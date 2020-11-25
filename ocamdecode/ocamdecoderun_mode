@@ -1,0 +1,49 @@
+#!/bin/bash
+
+echo "Mode should be argument 1"
+echo "Forward lookup (legacy) is triggered by using [any] second argument"
+echo "Input stream expected to be ocam2krc, regardless of shape"
+echo "And file naming should exploit that convention"
+echo "1  : 240x240 16bit FROM 528x121 16 bit"
+echo "3  : 120x120 16bit FROM 528x62 16 bit"
+echo "31 : 120x120 16bit FROM 44x44x8 16 bit (Matrox legacy, untested)"
+
+MODE=$1
+
+case $MODE in
+1)
+	npixr=240
+	npixc=240
+	;;
+3)
+	npixr=120
+	npixc=120
+	;;
+31)
+	npixr=120
+	npixc=120
+	;;
+*)
+	exit 1
+	;;
+esac
+
+PIXSLICEFILE=pixsliceNB_${MODE}.txt
+if [[ $# -eq 2 ]]; then # Legacy forward lookup
+	PIXIFILE=ocam2kpixi_${MODE}.fits
+	SLICEINDFILE=ocam2dsliceind_${MODE}.fits
+	REVERSE=0
+else
+	PIXIFILE=ocam2kpixi_${MODE}_REV.fits
+	SLICEINDFILE=ocam2dsliceind_${MODE}_REV.fits
+	REVERSE=1
+fi
+
+
+cacao << EOF
+readshmim ocam2krc
+loadfits "${PIXIFILE}" ocam2kpixi
+impixdecodeU ocam2krc ${npixr} ${npixc} ${PIXSLICEFILE} ocam2kpixi ocam2d ${SLICEINDFILE} ${REVERSE}
+exitCLI
+EOF
+
