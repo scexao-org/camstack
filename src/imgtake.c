@@ -58,7 +58,7 @@ int main(int argc, char **argv)
     // arg parsing if we make prio and cset settable from args.
     set_rt_priority();
 
-    bool BYTESHORTCAST = false;
+    int BYTESHORTCAST = 0;
     int STREAMNAMEINIT = 0;
 
     progname = argv[0];
@@ -92,7 +92,7 @@ int main(int argc, char **argv)
             break;
 
         case '8':
-            BYTESHORTCAST = true;
+            BYTESHORTCAST = 1;
             break;
 
         case 's':
@@ -229,8 +229,8 @@ int main(int argc, char **argv)
     timeout = pdv_get_timeout(pdv_p);
     cameratype = pdv_get_cameratype(pdv_p);
     
-    isiowidth = BYTESHORTCAST ? width / 2 : width;
-    atype = (BYTESHORTCAST || depth != 8) ? _DATATYPE_UINT16 : _DATATYPE_UINT8;
+    isiowidth = (BYTESHORTCAST != 0) ? width / 2 : width;
+    atype = ((BYTESHORTCAST != 0) || depth != 8) ? _DATATYPE_UINT16 : _DATATYPE_UINT8;
 
     printf("Size (edt)  : %d x %d\n", width, height);
     printf("Size (isio) : %d x %d\n", isiowidth, height);
@@ -389,7 +389,7 @@ int main(int argc, char **argv)
         imageshort = (unsigned short *)image_p; // FIXME
 
         image.md[0].write = 1; // set this flag to 1 when writing data
-        
+
         memcpy(image.array.UI16, imageshort,
                sizeof(unsigned char) * width * height);
 
