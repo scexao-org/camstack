@@ -1,0 +1,5 @@
+#!/bin/sh
+
+ISIO_ROOT=${MILK_ROOT}/src/ImageStreamIO
+
+gcc edttake.c -o edttake -I/opt/EDTpdv -I${ISIO_ROOT} -I${CACAO_ROOT}/src ${ISIO_ROOT}/ImageStreamIO.c /opt/EDTpdv/libpdv.a -Wall -lm -lpthread -ldl
