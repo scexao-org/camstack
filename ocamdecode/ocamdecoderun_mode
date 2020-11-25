@@ -30,17 +30,19 @@ esac
 
 PIXSLICEFILE=pixsliceNB_${MODE}.txt
 if [[ $# -eq 2 ]]; then # Legacy forward lookup
+	echo "Running legacy forward mode"
 	PIXIFILE=ocam2kpixi_${MODE}.fits
 	SLICEINDFILE=ocam2dsliceind_${MODE}.fits
 	REVERSE=0
 else
+	echo "Running reverse mode"
 	PIXIFILE=ocam2kpixi_${MODE}_REV.fits
 	SLICEINDFILE=ocam2dsliceind_${MODE}_REV.fits
 	REVERSE=1
 fi
 
 
-cacao << EOF
+OMP_NUM_THREADS=1 cacao -n ocamdecode << EOF
 readshmim ocam2krc
 loadfits "${PIXIFILE}" ocam2kpixi
 impixdecodeU ocam2krc ${npixr} ${npixc} ${PIXSLICEFILE} ocam2kpixi ocam2d ${SLICEINDFILE} ${REVERSE}

@@ -12,3 +12,5 @@ __pycache__
 ~*
 
 src/edttake
+_savefits*
+exitreport-*
