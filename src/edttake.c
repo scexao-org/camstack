@@ -47,12 +47,11 @@ int main(int argc, char **argv)
     char streamname[200];
 
     unsigned short *imageshort;
-    
+
     float exposure = 0.05; // exposure time [ms]
 
     int xsize, ysize;
     int kw;
-
 
     // Set RTprio and UID stuff - may need to migrate this after
     // arg parsing if we make prio and cset settable from args.
@@ -215,7 +214,7 @@ int main(int argc, char **argv)
 
     pdv_flush_fifo(pdv_p);
 
-    IMAGE image;   // pointer to array of images
+    IMAGE image;      // pointer to array of images
     int NBIMAGES = 5; // can hold multiple images
     long naxis;       // number of axis
     uint8_t atype;    // data type
@@ -228,7 +227,7 @@ int main(int argc, char **argv)
     depth = pdv_get_depth(pdv_p);
     timeout = pdv_get_timeout(pdv_p);
     cameratype = pdv_get_cameratype(pdv_p);
-    
+
     isiowidth = (BYTESHORTCAST != 0) ? width / 2 : width;
     atype = ((BYTESHORTCAST != 0) || depth != 8) ? _DATATYPE_UINT16 : _DATATYPE_UINT8;
 
@@ -237,6 +236,7 @@ int main(int argc, char **argv)
     printf("Depth       : %d\n", depth);
     printf("Timeout     : %d\n", timeout);
     printf("Camera type : %s\n", cameratype);
+    fflush(stdout);
 
     // allocate memory for array of images
     //image = malloc(sizeof(IMAGE));
@@ -258,48 +258,20 @@ int main(int argc, char **argv)
                            NBkw);
     free(imsize);
 
-    // Add keywords - no FILLING of keywords here
-    kw = 0;
-    strcpy(image.kw[kw].name, "tint");
-    image.kw[kw].type = 'D';
-    strcpy(image.kw[kw].comment, "exposure time");
+    // Add keywords
+    int N_KEYWORDS = 8;
 
-    kw = 1;
-    strcpy(image.kw[kw].name, "fps");
-    image.kw[kw].type = 'D';
-    strcpy(image.kw[kw].comment, "frame rate");
+    const char *KW_NAMES[] = {"tint", "fps", "NDR", "x0", "x1", "y0", "y1", "temp"};
+    const char KW_TYPES[] = {'D', 'D', 'L', 'L', 'L', 'L', 'L', 'D'};
+    const char *KW_COM[] = {"exposure time", "frame rate", "NDR", "x0", "x1", "y0", "y1", "detector temperature"};
 
-    kw = 2;
-    strcpy(image.kw[kw].name, "NDR");
-    image.kw[kw].type = 'L';
-    strcpy(image.kw[kw].comment, "NDR");
+    for (int kw = 0; kw < N_KEYWORDS; ++kw)
+    {
+        strcpy(image.kw[kw].name, KW_NAMES[kw]);
+        image.kw[kw].type = KW_TYPES[kw];
+        strcpy(image.kw[kw].comment, KW_COM[kw]);
+    }
 
-    kw = 3;
-    strcpy(image.kw[kw].name, "x0");
-    image.kw[kw].type = 'L';
-    strcpy(image.kw[kw].comment, "x0");
-
-    kw = 4;
-    strcpy(image.kw[kw].name, "x1");
-    image.kw[kw].type = 'L';
-    strcpy(image.kw[kw].comment, "x1");
-
-    kw = 5;
-    strcpy(image.kw[kw].name, "y0");
-    image.kw[kw].type = 'L';
-    strcpy(image.kw[kw].comment, "y0");
-
-    kw = 6;
-    strcpy(image.kw[kw].name, "y1");
-    image.kw[kw].type = 'L';
-    strcpy(image.kw[kw].comment, "y1");
-
-    kw = 7;
-    strcpy(image.kw[kw].name, "temp");
-    image.kw[kw].type = 'D';
-    strcpy(image.kw[kw].comment, "detector temperature");
-
-    fflush(stdout);
 
     /*
      * allocate four buffers for optimal pdv ring buffer pipeline (reduce if
@@ -386,13 +358,13 @@ int main(int argc, char **argv)
         // printf("line = %d\n", __LINE__);
         fflush(stdout);
 
+        // Fixme: 16->16, 8->8, and 8->16 must all work
         imageshort = (unsigned short *)image_p; // FIXME
 
         image.md[0].write = 1; // set this flag to 1 when writing data
 
         memcpy(image.array.UI16, imageshort,
-               sizeof(unsigned char) * width * height);
-
+               sizeof(unsigned char) * isiowidth * height);
         image.md[0].write = 0;
         // POST ALL SEMAPHORES
         ImageStreamIO_sempost(&image, -1);
@@ -447,36 +419,37 @@ usage(char *progname, char *errmsg)
     exit(1);
 }
 
-static void set_rt_priority() {
+static void set_rt_priority()
+{
 
-        uid_t ruid; // Real UID (= user launching process at startup)
-        uid_t euid; // Effective UID (= owner of executable at startup)
-        uid_t suid; // Saved UID (= owner of executable at startup)
+    uid_t ruid; // Real UID (= user launching process at startup)
+    uid_t euid; // Effective UID (= owner of executable at startup)
+    uid_t suid; // Saved UID (= owner of executable at startup)
 
-        int RT_priority = 70; //any number from 0-99
-        struct sched_param schedpar;
-        int ret;
+    int RT_priority = 70; //any number from 0-99
+    struct sched_param schedpar;
+    int ret;
 
-        getresuid(&ruid, &euid, &suid);
-        //This sets it to the privileges of the normal user
-        ret = seteuid(ruid);
-        if (ret != 0)
-        {
-            printf("setuid error\n");
-        }
-
-        schedpar.sched_priority = RT_priority;
-
-        if (ret != 0)
-        {
-            printf("setuid error\n");
-        }
-        ret = seteuid(euid); //This goes up to maximum privileges
-        sched_setscheduler(0, SCHED_FIFO,
-                        &schedpar); //other option is SCHED_RR, might be faster
-        ret = seteuid(ruid);           //Go back to normal privileges
-        if (ret != 0)
-        {
-            printf("setuid error\n");
-        }
+    getresuid(&ruid, &euid, &suid);
+    //This sets it to the privileges of the normal user
+    ret = seteuid(ruid);
+    if (ret != 0)
+    {
+        printf("setuid error\n");
     }
+
+    schedpar.sched_priority = RT_priority;
+
+    if (ret != 0)
+    {
+        printf("setuid error\n");
+    }
+    ret = seteuid(euid); //This goes up to maximum privileges
+    sched_setscheduler(0, SCHED_FIFO,
+                       &schedpar); //other option is SCHED_RR, might be faster
+    ret = seteuid(ruid);           //Go back to normal privileges
+    if (ret != 0)
+    {
+        printf("setuid error\n");
+    }
+}

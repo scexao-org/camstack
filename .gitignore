@@ -14,3 +14,4 @@ __pycache__
 src/edttake
 _savefits*
 exitreport-*
+camstack.egg-info

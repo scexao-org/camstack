@@ -2,12 +2,15 @@
     Chuck & Rajni
 '''
 
-from .utilities import CameraMode, TmuxMgr, otherstuff
+from camstack.core.edtcamera import EDTCamera
+
+from camstack.core.utilities import CameraMode
+
 # CameraModes: copy, ...
 
 # Camera: reloadshm, populatekeywords
 
-class CRED2(EDTcamera):
+class CRED2(EDTCamera):
     MODES = {
         # FULL 640 x 512
         -1: CameraMode(x0=0, x1=639, y0=0, y1=511),
@@ -33,7 +36,7 @@ class CRED2(EDTcamera):
         MODES[i+6] = CameraMode(x0=cm.x0, x1=cm.x1, y0=cm.y0, y1=cm.y1, fps=cm.fps, tint=cm.tint)
 
     def __init__(self, name, unit):
-        EDTCamera.__init__(self, name: str, unit: int, channel: int=0)
+        EDTCamera.__init__(self, name, unit, channel)
 
     def switch_mode(self, mode_number: int):
         pass

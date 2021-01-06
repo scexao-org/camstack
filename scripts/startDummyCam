@@ -1,0 +1,3 @@
+#!/bin/bash
+
+python -m camstack.camstack_generic_main dummycam 0

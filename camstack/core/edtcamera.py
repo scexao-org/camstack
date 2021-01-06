@@ -1,7 +1,11 @@
+import libtmux as tmux
+
 from .edtlib import _EdtLib
 
+from .dummyCamera import DummyCamera
 
-class EDTCamera:
+
+class EDTCamera(DummyCamera):
     '''
         Standard basic stuff that is common over EDT framegrabbers
 
@@ -23,7 +27,10 @@ class EDTCamera:
             Prepare the serial handles (also, think it MAY be overloaded for the Andors)
 
         '''
-        pass
+        
+        # tmux preparing
+        self.tmux_session_name = "??"
+
 
     def is_take_running(self):
         pass
@@ -39,13 +46,14 @@ class EDTCamera:
 
 
     def set_camera_mode(self):
-        stop_acq
+        # stop_acq
 
-        change_fg_parameters
+        # change_fg_parameters
 
-        change_camera_parameters # Serial OR other
+        # change_camera_parameters # Serial OR other
         
-        start_acq
+        # start_acq
+        pass
 
     def get_fg_parameters(self):
         pass
@@ -65,8 +73,5 @@ class EDTCamera:
 
     def _pdv_serial(self):
         pass
-
-    def 
-
 
     

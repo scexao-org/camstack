@@ -5,7 +5,7 @@
 from .utilities import CameraMode, TmuxMgr, otherstuff
 
 
-class Ocam(EDTcamera):
+class OCAM2K(EDTcamera):
 
     MODES = { # For ocam, the CameraMode content is *not* used for the camera setup, only the FG setup
         # Ocam full, unbinned
