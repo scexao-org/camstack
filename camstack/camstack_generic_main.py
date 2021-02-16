@@ -45,8 +45,11 @@ if __name__ == "__main__":
         pane.send_keys('C-z', enter=False, suppress_history=False)
         pane.send_keys('kill %')
 
+    # Reload the pdv config
+
     # Start the server
     server_command = f'ipython -im camstack.camstack_server_main -- {name} {pdv_unit}'
+
     if pdv_channel is not None:
         server_command += f' -c {pdv_channel}'
     if inital_cropmode is not None:
