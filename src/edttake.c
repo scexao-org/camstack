@@ -41,12 +41,13 @@ int main(int argc, char **argv)
     PdvDev *pdv_p;
     char errstr[64];
     int loops = 1;
-    int width, isiowidth, height, depth;
+    int width, isiowidth, bytewidth, height, depth;
+    // width: EDT image width (px.)
+    // isiowidth: final image width (px.)
+    // bytewidth: image width (bytes)
     char edt_devname[128];
     int channel = 0; // same as cam
     char streamname[200];
-
-    unsigned short *imageshort;
 
     float exposure = 0.05; // exposure time [ms]
 
@@ -110,9 +111,9 @@ int main(int argc, char **argv)
             --argc;
             if (argc < 1)
             {
-                printf("Error: option 'u' requires a numeric argument (0, 1 or 2)\n");
+                printf("Error: option 'u' requires a numeric argument (0-3)\n");
             }
-            if ((argv[0][0] >= '0') && (argv[0][0] <= '2'))
+            if ((argv[0][0] >= '0') && (argv[0][0] <= '3'))
             {
                 unit = atoi(argv[0]);
             }
@@ -230,6 +231,10 @@ int main(int argc, char **argv)
 
     isiowidth = (BYTESHORTCAST != 0) ? width / 2 : width;
     atype = ((BYTESHORTCAST != 0) || depth != 8) ? _DATATYPE_UINT16 : _DATATYPE_UINT8;
+    // 16 -> 16 OR 8 -> 16: bytewidth = isiowidth * 2
+    // 8 -> 8: bytewidth = isiowidth
+    // will be used to figure out the memcopy size
+    bytewidth = _DATATYPE_UINT8 ? isiowidth : isioswidth * 2;
 
     printf("Size (edt)  : %d x %d\n", width, height);
     printf("Size (isio) : %d x %d\n", isiowidth, height);
@@ -358,13 +363,9 @@ int main(int argc, char **argv)
         // printf("line = %d\n", __LINE__);
         fflush(stdout);
 
-        // Fixme: 16->16, 8->8, and 8->16 must all work
-        imageshort = (unsigned short *)image_p; // FIXME
-
         image.md[0].write = 1; // set this flag to 1 when writing data
 
-        memcpy(image.array.UI16, imageshort,
-               sizeof(unsigned char) * isiowidth * height);
+        memcpy(image.array.UI8, image_p, bytewidth * height);
         image.md[0].write = 0;
         // POST ALL SEMAPHORES
         ImageStreamIO_sempost(&image, -1);

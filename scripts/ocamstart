@@ -17,12 +17,15 @@ cset set
 echo ""
 read -p "cpusets looking OK ? Press enter to continue, Ctrl+C to abort."
 
+# EDT unit
+UNIT=3
+
 
 # aliases
 SC5="133.40.161.194"
 SC5tmux="streamTCPreceive_30107"
 
-tnew="tmux new-session -s"
+tnew="tmux new-session -d -s"
 tsend="tmux send-keys -t"
 
 # Create tmuxes and issue kills
@@ -49,27 +52,36 @@ echo ""
 read -p "Everything killed, proceed to startup ? Press enter to continue, Ctrl+C to abort."
 
 # STARTUP
+# EDT CONF
+$tsend ocam_edt "/opt/EDTpdv/initcam -u ${UNIT} -f /home/scexao/src/camstack/config/ocam_bin2.cfg" Enter
+sleep 1
 # First, OCAM serial
-$tsend ocam_serial "/opt/EDTpdv/serial_cmd -u 1" Enter
+$tsend ocam_serial "/opt/EDTpdv/serial_cmd -u ${UNIT}" Enter
 $tsend ocam_serial "binning on" Enter
 $tsend ocam_serial "gain 1" Enter
 $tsend ocam_serial "protection reset" Enter
 $tsend ocam_serial "synchro on" Enter
 sleep 5
-# Then, EDT FG
-$tsend ocam_edt "/opt/EDTpdv/initcam -u 1 -f /home/scexao/src/camstack/config/ocam_bin2.cfg" Enter
-$tsend ocam_edt "/home/scexao/src/camstack/src/edttake -s ocam2krc -u 1 -l 0 -N 4 -8" Enter
+# Start acquisition (and reconf the FG, seems might be a glitch ocasionnaly)
+$tsend ocam_edt "/opt/EDTpdv/initcam -u ${UNIT} -f /home/scexao/src/camstack/config/ocam_bin2.cfg" Enter
+$tsend ocam_edt "/home/scexao/src/camstack/src/edttake -s ocam2krc -u ${UNIT} -l 0 -N 4 -8" Enter
 sleep 1
 # Then, ocamdecode
+$tsend ocam_decode "creashmim ocam2dalt 120 120" Enter # Actually creates a float image ?
+$tsend ocam_decode "cd /home/scexao/src/camstack/ocamdecode" Enter
 $tsend ocam_decode "/home/scexao/src/camstack/ocamdecode/ocamdecoderun_mode 3" Enter
 # Then TCP, receiver, then transmitter
+# Latest bug: we need to create the image on sc5 to make sure it'll work
+ssh $SC5 "$tsend $SC5tmux \"milk\" Enter"
+ssh $SC5 "$tsend $SC5tmux \"creaushortimshm ocam2dalt 120 120\" Enter"
+ssh $SC5 "$tsend $SC5tmux \"exit\" Enter"
 ssh $SC5 "$tsend $SC5tmux \"shmimTCPreceive -c aol0COM 30107\" Enter"
 sleep .5
 $tsend ocam_tcp "OMP_NUM_THREADS=1 /home/scexao/bin/shmimTCPtransmit ocam2dalt 10.20.70.1 30107" Enter
 sleep 1
 
 # Then send the RT prio and cset setting
-PID=$(pgrep -f edttake)
+PID=$(pgrep -f "edttake -s ocam2krc")
 sudo cset proc --threads -m $PID ocam_edt > /dev/null
 sudo chrt -f -p 49 $PID > /dev/null
 
@@ -84,7 +96,9 @@ sudo chrt -f -p 47 $PID > /dev/null
 echo ""
 echo ""
 cset proc ocam_edt
+echo ""
 cset proc ocam_decode
+echo ""
 cset proc ocam_tcp
 
 echo "ocamstart completed."

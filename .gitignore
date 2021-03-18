@@ -15,3 +15,5 @@ src/edttake
 _savefits*
 exitreport-*
 camstack.egg-info
+config/first_tmp.cfg
+config/vampires_tmp.cfg
