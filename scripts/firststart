@@ -9,10 +9,9 @@
 
 # Sequence
 # (Re-)create tmuxes:
-# vcam(0|1)_edt: framegrabbing
-# vcam(0|1)_serial: serial to Andors (probs not implemented, will delete)
+# first_edt: framegrabbing
 # REMOTE @scexao5 streamTCPreceive_3010(4|5): shmimTCPreceive
-# vcam(0|1)_tcp: TCP receive
+# first_tcp: TCP receive
 
 if [ "$#" -ne 2 ]; then
     SIZE_W=512
@@ -65,8 +64,8 @@ CFG_FILE="/home/scexao/src/camstack/config/first_sedfile.cfg"
 TMP_FILE="/home/scexao/src/camstack/config/first_tmp.cfg"
 sed s/SED_WIDTH_HERE/${SIZE_W}/ $CFG_FILE | sed s/SED_HEIGHT_HERE/${SIZE_H}/ > $TMP_FILE
 
-$tsend first_edt "/opt/EDTpdv/initcam -u 0 -c 1 -f ${TMP_FILE}" Enter
-$tsend first_edt "/home/scexao/src/camstack/src/edttake -s firstcam -u 0 -c 1 -l 0 -N 4" Enter
+$tsend first_edt "/opt/EDTpdv/initcam -u 1 -c 1 -f ${TMP_FILE}" Enter
+$tsend first_edt "/home/scexao/src/camstack/src/edttake -s firstcam -u 1 -c 1 -l 0 -N 4" Enter
 sleep 1
 # Then TCP, receiver, then transmitter
 ssh $SC5 "$tsend $SC5tmux \"milk\" Enter"

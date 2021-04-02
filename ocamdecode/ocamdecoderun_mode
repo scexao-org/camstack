@@ -44,7 +44,7 @@ else
 fi
 
 
-OMP_NUM_THREADS=1 cacao -n ocamdecode << EOF
+OMP_NUM_THREADS=1 milk -n ocamdecode << EOF
 readshmim ocam2krc
 loadfits "${PIXIFILE}" ocam2kpixi
 csetpmove ${CSET}

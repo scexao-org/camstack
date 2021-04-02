@@ -234,7 +234,7 @@ int main(int argc, char **argv)
     // 16 -> 16 OR 8 -> 16: bytewidth = isiowidth * 2
     // 8 -> 8: bytewidth = isiowidth
     // will be used to figure out the memcopy size
-    bytewidth = _DATATYPE_UINT8 ? isiowidth : isioswidth * 2;
+    bytewidth = (atype == _DATATYPE_UINT8) ? isiowidth : isiowidth * 2;
 
     printf("Size (edt)  : %d x %d\n", width, height);
     printf("Size (isio) : %d x %d\n", isiowidth, height);
@@ -351,6 +351,7 @@ int main(int argc, char **argv)
             last_timeouts = timeouts;
             recovering_timeout = TRUE;
             printf("\ntimeout....\n");
+            continue;
         }
         else if (recovering_timeout)
         {
@@ -365,6 +366,7 @@ int main(int argc, char **argv)
 
         image.md[0].write = 1; // set this flag to 1 when writing data
 
+        // printf("Copying %d x %d bytes", bytewidth, height);
         memcpy(image.array.UI8, image_p, bytewidth * height);
         image.md[0].write = 0;
         // POST ALL SEMAPHORES

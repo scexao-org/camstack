@@ -15,7 +15,7 @@
 
 # Input
 NUM=$1
-SIZE_X=$2
+SIZE=$2
 echo ""
 read -p "Starting camera ${NUM} with size ${SIZE} ?"
 
