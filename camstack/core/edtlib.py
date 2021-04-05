@@ -7,9 +7,17 @@
 #
 
 import os
-from ctypes import *
+from ctypes import (CDLL, POINTER, c_int, c_void_p, c_char_p, c_short, create_string_buffer)
 
-_EdtLib = CDLL("/opt/EDTpdv/libpdv.so")
+try:
+    _EdtLib = CDLL("/opt/EDTpdv/libpdv.so")
+except OSError as e:
+    print('=============')
+    print("OSError: maybe can't locate libpdv.so")
+    print("If /opt/EDTpdv/libpdv.so does not exist")
+    print("It can be built with a 'make libpdv.so' at that location.")
+    print('\nRe-raising error:')
+    raise e
 
 
 def _initEdtIF():
@@ -81,10 +89,10 @@ TIMEOUT_OFFSET = 15000
 class EdtIF:
     numbuffs = 4
 
-    def __init__(self, devName='pdv'):
+    def __init__(self, unit, channel=0, devName=b'pdv'):
         """
         """
-        self.open(0, 0, devName) # FIXME UNIT AND CHANNEL
+        self.open(unit, channel, devName) # FIXME UNIT AND CHANNEL
 
         self.camName = devName # Useful ? self.devName too
         self.blackColumns = 0
