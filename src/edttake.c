@@ -264,6 +264,7 @@ int main(int argc, char **argv)
     free(imsize);
 
     // Add keywords
+    /*
     int N_KEYWORDS = 8;
 
     const char *KW_NAMES[] = {"tint", "fps", "NDR", "x0", "x1", "y0", "y1", "temp"};
@@ -276,6 +277,7 @@ int main(int argc, char **argv)
         image.kw[kw].type = KW_TYPES[kw];
         strcpy(image.kw[kw].comment, KW_COM[kw]);
     }
+    */
 
 
     /*
