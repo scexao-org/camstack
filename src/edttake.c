@@ -51,9 +51,6 @@ int main(int argc, char **argv)
 
     float exposure = 0.05; // exposure time [ms]
 
-    int xsize, ysize;
-    int kw;
-
     // Set RTprio and UID stuff - may need to migrate this after
     // arg parsing if we make prio and cset settable from args.
     set_rt_priority();
@@ -216,7 +213,6 @@ int main(int argc, char **argv)
     pdv_flush_fifo(pdv_p);
 
     IMAGE image;      // pointer to array of images
-    int NBIMAGES = 5; // can hold multiple images
     long naxis;       // number of axis
     uint8_t atype;    // data type
     uint32_t *imsize; // image size
@@ -264,12 +260,12 @@ int main(int argc, char **argv)
     free(imsize);
 
     // Add keywords
-    /*
-    int N_KEYWORDS = 8;
+    int N_KEYWORDS = 1;
 
-    const char *KW_NAMES[] = {"tint", "fps", "NDR", "x0", "x1", "y0", "y1", "temp"};
-    const char KW_TYPES[] = {'D', 'D', 'L', 'L', 'L', 'L', 'L', 'D'};
-    const char *KW_COM[] = {"exposure time", "frame rate", "NDR", "x0", "x1", "y0", "y1", "detector temperature"};
+    // Warning: the order of *kws* may change, because we're gonna allocate the other ones from python.
+    const char *KW_NAMES[] = {"fps_m"};      // "tint", "fps", "NDR", "x0", "x1", "y0", "y1", "temp"};
+    const char KW_TYPES[] = {'D'};           // {'D', 'D', 'L', 'L', 'L', 'L', 'L', 'D'};
+    const char *KW_COM[] = {"Measured FPS"}; // {"exposure time", "frame rate", "NDR", "x0", "x1", "y0", "y1", "detector temperature"};
 
     for (int kw = 0; kw < N_KEYWORDS; ++kw)
     {
@@ -277,8 +273,6 @@ int main(int argc, char **argv)
         image.kw[kw].type = KW_TYPES[kw];
         strcpy(image.kw[kw].comment, KW_COM[kw]);
     }
-    */
-
 
     /*
      * allocate four buffers for optimal pdv ring buffer pipeline (reduce if

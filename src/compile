@@ -2,4 +2,4 @@
 
 ISIO_ROOT=${MILK_ROOT}/src/ImageStreamIO
 
-gcc edttake.c -o edttake -I/opt/EDTpdv -I${ISIO_ROOT} -I${CACAO_ROOT}/src ${ISIO_ROOT}/ImageStreamIO.c /opt/EDTpdv/libpdv.a -Wall -lm -lpthread -ldl
+gcc edttake.c -o edttake -I/opt/EDTpdv -I${ISIO_ROOT} -I${CACAO_ROOT}/src ${ISIO_ROOT}/ImageStreamIO.c /opt/EDTpdv/libpdv.a -Wall -Wno-format-truncation  -Wno-format-overflow -lm -lpthread -ldl
