@@ -3,9 +3,12 @@ from camstack.core import tmux as tmux_util
 from camstack.core.edtinterface import EdtInterfaceSerial
 from pyMilk.interfacing.isio_shmlib import SHM
 
+from typing import List, Any
+
 import os
 import time
 import subprocess
+
 
 class EDTCameraNoModes:
     '''
@@ -13,17 +16,22 @@ class EDTCameraNoModes:
         Written with the mindset "What should be common between CRED2, Andors and OCAM ?"
         And implements the server side management of the imgtake
     '''
-    
+
     INTERACTIVE_SHELL_METHODS = ['send_command']
 
-    KEYWORDS = {} # Define the format ?
-    EDTTAKE_CAST = False # Only OCAM overrides that
+    KEYWORDS = {}  # Define the format ?
+    EDTTAKE_CAST = False  # Only OCAM overrides that
 
-
-    def __init__(self, name: str, stream_name: str,
-                 height: int, width: int,
-                 unit: int, channel: int,
-                 basefile: str):
+    def __init__(self,
+                 name: str,
+                 stream_name: str,
+                 height: int,
+                 width: int,
+                 unit: int,
+                 channel: int,
+                 basefile: str,
+                 no_start: bool = False,
+                 dependent_processes: List[Any] = []):
         '''
             Run an SYSTEM init_cam with the cfg file
             Grab the desired/default camera mode
@@ -39,13 +47,17 @@ class EDTCameraNoModes:
         self.STREAMNAME = stream_name
 
         self.height = height
-        self.width = width # IN CASE OF 8/16 CASTING, this is the ISIO width
-        self.width_fg = (width, 2*width)[self.EDTTAKE_CAST] # And this is the camlink image width
+        self.width = width  # IN CASE OF 8/16 CASTING, this is the ISIO width
+        self.width_fg = (
+            width, 2 *
+            width)[self.EDTTAKE_CAST]  # And this is the camlink image width
 
         self.pdv_unit = unit
         self.pdv_channel = channel
 
         self.base_config_file = basefile
+
+        self.dependent_processes = dependent_processes
 
         #=======================
         # TMUX TAKE SESSION MGMT
@@ -56,7 +68,6 @@ class EDTCameraNoModes:
         self.edttake_tmux_name = None
         self.kill_taker_and_dependents()
 
-
         #==================================================
         # PREPARE THE FRAMEGRABBER AND OPEN SERIAL/FG IFACE
         #==================================================
@@ -65,17 +76,18 @@ class EDTCameraNoModes:
         self.init_pdv_configuration()
         self.edt_iface = EdtInterfaceSerial(self.pdv_unit, self.pdv_channel)
 
-
         # ====================
         # PREPARE THE CAMERA
         # ====================
         # Now we have a serial link, in case prepare camera needs it.
         self.prepare_camera()
 
+        if no_start:
+            return
+
         # ====================
         # START THE TAKE - and thus expect the SHM to be created
         # ====================
-
         self.start_frame_taker_and_dependents()
 
         # ====================
@@ -83,15 +95,16 @@ class EDTCameraNoModes:
         # ====================
 
         self.camera_shm = None
-        self.grab_shm_fill_keywords() # TODO - now the SHM is allocated, so we can do that
+        self.grab_shm_fill_keywords(
+        )  # TODO - now the SHM is allocated, so we can do that
         # Maybe we can use a class variable as well to define what the expected keywords are ?
 
         # TODO csets and RT prios - through CACAO ?
 
     def kill_taker_and_dependents(self):
         # Kill the dependent processes in reverse order
-        #TODO
-        pass        
+        for dep_process in self.dependent_processes[::-1]:
+            dep_process.stop()
 
         self._kill_taker_no_dependents()
 
@@ -112,27 +125,30 @@ class EDTCameraNoModes:
         self.take_tmux_pane = tmux_util.find_or_create(self.edttake_tmux_name)
         tmux_util.kill_running(self.take_tmux_pane)
 
-
     def init_pdv_configuration(self):
         if self.is_taker_running():
-            raise AssertionError('Cannot change FG config while taker is running')
+            raise AssertionError(
+                'Cannot change FG config while taker is running')
 
         tmp_config = '/tmp/' + self.NAME + '.cfg'
         res = subprocess.run(['cp', self.base_config_file, tmp_config],
-                       stdout=subprocess.PIPE)
+                             stdout=subprocess.PIPE)
         if res.returncode != 0:
-            raise FileNotFoundError(f'EDT cfg file {self.base_config_file} not found.')
-        
+            raise FileNotFoundError(
+                f'EDT cfg file {self.base_config_file} not found.')
+
         with open(tmp_config, 'a') as file:
             file.write(f'width: {self.width_fg}\n')
             file.write(f'height: {self.height}\n')
 
         subprocess.run((f'/opt/EDTpdv/initcam -u {self.pdv_unit}'
-                        f' -c {self.pdv_channel} -f {tmp_config}'
-                        ).split(' '), stdout=subprocess.PIPE)
+                        f' -c {self.pdv_channel} -f {tmp_config}').split(' '),
+                       stdout=subprocess.PIPE)
 
     def prepare_camera(self):
-        print('Calling prepare_camera on generic EDTCameraClass. Nothing happens here.')
+        print(
+            'Calling prepare_camera on generic EDTCameraClass. Nothing happens here.'
+        )
 
     def is_taker_running(self):
         '''
@@ -143,14 +159,15 @@ class EDTCameraNoModes:
     def start_frame_taker_and_dependents(self):
         self._start_taker_no_dependents()
         # Now handle the dependent processes
-        #TODO
-        pass
+        
+        for dep_process in self.dependent_processes:
+            dep_process.start()
 
     def _start_taker_no_dependents(self):
         exec_path = '/home/scexao/src/camstack/src/edttake'
         self.edttake_tmux_command = f'{exec_path} -s {self.STREAMNAME} -u {self.pdv_unit} -c {self.pdv_channel} -l 0 -N 4'
         if self.EDTTAKE_CAST:
-            self.edttake_tmux_command += ' -8' # (byte pair) -> (ushort) casting.
+            self.edttake_tmux_command += ' -8'  # (byte pair) -> (ushort) casting.
 
         # Let's do it.
         tmux_util.send_keys(self.take_tmux_pane, self.edttake_tmux_command)
@@ -170,14 +187,13 @@ class EDTCameraNoModes:
 
         self.height = height
         self.width = width
-        self.width_fg = (width, 2*width)[self.EDTTAKE_CAST]
+        self.width_fg = (width, 2 * width)[self.EDTTAKE_CAST]
         self.init_pdv_configuration()
 
         self.start_frame_taker_and_dependents()
 
         self.grab_shm_fill_keywords()
 
-    
     def get_fg_parameters(self):
         # We don't need to get them, because we set them in init_pdv_configuration
         pass
@@ -200,22 +216,34 @@ class EDTCameraNoModes:
 
 
 class EDTCamera(EDTCameraNoModes):
-    
+
     INTERACTIVE_SHELL_METHODS = [] + EDTCameraNoModes.INTERACTIVE_SHELL_METHODS
 
-    MODES = {} # Define the format ?
+    MODES = {}  # Define the format ?
     EDTTAKE_CAST = False
 
-    def __init__(self, name: str, stream_name: str,
-                 mode_id, unit: int, channel: int,
-                 basefile: str):
+    def __init__(self,
+                 name: str,
+                 stream_name: str,
+                 mode_id,
+                 unit: int,
+                 channel: int,
+                 basefile: str,
+                 dependent_processes: List[Any] = []):
         width, height = self._fg_size_from_mode(mode_id)
 
         self.current_mode_id = mode_id
         self.current_mode = self.MODES[mode_id]
 
-        EDTCameraNoModes.__init__(self, name, stream_name, height, width, unit, channel, basefile)
-
+        EDTCameraNoModes.__init__(self,
+                                  name,
+                                  stream_name,
+                                  height,
+                                  width,
+                                  unit,
+                                  channel,
+                                  basefile,
+                                  dependent_processes=dependent_processes)
 
     def _fg_size_from_mode(self, mode_id):
         width, height = self.MODES[mode_id].fgsize
@@ -225,8 +253,9 @@ class EDTCamera(EDTCameraNoModes):
         # Gets called during constructor and set_mode
         if mode_id is None:
             mode_id = self.current_mode_id
-        print('Calling prepare_camera on generic EDTCameraClass. Nothing happens here.')
-
+        print(
+            'Calling prepare_camera on generic EDTCameraClass. Nothing happens here.'
+        )
 
     def set_camera_mode(self, mode_id):
         '''
@@ -240,14 +269,22 @@ class EDTCamera(EDTCameraNoModes):
         self.width_fg = self.width * (1, 2)[self.EDTTAKE_CAST]
 
         self.init_pdv_configuration()
-        
+
         self.prepare_camera()
 
         self.start_frame_taker_and_dependents()
 
         self.grab_shm_fill_keywords()
 
-    def change_camera_parameters(self):
-        raise NotImplementedError("Set camera mode should have a camera-specific implementation")
+    def set_mode(self, mode_id):
+        '''
+            Alias
+        '''
+        self.set_camera_mode(mode_id)
 
-    
+    def change_camera_parameters(self):
+        raise NotImplementedError(
+            "Set camera mode should have a camera-specific implementation")
+
+    def register_dependent(self):
+        pass

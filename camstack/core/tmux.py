@@ -54,7 +54,11 @@ class RemotePanePatch:
         self.host = host
 
     def send_keys(self, keys: str, enter: bool = True, suppress_history: bool = True):
-        # Mind the quotes
+        # Mind the quotes - we're gonna put keys between double quotes,
+        # so we need to escape double quotes inside of keys
+        # and we need to escape the backslash so that python knows it's a backslash
+        if '"' in keys:
+            keys = keys.replace('"', '\\"')
         if suppress_history:
             keys = " " + keys
         cmdstring = ['tmux', 'send-keys', '-t', self.session_name, '"' + keys + '"']

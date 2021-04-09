@@ -28,7 +28,8 @@ class EdtInterfaceSerial:
 
     def _serial_command(self, cmd):
         #CRED2: Confirmed and tested
-        return EdtDLL.pdv_serial_command(self.pdvObj, bytes(cmd, "UTF-8"))
+        # SWITCHING FROM UTF8 to LATIN1... because ocam.
+        return EdtDLL.pdv_serial_command(self.pdvObj, bytes(cmd, "latin1"))
 
     def _serial_wait(self, timeout, maxchars):
         #CRED2: Confirmed and tested
@@ -43,7 +44,7 @@ class EdtInterfaceSerial:
             res = EdtDLL.pdv_serial_read(self.pdvObj, revbuf, nchars)
             #print ("res %s " % res)
             if res > 0:
-                data = revbuf.value.decode('UTF-8')
+                data = revbuf.value.decode('latin1')
                 out.append(data)
                 n = self._serial_wait(timeout, nchars)
             else:
@@ -55,7 +56,8 @@ class EdtInterfaceSerial:
             return ""
         if ord(res[0]) == 6:
             return res[1:]
-        if len(res) > 3:
+        # Don't really know why that was there ?
+        if len(res) > 1:
             return res
         raise Exception("Error in response")
 
@@ -65,16 +67,19 @@ class EdtInterfaceSerial:
             _ = self._serial_read()
         except:
             pass
-        for _ in range(3):
+
+        recRes = None
+        for k in range(4):
             try:
                 _ = self._serial_command(cmd)
-                recRes = self._serial_read()
-                ###WCLogger.info ("Sent res=%s, rec res=%s" % (sentRes, recRes))
-                return recRes
+                recRes = self._serial_read(timeout=100 * 2**k)
+                if len(recRes) > 0:
+                    return recRes
             except:
-                ##WCLogger.error ("warning while sending " + cmd + " " + str(e))
                 continue
-        raise Exception("Error in sendCommand")
+        if recRes is None:
+            raise Exception("Error in sendCommand")
+        return recRes # Which is an empty string at this point
 
     def get_image_size(self):
         """

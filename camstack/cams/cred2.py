@@ -2,7 +2,7 @@
     Chuck, Rajni, GLINT
 '''
 
-from camstack.core.edtcamera import EDTCamera
+from camstack.core.edt_base import EDTCamera
 
 from camstack.core.utilities import CameraMode
 
@@ -16,7 +16,7 @@ class CRED2(EDTCamera):
 
     MODES = {
         # FULL 640 x 512
-        -1: CameraMode(x0=0, x1=639, y0=0, y1=511),
+        'full': CameraMode(x0=0, x1=639, y0=0, y1=511),
         # 320x256 half frame, centered
         0: CameraMode(x0=160, x1=479, y0=128, y1=383, fps=1500.082358000, tint=0.000663336),
     }
@@ -27,8 +27,47 @@ class CRED2(EDTCamera):
                  mode_id: int = 1, unit: int = 0, channel: int = 0):
         
         # Allocate and start right in the appropriate binning mode
+        self.synchro = False
         basefile = '/home/scexao/src/camstack/config/cred2_14bit.cfg'
 
+        # Call EDT camera init
+        # This should pre-kill dependent sessions
+        # But we should be able to "prepare" the camera before actually starting
+        EDTCamera.__init__(self, name, stream_name,
+                           mode_id, unit, channel, basefile)
+
+        # ======
+        # AD HOC 
+        # ======
+
+        # Issue a few standards for CRED2
+        #self.send_command('interface 0') # Disable verbosity to be able to parse temp
+        #self.gain_protection_reset()
+        #self.set_gain(1)
+        #self.set_synchro(True) # Is called by the setmode in the constructor.
+
+    # =====================
+    # AD HOC PREPARE CAMERA
+    # =====================
+
+    def prepare_camera(self, mode_id):
+                
+        if mode_id is None:
+            mode_id = self.current_mode_id
+
+        # Not really handling fps/tint for the OCAM, we just assume an ext trigger
+        if mode_id == 1: #TODO
+            self.send_command('binning off')
+        elif mode_id == 3:
+            self.send_command('binning on')
+        
+        # Changing the binning trips the external sync.
+        self.set_synchro(self.synchro)
+
+
+    # ===========================================
+    # AD HOC METHODS - TO BE BOUND IN THE SHELL ?
+    # ===========================================
 
 class Rajni(CRED2):
 
@@ -41,8 +80,8 @@ class Rajni(CRED2):
 
 
     def __init__(self, name:str, stream_name: str,
-                 mode: int, unit: int = 0, channel: int = 0):
-        CRED2.__init__(self, name, str_name, mode, unit, channel)
+                 mode_id: int, unit: int = 0, channel: int = 0):
+        CRED2.__init__(self, name, stream_name, mode_id, unit, channel)
 
 class GLINT(CRED2):
     MODES = {
@@ -73,6 +112,39 @@ class Chuck(CRED2):
 
 # Quick shorthand for testing
 if __name__ == "__main__":
-    ocam = Rajni('rajni', 'rajnicam', unit=1, channel=0, binning=True)
+    cam = Rajni('rajni', 'rajnicam', mode_id='full', unit=1, channel=0)
     from camstack.core.utilities import shellify_methods
-    shellify_methods(ocam, globals())
+    shellify_methods(cam, globals())
+
+
+    ########
+    '''
+    IRCAM SERVER legacy mapping:
+    
+    ## Server commands (identified from chuck)
+    gtint
+    gNDR
+    gfps
+
+    stint
+    sfps
+    sNDR
+    cropOFF -> set_mode('full') - (scrop_cols 0 639, scrop_rows 0 511)
+    cropON - reverts to the last cropmode ??
+
+    setcrop 1-N
+
+    ## Serial commands (identified from ircamserver.c)
+    tint
+    set tint
+    fps
+    set fps
+    nbreadworeset
+    set nbreadworeset
+    temperatures snake
+    set temperatures snake (redo a get after a set ?)
+
+    reset
+    shutdown
+
+    '''

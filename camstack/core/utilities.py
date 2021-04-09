@@ -1,5 +1,5 @@
-from typing import Tuple
-
+from typing import Tuple, List
+from camstack.core import tmux
 
 class CameraMode:
     def __init__(self,
@@ -38,6 +38,53 @@ class DependentProcess:
         They're expected to live in a tmux (local or remote)
         This typically will include ocamdecode, and the TCP transfer.
     '''
+    
+
+    def __init__(self, tmux_name: str, cli_cmd: str, cli_args: List[str], cset: str = None, rtprio: int = None):
+
+
+        self.enabled = True # Is this registered to run ?
+
+        self.tmux_name = tmux_name
+        self.cli_cmd = cli_cmd
+        self.cli_args = cli_args
+
+        self.initialize_tmux()
+
+    
+    def initialize_tmux(self):
+        self.tmux_pane = tmux.find_or_create(self.tmux_name)
+        tmux.kill_running(self.tmux_pane)
+
+    def start(self):
+        tmux.send_keys(self.tmux_pane, self.cli_cmd % self.cli_args)
+
+    def stop(self):
+        tmux.kill_running(self.tmux_pane)
+
+    def is_running(self):
+        return self.get_pid() is not None
+
+    def get_pid(self):
+        return tmux.find_pane_running_pid(self.tmux_pane)
+
+
+class RemoteDependentProcess(DependentProcess):
+    
+    def __init__(self, tmux_name, cli_cmd, cli_args, remote_host, cset: str = None, rt_prio: int = None):
+        
+        self.remote_host = remote_host
+
+        DependentProcess.__init__(self, tmux_name, cli_cmd, cli_args, cset, rt_prio)
+
+
+    def initialize_tmux(self):
+
+        self.tmux_pane = tmux.find_or_create_remote(self.tmux_name, self.remote_host)
+        tmux.kill_running(self.tmux_pane)
+
+
+
 
 def shellify_methods(instance_of_camera, top_level_globals):
     '''
