@@ -16,6 +16,7 @@
 
 #include <sched.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "edtinc.h"
 #include "ImageStruct.h"
@@ -50,6 +51,10 @@ int main(int argc, char **argv)
     char streamname[200];
 
     float exposure = 0.05; // exposure time [ms]
+    double meas_frate = 0.0; // Measured framerate, updated each frame
+    double meas_frate_gain = 0.01; // smoothing for meas_frate
+    clock_t time1;
+    clock_t time2;
 
     // Set RTprio and UID stuff - may need to migrate this after
     // arg parsing if we make prio and cset settable from args.
@@ -247,8 +252,8 @@ int main(int argc, char **argv)
     imsize[1] = height;
     // image will be in shared memory
     shared = 1;
-    // allocate space for 10 keywords
-    NBkw = 10;
+    // allocate space for keywords
+    NBkw = 25;
 
     if (STREAMNAMEINIT == 0)
     {
@@ -260,12 +265,12 @@ int main(int argc, char **argv)
     free(imsize);
 
     // Add keywords
-    int N_KEYWORDS = 1;
+    int N_KEYWORDS = 3;
 
     // Warning: the order of *kws* may change, because we're gonna allocate the other ones from python.
-    const char *KW_NAMES[] = {"fps_m", "fg_rows", "fg_cols"};      // "tint", "fps", "NDR", "x0", "x1", "y0", "y1", "temp"};
+    const char *KW_NAMES[] = {"MFRATE", "FG_SIZE1", "FG_SIZE2"};      // "tint", "fps", "NDR", "x0", "x1", "y0", "y1", "temp"};
     const char KW_TYPES[] = {'D', 'L', 'L'};           // {'D', 'D', 'L', 'L', 'L', 'L', 'L', 'D'};
-    const char *KW_COM[] = {"Measured FPS", "FG n rows", "FG n cols"}; // {"exposure time", "frame rate", "NDR", "x0", "x1", "y0", "y1", "detector temperature"};
+    const char *KW_COM[] = {"Measured frame rate (Hz)", "FG n rows", "FG n cols"}; // {"exposure time", "frame rate", "NDR", "x0", "x1", "y0", "y1", "detector temperature"};
 
     for (int kw = 0; kw < N_KEYWORDS; ++kw)
     {
@@ -306,10 +311,13 @@ int main(int argc, char **argv)
         pdv_start_images(pdv_p, numbufs);
     }
 
+    // Prep time measurement
+    time1 = clock();
+
     printf("\n");
     i = 0;
     int loopOK = 1;
-
+    
     while (loopOK == 1)
     {
         /*
@@ -376,6 +384,15 @@ int main(int argc, char **argv)
         image.md[0].write = 0; // Done writing data
         image.md[0].cnt0++;
         image.md[0].cnt1++;
+
+        // Write the timing !
+        time2 = clock();
+
+        meas_frate *= (1.0 - meas_frate_gain);
+        // This is only CPU time - that sucks.
+        meas_frate += 1.0 / (double)(time2 - time1) * CLOCKS_PER_SEC * meas_frate_gain;
+        image.kw[0].value.numf = (float)meas_frate;
+        time1 = time2;
 
         i++;
         if (i == loops)

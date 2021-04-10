@@ -19,22 +19,26 @@ class EDTCameraNoModes:
 
     INTERACTIVE_SHELL_METHODS = ['send_command', 'close', 'release']
 
-    KEYWORDS = { # Format is name: description - this list CAN be figured out from a redis query.
-        'BIN-FCT1' : 'Binning factor of the X axis (pixel)',
-        'BIN-FCT2' : 'Binning factor of the Y axis (pixel)',
-        'BSCALE' : 'Real=fits-value*BSCALE+BZERO',
-        'BUNIT' : 'Unit of original values',
-        'BZERO' : 'Real=fits-value*BSCALE+BZERO',
-        'CROP_OR1' : 'Origin in X of the cropped window (pixel)',
-        'CROP_OR2' : 'Origin in Y of the cropped window (pixel)',
-        'CROPPED' : 'Boolean indicating if the image is windowed or full frame',
-        'DET-TMP' : 'Detector temperature (K)',
-        'DETECTOR' : 'Name of the detector',
-        'DETGAIN' : 'Detector gain',
-        'DETMODE' : 'Detector mode',
-        'FRATE' : 'Frame rate of the acquisition (Hz)',
-        'GAIN' : 'AD conversion factor (electron/ADU)',
-        'NDR' : 'Number of non-destructive reads',
+    KEYWORDS = {  # Format is name: (value, description) - this list CAN be figured out from a redis query.
+        'BIN-FCT1': (1, 'Binning factor of the X axis (pixel)'),
+        'BIN-FCT2': (1, 'Binning factor of the Y axis (pixel)'),
+        'BSCALE': (1.0, 'Real=fits-value*BSCALE+BZERO'),
+        'BUNIT': ('ADU', 'Unit of original values'),
+        'BZERO': (0.0, 'Real=fits-value*BSCALE+BZERO'),
+        'CROP_OR1': (0, 'Origin in X of the cropped window (pixel)'),
+        'CROP_OR2': (0, 'Origin in Y of the cropped window (pixel)'),
+        'CROPPED':
+        ('False', 'Boolean indicating if the image is windowed or full frame'),
+        'DET-TMP': (0.0, 'Detector temperature (K)'),
+        'DETECTOR': ('DET', 'Name of the detector'),
+        'DETGAIN': (1., 'Detector gain'),
+        'DETMODE': ('base', 'Detector mode'),
+        'EXPTIME': (0.0, 'Total integration time of the frame (sec)'),
+        'FRATE': (0., 'Frame rate of the acquisition (Hz)'),
+        'GAIN': (1., 'AD conversion factor (electron/ADU)'),
+        'NDR': (1, 'Number of non-destructive reads'),
+        'EXTTRIG':
+        ('False', 'Boolean indicating if an extrernal trigger is used')
     }
 
     EDTTAKE_CAST = False  # Only OCAM overrides that
@@ -97,7 +101,7 @@ class EDTCameraNoModes:
         # PREPARE THE CAMERA
         # ====================
         # Now we have a serial link, in case prepare camera needs it.
-        self.prepare_camera()
+        self.prepare_camera_for_size()
 
         if no_start:
             return
@@ -112,9 +116,13 @@ class EDTCameraNoModes:
         # ====================
 
         self.camera_shm = None
-        self.grab_shm_fill_keywords(
-        )  # TODO - now the SHM is allocated, so we can do that
+        self.grab_shm_fill_keywords()
         # Maybe we can use a class variable as well to define what the expected keywords are ?
+
+        # =================================
+        # FINALIZE A FEW DETAILS POST-START
+        # =================================
+        self.prepare_camera_finalize()
 
         # TODO csets and RT prios - through CACAO ?
 
@@ -162,7 +170,11 @@ class EDTCameraNoModes:
                         f' -c {self.pdv_channel} -f {tmp_config}').split(' '),
                        stdout=subprocess.PIPE)
 
-    def prepare_camera(self):
+    def prepare_camera_for_size(self):
+        print(
+            'Calling prepare_camera on generic EDTCameraClass. Nothing happens here.'
+        )
+    def prepare_camera_finalize(self):
         print(
             'Calling prepare_camera on generic EDTCameraClass. Nothing happens here.'
         )
@@ -176,7 +188,7 @@ class EDTCameraNoModes:
     def start_frame_taker_and_dependents(self):
         self._start_taker_no_dependents()
         # Now handle the dependent processes
-        
+
         for dep_process in self.dependent_processes:
             dep_process.start()
 
@@ -192,11 +204,26 @@ class EDTCameraNoModes:
 
     def grab_shm_fill_keywords(self):
         # Only the init, or the regular updates ?
-        # How should the subclassing operate ?
-        self.camera_shm = SHM(self.STREAMNAME, symcode=0)
+        self.camera_shm = self._get_SHM()
+        self._fill_keywords()
 
-        #self.init
+    def _get_SHM(self):
+        # Separated to be overloaded if need be (thinking of you, OCAM !)
+        return SHM(self.STREAMNAME, symcode=0)
 
+    def _fill_keywords(self):
+        # These are pretty much defaults - we don't know anything about this
+        # basic abstract camera
+        preex_keywords = self.camera_shm.get_keywords(True)
+        preex_keywords.update(self.KEYWORDS)
+
+        self.camera_shm.set_keywords(preex_keywords)
+
+        self.camera_shm.update_keyword('BIN-FCT1', 1)
+        self.camera_shm.update_keyword('BIN-FCT2', 1)
+        self.camera_shm.update_keyword('CROP_OR1', 0)
+        self.camera_shm.update_keyword('CROP_OR2', 0)
+        self.camera_shm.update_keyword('CROPPED', 'N/A')
 
     def set_camera_size(self, height: int, width: int):
         '''
@@ -213,6 +240,7 @@ class EDTCameraNoModes:
         self.start_frame_taker_and_dependents()
 
         self.grab_shm_fill_keywords()
+
 
     def get_fg_parameters(self):
         # We don't need to get them, because we set them in init_pdv_configuration
@@ -269,12 +297,20 @@ class EDTCamera(EDTCameraNoModes):
         width, height = self.MODES[mode_id].fgsize
         return width, height
 
-    def prepare_camera(self, mode_id=None):
+    def prepare_camera_for_size(self, mode_id=None):
         # Gets called during constructor and set_mode
         if mode_id is None:
             mode_id = self.current_mode_id
         print(
-            'Calling prepare_camera on generic EDTCameraClass. Nothing happens here.'
+            'Calling prepare_camera_for_size on generic EDTCameraClass. Nothing happens here.'
+        )
+
+    def prepare_camera_finalize(self, mode_id=None):
+        # Gets called during constructor and set_mode
+        if mode_id is None:
+            mode_id = self.current_mode_id
+        print(
+            'Calling prepare_camera_finalize on generic EDTCameraClass. Nothing happens here.'
         )
 
     def set_camera_mode(self, mode_id):
@@ -290,17 +326,35 @@ class EDTCamera(EDTCameraNoModes):
 
         self.init_pdv_configuration()
 
-        self.prepare_camera()
+        self.prepare_camera_for_size()
 
         self.start_frame_taker_and_dependents()
 
         self.grab_shm_fill_keywords()
+
+        self.prepare_camera_finalize()
 
     def set_mode(self, mode_id):
         '''
             Alias
         '''
         self.set_camera_mode(mode_id)
+
+    def _fill_keywords(self):
+        preex_keywords = self.camera_shm.get_keywords(True)
+        print(preex_keywords)
+        print(33)
+        preex_keywords.update(self.KEYWORDS)
+
+        self.camera_shm.set_keywords(preex_keywords)
+        
+        cm = self.current_mode
+
+        self.camera_shm.update_keyword('BIN-FCT1', cm.binx)
+        self.camera_shm.update_keyword('BIN-FCT2', cm.biny)
+        self.camera_shm.update_keyword('CROP_OR1', cm.x0)
+        self.camera_shm.update_keyword('CROP_OR2', cm.y0)
+        self.camera_shm.update_keyword('CROPPED', 'N/A')
 
     def change_camera_parameters(self):
         raise NotImplementedError(

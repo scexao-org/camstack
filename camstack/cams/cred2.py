@@ -21,7 +21,8 @@ class CRED2(EDTCamera):
         0: CameraMode(x0=160, x1=479, y0=128, y1=383, fps=1500.082358000, tint=0.000663336),
     }
 
-    KEYWORDS = {} # TODO: see about that later.
+    KEYWORDS = {}
+    KEYWORDS.update(EDTCamera.KEYWORDS)
 
     def __init__(self, name:str, stream_name: str,
                  mode_id: int = 1, unit: int = 0, channel: int = 0):

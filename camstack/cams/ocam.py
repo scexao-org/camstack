@@ -5,6 +5,8 @@
 from camstack.cams.edt_base import EDTCamera
 from camstack.core.utilities import CameraMode
 
+from pyMilk.interfacing.isio_shmlib import SHM
+
 
 class OCAM2K(EDTCamera):
 
@@ -36,7 +38,8 @@ class OCAM2K(EDTCamera):
                    fgsize=(1056 // 2, 62)),
     }
 
-    KEYWORDS = {}  # TODO: see about that later.
+    KEYWORDS = {}
+    KEYWORDS.update(EDTCamera.KEYWORDS)
 
     EDTTAKE_CAST = True
 
@@ -54,7 +57,7 @@ class OCAM2K(EDTCamera):
         mode_id = (1, 3)[binning]
         basefile = '/home/scexao/src/camstack/config/ocam_full.cfg'
 
-        self.synchro = True  # TODO replace this with a kw dict matching the SHM
+        self.synchro = True
         self.STREAMNAME_ocam2d = final_stream_name
 
         # Call EDT camera init
@@ -78,7 +81,7 @@ class OCAM2K(EDTCamera):
     # AD HOC PREPARE CAMERA
     # =====================
 
-    def prepare_camera(self, mode_id: int = None):
+    def prepare_camera_for_size(self, mode_id: int = None):
 
         if mode_id is None:
             mode_id = self.current_mode_id
@@ -88,9 +91,6 @@ class OCAM2K(EDTCamera):
             self.send_command('binning off')
         elif mode_id == 3:
             self.send_command('binning on')
-
-        # Changing the binning trips the external sync.
-        self.set_synchro(self.synchro)
 
         # AD HOC PREPARE DEPENDENTS
         # Change the argument to ocam_decode
@@ -102,6 +102,10 @@ class OCAM2K(EDTCamera):
                 h, w = (cm.x1 - cm.x0 + 1) // cm.binx, (cm.y1 - cm.y0 + 1) // cm.biny
                 dep_proc.cli_args = (dep_proc.cli_args[0], h, w)
 
+    def prepare_camera_finalize(self, mode_id: int = None):
+        # Changing the binning trips the external sync.
+        self.set_synchro(self.synchro)
+
 
     def send_command(self, cmd, format=True):
         # Just a little bit of parsing to handle the OCAM format
@@ -111,6 +115,31 @@ class OCAM2K(EDTCamera):
             return res[wherechevron + 2:-1].split('][')
         else:
             return res
+
+    def _get_SHM(self):
+        # Overload to get a pointer to ocam2d instead of ocam2krc
+        return SHM(self.STREAMNAME_ocam2d, symcode=0)
+
+    def _fill_keywords(self):
+        # Do a little more filling than the subclass after changing a mode
+        # And call the thread-polling function
+        #TODO: thread temp polling
+
+        EDTCamera._fill_keywords(self)
+
+        self.camera_shm.update_keyword('DETECTOR', 'OCAM2K (Reno)')
+        self.camera_shm.update_keyword('DETMODE', 'GlobRstSingle')
+        self.camera_shm.update_keyword('CROPPED', 'False')
+        self.camera_shm.update_keyword('NDR', 1)
+
+        # Additional fill-up of the camera state
+        self.get_gain()
+        self.poll_camera_for_keywords()
+
+    def poll_camera_for_keywords(self):
+        self.get_temperature()
+
+
 
     # ===========================================
     # AD HOC METHODS - TO BE BOUND IN THE SHELL ?
@@ -124,35 +153,40 @@ class OCAM2K(EDTCamera):
 
     def set_gain(self, gain: int):
         res = self.send_command(f'gain {gain}')
-        return int(res[0])
-        # TODO set SHM keyword !
+        val = int(res[0])
+        self.camera_shm.update_keyword('DETGAIN', val)
+        return val
 
     def get_gain(self):
         res = self.send_command('gain')
-        # TODO set SHM keyword !
-        return int(res[0])
+        val = int(res[0])
+        self.camera_shm.update_keyword('DETGAIN', val)
+        return val
 
     def set_synchro(self, val: bool):
         self.send_command(f'synchro {("off","on")[val]}')
         self.synchro = val
-        # TODO set SHM keyword !
-        # TODO disable fps kw
+        self.camera_shm.update_keyword('EXTTRIG', ('False', 'True')[val])
 
     def set_fps(self, fps: float):
         # 0 sets maxfps
         if self.synchro:
             raise AssertionError('No fps set in synchro mode')
-        self.send_command(f'fps {int(fps)}')
+        res = self.send_command(f'fps {int(fps)}')
+        val = float(res[0])
+        self.camera_shm.update_keyword('FRATE', val)
+        return val
 
     def get_temperature(self):
-        return self._get_temperature()[0]
+        val = self._get_temperature()[0]
+        return val
 
     def _get_temperature(self):
         ret = self.send_command('temp')
         # Expected return: <1>[-45.2][23][13][24][0.1][9][12][-450][1][10594]
         temps = [float(x) for x in ret]
         self.is_cooling = bool(temps[8])
-        # TODO update keywords & internals
+        self.camera_shm.update_keyword('DET-TMP', temps[0])
         return temps[0], temps[7] / 10.  # temp, setpoint
 
     def set_cooling(self):
@@ -192,7 +226,7 @@ if __name__ == "__main__":
 
     ocam = OCAM2K('ocam',
                   'ocam2krc',
-                  'ocam2d',
+                  'ocam2dalt',
                   unit=3,
                   channel=0,
                   binning=binning,
