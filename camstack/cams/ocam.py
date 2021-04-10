@@ -42,7 +42,8 @@ class OCAM2K(EDTCamera):
 
     def __init__(self,
                  name: str,
-                 stream_name: str,
+                 mangled_stream_name: str,
+                 final_stream_name: str,
                  binning: bool = True,
                  unit: int = 3,
                  channel: int = 0,
@@ -54,11 +55,12 @@ class OCAM2K(EDTCamera):
         basefile = '/home/scexao/src/camstack/config/ocam_full.cfg'
 
         self.synchro = True  # TODO replace this with a kw dict matching the SHM
+        self.STREAMNAME_ocam2d = final_stream_name
 
         # Call EDT camera init
         # This should pre-kill dependent sessions
         # But we should be able to "prepare" the camera before actually starting
-        EDTCamera.__init__(self, name, stream_name, mode_id, unit, channel,
+        EDTCamera.__init__(self, name, mangled_stream_name, mode_id, unit, channel,
                            basefile, dependent_processes)
 
         # ======
@@ -184,12 +186,13 @@ if __name__ == "__main__":
     )
     tcp_send = DependentProcess(
         tmux_name='ocam_tcp',
-        cli_cmd='OMP_NUM_THREADS=1 /home/scexao/bin/shmimTCPtransmit %s %s %u',
+        cli_cmd='sleep 5; OMP_NUM_THREADS=1 /home/scexao/bin/shmimTCPtransmit %s %s %u',
         cli_args=('ocam2dalt', '10.20.70.1', 30107),
     )
 
     ocam = OCAM2K('ocam',
                   'ocam2krc',
+                  'ocam2d',
                   unit=3,
                   channel=0,
                   binning=binning,

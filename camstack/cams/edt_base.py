@@ -17,9 +17,26 @@ class EDTCameraNoModes:
         And implements the server side management of the imgtake
     '''
 
-    INTERACTIVE_SHELL_METHODS = ['send_command']
+    INTERACTIVE_SHELL_METHODS = ['send_command', 'close', 'release']
 
-    KEYWORDS = {}  # Define the format ?
+    KEYWORDS = { # Format is name: description - this list CAN be figured out from a redis query.
+        'BIN-FCT1' : 'Binning factor of the X axis (pixel)',
+        'BIN-FCT2' : 'Binning factor of the Y axis (pixel)',
+        'BSCALE' : 'Real=fits-value*BSCALE+BZERO',
+        'BUNIT' : 'Unit of original values',
+        'BZERO' : 'Real=fits-value*BSCALE+BZERO',
+        'CROP_OR1' : 'Origin in X of the cropped window (pixel)',
+        'CROP_OR2' : 'Origin in Y of the cropped window (pixel)',
+        'CROPPED' : 'Boolean indicating if the image is windowed or full frame',
+        'DET-TMP' : 'Detector temperature (K)',
+        'DETECTOR' : 'Name of the detector',
+        'DETGAIN' : 'Detector gain',
+        'DETMODE' : 'Detector mode',
+        'FRATE' : 'Frame rate of the acquisition (Hz)',
+        'GAIN' : 'AD conversion factor (electron/ADU)',
+        'NDR' : 'Number of non-destructive reads',
+    }
+
     EDTTAKE_CAST = False  # Only OCAM overrides that
 
     def __init__(self,
@@ -176,7 +193,10 @@ class EDTCameraNoModes:
     def grab_shm_fill_keywords(self):
         # Only the init, or the regular updates ?
         # How should the subclassing operate ?
-        pass
+        self.camera_shm = SHM(self.STREAMNAME, symcode=0)
+
+        #self.init
+
 
     def set_camera_size(self, height: int, width: int):
         '''
