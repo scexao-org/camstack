@@ -219,6 +219,8 @@ class EDTCameraNoModes:
 
         self.camera_shm.set_keywords(preex_keywords)
 
+        self.camera_shm.update_keyword('DETECTOR',
+                f'FG unit {self.pdv_unit} ch. {self.pdv_channel}')
         self.camera_shm.update_keyword('BIN-FCT1', 1)
         self.camera_shm.update_keyword('BIN-FCT2', 1)
         self.camera_shm.update_keyword('CROP_OR1', 0)
@@ -265,7 +267,7 @@ class EDTCameraNoModes:
 
 class EDTCamera(EDTCameraNoModes):
 
-    INTERACTIVE_SHELL_METHODS = [] + EDTCameraNoModes.INTERACTIVE_SHELL_METHODS
+    INTERACTIVE_SHELL_METHODS = ['set_camera_mode'] + EDTCameraNoModes.INTERACTIVE_SHELL_METHODS
 
     MODES = {}  # Define the format ?
     EDTTAKE_CAST = False

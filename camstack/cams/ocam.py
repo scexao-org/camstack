@@ -12,7 +12,7 @@ class OCAM2K(EDTCamera):
 
     INTERACTIVE_SHELL_METHODS = [
         'set_binning', 'gain_protection_reset', 'set_gain', 'get_gain',
-        'set_synchro', 'set_fps', 'get_temperature', 'set_cooling',
+        'set_synchro', 'set_fps', 'get_temperature', 'toggle_cooling',
         'set_temperature_setpoint'
     ] + EDTCamera.INTERACTIVE_SHELL_METHODS
 
@@ -73,7 +73,9 @@ class OCAM2K(EDTCamera):
         # Issue a few standards for OCAM
         self.send_command(
             'interface 0')  # Disable verbosity to be able to parse temp
-        self.set_command('led off')
+        self.toggle_cooling(True)
+        self.set_temperature_setpoint(-45.0)
+        self.send_command('led off')
         self.gain_protection_reset()
         self.set_gain(1)
         self.set_synchro(True)  # Is called by the setmode in the constructor.
@@ -134,14 +136,18 @@ class OCAM2K(EDTCamera):
 
         self.camera_shm.update_keyword('DETECTOR', 'OCAM2K (Reno)')
         self.camera_shm.update_keyword('DETMODE', 'GlobRstSingle')
-        self.camera_shm.update_keyword('CROPPED', 'False')
+
+        self.camera_shm.update_keyword('BIN-FCT1', self.current_mode.binx)
+        self.camera_shm.update_keyword('BIN-FCT2', self.current_mode.biny)
+
+        self.camera_shm.update_keyword('CROPPED', 'False') # Ocam bins but never crops.
         self.camera_shm.update_keyword('NDR', 1)
 
         # Additional fill-up of the camera state
-        self.get_gain()
+        self.get_gain() # Sets 'DETGAIN'
 
         # Call the stuff that we can't know otherwise
-        self.poll_camera_for_keywords()
+        self.poll_camera_for_keywords() # Sets 'DET-TMP'
 
     def poll_camera_for_keywords(self):
         self.get_temperature()
@@ -193,13 +199,15 @@ class OCAM2K(EDTCamera):
         # Expected return: <1>[-45.2][23][13][24][0.1][9][12][-450][1][10594]
         temps = [float(x) for x in ret]
         self.is_cooling = bool(temps[8])
-        self.camera_shm.update_keyword('DET-TMP', temps[0])
+        self.camera_shm.update_keyword('DET-TMP', temps[0] + 273.15)
         return temps[0], temps[7] / 10.  # temp, setpoint
 
-    def set_cooling(self):
-        self.get_temperature()
-        self.is_cooling = not self.is_cooling
+    def toggle_cooling(self, cooling: bool = None):
+        if cooling is None: # Perform a toggle
+            self.get_temperature() # Populate self.is_cooling = bool(temp[8])
+            cooling = not self.is_cooling
         self.send_command('temp ' + ('off', 'on')[self.is_cooling])
+        self.is_cooling = cooling
 
     def set_temperature_setpoint(self, temp):
         self.send_command(f'temp {int(temp)}')
