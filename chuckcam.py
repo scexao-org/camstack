@@ -9,17 +9,16 @@
 #                                                    #
 # -------------------------------------------------- #
 
-import pygame, sys
+import pygame
 from pygame.locals import *
-from pygame.locals import (KMOD_LALT, KMOD_LCTRL, KMOD_LSHIFT, K_f, K_q, K_a,
-                           K_h, K_p, K_b, K_r, K_s, K_d, K_c, K_m, K_i, K_v,
-                           K_g, K_z, K_n, K_o, K_l, K_1, K_2, K_3, K_4, K_5,
-                           K_6, K_7, K_8, K_9, K_0, K_MINUS, K_EQUALS, K_UP,
-                           K_LEFT, K_DOWN, K_RIGHT, QUIT, KEYDOWN, K_ESCAPE)
+
 import numpy as np
-import matplotlib.cm as cm
+
+from matplotlib import cm
+
+import os, sys
 import struct
-import os
+
 from PIL import Image
 import time
 import math as m
@@ -27,11 +26,15 @@ import copy
 import datetime as dt
 from astropy.io import fits as pf
 import subprocess
-from xaosim.scexao_shmlib import shm
+
+
+from pyMilk.interfacing.isio_shmlib import SHM
 
 home = os.getenv('HOME')
 conf_dir = home + "/conf/chuckcam_aux/"
 sys.path.append(home + '/src/lib/python/')
+
+MILK_SHM_DIR = os.getenv('MILK_SHM_DIR')
 
 import image_processing as impro
 
@@ -40,19 +43,19 @@ import image_processing as impro
 #             short hands for opening and checking shm
 # ------------------------------------------------------------------
 def open_shm(shm_name, dims=(1, 1), check=False):
-
-    if not os.path.isfile("/tmp/%s.im.shm" % (shm_name, )):
+    
+    if not os.path.isfile(MILK_SHM_DIR + "/%s.im.shm" % (shm_name, )):
         os.system("creashmim %s %d %d" % (shm_name, dims[0], dims[1]))
-    shm_data = shm("/tmp/%s.im.shm" % (shm_name, ), verbose=False)
+    shm_data = SHM(MILK_SHM_DIR + "/%s.im.shm" % (shm_name, ))
     if check:
-        tmp = shm_data.mtdata['x'], shm_data.mtdata['y']
+        tmp = shm_data.shape_c
         if tmp != dims:
             #if shm_data.mtdata['size'][:2] != dims:
-            os.system("rm /tmp/%s.im.shm" % (shm_name, ))
+            os.system("rm %s/%s.im.shm" % (MILK_SHM_DIR, shm_name, ))
             os.system("creashmim %s %d %d" % (shm_name, xsizeim, ysizeim))
-            shm_data = shm("/tmp/%s.im.shm" % (shm_data, ), verbose=False)
+            shm_data = SHM(MILK_SHM_DIR + "/%s.im.shm" % (shm_data, ), verbose=False)
 
-    return (shm_data)
+    return shm_data
 
 
 # ------------------------------------------------------------------
@@ -439,8 +442,8 @@ if args != []:
 #                access to shared memory structures
 # ------------------------------------------------------------------
 camid = 0  # camera identifier (0: science camera)
-cam = shm("/tmp/ircam%d.im.shm" % (camid, ), verbose=False)
-xsizeim, ysizeim = cam.mtdata['x'], cam.mtdata['y']
+cam = SHM(MILK_SHM_DIR + "/ircam%d.im.shm" % (camid, ), verbose=False)
+xsizeim, ysizeim = cam.shape_c
 
 (xsize, ysize) = (320, 256)  #Force size of old chuck for the display
 
@@ -888,11 +891,11 @@ while True:  # the main game loop
     # Relaod shared memory with different size due to change in window size
     if shmreload:
         print("reloading SHM")
-        cam = shm("/tmp/ircam%d.im.shm" % (camid, ), verbose=False)
+        cam = SHM(MILK_SHM_DIR + "/ircam%d.im.shm" % (camid, ), verbose=False)
         xsizeim, ysizeim = cam.mtdata['x'], cam.mtdata['y']
         #(xsizeim, ysizeim) = cam.mtdata['size'][:2]#size[:cam.naxis]
         print("image xsize=%d, ysize=%d" % (xsizeim, ysizeim))
-        os.system("rm /tmp/ircam%d_*" % (camid, ))
+        os.system("rm %s/ircam%d_*" % (MILK_SHM_DIR, camid, ))
         time.sleep(1)
         cam_dark = open_shm("ircam%d_dark" % (camid, ),
                             dims=(xsizeim, ysizeim),
@@ -1714,8 +1717,12 @@ while True:  # the main game loop
                     saveim = not saveim
                     if saveim:
                         timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
-                        savepath = '/media/data/' + timestamp + '/ircam%dlog/' % (
-                            camid, )
+                        if (mmods & KMOD_LSHIFT):
+                            savepath = '/media/data/ARCHIVED_DATA/' + timestamp + \
+                                '/ircam%dlog/' % (camid, )
+                        else:
+                            savepath = '/media/data/' + timestamp + \
+                                '/ircam%dlog/' % (camid, )
                         ospath = os.path.dirname(savepath)
                         if not os.path.exists(ospath):
                             os.makedirs(ospath)
@@ -1955,17 +1962,15 @@ while True:  # the main game loop
             # Crop modes and full frame
             #--------------------------
             CROP_KEYLIST = [
-                K_f, K_1, K_2, K_3, K_4, K_5, K_6, K_7, K_8, K_9, K_0, K_MINUS,
-                K_EQUALS
+                K_0, K_1, K_2, K_3, K_4, K_5, K_6, K_7, K_8, K_9, K_MINUS,
+                K_EQUALS, K_f
             ]
             if event.key in CROP_KEYLIST:
                 what_key = CROP_KEYLIST.index(event.key)
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL) and (mmods & KMOD_LALT):
-                    mode_id = (
-                        'full',
-                        str(what_key))[what_key >=
-                                       1]  # Index 0 == Ctrl+alt+f == full
+                    mode_id = ('full', str(what_key))[
+                        what_key == 12]  # Index 12 == Ctrl+alt+f == full
                     cam_paused.set_data(np.ones(1, dtype=np.float32))
                     tmux("set_camera_mode(%s)" % mode_id,
                          session="ircam%dctrl" % (camid, ))
@@ -2009,7 +2014,6 @@ while True:  # the main game loop
 
     pygame.display.update(rects)
 
-    #pygame.display.flip()
     fpsClock.tick(FPSdisp)
 
 pygame.quit()
