@@ -42,10 +42,10 @@ class CRED2(EDTCamera):
         # ======
 
         # Issue a few standards for CRED2
-        #self.send_command('interface 0') # Disable verbosity to be able to parse temp
-        #self.gain_protection_reset()
-        #self.set_gain(1)
-        #self.set_synchro(True) # Is called by the setmode in the constructor.
+        self.send_command('set fan mode manual')
+        self.send_command('set fan speed 0')
+        self.send_command('set led off')
+        self.set_gain('high')
 
     # =====================
     # AD HOC PREPARE CAMERA
@@ -57,18 +57,77 @@ class CRED2(EDTCamera):
             mode_id = self.current_mode_id
 
         # Not really handling fps/tint for the OCAM, we just assume an ext trigger
-        if mode_id == 1: #TODO
-            self.send_command('binning off')
-        elif mode_id == 3:
-            self.send_command('binning on')
+        if mode_id == 'full': #TODO
+            self.send_command('set cropping off')
+        else:
+            self.send_command('set cropping on')
+
+        mode = self.MODES[mode_id]
+        self._set_check_cropping(mode.x0, mode.x1, mode.y0, mode.y1)
         
         # Changing the binning trips the external sync.
         self.set_synchro(self.synchro)
 
+    def prepare_camera_finalize(self, mode_id: int = None):
+
+        if mode_id is None:
+            mode_id = self.current_mode_id
+        cm = self.MODES[mode_id]
+
+        self.set_fps(cm.fps)
+        self.set_tint(cm.tint)
+
+    def send_command(self, cmd, format=True):
+        # Just a little bit of parsing to handle the CRED2 format
+        res = EDTCamera.send_command(self, cmd)
+        if format:
+            return res.split(':')
+        else:
+            return res
+
+    def _fill_keywords(self):
+        # Do a little more filling than the subclass after changing a mode
+        # And call the thread-polling function
+        #TODO: thread temp polling
+
+        EDTCamera._fill_keywords(self)
+
+        self.camera_shm.update_keyword('DETECTOR', 'CRED2')
+        self.camera_shm.update_keyword('CROPPED', 'False')
+        self.get_NDR()
+        self.get_tint()
+        self.get_fps()
+        self.camera_shm.update_keyword('DETMODE', ('Single', 'IMRO')[self.NDR > 1])
+
+        # Additional fill-up of the camera state
+        self.get_gain()
+
+        # Call the stuff that we can't know otherwise
+        self.poll_camera_for_keywords()
+
+    def poll_camera_for_keywords(self):
+        self.get_temperature()
 
     # ===========================================
     # AD HOC METHODS - TO BE BOUND IN THE SHELL ?
     # ===========================================
+
+    def _get_cropping(self):
+        xx, yy = self.send_command('cropping raw')[1:]
+        x0, x1 = xx.split('-')
+        y0, y1 = yy.split('-')
+        return int(x0), int(x1), int(y0), int(y1)
+
+    def _set_check_cropping(self, x0, x1, y0, y1):
+        for _ in range(3):
+            gx0, gx1, gy0, gy1 = self._get_cropping()
+            if gx0 == x0 and gx1 == x1 and gy0 == y0 and gy1 == y1:
+                return x0, x1, y0, y1
+            if gx0 != x0 or gx1 != x1:
+                self.send_command('set cropping columns %u-%u') % (x0, x1)
+            if gy0 != y0 or gy1 != y1:
+                self.send_command('set cropping rows %u-%u') % (x0, x1)
+        raise AssertionError(f'Cannot set desired crop {x0}-{x1} {y0}-{y1} after 3 tries')
 
 class Rajni(CRED2):
 

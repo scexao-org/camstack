@@ -73,6 +73,7 @@ class OCAM2K(EDTCamera):
         # Issue a few standards for OCAM
         self.send_command(
             'interface 0')  # Disable verbosity to be able to parse temp
+        self.set_command('led off')
         self.gain_protection_reset()
         self.set_gain(1)
         self.set_synchro(True)  # Is called by the setmode in the constructor.
@@ -103,6 +104,10 @@ class OCAM2K(EDTCamera):
                 dep_proc.cli_args = (dep_proc.cli_args[0], h, w)
 
     def prepare_camera_finalize(self, mode_id: int = None):
+
+        if mode_id is None:
+            mode_id = self.current_mode_id
+
         # Changing the binning trips the external sync.
         self.set_synchro(self.synchro)
 
@@ -134,6 +139,8 @@ class OCAM2K(EDTCamera):
 
         # Additional fill-up of the camera state
         self.get_gain()
+
+        # Call the stuff that we can't know otherwise
         self.poll_camera_for_keywords()
 
     def poll_camera_for_keywords(self):
