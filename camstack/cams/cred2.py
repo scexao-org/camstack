@@ -8,11 +8,6 @@ from camstack.cams.edt_base import EDTCamera
 
 from camstack.core.utilities import CameraMode
 
-# CameraModes: copy, ...
-
-# Camera: reloadshm, populatekeywords
-
-
 class CRED2(EDTCamera):
 
     INTERACTIVE_SHELL_METHODS = [
