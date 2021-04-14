@@ -61,7 +61,7 @@ class EdtInterfaceSerial:
             return res
         raise Exception("Error in response")
 
-    def send_command(self, cmd):
+    def send_command(self, cmd, base_timeout: float = 100):
         #CRED2: Confirmed and tested
         try:  # Try to flush the serial buffer, just in case.
             _ = self._serial_read()
@@ -69,10 +69,10 @@ class EdtInterfaceSerial:
             pass
 
         recRes = None
-        for k in range(4):
+        for k in range(3):
+            _ = self._serial_command(cmd)
             try:
-                _ = self._serial_command(cmd)
-                recRes = self._serial_read(timeout=100 * 2**k)
+                recRes = self._serial_read(int(base_timeout) * 2**k)
                 if len(recRes) > 0:
                     return recRes
             except:
@@ -190,87 +190,3 @@ class EdtInterfaceAcquisition(EdtInterfaceSerial):
             EdtDLL.pdv_close(self.pdvObj)
         except Exception as e:
             print(e)
-
-    #=========================================================
-    #
-    # FIXME METHODS - stuff that should move to camera classes
-    # (This is CRED2 stuff)
-    #=========================================================
-
-
-    def getVersion(self):
-        '''
-        CRED2: returns single, printable string with all version values
-        ie: use print(getVersion()) to print the result
-
-        # FIXME: camera function
-        '''
-        #CRED2: Confirmed and tested
-        res = self.send_command("version")
-        return "".join(res.split('\r'))
-
-    def setExtMode(self, mode=0):
-        """
-        returns early if invalid mode is provided
-        mode = 0, internal
-        mode = 2, external
-
-        # FIXME: camera function
-        """
-        #CRED2: Confirmed and tested
-        if mode == 0:
-            mdstr = "off"
-        elif mode == 2:
-            mdstr = "on"
-        else:
-            return mode
-        _ = self.send_command("set extsynchro " + mdstr)
-        #WCLogger.info("Set external mode %d" % mode)
-        self.extMode = mode
-        return mode
-
-    def getExtMode(self):
-        #CRED2: Confirmed and tested
-        """
-            FIXME: camera function
-        """
-        res = self.send_command("extsynchro")
-        return " ".join(res.split()[1:])
-
-    def getTemperatures(self, full=None):
-        """
-        Default is to return just sensor temperature
-        Returns
-            full = None: (float) just sensor temperature
-            full != None: (str) 
-                single, printable string with all temp values
-                ie: use print(getVersion()) to print the result
-
-        FIXME: camera command
-        """
-        #CRED2: Confirmed and tested
-        if full is None:
-            res = self.send_command("temperatures snake raw")
-            return float(res.split()[0])
-        else:
-            res = self.send_command("temperatures")
-            return "".join(res.split('\r'))
-
-    def getTempSetpoint(self):
-        '''
-        Returns setpoint for the camera's sensor (float)
-        # FIXME: camera command
-        '''
-        #CRED2: Confirmed and tested
-        res = self.send_command("temperatures snake setpoint raw")
-        return float(res.split()[0])
-
-    def setTemperature(self, degC):
-        '''
-        Set the temperature for the camera (sensor)
-        degC: temperature to set in Celsius
-        # FIXME: camera command
-        '''
-        #CRED2: Confirmed and tested
-        #WCLogger.info("Setting temp to %d degC" % degC)
-        self.send_command("set temperatures snake " + str(degC))

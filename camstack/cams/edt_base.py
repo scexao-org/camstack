@@ -165,6 +165,7 @@ class EDTCameraNoModes:
                 f'EDT cfg file {self.base_config_file} not found.')
 
         with open(tmp_config, 'a') as file:
+            file.write(f'\n\n')
             file.write(f'width: {self.width_fg}\n')
             file.write(f'height: {self.height}\n')
 
@@ -189,6 +190,9 @@ class EDTCameraNoModes:
 
     def start_frame_taker_and_dependents(self):
         self._start_taker_no_dependents()
+        # We recreated the SHM !
+        self.grab_shm_fill_keywords()
+        self.prepare_camera_finalize()
         # Now handle the dependent processes
 
         for dep_process in self.dependent_processes:
@@ -253,12 +257,12 @@ class EDTCameraNoModes:
     def set_fg_parameters(self):
         pass
 
-    def send_command(self, cmd):
+    def send_command(self, cmd, base_timeout: float=100.):
         '''
             Wrap to the serial
             That supposes we HAVE serial... maybe we'll move this to a subclass
         '''
-        return self.edt_iface.send_command(cmd)
+        return self.edt_iface.send_command(cmd, base_timeout=base_timeout)
 
     def raw(self, cmd):
         '''
