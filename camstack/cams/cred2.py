@@ -58,6 +58,7 @@ class CRED2(EDTCamera):
         # ======
 
         # Issue a few standards for CRED2
+        self.send_command('set cropping on')
         self.send_command('set fan mode manual')
         self.send_command('set fan speed 0')
         self.send_command('set led off')
@@ -75,12 +76,12 @@ class CRED2(EDTCamera):
 
         # Not really handling fps/tint for the OCAM, we just assume an ext trigger
         if mode_id == self.FULL:
-            self.send_command('set cropping off')
+            pass
+            #self.send_command('set cropping off')
             # CRED2 is especially serial-bitchy after a "set cropping"
-            self.edt_iface._serial_read(timeout=3000)
+            #self.edt_iface._serial_read(timeout=3000)
         else:
-            self.send_command('set cropping on')
-            self.edt_iface._serial_read(timeout=3000)
+            pass
 
         mode = self.MODES[mode_id]
         self._set_check_cropping(mode.x0, mode.x1, mode.y0, mode.y1)
@@ -106,15 +107,14 @@ class CRED2(EDTCamera):
 
     def send_command(self, cmd, format=True):
         # Just a little bit of parsing to handle the CRED2 format
-        res = EDTCamera.send_command(self, cmd, base_timeout=500)[:-10]
-        print(cmd, res)
+        res = EDTCamera.send_command(self, cmd)[:-10]
+
         while 'cli>' in res:
             # We might have gotten a double answer
             # Seems to happen when requesting pressure (CRED1) and pretty often with CRED2
             cut = res.index('>')
             res = res[cut+1:]
 
-        print(res)
         if format and ':' in res:
             return res.split(':')
         else:
@@ -149,7 +149,6 @@ class CRED2(EDTCamera):
 
     def _get_cropping(self):
         res = self.send_command('cropping raw')
-        print(res)
         xx, yy = res[1:]
         x0, x1 = [int(xxx) for xxx in xx.split('-')]
         y0, y1 = [int(yyy) for yyy in yy.split('-')]
@@ -163,10 +162,10 @@ class CRED2(EDTCamera):
             if gx0 != x0 or gx1 != x1:
                 self.send_command('set cropping columns %u-%u' % (x0, x1))
                 # CRED2s are finnicky with cropping, we'll add a wait
-                time.sleep(1.5)
+                time.sleep(.2)
             if gy0 != y0 or gy1 != y1:
                 self.send_command('set cropping rows %u-%u' % (y0, y1))
-                time.sleep(1.5)
+                time.sleep(.2)
         raise AssertionError(
             f'Cannot set desired crop {x0}-{x1} {y0}-{y1} after 3 tries')
 
@@ -288,9 +287,9 @@ class Chuck(CRED2):
         # 224 x 156, centered
         1:
         CameraMode(x0=192,
-                   x1=415,
-                   y0=160,
-                   y1=347,
+                   x1=447,
+                   y0=178,
+                   y1=333,
                    fps=2050.202611000,
                    tint=0.000483913),
         # 128 x 128, centered
@@ -319,8 +318,8 @@ class Chuck(CRED2):
                    tint=0.000449819),
         # 96 x 72, centered
         5:
-        CameraMode(x0=256,
-                   x1=351,
+        CameraMode(x0=272,
+                   x1=368,
                    y0=220,
                    y1=291,
                    fps=8002.636203000,

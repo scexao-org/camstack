@@ -895,7 +895,7 @@ while True:  # the main game loop
 
         print("In the time it takes Chuck Norris to sidekick a")
         print("red-headed stepchild, we'll acquire this dark.")
-        
+
         if not block:
             os.system("ircam_block")  # blocking the light
         msgwhl = "     BLOCK      "
@@ -960,9 +960,14 @@ while True:  # the main game loop
             fpsn = sync_param[3]
             delay = cam_ro + flc_oft + 3 * lag
         else:
-            etimen = cam.get_expt() * 1e6
-            fpsn = cam.get_fps()
-            delay = 0
+            try:
+                etimen = cam.get_expt() * 1e6
+                fpsn = cam.get_fps()
+                delay = 0
+            except KeyError:
+                time.sleep(5.)
+                shmreload = True
+                continue
         ndrn = int(cam.get_ndr())
         cropn = cam.get_crop().astype(int)
         if gpin:
@@ -1367,7 +1372,7 @@ while True:  # the main game loop
                     if (nindex < nndr - 1):
                         nindex += 1
                         ndrc = ndrs[nindex]
-                        tmux("set_NDR() %d" % (ndrc, ),
+                        tmux("set_NDR(%d)" % (ndrc, ),
                              session="ircam%dctrl" % (camid, ))
                         time.sleep(1)
                         ndr = cam.get_ndr()
@@ -1391,7 +1396,7 @@ while True:  # the main game loop
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
                         else:
-                            tmux("set_tint() %f" % (etimec * 1.e-6, ),
+                            tmux("set_tint(%f)" % (etimec * 1.e-6, ),
                                  session="ircam%dctrl" % (camid, ))
                             time.sleep(1)
                             etime = cam.get_expt() * 1e6
@@ -1409,7 +1414,7 @@ while True:  # the main game loop
                     if (nindex > 0):
                         nindex -= 1
                         ndrc = ndrs[nindex]
-                        tmux("set_NDR() %d" % (ndrc, ),
+                        tmux("set_NDR(%d)" % (ndrc, ),
                              session="ircam%dctrl" % (camid, ))
                         time.sleep(1)
                         ndr = cam.get_ndr()
@@ -1433,7 +1438,7 @@ while True:  # the main game loop
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
                         else:
-                            tmux("set_tint() %f" % (etimec * 1.e-6, ),
+                            tmux("set_tint(%f)" % (etimec * 1.e-6, ),
                                  session="ircam%dctrl" % (camid, ))
                             time.sleep(1)
                             etime = cam.get_expt() * 1e6
@@ -1465,7 +1470,7 @@ while True:  # the main game loop
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
                         else:
-                            tmux("set_fps() %f" % (fpsc, ),
+                            tmux("set_fps(%f)" % (fpsc, ),
                                  session="ircam%dctrl" % (camid, ))
                             time.sleep(1)
                             fps = cam.get_fps()
@@ -1504,7 +1509,7 @@ while True:  # the main game loop
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
                         else:
-                            tmux("set_fps() %f" % (fpsc, ),
+                            tmux("set_fps(%f)" % (fpsc, ),
                                  session="ircam%dctrl" % (camid, ))
                             time.sleep(1)
                             fps = cam.get_fps()
@@ -1662,7 +1667,7 @@ while True:  # the main game loop
                                     np.int)
                                 tint = sync_param[2]
                             else:
-                                tmux("set_tint() %f" % (tint * 1.e-6, ),
+                                tmux("set_tint(%f)" % (tint * 1.e-6, ),
                                      session="ircam%dctrl" % (camid, ))
                                 time.sleep(1)
                                 tint = cam.get_expt() * 1e6
@@ -1694,7 +1699,7 @@ while True:  # the main game loop
                             ircam_synchro.set_data(
                                 sync_param.astype(np.float32))
                         else:
-                            tmux("set_tint() %f" % (tint * 1.e-6, ),
+                            tmux("set_tint(%f)" % (tint * 1.e-6, ),
                                  session="ircam%dctrl" % (camid, ))
                         biashere = True
                         bpmhere = True
@@ -1973,7 +1978,7 @@ while True:  # the main game loop
                         cam_paused.set_data(ONES_NODIM)
                         tmux("set_camera_mode(%s)" % mode_id,
                             session="ircam%dctrl" % (camid, ))
-                        time.sleep(10)
+                        time.sleep(12)
                         cam_paused.set_data(ZERO_NODIM)
                         shmreload = True
 

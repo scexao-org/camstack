@@ -35,7 +35,7 @@ class EdtInterfaceSerial:
         #CRED2: Confirmed and tested
         return EdtDLL.pdv_serial_wait(self.pdvObj, timeout, maxchars)
 
-    def _serial_read(self, timeout=100, nchars=32):
+    def _serial_read(self, timeout=10, nchars=5):
         #CRED2: Confirmed and tested
         revbuf = create_string_buffer(b'\000' * 40)
         n = self._serial_wait(timeout, nchars)
@@ -61,7 +61,7 @@ class EdtInterfaceSerial:
             return res
         raise Exception("Error in response")
 
-    def send_command(self, cmd, base_timeout: float = 100):
+    def send_command(self, cmd, base_timeout: float = 10):
         #CRED2: Confirmed and tested
         try:  # Try to flush the serial buffer, just in case.
             _ = self._serial_read()
@@ -69,14 +69,22 @@ class EdtInterfaceSerial:
             pass
 
         recRes = None
+        # Number of attempts in sending the command
         for k in range(3):
             _ = self._serial_command(cmd)
-            try:
-                recRes = self._serial_read(int(base_timeout) * 2**k)
-                if len(recRes) > 0:
-                    return recRes
-            except:
-                continue
+            # Number of attemps at receiving the command, with exp
+            # increasing timeouts
+            for i in range(8):
+                try:
+                    recRes = self._serial_read(int(base_timeout) * 2**i)
+                    if len(recRes) > 0:
+                        print(f'Command {cmd}')
+                        print(f'Attempted sends: {k+1}')
+                        print(f'Attempted receives: {i+1}')
+                        print('----')
+                        return recRes
+                except:
+                    continue
         if recRes is None:
             raise Exception("Error in sendCommand")
         return recRes # Which is an empty string at this point
