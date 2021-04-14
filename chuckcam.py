@@ -617,7 +617,7 @@ tmux("get_NDR()", session="ircam%dctrl" % (camid, ))
 time.sleep(1)
 tmux("get_fps()", session="ircam%dctrl" % (camid, ))
 time.sleep(1)
-sync_param = ircam_synchro.get_data().astype(np.int)[0]
+sync_param = ircam_synchro.get_data().astype(np.int)
 lag = 7
 cam_ro = 22 - lag
 sync_param[4] = 160
@@ -791,7 +791,7 @@ rct_zm.topleft = (5 * z1, 5 * z1)
 msgwhl = whatfilter(reachphoto, slot, block)
 wh = font1.render(msgwhl, True, CYAN)
 rct_wh = wh.get_rect()
-rct_wh.topright = (xws - 6 * z1, 5 * z1)
+rct_wh.topright = (xws - 8 * z1, 5 * z1)
 
 #pupil lens
 msgtop = whatmsg(pup, reachphoto, gpin, rpin)
@@ -953,7 +953,7 @@ while True:  # the main game loop
     else:
         # ------------------------------------------------------------------
         # read changes in expt, fps, ndr and crop
-        sync_param = ircam_synchro.get_data().astype(np.int)[0]
+        sync_param = ircam_synchro.get_data().astype(np.int)
         flc_oft = sync_param[4] - lag
         if not sync_param[0] and sync_param[1]:
             etimen = sync_param[2]
@@ -1378,7 +1378,7 @@ while True:  # the main game loop
                     if (tindex < net2 - 1):
                         tindex += 1
                         etimec = etimes2[tindex]
-                        sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                        sync_param = ircam_synchro.get_data().astype(np.int)
                         if not sync_param[0] and sync_param[1]:
                             sync_param[2] = etimec
                             sync_param[0] = 1
@@ -1386,7 +1386,7 @@ while True:  # the main game loop
                                 sync_param.astype(np.float32))
                             time.sleep(1)
                             sync_param = ircam_synchro.get_data().astype(
-                                np.int)[0]
+                                np.int)
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
@@ -1420,7 +1420,7 @@ while True:  # the main game loop
                     if (tindex > 0):
                         tindex -= 1
                         etimec = etimes2[tindex]
-                        sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                        sync_param = ircam_synchro.get_data().astype(np.int)
                         if not sync_param[0] and sync_param[1]:
                             sync_param[2] = etimec
                             sync_param[0] = 1
@@ -1428,7 +1428,7 @@ while True:  # the main game loop
                                 sync_param.astype(np.float32))
                             time.sleep(1)
                             sync_param = ircam_synchro.get_data().astype(
-                                np.int)[0]
+                                np.int)
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
@@ -1451,7 +1451,7 @@ while True:  # the main game loop
                     if (findex < nfps2 - 1):
                         findex += 1
                         fpsc = fpss2[findex]
-                        sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                        sync_param = ircam_synchro.get_data().astype(np.int)
                         if not sync_param[0] and sync_param[1]:
                             sync_param[3] = fpsc
                             sync_param[0] = 1
@@ -1459,7 +1459,7 @@ while True:  # the main game loop
                                 sync_param.astype(np.float32))
                             time.sleep(1)
                             sync_param = ircam_synchro.get_data().astype(
-                                np.int)[0]
+                                np.int)
                             fps = sync_param[3]
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
@@ -1490,7 +1490,7 @@ while True:  # the main game loop
                     if (findex > 0):
                         findex -= 1
                         fpsc = fpss2[findex]
-                        sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                        sync_param = ircam_synchro.get_data().astype(np.int)
                         if not sync_param[0] and sync_param[1]:
                             sync_param[3] = fpsc
                             sync_param[0] = 1
@@ -1498,7 +1498,7 @@ while True:  # the main game loop
                                 sync_param.astype(np.float32))
                             time.sleep(1)
                             sync_param = ircam_synchro.get_data().astype(
-                                np.int)[0]
+                                np.int)
                             fps = sync_param[3]
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
@@ -1649,7 +1649,7 @@ while True:  # the main game loop
                         pygame.display.update([rct_dinfo2, rct_wh])
                         time.sleep(2.0)  # safety
 
-                        sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                        sync_param = ircam_synchro.get_data().astype(np.int)
                         for tint in etimes2:
                             if not sync_param[0] and sync_param[1]:
                                 sync_param[2] = tint
@@ -1659,7 +1659,7 @@ while True:  # the main game loop
                                     sync_param.astype(np.float32))
                                 time.sleep(1)
                                 sync_param = ircam_synchro.get_data().astype(
-                                    np.int)[0]
+                                    np.int)
                                 tint = sync_param[2]
                             else:
                                 tmux("set_tint() %f" % (tint * 1.e-6, ),
@@ -1938,7 +1938,7 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LALT):
-                        sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                        sync_param = ircam_synchro.get_data().astype(np.int)
                         if not sync_param[0] and not sync_param[1]:
                             sync_param[2] = etime
                             sync_param[3] = fps
@@ -1986,11 +1986,10 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL) and not (
                         mmods & KMOD_LALT):  # Ctrl but no alt, filter set
-                    slot = what_key + 1
-                    os.system('ircam_filter %d' % slot)
-                    msgwheel = ircam_filters[slot - 1]
-                    font_color = (CYAN, RED1)[slot == 7]
-                    wh = font1.render(msgwhl, True, font_color)
+                    if what_key == 6:
+                        os.system('ircam_block')
+                    else:
+                        os.system('ircam_filter %d' % (what_key+1,))
 
             # DM stage
             #----------
