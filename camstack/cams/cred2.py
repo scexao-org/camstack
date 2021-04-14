@@ -12,12 +12,12 @@ class CRED2(EDTCamera):
 
     INTERACTIVE_SHELL_METHODS = [
         'set_synchro', 'set_gain','get_gain', 'set_NDR', 'get_NDR', 'set_fps',
-        'get_fps', 'set_tint', 'get_tint', 'get_temperature', 'toggle_cooling',
+        'get_fps', 'set_tint', 'get_tint', 'get_temperature',
         'set_temperature_setpoint', 'FULL'] + \
         EDTCamera.INTERACTIVE_SHELL_METHODS
 
-    FULL = 'full
-    '
+    FULL = 'full'
+
     MODES = {
         # FULL 640 x 512
         FULL:
@@ -68,16 +68,19 @@ class CRED2(EDTCamera):
     # AD HOC PREPARE CAMERA
     # =====================
 
-    def prepare_camera_for_size(self, mode_id):
+    def prepare_camera_for_size(self, mode_id = None):
 
         if mode_id is None:
             mode_id = self.current_mode_id
 
         # Not really handling fps/tint for the OCAM, we just assume an ext trigger
-        if mode_id == 'full':  #TODO
+        if mode_id == self.FULL:
             self.send_command('set cropping off')
+            # CRED2 is especially serial-bitchy after a "set cropping"
+            self.edt_iface._serial_read(timeout=3000)
         else:
             self.send_command('set cropping on')
+            self.edt_iface._serial_read(timeout=3000)
 
         mode = self.MODES[mode_id]
         self._set_check_cropping(mode.x0, mode.x1, mode.y0, mode.y1)
@@ -103,8 +106,16 @@ class CRED2(EDTCamera):
 
     def send_command(self, cmd, format=True):
         # Just a little bit of parsing to handle the CRED2 format
-        res = EDTCamera.send_command(self, cmd)
-        if format:
+        res = EDTCamera.send_command(self, cmd, base_timeout=500)[:-10]
+        print(cmd, res)
+        while 'cli>' in res:
+            # We might have gotten a double answer
+            # Seems to happen when requesting pressure (CRED1) and pretty often with CRED2
+            cut = res.index('>')
+            res = res[cut+1:]
+
+        print(res)
+        if format and ':' in res:
             return res.split(':')
         else:
             return res
@@ -137,10 +148,12 @@ class CRED2(EDTCamera):
     # ===========================================
 
     def _get_cropping(self):
-        xx, yy = self.send_command('cropping raw')[1:]
-        x0, x1 = xx.split('-')
-        y0, y1 = yy.split('-')
-        return int(x0), int(x1), int(y0), int(y1)
+        res = self.send_command('cropping raw')
+        print(res)
+        xx, yy = res[1:]
+        x0, x1 = [int(xxx) for xxx in xx.split('-')]
+        y0, y1 = [int(yyy) for yyy in yy.split('-')]
+        return x0, x1, y0, y1
 
     def _set_check_cropping(self, x0, x1, y0, y1):
         for _ in range(3):
@@ -148,12 +161,12 @@ class CRED2(EDTCamera):
             if gx0 == x0 and gx1 == x1 and gy0 == y0 and gy1 == y1:
                 return x0, x1, y0, y1
             if gx0 != x0 or gx1 != x1:
-                self.send_command('set cropping columns %u-%u') % (x0, x1)
+                self.send_command('set cropping columns %u-%u' % (x0, x1))
                 # CRED2s are finnicky with cropping, we'll add a wait
-                time.sleep(.5)
+                time.sleep(1.5)
             if gy0 != y0 or gy1 != y1:
-                self.send_command('set cropping rows %u-%u') % (x0, x1)
-                time.sleep(.5)
+                self.send_command('set cropping rows %u-%u' % (y0, y1))
+                time.sleep(1.5)
         raise AssertionError(
             f'Cannot set desired crop {x0}-{x1} {y0}-{y1} after 3 tries')
 
@@ -214,7 +227,8 @@ class CRED2(EDTCamera):
         return float(self.send_command('maxtint raw'))
 
     def get_temperature(self):
-        temp = float(self.send_command('temp snake raw'))
+        temp = float(self.send_command('temp raw')[3])
+
         self.camera_shm.update_keyword('DET-TMP', temp + 273.15)
         return temp
 
@@ -267,6 +281,9 @@ class GLINT(CRED2):
 
 
 class Chuck(CRED2):
+
+    INTERACTIVE_SHELL_METHODS = [] + CRED2.INTERACTIVE_SHELL_METHODS
+
     MODES = {
         # 224 x 156, centered
         1:
@@ -321,41 +338,14 @@ class Chuck(CRED2):
                                   fps=cm.fps,
                                   tint=cm.tint)
 
+    def _fill_keywords(self):
+        CRED2._fill_keywords(self)
+
+        # Override detector name
+        self.camera_shm.update_keyword('DETECTOR', 'CRED2 - CHUCK')
 
 # Quick shorthand for testing
 if __name__ == "__main__":
-    cam = Rajni('rajni', 'rajnicam', mode_id='full', unit=1, channel=0)
+    cam = Chuck('chuck', 'ircam0', mode_id=0, unit=0, channel=0)
     from camstack.core.utilities import shellify_methods
     shellify_methods(cam, globals())
-
-    ########
-    '''
-    IRCAM SERVER legacy mapping:
-    
-    ## Useful server commands (identified from chuck)
-    gtint -> get_tint
-    gNDR -> get_NDR
-    gfps -> get_fps
-
-    stint -> set_tint
-    sfps -> set_fps
-    sNDR -> set_NDR
-    cropOFF -> set_mode('full') - (scrop_cols 0 639, scrop_rows 0 511)
-    cropON - reverts to the last cropmode ??
-
-    setcrop 1-N -> set modes
-
-    ## Serial commands (identified from ircamserver.c)
-    tint
-    set tint
-    fps
-    set fps
-    nbreadworeset
-    set nbreadworeset
-    temperatures snake
-    set temperatures snake (redo a get after a set ?)
-
-    reset
-    shutdown
-
-    '''

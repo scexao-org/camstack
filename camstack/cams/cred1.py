@@ -17,7 +17,7 @@ class ROMODES:
 class CRED1(EDTCamera):
 
     INTERACTIVE_SHELL_METHODS = [
-        'set_readout_mode', 'set_readout_mode', 'set_gain','get_gain',
+        'set_readout_mode', 'get_readout_mode', 'set_gain','get_gain',
         'set_NDR', 'get_NDR', 'set_fps',
         'get_fps', 'set_tint', 'get_tint', 'get_temperature', 'FULL'] + \
         EDTCamera.INTERACTIVE_SHELL_METHODS
@@ -204,6 +204,8 @@ class CRED1(EDTCamera):
         return res
 
     def set_NDR(self, NDR: int):
+        if NDR < 1 or not type(NDR) is int:
+            raise AssertionError(f'Illegal NDR value: {NDR}')
         self.send_command(f'set nbreadworeset {NDR}')
         return self.get_NDR()
 
@@ -211,7 +213,7 @@ class CRED1(EDTCamera):
         self.NDR = int(self.send_command('nbreadworeset raw'))
         self.camera_shm.update_keyword('NDR', self.NDR)
         self.camera_shm.update_keyword('DETMODE',
-                                       ('Single', 'IMRO')[self.NDR > 1])
+                                       ('globalresetsingle', 'globalresetcds')[self.NDR > 1])
         return self.NDR
 
     def set_fps(self, fps: float):
