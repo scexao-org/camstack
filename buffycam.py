@@ -43,17 +43,18 @@ ONES_NODIM = np.array(1., dtype=np.float32)
 def open_shm(shm_name, dims=(1, 1), check=False):
 
     if not os.path.isfile(MILK_SHM_DIR + "/%s.im.shm" % (shm_name, )):
-        os.system("creashmim %s %d %d" % (shm_name, dims[0], dims[1]))
+        tmux("creashmim %s %d %d" % (shm_name, dims[0], dims[1]))
+        time.sleep(.1)
     shm_data = SHM(MILK_SHM_DIR + "/%s.im.shm" % (shm_name, ))
     if check:
         tmp = shm_data.shape_c
         if tmp != dims:
             #if shm_data.mtdata['size'][:2] != dims:
-            os.system("rm %s/%s.im.shm" % (
+            tmux("rm %s/%s.im.shm" % (
                 MILK_SHM_DIR,
                 shm_name,
             ))
-            os.system("creashmim %s %d %d" % (shm_name, dims[0], dims[1]))
+            tmux("creashmim %s %d %d" % (shm_name, dims[0], dims[1]))
             shm_data = SHM(MILK_SHM_DIR + "/%s.im.shm" % (shm_name, ))
 
     return shm_data
@@ -62,7 +63,7 @@ def open_shm(shm_name, dims=(1, 1), check=False):
 # ------------------------------------------------------------------
 #             short hands for tmux commands
 # ------------------------------------------------------------------
-def tmux(cargs="", session="buffycam", command="send-keys"):
+def tmux(cargs="", session="buffycam_misc", command="send-keys"):
     ''' ------------------------------------------------------------
     Synthesizes and sends a tmux command. The default option was
     chosen to match the most common one, hence making the code
@@ -501,7 +502,7 @@ XW, YW = xsize * z1, (ysize + 100) * z1
 screen = pygame.display.set_mode((XW, YW), 0, 32)
 pygame.display.set_caption('SCIENCE camera display!')
 
-os.system("tmux new-session -d -s kcam")  #start a tmux session for messsages
+os.system("tmux new-session -d -s buffycam_misc")  #start a tmux session for messsages - same as default arg of tmux function
 os.system("tmux new-session -d -s ircam_synchro"
           )  #start a tmux session for FLC synchro
 os.system("tmux new-session -d -s telescope_status"
@@ -849,13 +850,13 @@ while True:  # the main game loop
         msg = "  !! Acquiring a dark !!  "
         dinfo2 = font3.render(msg, True, BGCOL, SACOL)
         screen.blit(dinfo2, rct_dinfo2)
-        os.system("scexaostatus set darkbuffy 'NEW INT DARK    ' 0")
-        os.system("log Buffycam: Saving current internal dark")
+        tmux("scexaostatus set darkbuffy 'NEW INT DARK    ' 0")
+        tmux("log Buffycam: Saving current internal dark")
 
         print("In the time it takes Buffy to dust a")
         print("vampire, we'll acquire this dark.")
 
-        os.system("ircam_block")  # blocking the light
+        tmux("ircam_block")  # blocking the light
         msgwhl = ircam_filters[6]
         wh = font1.render(msgwhl, True, RED1)
         screen.blit(wh, rct_wh)
@@ -876,9 +877,9 @@ while True:  # the main game loop
         bias = ave_dark * badpixmap
         time.sleep(0.2)
 
-        os.system("ircam_block")  # blocking the light
-        os.system("scexaostatus set darkbuffy 'OFF             ' 1")
-        os.system("log Buffycam: Done saving current internal dark")
+        tmux("ircam_block")  # blocking the light
+        tmux("scexaostatus set darkbuffy 'OFF             ' 1")
+        tmux("log Buffycam: Done saving current internal dark")
         cam_dark.set_data(bias.astype(np.float32))
         cam_badpixmap.set_data(badpixmap.astype(np.float32))
         new_dark.set_data(ONES_NODIM)
@@ -891,7 +892,7 @@ while True:  # the main game loop
         xsizeim, ysizeim = cam.shape_c
         #(xsizeim, ysizeim) = cam.mtdata['size'][:2]#size[:cam.naxis]
         print("image xsize=%d, ysize=%d" % (xsizeim, ysizeim))
-        os.system("rm /tmp/kcam_*")
+        tmux("rm /tmp/kcam_*")
         time.sleep(1)
         cam_dark = open_shm("kcam_dark", dims=(xsizeim, ysizeim), check=True)
         cam_badpixmap = open_shm("kcam_badpixmap",
@@ -916,7 +917,14 @@ while True:  # the main game loop
             fpsn = sync_param[3]
             delay = cam_ro + flc_oft + 3 * lag
         else:
-            etimen = cam.get_expt() * 1e3
+            # This is where we're going to crash if the FG just stopped / restarted
+            # and we try between the FG starts and the keywords are put in.
+            try:
+                etimen = cam.get_expt() * 1e3
+            except KeyError:
+                time.sleep(5.)
+                shmreload = True
+                continue
             fpsn = cam.get_fps()
             delay = 0
         ndrn = int(cam.get_ndr())
@@ -1264,7 +1272,7 @@ while True:  # the main game loop
             timeexpt = np.append(timeexpt, time.time())
             time.sleep(0.1)
             if timeexpt[-1] - timeexpt[0] > 4:
-                os.system(
+                tmux(
                     "/home/scexao/bin/log Buffycam: changing exposure time to %d"
                     % etime)
                 timeexpt = []
@@ -1274,7 +1282,7 @@ while True:  # the main game loop
             timendr = np.append(timendr, time.time())
             time.sleep(0.1)
             if timendr[-1] - timendr[0] > 4:
-                os.system(
+                tmux(
                     "/home/scexao/bin/log Buffycam: changing exposure time to %d"
                     % etime)
                 timendr = []
@@ -1352,15 +1360,14 @@ while True:  # the main game loop
                     if (tindex < net2 - 1):
                         tindex += 1
                         etimec = etimes2[tindex]
-                        sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                        sync_param = ircam_synchro.get_data().astype(np.int)
                         if not sync_param[0] and sync_param[1]:
                             sync_param[2] = etimec
                             sync_param[0] = 1
                             ircam_synchro.set_data(
                                 sync_param.astype(np.float32))
                             time.sleep(1)
-                            sync_param = ircam_synchro.get_data().astype(
-                                np.int)[0]
+                            sync_param = ircam_synchro.get_data().astype(np.int)
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
@@ -1387,15 +1394,14 @@ while True:  # the main game loop
                     if (tindex > 0):
                         tindex -= 1
                         etimec = etimes2[tindex]
-                        sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                        sync_param = ircam_synchro.get_data().astype(np.int)
                         if not sync_param[0] and sync_param[1]:
                             sync_param[2] = etimec
                             sync_param[0] = 1
                             ircam_synchro.set_data(
                                 sync_param.astype(np.float32))
                             time.sleep(1)
-                            sync_param = ircam_synchro.get_data().astype(
-                                np.int)[0]
+                            sync_param = ircam_synchro.get_data().astype(np.int)
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
@@ -1418,19 +1424,26 @@ while True:  # the main game loop
                     if (findex < nfps2 - 1):
                         findex += 1
                         fpsc = fpss2[findex]
-                        sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                        sync_param = ircam_synchro.get_data().astype(np.int)
                         if not sync_param[0] and sync_param[1]:
                             sync_param[3] = fpsc
                             sync_param[0] = 1
                             ircam_synchro.set_data(
                                 sync_param.astype(np.float32))
                             time.sleep(1)
-                            sync_param = ircam_synchro.get_data().astype(
-                                np.int)[0]
+                            sync_param = ircam_synchro.get_data().astype(np.int)
                             fps = sync_param[3]
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
+                        else:
+                            tmux("set_fps(%f)" % (fpsc, ), session="kcamctrl")
+                            time.sleep(1)
+                            fps = cam.get_fps()
+                            tmux("get_tint()", session="kcamctrl")
+                            time.sleep(1)
+                            etime = cam.get_expt() * 1e3
+                            delay = 0
                         (etimes2, net2, tindex) = whatexpt(etime, fps, delay)
                         (fpss2, nfps2, findex) = whatfps(fps, crop)
                         logfps = True
@@ -1447,15 +1460,14 @@ while True:  # the main game loop
                     if (findex > 0):
                         findex -= 1
                         fpsc = fpss2[findex]
-                        sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                        sync_param = ircam_synchro.get_data().astype(np.int)
                         if not sync_param[0] and sync_param[1]:
                             sync_param[3] = fpsc
                             sync_param[0] = 1
                             ircam_synchro.set_data(
                                 sync_param.astype(np.float32))
                             time.sleep(1)
-                            sync_param = ircam_synchro.get_data().astype(
-                                np.int)[0]
+                            sync_param = ircam_synchro.get_data().astype(np.int)
                             fps = sync_param[3]
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
@@ -1518,9 +1530,9 @@ while True:  # the main game loop
                         msg = "  !! Acquiring a dark !!  "
                         dinfo2 = font3.render(msg, True, BGCOL, SACOL)
                         screen.blit(dinfo2, rct_dinfo2)
-                        os.system(
+                        tmux(
                             "scexaostatus set darkbuffy 'NEW INT DARK    ' 0")
-                        os.system("log Buffycam: Saving current internal dark")
+                        tmux("log Buffycam: Saving current internal dark")
 
                         print("In the time it takes Buffy to dust a")
                         print("vampire, we'll acquire this dark.")
@@ -1554,9 +1566,9 @@ while True:  # the main game loop
                         #    os.system("ircam_block")          # blocking the light
                         #else:
                         #    os.system("PG1_pickoff")
-                        os.system(
+                        tmux(
                             "scexaostatus set darkbuffy 'OFF             ' 1")
-                        os.system(
+                        tmux(
                             "log Buffycam: Done saving current internal dark")
                         cam_dark.set_data(bias.astype(np.float32))
                         cam_badpixmap.set_data(badpixmap.astype(np.float32))
@@ -1567,21 +1579,21 @@ while True:  # the main game loop
                         msg = "  !! Acquiring darks !!   "
                         dinfo2 = font3.render(msg, True, BGCOL, SACOL)
                         screen.blit(dinfo2, rct_dinfo2)
-                        os.system(
+                        tmux(
                             "scexaostatus set darkbuffy 'ALL INT DARKS   ' 0")
-                        os.system("log Buffycam: Saving internal darks")
+                        tmux("log Buffycam: Saving internal darks")
 
                         print("In the time it takes Buffy to dust all the")
                         print("vampires, we'll acquire all biases.")
 
-                        os.system("ircam_block")  # blocking the light
+                        tmux("ircam_block")  # blocking the light
                         msgwhl = ircam_filters[6]
                         wh = font1.render(msgwhl, True, RED1)
                         screen.blit(wh, rct_wh)
                         pygame.display.update([rct_dinfo2, rct_wh])
                         time.sleep(2.0)  # safety
 
-                        sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                        sync_param = ircam_synchro.get_data().astype(np.int)
                         for tint in etimes2:
                             if not sync_param[0] and sync_param[1]:
                                 sync_param[2] = tint
@@ -1590,8 +1602,7 @@ while True:  # the main game loop
                                 ircam_synchro.set_data(
                                     sync_param.astype(np.float32))
                                 time.sleep(1)
-                                sync_param = ircam_synchro.get_data().astype(
-                                    np.int)[0]
+                                sync_param = ircam_synchro.get_data().astype(np.int)
                                 tint = sync_param[2]
                             else:
                                 tmux("set_tint(%f)" % (tint * 1.e-6, ),
@@ -1615,10 +1626,10 @@ while True:  # the main game loop
                             time.sleep(0.2)
                         print(
                             "\nBuffy dusted the crap out of the poor vampire.")
-                        os.system("ircam_block")  # opening the shutter
-                        os.system(
+                        tmux("ircam_block")  # opening the shutter
+                        tmux(
                             "scexaostatus set darkbuffy 'OFF             ' 1")
-                        os.system("log Buffycam: Done saving internal darks")
+                        tmux("log Buffycam: Done saving internal darks")
 
                         if not sync_param[0] and sync_param[1]:
                             sync_param[2] = tint
@@ -1683,8 +1694,8 @@ while True:  # the main game loop
                         os.system("tmux new-session -d -s kcamlog")
                         tmux("logshim kcam %i %s" % (nimsave, savepath),
                              session="kcamlog")
-                        os.system("log Buffycam: start logging images")
-                        os.system(
+                        tmux("log Buffycam: start logging images")
+                        tmux(
                             "scexaostatus set logbuffy 'LOGGING         ' 3")
                         if plot_pa:
                             savepathst = '/media/data/' + timestamp + '/telescope_status/'
@@ -1701,8 +1712,8 @@ while True:  # the main game loop
                     else:
                         tmux("logshimkill", session="kcamlog")
                         tmux("", session="kcamlog", command="kill-session")
-                        os.system("log Buffycam: stop logging images")
-                        os.system(
+                        tmux("log Buffycam: stop logging images")
+                        tmux(
                             "scexaostatus set logbuffy 'OFF             ' 1")
                         if plot_pa:
                             tmux("logshimkill", session="telescope_status_log")
@@ -1879,7 +1890,7 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LALT):
-                        sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                        sync_param = ircam_synchro.get_data().astype(np.int)
                         if not sync_param[0] and not sync_param[1]:
                             sync_param[2] = etime
                             sync_param[3] = fps
@@ -1927,7 +1938,7 @@ while True:  # the main game loop
                 if (mmods & KMOD_LCTRL) and not (
                         mmods & KMOD_LALT):  # Ctrl but no alt, filter set
                     slot = what_key + 1
-                    os.system('ircam_filter %d' % slot)
+                    tmux('ircam_filter %d' % slot)
                     msgwheel = ircam_filters[slot - 1]
                     font_color = (CYAN, RED1)[slot == 7]
                     wh = font1.render(msgwhl, True, font_color)
@@ -1939,11 +1950,19 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux("dm_stage y push -100")
+                        tmux("dm_stage x push -100")
                     else:
-                        tmux("dm_stage y push -20")
+                        tmux("dm_stage x push -20")
 
             if event.key == K_DOWN:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    if (mmods & KMOD_LSHIFT):
+                        tmux("dm_stage x push +100")
+                    else:
+                        tmux("dm_stage x push +20")
+
+            if event.key == K_LEFT:
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
@@ -1951,21 +1970,13 @@ while True:  # the main game loop
                     else:
                         tmux("dm_stage y push +20")
 
-            if event.key == K_LEFT:
-                mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL):
-                    if (mmods & KMOD_LSHIFT):
-                        tmux("dm_stage x push -100")
-                    else:
-                        tmux("dm_stage x push -20")
-
             if event.key == K_RIGHT:
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux("dm_stage x push +100")
+                            tmux("dm_stage y push -100")
                     else:
-                        tmux("dm_stage x push +20")
+                        tmux("dm_stage y push -20")
 
     pygame.display.update(rects)
 
