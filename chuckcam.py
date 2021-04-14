@@ -27,6 +27,8 @@ import datetime as dt
 from astropy.io import fits as pf
 import subprocess
 
+from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT
+from scxkw.redisutil.typed_db import Redis
 
 from pyMilk.interfacing.isio_shmlib import SHM
 
@@ -43,7 +45,6 @@ import image_processing as impro
 #             short hands for opening and checking shm
 # ------------------------------------------------------------------
 def open_shm(shm_name, dims=(1, 1), check=False):
-    
     if not os.path.isfile(MILK_SHM_DIR + "/%s.im.shm" % (shm_name, )):
         os.system("creashmim %s %d %d" % (shm_name, dims[0], dims[1]))
     shm_data = SHM(MILK_SHM_DIR + "/%s.im.shm" % (shm_name, ))
@@ -53,7 +54,7 @@ def open_shm(shm_name, dims=(1, 1), check=False):
             #if shm_data.mtdata['size'][:2] != dims:
             os.system("rm %s/%s.im.shm" % (MILK_SHM_DIR, shm_name, ))
             os.system("creashmim %s %d %d" % (shm_name, xsizeim, ysizeim))
-            shm_data = SHM(MILK_SHM_DIR + "/%s.im.shm" % (shm_data, ), verbose=False)
+            shm_data = SHM(MILK_SHM_DIR + "/%s.im.shm" % (shm_name, ), verbose=False)
 
     return shm_data
 
@@ -338,6 +339,43 @@ def make_badpix(bias, filt=3.5):
     bpmap[bias < mu - filt * rms] = 0.0
     return (bpmap)
 
+# ------------------------------------------------------------------
+#  Read database for some stage status
+# ------------------------------------------------------------------
+def RDB_pull(rdb):
+
+    fits_keys_to_pull = {'X_IRCFLT','X_IRCBLK','X_CHKPUP','X_CHKPUS','X_NULPKO','X_RCHPKO','D_IMRPAD','D_IMRPAP'}
+    # Now Getting the keys
+    with rdb.pipeline() as pipe:
+        for key in fits_keys_to_pull:
+            pipe.hget(key, 'FITS header')
+            pipe.hget(key, 'value')
+        values = pipe.execute()
+    status = {k: v for k,v in zip(values[::2], values[1::2])}
+
+    pup = status['X_CHKPUP'].strip() == 'IN'
+    reachphoto = status['X_CHKPUS'].strip() == 'REACH'
+    gpin = status['X_NULPKO'].strip() == 'IN'
+    rpin = status['X_RCHPKO'].strip() == 'IN'
+    slot = status['X_IRCFLT']
+    block = status['X_IRCBLK'].strip() == 'IN'
+    pap = float(status['D_IMRPAP'])
+    pad = float(status['D_IMRPAD'])
+
+    return(pup,reachphoto,gpin,rpin,slot,block,pap,pad)
+
+# ------------------------------------------------------------------
+#  Filter message
+# ------------------------------------------------------------------
+def whatfilter(reachphoto, slot, block):
+    if reachphoto:
+        msgwhl = "      OPEN      "
+    else:
+        if block:
+            msgwhl = "     BLOCK      "
+        else:
+            msgwhl = slot
+    return(msgwhl)
 
 # ------------------------------------------------------------------
 #  Top message
@@ -352,6 +390,7 @@ def whatmsg(pup, reachphoto, gpin, rpin):
     else:
         if pup and not rpin:
             msgtop = msgtops[1]
+
         elif rpin:
             msgtop = msgtops[2]
         else:
@@ -456,17 +495,23 @@ cam_badpixmap = open_shm("ircam%d_badpixmap" % (camid, ),
 #cam_clean = open_shm("ircam%d_clean" % (camid,), dims=(xsizeim, ysizeim), check=True)
 cam_paused = open_shm("ircam%d_paused" % (camid, ))
 new_dark = open_shm("ircam%d_newdark" % (camid, ))
-ircam_filter = open_shm("ircam_filter")
-pupshm = open_shm("chuck_pup")
-reachphotoshm = open_shm("chuck_pup_fcs")
-glint_pickoff = open_shm("nuller_pickoff")
-reach_pickoff = open_shm("reach_pickoff")
 telescope_status = open_shm("telescope_status", dims=(6, 1))
 ircam_synchro = open_shm("ircam_synchro", dims=(6, 1))
-pup = int(pupshm.get_data())
-reachphoto = int(reachphotoshm.get_data())
-gpin = int(glint_pickoff.get_data())
-rpin = int(reach_pickoff.get_data())
+
+# ------------------------------------------------------------------
+#            Configure communication with SCExAO's redis
+# ------------------------------------------------------------------
+rdb = Redis(host=REDIS_DB_HOST, port=REDIS_DB_PORT)
+# Is the server alive ?
+try:
+    alive = rdb.ping()
+    if not alive:
+        raise ConnectionError
+except:
+    print('Error: can\'t ping redis DB.')
+    sys.exit(1)
+
+pup,reachphoto,gpin,rpin,slot,block,pap,pad = RDB_pull(rdb)
 
 pscale = 16.9  #mas per pixel in Chuckcam
 
@@ -511,8 +556,6 @@ os.system("tmux new-session -d -s telescope_status"
 res = subprocess.check_output("ps aux | grep ircam_synchro", shell=True)
 if b'/home/scexao/bin/devices/ircam_synchro' not in res:
     tmux("ircam_synchro", session="ircam_synchro")
-
-slot = int(ircam_filter.get_data())
 
 # ------------------------------------------------------------------
 #              !!! now we are in business !!!!
@@ -742,15 +785,8 @@ rct_zm = zm.get_rect()
 rct_zm.topleft = (5 * z1, 5 * z1)
 
 #ircam_filter
-ircam_filters = [
-    "          OPEN", "        y-band", "1550nm 25nm BW", "1550nm 50nm BW",
-    "        J-band", "        H-band", "         BLOCK"
-]
-msgwhl = ircam_filters[slot - 1]
-if slot < 7:
-    wh = font1.render(msgwhl, True, CYAN)
-elif slot == 7:
-    wh = font1.render(msgwhl, True, RED1)
+msgwhl = whatfilter(reachphoto, slot, block)
+wh = font1.render(msgwhl, True, CYAN)
 rct_wh = wh.get_rect()
 rct_wh.topright = (xws - 6 * z1, 5 * z1)
 
@@ -821,8 +857,6 @@ while True:  # the main game loop
     cnti += 1
     clicked = False
     pwr0 = 1.0
-    gpin = int(glint_pickoff.get_data())
-    rpin = int(reach_pickoff.get_data())
     if not lin_scale:
         pwr0 = 0.3
 
@@ -858,13 +892,14 @@ while True:  # the main game loop
 
         print("In the time it takes Chuck Norris to sidekick a")
         print("red-headed stepchild, we'll acquire this dark.")
-
-        os.system("ircam_block")  # blocking the light
-        msgwhl = ircam_filters[6]
+        
+        if not block:
+            os.system("ircam_block")  # blocking the light
+        msgwhl = "     BLOCK      "
         wh = font1.render(msgwhl, True, RED1)
         screen.blit(wh, rct_wh)
         pygame.display.update([rct_dinfo2, rct_wh])
-        time.sleep(2.0)  # safety
+        time.sleep(1.0)  # safety
 
         ndark = int(10 * fps / float(ndr))  # 10s of dark
         ave_dark = ave_img_data(ndark, clean=False, disp=True, tint=etime)
@@ -1192,9 +1227,6 @@ while True:  # the main game loop
                 pygame.draw.line(screen, color, (xcross, 0), (xcross, yws), 1)
 
         if plot_pa:
-            temp = telescope_status.get_data()
-            pad = temp[0][4]
-            pap = temp[0][5]
             pygame.draw.line(screen, RED, (xcpa, ycpa),
                              (xcpa - 20 * z1 * m.cos(m.radians(pad)),
                               ycpa - 20 * z1 * m.sin(m.radians(pad))), 1)
@@ -1286,15 +1318,9 @@ while True:  # the main game loop
                 timendr = []
                 logndr = False
         if cnti % 20 == 0:
-            slot = int(ircam_filter.get_data())
-            msgwhl = ircam_filters[slot - 1]
-            if slot < 7:
-                wh = font1.render(msgwhl, True, CYAN)
-            else:
-                wh = font1.render(msgwhl, True, RED1)
-
-            pup = int(pupshm.get_data())
-            reachphoto = int(reachphotoshm.get_data())
+            pup,reachphoto,gpin,rpin,slot,block,pap,pad = RDB_pull(rdb)
+            msgwhl = whatfilter(reachphoto, slot, block)
+            wh = font1.render(msgwhl, True, CYAN)
             msgtop = whatmsg(pup, reachphoto, gpin, rpin)
             topm = font1.render(msgtop, True, CYAN)
 
@@ -1313,11 +1339,6 @@ while True:  # the main game loop
             cam_badpixmap.close()
             #cam_clean.close()
             new_dark.close()
-            ircam_filter.close()
-            pupshm.close()
-            reachphotoshm.close()
-            telescope_status.close()
-            glint_pickoff.close()
             print("Chuckcam has ended normally.")
             sys.exit()
         elif event.type == KEYDOWN:
@@ -1329,11 +1350,6 @@ while True:  # the main game loop
                 cam_badpixmap.close()
                 #cam_clean.close()
                 new_dark.close()
-                ircam_filter.close()
-                pupshm.close()
-                reachphotoshm.close()
-                telescope_status.close()
-                glint_pickoff.close()
                 print("Chuckcam has ended normally.")
                 sys.exit()
 
@@ -1570,10 +1586,11 @@ while True:  # the main game loop
                             "In the time it takes Chuck Norris to sidekick a")
                         print("red-headed stepchild, we'll acquire this dark.")
                         if not reachphoto:
-                            os.system("ircam_block")  # blocking the light
+                            if not block:
+                                os.system("ircam_block")  # blocking the light
                         else:
                             os.system("PG1_pickoff")
-                        msgwhl = ircam_filters[6]
+                        msgwhl = "     BLOCK      "
                         wh = font1.render(msgwhl, True, RED1)
                         screen.blit(wh, rct_wh)
                         pygame.display.update([rct_dinfo2, rct_wh])
@@ -1620,9 +1637,10 @@ while True:  # the main game loop
                             "In the time it takes Chuck Norris to sidekick a")
                         print(
                             "red-headed stepchild, we'll acquire all biases.")
-
-                        os.system("ircam_block")  # blocking the light
-                        msgwhl = ircam_filters[6]
+                        
+                        if not block:
+                            os.system("ircam_block")  # blocking the light
+                        msgwhl = "     BLOCK      "
                         wh = font1.render(msgwhl, True, RED1)
                         screen.blit(wh, rct_wh)
                         pygame.display.update([rct_dinfo2, rct_wh])
@@ -1953,11 +1971,10 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL) and not (
                         mmods & KMOD_LALT):  # Ctrl but no alt, filter set
-                    slot = what_key + 1
-                    os.system('ircam_filter %d' % slot)
-                    msgwheel = ircam_filters[slot - 1]
-                    font_color = (CYAN, RED1)[slot == 7]
-                    wh = font1.render(msgwhl, True, font_color)
+                    if what_key < 6:
+                        os.system('ircam_filter %d' % what_key+1)
+                    else:
+                        os.system('ircam_block')
 
             # Crop modes and full frame
             #--------------------------

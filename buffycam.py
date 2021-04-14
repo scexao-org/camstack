@@ -33,6 +33,9 @@ MILK_SHM_DIR = os.getenv('MILK_SHM_DIR')
 
 import image_processing as impro
 
+ZERO_NODIM = np.array(0., dtype=np.float32)
+ONES_NODIM = np.array(1., dtype=np.float32)
+
 
 # ------------------------------------------------------------------
 #             short hands for opening and checking shm
@@ -46,9 +49,12 @@ def open_shm(shm_name, dims=(1, 1), check=False):
         tmp = shm_data.shape_c
         if tmp != dims:
             #if shm_data.mtdata['size'][:2] != dims:
-            os.system("rm %s/%s.im.shm" % (MILK_SHM_DIR, shm_name, ))
-            os.system("creashmim %s %d %d" % (shm_name, xsizeim, ysizeim))
-            shm_data = SHM(MILK_SHM_DIR + "/%s.im.shm" % (shm_data, ))
+            os.system("rm %s/%s.im.shm" % (
+                MILK_SHM_DIR,
+                shm_name,
+            ))
+            os.system("creashmim %s %d %d" % (shm_name, dims[0], dims[1]))
+            shm_data = SHM(MILK_SHM_DIR + "/%s.im.shm" % (shm_name, ))
 
     return shm_data
 
@@ -446,7 +452,7 @@ cam_dark = open_shm("buffycam_dark", dims=(xsizeim, ysizeim), check=True)
 cam_badpixmap = open_shm("buffycam_badpixmap",
                          dims=(xsizeim, ysizeim),
                          check=True)
-#cam_clean = open_shm("ircam%d_clean" % (camid,), dims=(xsizeim, ysizeim), check=True)
+
 cam_paused = open_shm("buffycam_paused")
 new_dark = open_shm("buffycam_newdark")
 ircam_filter = open_shm("ircam_filter")
@@ -557,13 +563,13 @@ ndrs = np.array([1, 2, 4, 8, 16, 32, 64, 128, 255])
 nndr = np.size(ndrs)
 
 # get initial values for expt, fps and ndr
-tmux("gtint", session="kcamctrl")
+tmux("get_tint()", session="kcamctrl")
 time.sleep(1)
-tmux("gNDR", session="kcamctrl")
+tmux("get_NDR()", session="kcamctrl")
 time.sleep(1)
-tmux("gfps", session="kcamctrl")
+tmux("get_fps()", session="kcamctrl")
 time.sleep(1)
-sync_param = ircam_synchro.get_data().astype(np.int)[0]
+sync_param = ircam_synchro.get_data().astype(np.int)
 lag = 7
 cam_ro = 22 - lag
 sync_param[4] = 160
@@ -875,14 +881,14 @@ while True:  # the main game loop
         os.system("log Buffycam: Done saving current internal dark")
         cam_dark.set_data(bias.astype(np.float32))
         cam_badpixmap.set_data(badpixmap.astype(np.float32))
-        new_dark.set_data(np.zeros(1, dtype=np.float32))
+        new_dark.set_data(ONES_NODIM)
 
     # ------------------------------------------------------------------
     # Relaod shared memory with different size due to change in window size
     if shmreload:
         print("reloading SHM")
         cam = SHM(MILK_SHM_DIR + "/kcam.im.shm", verbose=False)
-        xsizeim, ysizeim = cam.mtdata['x'], cam.mtdata['y']
+        xsizeim, ysizeim = cam.shape_c
         #(xsizeim, ysizeim) = cam.mtdata['size'][:2]#size[:cam.naxis]
         print("image xsize=%d, ysize=%d" % (xsizeim, ysizeim))
         os.system("rm /tmp/kcam_*")
@@ -893,17 +899,17 @@ while True:  # the main game loop
                                  check=True)
         #cam_clean = open_shm("ircam%d_clean" % (camid,), dims=(xsizeim, ysizeim), check=True)
         time.sleep(1)
-        tmux("gtint", session="kcamctrl")
+        tmux("get_tint()", session="kcamctrl")
         time.sleep(1)
-        tmux("gNDR", session="kcamctrl")
+        tmux("get_NDR()", session="kcamctrl")
         time.sleep(1)
-        tmux("gfps", session="kcamctrl")
+        tmux("get_fps()", session="kcamctrl")
         time.sleep(1)
         shmreload = False
     else:
         # ------------------------------------------------------------------
         # read changes in expt, fps, ndr and crop
-        sync_param = ircam_synchro.get_data().astype(np.int)[0]
+        sync_param = ircam_synchro.get_data().astype(np.int)
         flc_oft = sync_param[4] - lag
         if not sync_param[0] and sync_param[1]:
             etimen = sync_param[2]
@@ -1336,7 +1342,7 @@ while True:  # the main game loop
                     if (nindex < nndr - 1):
                         nindex += 1
                         ndrc = ndrs[nindex]
-                        tmux("sNDR %d" % (ndrc, ), session="kcamctrl")
+                        tmux("set_NDR(%d)" % (ndrc, ), session="kcamctrl")
                         time.sleep(1)
                         ndr = cam.get_ndr()
                         etimet = etime * ndr
@@ -1371,7 +1377,7 @@ while True:  # the main game loop
                     if (nindex > 0):
                         nindex -= 1
                         ndrc = ndrs[nindex]
-                        tmux("sNDR %d" % (ndrc, ), session="kcamctrl")
+                        tmux("set_NDR(%d)" % (ndrc, ), session="kcamctrl")
                         time.sleep(1)
                         ndr = cam.get_ndr()
                         etimet = etime * ndr
@@ -1394,7 +1400,7 @@ while True:  # the main game loop
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
                         else:
-                            tmux("stint %f" % (etimec * 1.e-6, ),
+                            tmux("set_tint(%f)" % (etimec * 1.e-6, ),
                                  session="kcamctrl")
                             time.sleep(1)
                             etime = cam.get_expt() * 1e3
@@ -1455,10 +1461,10 @@ while True:  # the main game loop
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
                         else:
-                            tmux("sfps %f" % (fpsc, ), session="kcamctrl")
+                            tmux("set_fps(%f)" % (fpsc, ), session="kcamctrl")
                             time.sleep(1)
                             fps = cam.get_fps()
-                            tmux("gtint", session="kcamctrl")
+                            tmux("get_tint()", session="kcamctrl")
                             time.sleep(1)
                             etime = cam.get_expt() * 1e3
                             delay = 0
@@ -1588,7 +1594,7 @@ while True:  # the main game loop
                                     np.int)[0]
                                 tint = sync_param[2]
                             else:
-                                tmux("stint %f" % (tint * 1.e-6, ),
+                                tmux("set_tint(%f)" % (tint * 1.e-6, ),
                                      session="kcamctrl")
                                 time.sleep(1)
                                 tint = cam.get_expt() * 1e3
@@ -1620,7 +1626,7 @@ while True:  # the main game loop
                             ircam_synchro.set_data(
                                 sync_param.astype(np.float32))
                         else:
-                            tmux("stint %f" % (tint * 1.e-6, ),
+                            tmux("set_tint(%f)" % (tint * 1.e-6, ),
                                  session="kcamctrl")
                         biashere = True
                         bpmhere = True
@@ -1662,7 +1668,7 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     saveim = not saveim
-                    if saveim:                        
+                    if saveim:
                         timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
                         if (mmods & KMOD_LSHIFT):
                             savepath = '/media/data/ARCHIVED_DATA/' + timestamp + '/kcamlog/'
@@ -1866,30 +1872,6 @@ while True:  # the main game loop
                     msgzm = "  "
                 zm = font1.render(msgzm, True, CYAN)
 
-            # Camera in full frame
-            #---------------------
-            if event.key == K_f:
-                mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL):
-                    if (mmods & KMOD_LALT):
-                        if xsizeim != 640 and ysizeim != 512:
-                            cam_paused.set_data(np.ones(1, dtype=np.float32))
-                            tmux("stop", session="kcamctrl")
-                            time.sleep(2)
-                            tmux("cropOFF", session="kcamctrl")
-                            time.sleep(2)
-                            tmux("scrop_cols 0 639", session="kcamctrl")
-                            time.sleep(2)
-                            tmux("scrop_rows 0 511", session="kcamctrl")
-                            time.sleep(2)
-                            tmux("start", session="kcamctrl")
-                            time.sleep(5)
-                            tmux("stop", session="kcamctrl")
-                            time.sleep(2)
-                            tmux("start", session="kcamctrl")
-                            time.sleep(5)
-                            cam_paused.set_data(np.zeros(1, dtype=np.float32))
-                            shmreload = True
 
             # Exttrig stuff
             #---------------------
@@ -1913,163 +1895,44 @@ while True:  # the main game loop
                                 sync_param.astype(np.float32))
                             time.sleep(1)
 
-            # Ircam_Filter/block/Crop modes
+            # Crop modes and full frame
+            #--------------------------
+            CROP_KEYLIST = [
+                K_0, K_1, K_2, K_3, K_4, K_5, K_6, K_7, K_8, K_9, K_MINUS,
+                K_EQUALS, K_f
+            ]
+            if event.key in CROP_KEYLIST:
+                what_key = CROP_KEYLIST.index(event.key)
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL) and (mmods & KMOD_LALT):
+                    # Index 12 == Ctrl+alt+f == full
+                    mode_id = (str(what_key), "self.FULL")[event.key == K_f]
+                    if event.key == K_f and xsizeim == 320 and ysizeim == 256:
+                        # Skip full frame if full frame already
+                        print('Camera already in full frame - skipping set_camera_mode()')
+                    else:
+                        cam_paused.set_data(ONES_NODIM)
+                        tmux("set_camera_mode(%s)" % mode_id, session="kcamctrl")
+                        time.sleep(10)
+                        cam_paused.set_data(ZERO_NODIM)
+                        shmreload = True
+
+            # Ircam Filter/block
             #------------------------------
-            if event.key == K_1:
-                mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL):
-                    if (mmods & KMOD_LALT):
-                        cam_paused.set_data(np.ones(1, dtype=np.float32))
-                        tmux("setcrop 1", session="kcamctrl")
-                        time.sleep(12)
-                        cam_paused.set_data(np.zeros(1, dtype=np.float32))
-                        shmreload = True
-                    else:
-                        slot = 1
-                        os.system("ircam_filter %d" % (slot, ))
-                        msgwhl = ircam_filters[slot - 1]
-                        wh = font1.render(msgwhl, True, CYAN)
 
-            if event.key == K_2:
+            FILT_KEYLIST = [K_1, K_2, K_3, K_4, K_5, K_6, K_7]
+            if event.key in FILT_KEYLIST:
+                what_key = FILT_KEYLIST.index(event.key)
                 mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL):
-                    if (mmods & KMOD_LALT):
-                        cam_paused.set_data(np.ones(1, dtype=np.float32))
-                        tmux("setcrop 2", session="kcamctrl")
-                        time.sleep(12)
-                        cam_paused.set_data(np.zeros(1, dtype=np.float32))
-                        shmreload = True
-                    else:
-                        slot = 2
-                        os.system("ircam_filter %d" % (slot, ))
-                        msgwhl = ircam_filters[slot - 1]
-                        wh = font1.render(msgwhl, True, CYAN)
+                if (mmods & KMOD_LCTRL) and not (
+                        mmods & KMOD_LALT):  # Ctrl but no alt, filter set
+                    slot = what_key + 1
+                    os.system('ircam_filter %d' % slot)
+                    msgwheel = ircam_filters[slot - 1]
+                    font_color = (CYAN, RED1)[slot == 7]
+                    wh = font1.render(msgwhl, True, font_color)
 
-            if event.key == K_3:
-                mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL):
-                    if (mmods & KMOD_LALT):
-                        cam_paused.set_data(np.ones(1, dtype=np.float32))
-                        tmux("setcrop 3", session="kcamctrl")
-                        time.sleep(12)
-                        cam_paused.set_data(np.zeros(1, dtype=np.float32))
-                        shmreload = True
-                    else:
-                        slot = 3
-                        os.system("ircam_filter %d" % (slot, ))
-                        msgwhl = ircam_filters[slot - 1]
-                        wh = font1.render(msgwhl, True, CYAN)
-
-            if event.key == K_4:
-                mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL):
-                    if (mmods & KMOD_LALT):
-                        cam_paused.set_data(np.ones(1, dtype=np.float32))
-                        tmux("setcrop 4", session="kcamctrl")
-                        time.sleep(12)
-                        cam_paused.set_data(np.zeros(1, dtype=np.float32))
-                        shmreload = True
-                    else:
-                        slot = 4
-                        os.system("ircam_filter %d" % (slot, ))
-                        msgwhl = ircam_filters[slot - 1]
-                        wh = font1.render(msgwhl, True, CYAN)
-
-            if event.key == K_5:
-                mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL):
-                    if (mmods & KMOD_LALT):
-                        cam_paused.set_data(np.ones(1, dtype=np.float32))
-                        tmux("setcrop 5", session="kcamctrl")
-                        time.sleep(12)
-                        cam_paused.set_data(np.zeros(1, dtype=np.float32))
-                        shmreload = True
-                    else:
-                        slot = 5
-                        os.system("ircam_filter %d" % (slot, ))
-                        msgwhl = ircam_filters[slot - 1]
-                        wh = font1.render(msgwhl, True, CYAN)
-
-            if event.key == K_6:
-                mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL):
-                    if (mmods & KMOD_LALT):
-                        cam_paused.set_data(np.ones(1, dtype=np.float32))
-                        tmux("setcrop 6", session="kcamctrl")
-                        time.sleep(12)
-                        cam_paused.set_data(np.zeros(1, dtype=np.float32))
-                        shmreload = True
-                    else:
-                        slot = 6
-                        os.system("ircam_filter %d" % (slot, ))
-                        msgwhl = ircam_filters[slot - 1]
-                        wh = font1.render(msgwhl, True, CYAN)
-
-            if event.key == K_7:
-                mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL):
-                    if (mmods & KMOD_LALT):
-                        cam_paused.set_data(np.ones(1, dtype=np.float32))
-                        tmux("setcrop 7", session="kcamctrl")
-                        time.sleep(12)
-                        cam_paused.set_data(np.zeros(1, dtype=np.float32))
-                        shmreload = True
-                    else:
-                        slot = 7
-                        os.system("ircam_block")
-                        msgwhl = ircam_filters[slot - 1]
-                        wh = font1.render(msgwhl, True, RED1)
-
-            if event.key == K_8:
-                mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL):
-                    if (mmods & KMOD_LALT):
-                        cam_paused.set_data(np.ones(1, dtype=np.float32))
-                        tmux("setcrop 8", session="kcamctrl")
-                        time.sleep(12)
-                        cam_paused.set_data(np.zeros(1, dtype=np.float32))
-                        shmreload = True
-
-            if event.key == K_9:
-                mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL):
-                    if (mmods & KMOD_LALT):
-                        cam_paused.set_data(np.ones(1, dtype=np.float32))
-                        tmux("setcrop 9", session="kcamctrl")
-                        time.sleep(12)
-                        cam_paused.set_data(np.zeros(1, dtype=np.float32))
-                        shmreload = True
-
-            if event.key == K_0:
-                mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL):
-                    if (mmods & KMOD_LALT):
-                        cam_paused.set_data(np.ones(1, dtype=np.float32))
-                        tmux("setcrop 0", session="kcamctrl")
-                        time.sleep(12)
-                        cam_paused.set_data(np.zeros(1, dtype=np.float32))
-                        shmreload = True
-
-            if event.key == K_MINUS:
-                mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL):
-                    if (mmods & KMOD_LALT):
-                        cam_paused.set_data(np.ones(1, dtype=np.float32))
-                        tmux("setcrop 10", session="kcamctrl")
-                        time.sleep(12)
-                        cam_paused.set_data(np.zeros(1, dtype=np.float32))
-                        shmreload = True
-
-            if event.key == K_EQUALS:
-                mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL):
-                    if (mmods & KMOD_LALT):
-                        cam_paused.set_data(np.ones(1, dtype=np.float32))
-                        tmux("setcrop 11", session="kcamctrl")
-                        time.sleep(12)
-                        cam_paused.set_data(np.zeros(1, dtype=np.float32))
-                        shmreload = True
-
+            
             # DM stage
             #----------
             if event.key == K_UP:
