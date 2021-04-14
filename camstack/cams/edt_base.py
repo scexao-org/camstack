@@ -17,7 +17,7 @@ class EDTCameraNoModes:
         And implements the server side management of the imgtake
     '''
 
-    INTERACTIVE_SHELL_METHODS = ['send_command', 'close', 'release']
+    INTERACTIVE_SHELL_METHODS = ['send_command', 'close', 'release', '_start', '_stop']
 
     KEYWORDS = {  # Format is name: (value, description) - this list CAN be figured out from a redis query.
         'BIN-FCT1': (1, 'Binning factor of the X axis (pixel)'),
@@ -152,6 +152,12 @@ class EDTCameraNoModes:
         self.take_tmux_pane = tmux_util.find_or_create(self.edttake_tmux_name)
         tmux_util.kill_running(self.take_tmux_pane)
 
+    def _stop(self):
+        '''
+        Alias
+        '''
+        self._kill_taker_no_dependents()
+
     def init_pdv_configuration(self):
         if self.is_taker_running():
             raise AssertionError(
@@ -188,6 +194,7 @@ class EDTCameraNoModes:
         '''
         return tmux_util.find_pane_running_pid(self.take_tmux_pane) is not None
 
+
     def start_frame_taker_and_dependents(self):
         self._start_taker_no_dependents()
         # We recreated the SHM !
@@ -208,6 +215,12 @@ class EDTCameraNoModes:
         tmux_util.send_keys(self.take_tmux_pane, self.edttake_tmux_command)
         time.sleep(1)
 
+    def _start(self):
+        '''
+        Alias
+        '''
+        self._start_taker_no_dependents()
+    
     def grab_shm_fill_keywords(self):
         # Only the init, or the regular updates ?
         self.camera_shm = self._get_SHM()
@@ -272,7 +285,7 @@ class EDTCameraNoModes:
 
 
 class EDTCamera(EDTCameraNoModes):
-
+    
     INTERACTIVE_SHELL_METHODS = ['set_camera_mode'] + EDTCameraNoModes.INTERACTIVE_SHELL_METHODS
 
     MODES = {}  # Define the format ?
