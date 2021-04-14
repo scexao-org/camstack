@@ -40,6 +40,9 @@ MILK_SHM_DIR = os.getenv('MILK_SHM_DIR')
 
 import image_processing as impro
 
+ZERO_NODIM = np.array(0., dtype=np.float32)
+ONES_NODIM = np.array(1., dtype=np.float32)
+
 
 # ------------------------------------------------------------------
 #             short hands for opening and checking shm
@@ -53,7 +56,7 @@ def open_shm(shm_name, dims=(1, 1), check=False):
         if tmp != dims:
             #if shm_data.mtdata['size'][:2] != dims:
             os.system("rm %s/%s.im.shm" % (MILK_SHM_DIR, shm_name, ))
-            os.system("creashmim %s %d %d" % (shm_name, xsizeim, ysizeim))
+            os.system("creashmim %s %d %d" % (shm_name, dims[0], dims[1]))
             shm_data = SHM(MILK_SHM_DIR + "/%s.im.shm" % (shm_name, ), verbose=False)
 
     return shm_data
@@ -920,14 +923,14 @@ while True:  # the main game loop
         os.system("log Chuckcam: Done saving current internal dark")
         cam_dark.set_data(bias.astype(np.float32))
         cam_badpixmap.set_data(badpixmap.astype(np.float32))
-        new_dark.set_data(np.zeros(1, dtype=np.float32))
+        new_dark.set_data(ONES_NODIM)
 
     # ------------------------------------------------------------------
     # Relaod shared memory with different size due to change in window size
     if shmreload:
         print("reloading SHM")
         cam = SHM(MILK_SHM_DIR + "/ircam%d.im.shm" % (camid, ), verbose=False)
-        xsizeim, ysizeim = cam.mtdata['x'], cam.mtdata['y']
+        xsizeim, ysizeim = cam.shape_c
         #(xsizeim, ysizeim) = cam.mtdata['size'][:2]#size[:cam.naxis]
         print("image xsize=%d, ysize=%d" % (xsizeim, ysizeim))
         os.system("rm %s/ircam%d_*" % (MILK_SHM_DIR, camid, ))
@@ -1637,7 +1640,7 @@ while True:  # the main game loop
                             "In the time it takes Chuck Norris to sidekick a")
                         print(
                             "red-headed stepchild, we'll acquire all biases.")
-                        
+
                         if not block:
                             os.system("ircam_block")  # blocking the light
                         msgwhl = "     BLOCK      "
@@ -1951,33 +1954,8 @@ while True:  # the main game loop
                                 sync_param.astype(np.float32))
                             time.sleep(1)
 
-            # Camera in full frame
-            #---------------------
-            if event.key == K_f:
-                mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL):
-                    if (mmods & KMOD_LALT):
-                        if xsizeim != 640 and ysizeim != 512:  # don't set full if already full
-                            cam_paused.set_data(np.ones(1, dtype=np.float32))
-                            tmux("set_camera_mode('full')",
-                                 session="ircam%dctrl" % (camid, ))
-                            time.sleep(2)
-                            cam_paused.set_data(np.zeros(1, dtype=np.float32))
-                            shmreload = True
-
-            FILT_KEYLIST = [K_1, K_2, K_3, K_4, K_5, K_6, K_7]
-            if event.key in FILT_KEYLIST:
-                what_key = FILT_KEYLIST.index(event.key)
-                mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL) and not (
-                        mmods & KMOD_LALT):  # Ctrl but no alt, filter set
-                    if what_key < 6:
-                        os.system('ircam_filter %d' % what_key+1)
-                    else:
-                        os.system('ircam_block')
-
             # Crop modes and full frame
-            #--------------------------
+            #---------------------
             CROP_KEYLIST = [
                 K_0, K_1, K_2, K_3, K_4, K_5, K_6, K_7, K_8, K_9, K_MINUS,
                 K_EQUALS, K_f
@@ -1986,14 +1964,33 @@ while True:  # the main game loop
                 what_key = CROP_KEYLIST.index(event.key)
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL) and (mmods & KMOD_LALT):
-                    mode_id = ('full', str(what_key))[
-                        what_key == 12]  # Index 12 == Ctrl+alt+f == full
-                    cam_paused.set_data(np.ones(1, dtype=np.float32))
-                    tmux("set_camera_mode(%s)" % mode_id,
-                         session="ircam%dctrl" % (camid, ))
-                    time.sleep(10)
-                    cam_paused.set_data(np.zeros(1, dtype=np.float32))
-                    shmreload = True
+                    # Index 12 == Ctrl+alt+f == full
+                    mode_id = (str(what_key), "FULL")[event.key == K_f]
+                    if event.key == K_f and xsizeim == 640 and ysizeim == 512:
+                        # Skip full frame if full frame already
+                        print('Camera already in full frame - skipping set_camera_mode()')
+                    else:
+                        cam_paused.set_data(ONES_NODIM)
+                        tmux("set_camera_mode(%s)" % mode_id,
+                            session="ircam%dctrl" % (camid, ))
+                        time.sleep(10)
+                        cam_paused.set_data(ZERO_NODIM)
+                        shmreload = True
+
+            # Ircam Filter/block
+            #------------------------------
+
+            FILT_KEYLIST = [K_1, K_2, K_3, K_4, K_5, K_6, K_7]
+            if event.key in FILT_KEYLIST:
+                what_key = FILT_KEYLIST.index(event.key)
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL) and not (
+                        mmods & KMOD_LALT):  # Ctrl but no alt, filter set
+                    slot = what_key + 1
+                    os.system('ircam_filter %d' % slot)
+                    msgwheel = ircam_filters[slot - 1]
+                    font_color = (CYAN, RED1)[slot == 7]
+                    wh = font1.render(msgwhl, True, font_color)
 
             # DM stage
             #----------

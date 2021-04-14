@@ -1,5 +1,5 @@
 '''
-    Chuck, Rajni, GLINT
+    Buffy
 '''
 import time
 from typing import Union
@@ -8,43 +8,45 @@ from camstack.cams.edt_base import EDTCamera
 
 from camstack.core.utilities import CameraMode
 
-class CRED2(EDTCamera):
+
+class ROMODES:
+    globalresetsingle = 'globalresetsingle'
+    globalresetcds = 'globalresetcds'
+
+
+class CRED1(EDTCamera):
 
     INTERACTIVE_SHELL_METHODS = [
-        'set_synchro', 'set_gain','get_gain', 'set_NDR', 'get_NDR', 'set_fps',
-        'get_fps', 'set_tint', 'get_tint', 'get_temperature', 'toggle_cooling',
-        'set_temperature_setpoint', 'FULL'] + \
+        'set_readout_mode', 'set_readout_mode', 'set_gain','get_gain',
+        'set_NDR', 'get_NDR', 'set_fps',
+        'get_fps', 'set_tint', 'get_tint', 'get_temperature', 'FULL'] + \
         EDTCamera.INTERACTIVE_SHELL_METHODS
 
-    FULL = 'full
-    '
+    FULL = 'full'
     MODES = {
-        # FULL 640 x 512
-        FULL:
-        CameraMode(x0=0, x1=639, y0=0, y1=511),
-        # 320x256 half frame, centered
-        0:
-        CameraMode(x0=160,
-                   x1=479,
-                   y0=128,
-                   y1=383,
-                   fps=1500.082358000,
-                   tint=0.000663336),
+        # FULL 320 x 256
+        FULL: CameraMode(x0=0, x1=319, y0=0, y1=255, fps=1738.152),
+        # 128x128 centered
+        1: CameraMode(x0=96, x1=223, y0=64, y1=191, fps=7008.368),
+        # 64x64 centered
+        2: CameraMode(x0=128, x1=191, y0=96, y1=159, fps=20679.012),
     }
 
-    KEYWORDS = {}
+    KEYWORDS = {
+        'DET-PRES': (0.0, 'Detector pressure (mbar)'),
+    }
     KEYWORDS.update(EDTCamera.KEYWORDS)
 
     def __init__(self,
                  name: str,
                  stream_name: str,
-                 mode_id: int = 0,
-                 unit: int = 0,
+                 mode_id: int = 'full',
+                 unit: int = 1,
                  channel: int = 0):
 
         # Allocate and start right in the appropriate binning mode
         self.synchro = False
-        basefile = '/home/scexao/src/camstack/config/cred2_14bit.cfg'
+        basefile = '/home/scexao/src/camstack/config/cred1_16bit.cfg'
         self.NDR = None  # Grabbed in prepare_camera_finalize
 
         # Call EDT camera init
@@ -57,18 +59,16 @@ class CRED2(EDTCamera):
         # AD HOC
         # ======
 
-        # Issue a few standards for CRED2
-        self.send_command('set fan mode manual')
-        self.send_command('set fan speed 0')
+        # Issue a few standards for CRED1
         self.send_command('set led off')
-        self.set_gain('high')
-        self.set_temperature_setpoint(-40.0)
+        self.send_command('set events off')
+        self.set_gain(50)
 
     # =====================
     # AD HOC PREPARE CAMERA
     # =====================
 
-    def prepare_camera_for_size(self, mode_id):
+    def prepare_camera_for_size(self, mode_id = None):
 
         if mode_id is None:
             mode_id = self.current_mode_id
@@ -92,9 +92,10 @@ class CRED2(EDTCamera):
         # Changing the binning trips the external sync (at lest on OCAM ?)
         self.set_synchro(self.synchro)
 
-        # Initialization of the camera: reset the NDR to 1.
+        # Initialization of the camera: reset the NDR to globalresetcds, NDR2.
         if self.NDR is None:
-            self.set_NDR(1)
+            self.set_readout_mode(ROMODES.globalresetcds)
+            self.set_NDR(2)
 
         if cm.fps is not None:
             self.set_fps(cm.fps)
@@ -102,9 +103,17 @@ class CRED2(EDTCamera):
             self.set_tint(cm.tint)
 
     def send_command(self, cmd, format=True):
-        # Just a little bit of parsing to handle the CRED2 format
-        res = EDTCamera.send_command(self, cmd)
-        if format:
+        # Just a little bit of parsing to handle the CRED1 format
+        # FLI has *decided* to end all their answers with a return prompt "\r\nfli-cli>"
+        res = EDTCamera.send_command(self, cmd)[:-10]
+
+        if 'cli>' in res:
+            # We might have gotten a double answer
+            # Seems to happen when requesting pressure
+            cut = res.index('>')
+            res = res[cut+1:]
+
+        if format and ':' in res:
             return res.split(':')
         else:
             return res
@@ -125,22 +134,30 @@ class CRED2(EDTCamera):
 
         # Additional fill-up of the camera state
         self.get_gain()  # Sets 'DETGAIN'
+        self.get_readout_mode() # Set DETMODE
 
         # Call the stuff that we can't know otherwise
         self.poll_camera_for_keywords()  # Sets 'DET-TMP'
 
     def poll_camera_for_keywords(self):
-        self.get_temperature()
+        self.get_temperature() # Sets DET-TMP
+        time.sleep(.1)
+        self.get_cryo_pressure() # Sets DET-PRES
+        time.sleep(.1)
 
     # ===========================================
     # AD HOC METHODS - TO BE BOUND IN THE SHELL ?
     # ===========================================
 
     def _get_cropping(self):
+        # We mimicked the definition of the cropmodes from the CRED2
+        # BUT the CRED1 is 1-base indexed.... remove 1
         xx, yy = self.send_command('cropping raw')[1:]
-        x0, x1 = xx.split('-')
-        y0, y1 = yy.split('-')
-        return int(x0), int(x1), int(y0), int(y1)
+        x0, x1 = [(int(xxx)-1) for xxx in xx.split('-')]
+        x0 = 32 * x0
+        x1 = 32 * x1 + 31 # column blocks of 32
+        y0, y1 = [int(yyy) - 1 for yyy in yy.split('-')]
+        return x0, x1, y0, y1
 
     def _set_check_cropping(self, x0, x1, y0, y1):
         for _ in range(3):
@@ -148,11 +165,13 @@ class CRED2(EDTCamera):
             if gx0 == x0 and gx1 == x1 and gy0 == y0 and gy1 == y1:
                 return x0, x1, y0, y1
             if gx0 != x0 or gx1 != x1:
-                self.send_command('set cropping columns %u-%u') % (x0, x1)
+                # BUT the CRED1 is 1-base indexed.... add 1
+                self.send_command('set cropping columns %u-%u' % (x0 // 32 + 1, x1 // 32 + 1))
                 # CRED2s are finnicky with cropping, we'll add a wait
                 time.sleep(.5)
             if gy0 != y0 or gy1 != y1:
-                self.send_command('set cropping rows %u-%u') % (x0, x1)
+                # BUT the CRED1 is 1-base indexed.... add 1
+                self.send_command('set cropping rows %u-%u' % (y0 + 1, y1 + 1))
                 time.sleep(.5)
         raise AssertionError(
             f'Cannot set desired crop {x0}-{x1} {y0}-{y1} after 3 tries')
@@ -166,24 +185,30 @@ class CRED2(EDTCamera):
                                        ('False', 'True')[self.synchro])
         return self.synchro
 
-    def set_gain(self, gain: Union[int, str]):
-        if type(gain) is int:
-            gain = ('low', 'medium', 'high')[gain]
-        self.send_command(f'set sensibility {gain}')
+    def set_readout_mode(self, mode):
+        self.send_command(f'set mode {mode}')
+        return self.get_readout_mode()
+
+    def get_readout_mode(self):
+        res = self.send_command('mode raw')
+        self.camera_shm.update_keyword('DETMODE', res)
+        return res
+
+    def set_gain(self, gain: int):
+        self.send_command(f'set gain {gain}')
         return self.get_gain()
 
     def get_gain(self):
-        res = self.send_command('sensibility raw')
-        # res is high, medium or low
+        res = float(self.send_command('gain raw'))
         self.camera_shm.update_keyword('DETGAIN', res)
         return res
 
     def set_NDR(self, NDR: int):
-        self.send_command('set nbreadworeset {NDR}')
+        self.send_command(f'set nbreadworeset {NDR}')
         return self.get_NDR()
 
     def get_NDR(self):
-        self.NDR = int(self.send_command(f'nbreadworeset raw'))
+        self.NDR = int(self.send_command('nbreadworeset raw'))
         self.camera_shm.update_keyword('NDR', self.NDR)
         self.camera_shm.update_keyword('DETMODE',
                                        ('Single', 'IMRO')[self.NDR > 1])
@@ -196,31 +221,30 @@ class CRED2(EDTCamera):
     def get_fps(self):
         fps = float(self.send_command('fps raw'))
         self.camera_shm.update_keyword('FRATE', fps)
+        self.camera_shm.update_keyword('EXPTIME', 1. / fps)
         return fps
 
     def max_fps(self):
         return float(self.send_command('maxfps raw'))
 
     def set_tint(self, tint: float):
-        self.send_command(f'set tint {tint}')
-        return self.get_tint()
+        # CRED1 has no tint management
+        return 1. / self.set_fps(1 / tint)
 
     def get_tint(self):
-        tint = float(self.send_command('tint raw'))
-        self.camera_shm.update_keyword('EXPTIME', tint)
-        return tint
+        # CRED1 has no tint management
+        return 1. / self.get_fps()
 
-    def max_tint(self):
-        return float(self.send_command('maxtint raw'))
+    def get_cryo_pressure(self):
+        pres = float(self.send_command('pressure raw'))
+        self.camera_shm.update_keyword('DET-PRES', pres)
+        return pres
 
     def get_temperature(self):
-        temp = float(self.send_command('temp snake raw'))
-        self.camera_shm.update_keyword('DET-TMP', temp + 273.15)
+        temp = float(self.send_command('temp cryostat diode raw'))
+        self.camera_shm.update_keyword('DET-TMP', temp)
         return temp
 
-    def set_temperature_setpoint(self, temp: float):
-        self.send_command(f'set temp snake {temp:.1f}')
-        return float(self.send_command('temp snake setpoint raw'))
 
     def _shutdown(self):
         input(f'Detector temperature {self.get_temperature()} K; proceed anyway ? Ctrl+C aborts.')
@@ -234,128 +258,25 @@ class CRED2(EDTCamera):
                 print('You\'ll need to power cycle the CRED2 to reboot it.')
 
 
-class Rajni(CRED2):
+class Buffy(CRED1):
 
-    INTERACTIVE_SHELL_METHODS = [] + CRED2.INTERACTIVE_SHELL_METHODS
+    INTERACTIVE_SHELL_METHODS = [] + CRED1.INTERACTIVE_SHELL_METHODS
 
     MODES = {}
-    MODES.update(CRED2.MODES)
+    MODES.update(CRED1.MODES)
 
-    KEYWORDS = {}  # TODO: see about that later.
+    KEYWORDS = {}
+    KEYWORDS.update(CRED1.KEYWORDS)
 
-    def __init__(self,
-                 name: str,
-                 stream_name: str,
-                 mode_id: int,
-                 unit: int = 0,
-                 channel: int = 0):
-        CRED2.__init__(self, name, stream_name, mode_id, unit, channel)
+    def _fill_keywords(self):
+        CRED1._fill_keywords(self)
 
-
-class GLINT(CRED2):
-    MODES = {
-        # GLINT
-        12:
-        CameraMode(x0=224,
-                   x1=319,
-                   y0=80,
-                   y1=423,
-                   fps=1394.833104000,
-                   tint=0.000711851),
-    }
-    MODES.update(CRED2.MODES)
-
-
-class Chuck(CRED2):
-    MODES = {
-        # 224 x 156, centered
-        1:
-        CameraMode(x0=192,
-                   x1=415,
-                   y0=160,
-                   y1=347,
-                   fps=2050.202611000,
-                   tint=0.000483913),
-        # 128 x 128, centered
-        2:
-        CameraMode(x0=256,
-                   x1=383,
-                   y0=192,
-                   y1=319,
-                   fps=4500.617741000,
-                   tint=0.000218568),
-        # 64 x 64, centered
-        3:
-        CameraMode(x0=288,
-                   x1=351,
-                   y0=224,
-                   y1=287,
-                   fps=9203.638201000,
-                   tint=0.000105249),
-        # 192 x 192, centered
-        4:
-        CameraMode(x0=224,
-                   x1=415,
-                   y0=160,
-                   y1=351,
-                   fps=2200.024157000,
-                   tint=0.000449819),
-        # 96 x 72, centered
-        5:
-        CameraMode(x0=256,
-                   x1=351,
-                   y0=220,
-                   y1=291,
-                   fps=8002.636203000,
-                   tint=0.000121555),
-    }
-    MODES.update(CRED2.MODES)
-
-    # Add modes 6-11 (0-5 offseted 32 pix)
-    for i in range(6):
-        cm = MODES[i]
-        MODES[i + 6] = CameraMode(x0=cm.x0 - 32,
-                                  x1=cm.x1 - 32,
-                                  y0=cm.y0,
-                                  y1=cm.y1,
-                                  fps=cm.fps,
-                                  tint=cm.tint)
+        # Override detector name
+        self.camera_shm.update_keyword('DETECTOR', 'CRED1 - BUFFY')
 
 
 # Quick shorthand for testing
 if __name__ == "__main__":
-    cam = Rajni('rajni', 'rajnicam', mode_id='full', unit=1, channel=0)
+    cam = Buffy('buffycam', 'kcam', mode_id='full', unit=1, channel=0)
     from camstack.core.utilities import shellify_methods
     shellify_methods(cam, globals())
-
-    ########
-    '''
-    IRCAM SERVER legacy mapping:
-    
-    ## Useful server commands (identified from chuck)
-    gtint -> get_tint
-    gNDR -> get_NDR
-    gfps -> get_fps
-
-    stint -> set_tint
-    sfps -> set_fps
-    sNDR -> set_NDR
-    cropOFF -> set_mode('full') - (scrop_cols 0 639, scrop_rows 0 511)
-    cropON - reverts to the last cropmode ??
-
-    setcrop 1-N -> set modes
-
-    ## Serial commands (identified from ircamserver.c)
-    tint
-    set tint
-    fps
-    set fps
-    nbreadworeset
-    set nbreadworeset
-    temperatures snake
-    set temperatures snake (redo a get after a set ?)
-
-    reset
-    shutdown
-
-    '''

@@ -253,7 +253,7 @@ int main(int argc, char **argv)
     // image will be in shared memory
     shared = 1;
     // allocate space for keywords
-    NBkw = 25;
+    NBkw = 50;
 
     if (STREAMNAMEINIT == 0)
     {

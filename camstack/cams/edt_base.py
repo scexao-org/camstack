@@ -27,6 +27,8 @@ class EDTCameraNoModes:
         'BZERO': (0.0, 'Real=fits-value*BSCALE+BZERO'),
         'CROP_OR1': (0, 'Origin in X of the cropped window (pixel)'),
         'CROP_OR2': (0, 'Origin in Y of the cropped window (pixel)'),
+        'CROP_EN1': (1, 'End in X of the cropped window (pixel)'),
+        'CROP_EN2': (1, 'End in Y of the cropped window (pixel)'),
         'CROPPED':
         ('False', 'Boolean indicating if the image is windowed or full frame'),
         'DET-TMP': (0.0, 'Detector temperature (K)'),
@@ -344,8 +346,6 @@ class EDTCamera(EDTCameraNoModes):
 
     def _fill_keywords(self):
         preex_keywords = self.camera_shm.get_keywords(True)
-        print(preex_keywords)
-        print(33)
         preex_keywords.update(self.KEYWORDS)
 
         self.camera_shm.set_keywords(preex_keywords)
@@ -356,6 +356,8 @@ class EDTCamera(EDTCameraNoModes):
         self.camera_shm.update_keyword('BIN-FCT2', cm.biny)
         self.camera_shm.update_keyword('CROP_OR1', cm.x0)
         self.camera_shm.update_keyword('CROP_OR2', cm.y0)
+        self.camera_shm.update_keyword('CROP_EN1', cm.x1)
+        self.camera_shm.update_keyword('CROP_EN2', cm.y1)
         self.camera_shm.update_keyword('CROPPED', 'N/A')
 
     def change_camera_parameters(self):

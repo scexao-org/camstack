@@ -22,4 +22,4 @@ setup(
         url = "http://www.github.com/milk-org/camstack",
         packages = ['camstack'],  # same as name
         install_requires = ['docopt', 'libtmux'],
-        scripts = [])
+        scripts = ['./buffycam.py', './chuckcam.py'])

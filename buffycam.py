@@ -1906,7 +1906,7 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL) and (mmods & KMOD_LALT):
                     # Index 12 == Ctrl+alt+f == full
-                    mode_id = (str(what_key), "self.FULL")[event.key == K_f]
+                    mode_id = (str(what_key), "FULL")[event.key == K_f]
                     if event.key == K_f and xsizeim == 320 and ysizeim == 256:
                         # Skip full frame if full frame already
                         print('Camera already in full frame - skipping set_camera_mode()')
@@ -1932,7 +1932,7 @@ while True:  # the main game loop
                     font_color = (CYAN, RED1)[slot == 7]
                     wh = font1.render(msgwhl, True, font_color)
 
-            
+
             # DM stage
             #----------
             if event.key == K_UP:
