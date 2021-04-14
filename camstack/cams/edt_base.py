@@ -197,9 +197,6 @@ class EDTCameraNoModes:
 
     def start_frame_taker_and_dependents(self):
         self._start_taker_no_dependents()
-        # We recreated the SHM !
-        self.grab_shm_fill_keywords()
-        self.prepare_camera_finalize()
         # Now handle the dependent processes
 
         for dep_process in self.dependent_processes:
@@ -213,7 +210,11 @@ class EDTCameraNoModes:
 
         # Let's do it.
         tmux_util.send_keys(self.take_tmux_pane, self.edttake_tmux_command)
-        time.sleep(1)
+        # We recreated the SHM !
+        time.sleep(1.)
+        self.grab_shm_fill_keywords()
+        self.prepare_camera_finalize()
+
 
     def _start(self):
         '''
