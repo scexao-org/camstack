@@ -23,6 +23,9 @@ import datetime as dt
 from astropy.io import fits as pf
 import subprocess
 
+from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT
+from scxkw.redisutil.typed_db import Redis
+
 from pyMilk.interfacing.isio_shmlib import SHM
 
 home = os.getenv('HOME')
@@ -341,6 +344,44 @@ def make_badpix(bias, filt=3.5):
     bpmap[bias < mu - filt * rms] = 0.0
     return (bpmap)
 
+# ------------------------------------------------------------------
+#  Read database for some stage status
+# ------------------------------------------------------------------
+def RDB_pull(rdb):
+
+    fits_keys_to_pull = {'X_IRCFLT','X_IRCBLK','X_BUFPUP','X_CHKPUS','X_NULPKO','X_RCHPKO','X_BUFPKO','D_IMRPAD','D_IMRPAP'}
+    # Now Getting the keys
+    with rdb.pipeline() as pipe:
+        for key in fits_keys_to_pull:
+            pipe.hget(key, 'FITS header')
+            pipe.hget(key, 'value')
+        values = pipe.execute()
+    status = {k: v for k,v in zip(values[::2], values[1::2])}
+
+    pup = status['X_BUFPUP'].strip() == 'IN'
+    reachphoto = status['X_CHKPUS'].strip() == 'REACH'
+    gpin = status['X_NULPKO'].strip() == 'IN'
+    rpin = status['X_RCHPKO'].strip() == 'IN'
+    slot = status['X_IRCFLT']
+    block = status['X_IRCBLK'].strip() == 'IN'
+    bpin = status['X_BUFPKO'].strip() == 'IN'
+    pap = float(status['D_IMRPAP'])
+    pad = float(status['D_IMRPAD'])
+
+    return(pup,reachphoto,gpin,rpin,bpin,slot,block,pap,pad)
+
+# ------------------------------------------------------------------
+#  Filter message
+# ------------------------------------------------------------------
+def whatfilter(reachphoto, slot, block):
+    if reachphoto:
+        msgwhl = "      OPEN      "
+    else:
+        if block:
+            msgwhl = "     BLOCK      "
+        else:
+            msgwhl = slot
+    return(msgwhl)
 
 # ------------------------------------------------------------------
 #  Top message
@@ -386,6 +427,7 @@ CTRL+b      : take new darks
 CTRL+SHIFT+b: take new dark for current exp
 CTRL+r      : save a reference image
 CTRL+s      : start/stop logging images
+CTRL+SHIFT+s: start/stop archiving images
 CTRL+d      : save a HDR image
 CTRL+n      : switch to external/internal trigger
 CTRL+1-6    : change filter wheel slot:
@@ -456,17 +498,22 @@ cam_badpixmap = open_shm("buffycam_badpixmap",
 
 cam_paused = open_shm("buffycam_paused")
 new_dark = open_shm("buffycam_newdark")
-ircam_filter = open_shm("ircam_filter")
-pupshm = open_shm("buffy_pup")
-reachphotoshm = open_shm("chuck_pup_fcs")
-glint_pickoff = open_shm("nuller_pickoff")
-reach_pickoff = open_shm("reach_pickoff")
-telescope_status = open_shm("telescope_status", dims=(6, 1))
 ircam_synchro = open_shm("ircam_synchro", dims=(6, 1))
-pup = int(pupshm.get_data())
-reachphoto = int(reachphotoshm.get_data())
-gpin = int(glint_pickoff.get_data())
-rpin = int(reach_pickoff.get_data())
+
+# ------------------------------------------------------------------
+#            Configure communication with SCExAO's redis
+# ------------------------------------------------------------------
+rdb = Redis(host=REDIS_DB_HOST, port=REDIS_DB_PORT)
+# Is the server alive ?
+try:
+    alive = rdb.ping()
+    if not alive:
+        raise ConnectionError
+except:
+    print('Error: can\'t ping redis DB.')
+    sys.exit(1)
+
+pup,reachphoto,gpin,rpin,bpin,slot,block,pap,pad = RDB_pull(rdb)
 
 pscale = 16.9  #mas per pixel in Buffycam
 
@@ -505,13 +552,9 @@ pygame.display.set_caption('SCIENCE camera display!')
 os.system("tmux new-session -d -s buffycam_misc")  #start a tmux session for messsages - same as default arg of tmux function
 os.system("tmux new-session -d -s ircam_synchro"
           )  #start a tmux session for FLC synchro
-os.system("tmux new-session -d -s telescope_status"
-          )  #start a tmux session for telescope status
 res = subprocess.check_output("ps aux | grep ircam_synchro", shell=True)
 if b'/home/scexao/bin/devices/ircam_synchro' not in res:
     tmux("ircam_synchro", session="ircam_synchro")
-
-slot = int(ircam_filter.get_data())
 
 # ------------------------------------------------------------------
 #              !!! now we are in business !!!!
@@ -742,15 +785,8 @@ rct_zm = zm.get_rect()
 rct_zm.topleft = (5 * z1, 5 * z1)
 
 #ircam_filter
-ircam_filters = [
-    "          OPEN", "        y-band", "1550nm 25nm BW", "1550nm 50nm BW",
-    "        J-band", "        H-band", "         BLOCK"
-]
-msgwhl = ircam_filters[slot - 1]
-if slot < 7:
-    wh = font1.render(msgwhl, True, CYAN)
-elif slot == 7:
-    wh = font1.render(msgwhl, True, RED1)
+msgwhl = whatfilter(reachphoto, slot, block)
+wh = font1.render(msgwhl, True, CYAN)
 rct_wh = wh.get_rect()
 rct_wh.topright = (xws - 6 * z1, 5 * z1)
 
@@ -766,9 +802,27 @@ surf_live = pygame.surface.Surface((xws, yws))
 rect1 = surf_live.get_rect()
 rect1.topleft = (0, 0)
 
+surf_live2 = pygame.surface.Surface((XW, 100 * z1))
+rect2b = surf_live2.get_rect()
+rect2b.bottomleft = (0, YW)
+
 rect2 = cartoon1.get_rect()
 rect2.bottomright = XW, YW + 10 * z1
 screen.blit(cartoon1, rect2)
+
+idt = 0
+datatyp = ["OBJECT","DARK","FLAT","SKYFLAT","DOMEFLAT","COMPARISON","TEST"]
+ndt = len(datatyp)
+for i in range(ndt):
+    exec("dtline%d = font1.render(datatyp[i], True, CYAN, BGCOL)" %i)
+    exec("dtliner%d = font1.render(datatyp[i], True, RED, BGCOL)" %i)
+    exec("rctline%d = dtline%d.get_rect()" %(i,i))
+    exec("rctliner%d = dtline%d.get_rect()" %(i,i))
+    if i == 0:
+        dth = rctline0.h
+    exec("rctline%d.center = (XW/2, yws/2+2*(i-(ndt-1)/2)*dth)" %i)
+    exec("rctliner%d.center = (XW/2, yws/2+2*(i-(ndt-1)/2)*dth)" %i)
+    exec("screen.blit(dtline%d,rctline%d)" %(i,i))
 
 # ------------------------------------------------------------------
 # Initialize variables
@@ -789,6 +843,7 @@ plot_pa = False
 clr_scale = 0  # flag for the display color scale
 shmreload = 0
 keeprpin = False
+waitfordt = False
 
 (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
 
@@ -818,8 +873,6 @@ while True:  # the main game loop
     cnti += 1
     clicked = False
     pwr0 = 1.0
-    gpin = int(glint_pickoff.get_data())
-    rpin = int(reach_pickoff.get_data())
     if not lin_scale:
         pwr0 = 0.3
 
@@ -856,12 +909,13 @@ while True:  # the main game loop
         print("In the time it takes Buffy to dust a")
         print("vampire, we'll acquire this dark.")
 
-        tmux("ircam_block")  # blocking the light
-        msgwhl = ircam_filters[6]
+        if not block and bpin:
+            tmux("ircam_block")  # blocking the light
+        msgwhl = "     BLOCK      "
         wh = font1.render(msgwhl, True, RED1)
         screen.blit(wh, rct_wh)
         pygame.display.update([rct_dinfo2, rct_wh])
-        time.sleep(2.0)  # safety
+        time.sleep(1.0)  # safety
 
         ndark = int(10 * fps / float(ndr))  # 10s of dark
         ave_dark = ave_img_data(ndark, clean=False, disp=True, tint=etime)
@@ -1194,9 +1248,6 @@ while True:  # the main game loop
                 pygame.draw.line(screen, color, (xcross, 0), (xcross, yws), 1)
 
         if plot_pa:
-            temp = telescope_status.get_data()
-            pad = temp[0][4]
-            pap = temp[0][5]
             pygame.draw.line(screen, RED, (xcpa, ycpa),
                              (xcpa - 20 * z1 * m.cos(m.radians(pad)),
                               ycpa - 20 * z1 * m.sin(m.radians(pad))), 1)
@@ -1246,27 +1297,42 @@ while True:  # the main game loop
             cntl = 0
 
         # ------------------------------------------------------------------
+        # Menu for the DATA-TYP for archiving
+        if waitfordt:
+            pygame.draw.rect(screen, BGCOL, (xws/4,yws/2-dth*ndt,xws/2, 2*dth*ndt), 0)
+            rctlines = []
+            for i in range(ndt):
+                if i != idt:
+                    exec("screen.blit(dtline%d,rctline%d)" %(i,i))
+                    exec("rctlines += [rctline%d]" %i)
+                else:
+                    exec("screen.blit(dtliner%d,rctliner%d)" %(i,i))
+                    exec("rctlines += [rctliner%d]" %i)
+                
+        # ------------------------------------------------------------------
         # saving images
         tmuxon = os.popen('tmux ls |grep kcamlog | awk \'{print $2}\'').read()
         if tmuxon:
             saveim = True
         else:
             saveim = False
+        if cnti % 20:
+            rects = [rect2b, rect2, rct, rct2]
+        else:
+            rects = []
+        rects += [
+            rect1, rct_info0, rct_info1, rct_info2, rct_info3, rct_zm,
+            rct_dinfo, rct_dinfo2, rct_sc1, rct_sc2, rct_wh, rct_top
+        ]
         if saveim:
             screen.blit(savem1, rct_savem1)
             screen.blit(savem2, rct_savem2)
             screen.blit(savem3, rct_savem3)
-            rects = [
-                rect1, rct_info0, rct_info1, rct_info2, rct_info3, rct_zm,
-                rct_dinfo, rct_dinfo2, rct_savem1, rct_savem2, rct_savem3,
-                rct_sc1, rct_sc2, rct_wh, rct_top
-            ]
-        else:
-            rects = [
-                rect1, rct_info0, rct_info1, rct_info2, rct_info3, rct_zm,
-                rct_dinfo, rct_dinfo2, rct_sc1, rct_sc2, rct_wh, rct_top
-            ]
+            rects += [rct_savem1, rct_savem2, rct_savem3]
 
+        if waitfordt:
+            rects += rctlines
+            
         if logexpt:
             time.sleep(0.1)
             timeexpt = np.append(timeexpt, time.time())
@@ -1288,15 +1354,9 @@ while True:  # the main game loop
                 timendr = []
                 logndr = False
         if cnti % 20 == 0:
-            slot = int(ircam_filter.get_data())
-            msgwhl = ircam_filters[slot - 1]
-            if slot < 7:
-                wh = font1.render(msgwhl, True, CYAN)
-            else:
-                wh = font1.render(msgwhl, True, RED1)
-
-            pup = int(pupshm.get_data())
-            reachphoto = int(reachphotoshm.get_data())
+            pup,reachphoto,gpin,rpin,bpin,slot,block,pap,pad = RDB_pull(rdb)
+            msgwhl = whatfilter(reachphoto, slot, block)
+            wh = font1.render(msgwhl, True, CYAN)
             msgtop = whatmsg(pup, reachphoto, gpin, rpin)
             topm = font1.render(msgtop, True, CYAN)
 
@@ -1315,11 +1375,6 @@ while True:  # the main game loop
             cam_badpixmap.close()
             #cam_clean.close()
             new_dark.close()
-            ircam_filter.close()
-            pupshm.close()
-            reachphotoshm.close()
-            telescope_status.close()
-            glint_pickoff.close()
             print("Buffycam has ended normally.")
             sys.exit()
         elif event.type == KEYDOWN:
@@ -1331,11 +1386,6 @@ while True:  # the main game loop
                 cam_badpixmap.close()
                 #cam_clean.close()
                 new_dark.close()
-                ircam_filter.close()
-                pupshm.close()
-                reachphotoshm.close()
-                telescope_status.close()
-                glint_pickoff.close()
                 print("Buffycam has ended normally.")
                 sys.exit()
 
@@ -1513,10 +1563,6 @@ while True:  # the main game loop
                         tmux("buffy_pup")
                         tmux("ircam_fcs buffy_pup")
                 else:
-                    res = subprocess.check_output(
-                        "ps aux | grep telescope_status", shell=True)
-                    if b'/home/scexao/bin/telescope_status' not in res:
-                        tmux("telescope_status", session="telescope_status")
                     plot_pa = not plot_pa
 
             # Save new darks for one/all exposure times
@@ -1536,15 +1582,13 @@ while True:  # the main game loop
 
                         print("In the time it takes Buffy to dust a")
                         print("vampire, we'll acquire this dark.")
-                        #if not reachphoto:
-                        #os.system("ircam_block")          # blocking the light
-                        #else:
-                        #os.system("PG1_pickoff")
-                        msgwhl = ircam_filters[6]
+                        if not block and bpin:
+                            os.system("ircam_block")  # blocking the light
+                        msgwhl = "     BLOCK      "
                         wh = font1.render(msgwhl, True, RED1)
                         screen.blit(wh, rct_wh)
                         pygame.display.update([rct_dinfo2, rct_wh])
-                        time.sleep(2.0)  # safety
+                        time.sleep(1.0)  # safety
 
                         ndark = int(10 * fps / float(ndr))  # 10s of dark
                         ave_dark = ave_img_data(ndark,
@@ -1562,10 +1606,8 @@ while True:  # the main game loop
 
                         bias = ave_dark * badpixmap
                         time.sleep(0.2)
-                        #if not reachphoto:
-                        #    os.system("ircam_block")          # blocking the light
-                        #else:
-                        #    os.system("PG1_pickoff")
+                        if bpin:
+                            os.system("ircam_block")          # blocking the light
                         tmux(
                             "scexaostatus set darkbuffy 'OFF             ' 1")
                         tmux(
@@ -1585,13 +1627,13 @@ while True:  # the main game loop
 
                         print("In the time it takes Buffy to dust all the")
                         print("vampires, we'll acquire all biases.")
-
-                        tmux("ircam_block")  # blocking the light
-                        msgwhl = ircam_filters[6]
+                        if bpin:
+                            tmux("ircam_block")  # blocking the light
+                        msgwhl = "     BLOCK      "
                         wh = font1.render(msgwhl, True, RED1)
                         screen.blit(wh, rct_wh)
                         pygame.display.update([rct_dinfo2, rct_wh])
-                        time.sleep(2.0)  # safety
+                        time.sleep(1.0)  # safety
 
                         sync_param = ircam_synchro.get_data().astype(np.int)
                         for tint in etimes2:
@@ -1626,7 +1668,8 @@ while True:  # the main game loop
                             time.sleep(0.2)
                         print(
                             "\nBuffy dusted the crap out of the poor vampire.")
-                        tmux("ircam_block")  # opening the shutter
+                        if bpin:
+                            tmux("ircam_block")  # opening the shutter
                         tmux(
                             "scexaostatus set darkbuffy 'OFF             ' 1")
                         tmux("log Buffycam: Done saving internal darks")
@@ -1682,32 +1725,20 @@ while True:  # the main game loop
                     if saveim:
                         timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
                         if (mmods & KMOD_LSHIFT):
-                            savepath = '/media/data/ARCHIVED_DATA/' + timestamp + '/kcamlog/'
+                            waitfordt = True
                         else:
                             savepath = '/media/data/' + timestamp + '/kcamlog/'
-
-                        ospath = os.path.dirname(savepath)
-                        if not os.path.exists(ospath):
-                            os.makedirs(ospath)
-                        nimsave = int(min(1000, (50000000 / etimet)))
-                        # creating a tmux session for logging
-                        os.system("tmux new-session -d -s kcamlog")
-                        tmux("logshim kcam %i %s" % (nimsave, savepath),
-                             session="kcamlog")
-                        tmux("log Buffycam: start logging images")
-                        tmux(
-                            "scexaostatus set logbuffy 'LOGGING         ' 3")
-                        if plot_pa:
-                            savepathst = '/media/data/' + timestamp + '/telescope_status/'
-                            ospathst = os.path.dirname(savepathst)
-                            if not os.path.exists(ospathst):
-                                os.makedirs(ospathst)
+                            ospath = os.path.dirname(savepath)
+                            if not os.path.exists(ospath):
+                                os.makedirs(ospath)
+                            nimsave = int(min(10000, (50000000 / etimet)))
                             # creating a tmux session for logging
-                            os.system(
-                                "tmux new-session -d -s telescope_status_log")
-                            tmux("logshim telescope_status 1 %s" %
-                                 (savepathst, ),
-                                 session="telescope_status_log")
+                            os.system("tmux new-session -d -s kcamlog")
+                            tmux("logshim kcam %i %s" % (nimsave, savepath),
+                                 session="kcamlog")
+                            tmux("log Buffycam: start logging images")
+                            tmux(
+                                "scexaostatus set logbuffy 'LOGGING         ' 3")
 
                     else:
                         tmux("logshimkill", session="kcamlog")
@@ -1715,11 +1746,26 @@ while True:  # the main game loop
                         tmux("log Buffycam: stop logging images")
                         tmux(
                             "scexaostatus set logbuffy 'OFF             ' 1")
-                        if plot_pa:
-                            tmux("logshimkill", session="telescope_status_log")
-                            tmux("",
-                                 session="telescope_status_log",
-                                 command="kill-session")
+
+            # Start archiving images
+            #--------------------------
+            if event.key == K_RETURN and waitfordt:
+                cam.update_keyword("DATA-TYP",datatyp[idt])
+                timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
+                savepath = '/media/data/ARCHIVED_DATA/' + timestamp + \
+                           '/kcamlog/'
+                waitfordt = False
+                ospath = os.path.dirname(savepath)
+                if not os.path.exists(ospath):
+                    os.makedirs(ospath)
+                nimsave = int(min(20000, (50000000 / etimet)))
+                # creating a tmux session for logging
+                os.system("tmux new-session -d -s kcamlog")
+                tmux("logshim kcam %i %s" %(nimsave, savepath),
+                     session="kcamlog")
+                os.system("log Buffycam: start archiving images")
+                os.system(
+                    "scexaostatus set logbuffy 'ARCHIVING       ' 3")
 
             # Save an HDR image/Subtract dark
             #--------------------------------
@@ -1937,11 +1983,10 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL) and not (
                         mmods & KMOD_LALT):  # Ctrl but no alt, filter set
-                    slot = what_key + 1
-                    tmux('ircam_filter %d' % slot)
-                    msgwheel = ircam_filters[slot - 1]
-                    font_color = (CYAN, RED1)[slot == 7]
-                    wh = font1.render(msgwhl, True, font_color)
+                    if what_key == 6:
+                        os.system('ircam_block')
+                    else:
+                        os.system('ircam_filter %d' % (what_key+1,))
 
 
             # DM stage
@@ -1953,6 +1998,10 @@ while True:  # the main game loop
                         tmux("dm_stage x push -100")
                     else:
                         tmux("dm_stage x push -20")
+                else:
+                    if waitfordt:
+                        idt -= 1
+                        idt %= ndt
 
             if event.key == K_DOWN:
                 mmods = pygame.key.get_mods()
@@ -1961,6 +2010,10 @@ while True:  # the main game loop
                         tmux("dm_stage x push +100")
                     else:
                         tmux("dm_stage x push +20")
+                else:
+                    if waitfordt:
+                        idt += 1
+                        idt %= ndt
 
             if event.key == K_LEFT:
                 mmods = pygame.key.get_mods()

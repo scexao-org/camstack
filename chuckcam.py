@@ -425,6 +425,7 @@ CTRL+b      : take new darks
 CTRL+SHIFT+b: take new dark for current exp
 CTRL+r      : save a reference image
 CTRL+s      : start/stop logging images
+CTRL+SHIFT+s: start/stop archiving images
 CTRL+d      : save a HDR image
 CTRL+n      : switch to external/internal trigger
 CTRL+1-6    : change filter wheel slot:
@@ -495,10 +496,8 @@ cam_dark = open_shm("ircam%d_dark" % (camid, ),
 cam_badpixmap = open_shm("ircam%d_badpixmap" % (camid, ),
                          dims=(xsizeim, ysizeim),
                          check=True)
-#cam_clean = open_shm("ircam%d_clean" % (camid,), dims=(xsizeim, ysizeim), check=True)
 cam_paused = open_shm("ircam%d_paused" % (camid, ))
 new_dark = open_shm("ircam%d_newdark" % (camid, ))
-telescope_status = open_shm("telescope_status", dims=(6, 1))
 ircam_synchro = open_shm("ircam_synchro", dims=(6, 1))
 
 # ------------------------------------------------------------------
@@ -554,8 +553,6 @@ os.system("tmux new-session -d -s ircam%d" %
           (camid, ))  #start a tmux session for messsages
 os.system("tmux new-session -d -s ircam_synchro"
           )  #start a tmux session for FLC synchro
-os.system("tmux new-session -d -s telescope_status"
-          )  #start a tmux session for telescope status
 res = subprocess.check_output("ps aux | grep ircam_synchro", shell=True)
 if b'/home/scexao/bin/devices/ircam_synchro' not in res:
     tmux("ircam_synchro", session="ircam_synchro")
@@ -1585,26 +1582,6 @@ while True:  # the main game loop
                         tmux("ircam_fcs chuck_pup")
                 else:
                     plot_pa = not plot_pa
-                    timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
-                    res = subprocess.check_output(
-                        "ps aux | grep telescope_status", shell=True)
-                    if b'/home/scexao/bin/telescope_status' not in res:
-                        tmux("telescope_status", session="telescope_status")
-                    if plot_pa:
-                        savepathst = '/media/data/' + timestamp + '/telescope_status/'
-                        ospathst = os.path.dirname(savepathst)
-                        if not os.path.exists(ospathst):
-                            os.makedirs(ospathst)
-                            # creating a tmux session for logging
-                        os.system(
-                            "tmux new-session -d -s telescope_status_log")
-                        tmux("logshim telescope_status 1 %s" % (savepathst, ),
-                             session="telescope_status_log")
-                    if not plot_pa:
-                        tmux("logshimkill", session="telescope_status_log")
-                        tmux("",
-                             session="telescope_status_log",
-                             command="kill-session")
 
             # Save new darks for one/all exposure times
             # -----------------------------------------
@@ -1633,7 +1610,7 @@ while True:  # the main game loop
                         wh = font1.render(msgwhl, True, RED1)
                         screen.blit(wh, rct_wh)
                         pygame.display.update([rct_dinfo2, rct_wh])
-                        time.sleep(2.0)  # safety
+                        time.sleep(1.0)  # safety
 
                         ndark = int(10 * fps / float(ndr))  # 10s of dark
                         ave_dark = ave_img_data(ndark,
@@ -1676,14 +1653,16 @@ while True:  # the main game loop
                             "In the time it takes Chuck Norris to sidekick a")
                         print(
                             "red-headed stepchild, we'll acquire all biases.")
-
-                        if not block:
-                            os.system("ircam_block")  # blocking the light
+                        if not reachphoto:
+                            if not block:
+                                os.system("ircam_block")  # blocking the light
+                        else:
+                            os.system("PG1_pickoff")
                         msgwhl = "     BLOCK      "
                         wh = font1.render(msgwhl, True, RED1)
                         screen.blit(wh, rct_wh)
                         pygame.display.update([rct_dinfo2, rct_wh])
-                        time.sleep(2.0)  # safety
+                        time.sleep(1.0)  # safety
 
                         sync_param = ircam_synchro.get_data().astype(np.int)
                         for tint in etimes2:
@@ -1719,7 +1698,10 @@ while True:  # the main game loop
                             time.sleep(0.2)
                         print(
                             "\nChuck sidekicked the crap out of the poor kid.")
-                        os.system("ircam_block")  # opening the shutter
+                        if not reachphoto:
+                            os.system("ircam_block")  # opening the shutter
+                        else:
+                            os.system("PG1_pickoff")
                         os.system(
                             "scexaostatus set darkchuck 'OFF             ' 1")
                         os.system("log Chuckcam: Done saving internal darks")
@@ -1782,7 +1764,7 @@ while True:  # the main game loop
                             ospath = os.path.dirname(savepath)
                             if not os.path.exists(ospath):
                                 os.makedirs(ospath)
-                            nimsave = int(min(1000, (50000000 / etimet)))
+                            nimsave = int(min(10000, (50000000 / etimet)))
                             # creating a tmux session for logging
                             os.system("tmux new-session -d -s ircam%dlog" %
                                       (camid, ))
@@ -1813,7 +1795,7 @@ while True:  # the main game loop
                 ospath = os.path.dirname(savepath)
                 if not os.path.exists(ospath):
                     os.makedirs(ospath)
-                nimsave = int(min(1000, (50000000 / etimet)))
+                nimsave = int(min(20000, (50000000 / etimet)))
                 # creating a tmux session for logging
                 os.system("tmux new-session -d -s ircam%dlog" %
                           (camid, ))
