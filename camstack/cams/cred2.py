@@ -191,7 +191,7 @@ class CRED2(EDTCamera):
         return res
 
     def set_NDR(self, NDR: int):
-        self.send_command('set nbreadworeset {NDR}')
+        self.send_command(f'set nbreadworeset {NDR}')
         return self.get_NDR()
 
     def get_NDR(self):

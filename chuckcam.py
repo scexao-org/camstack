@@ -812,6 +812,20 @@ rect2 = cartoon1.get_rect()
 rect2.bottomright = XW, YW + 10 * z1
 screen.blit(cartoon1, rect2)
 
+idt = 0
+datatyp = ["OBJECT","DARK","FLAT","SKYFLAT","DOMEFLAT","COMPARISON","TEST"]
+ndt = len(datatyp)
+for i in range(ndt):
+    exec("dtline%d = font1.render(datatyp[i], True, CYAN, BGCOL)" %i)
+    exec("dtliner%d = font1.render(datatyp[i], True, RED, BGCOL)" %i)
+    exec("rctline%d = dtline%d.get_rect()" %(i,i))
+    exec("rctliner%d = dtline%d.get_rect()" %(i,i))
+    if i == 0:
+        dth = rctline0.h
+    exec("rctline%d.center = (XW/2, yws/2+2*(i-(ndt-1)/2)*dth)" %i)
+    exec("rctliner%d.center = (XW/2, yws/2+2*(i-(ndt-1)/2)*dth)" %i)
+    exec("screen.blit(dtline%d,rctline%d)" %(i,i))
+
 # ------------------------------------------------------------------
 # Initialize variables
 # ------------------------------------------------------------------
@@ -831,6 +845,7 @@ plot_pa = False
 clr_scale = 0  # flag for the display color scale
 shmreload = 0
 keeprpin = False
+waitfordt = False
 
 (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
 
@@ -989,7 +1004,7 @@ while True:  # the main game loop
             nindex = np.where(ndrs >= ndr)[0][0]
         # ------------------------------------------------------------------
         # read image
-        temp, isat = get_img_data(bias, badpixmap, subt_ref, ref_im, lin_scale)
+        temp, isat = get_img_data(bias, badpixmap, subt_ref, ref_im, lin_scale, check=False)
         # ------------------------------------------------------------------
         # averaging
         if average:
@@ -1284,6 +1299,19 @@ while True:  # the main game loop
             cntl = 0
 
         # ------------------------------------------------------------------
+        # Menu for the DATA-TYP for archiving
+        if waitfordt:
+            pygame.draw.rect(screen, BGCOL, (xws/4,yws/2-dth*ndt,xws/2, 2*dth*ndt), 0)
+            rctlines = []
+            for i in range(ndt):
+                if i != idt:
+                    exec("screen.blit(dtline%d,rctline%d)" %(i,i))
+                    exec("rctlines += [rctline%d]" %i)
+                else:
+                    exec("screen.blit(dtliner%d,rctliner%d)" %(i,i))
+                    exec("rctlines += [rctliner%d]" %i)
+                
+        # ------------------------------------------------------------------
         # saving images
         tmuxon = os.popen('tmux ls |grep ircam%dlog | awk \'{print $2}\'' %
                           (camid, )).read()
@@ -1304,7 +1332,10 @@ while True:  # the main game loop
             screen.blit(savem2, rct_savem2)
             screen.blit(savem3, rct_savem3)
             rects += [rct_savem1, rct_savem2, rct_savem3]
-
+            
+        if waitfordt:
+            rects += rctlines
+            
         if logexpt:
             time.sleep(0.1)
             timeexpt = np.append(timeexpt, time.time())
@@ -1744,24 +1775,23 @@ while True:  # the main game loop
                     if saveim:
                         timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
                         if (mmods & KMOD_LSHIFT):
-                            savepath = '/media/data/ARCHIVED_DATA/' + timestamp + \
-                                '/ircam%dlog/' % (camid, )
+                            waitfordt = True
                         else:
                             savepath = '/media/data/' + timestamp + \
                                 '/ircam%dlog/' % (camid, )
-                        ospath = os.path.dirname(savepath)
-                        if not os.path.exists(ospath):
-                            os.makedirs(ospath)
-                        nimsave = int(min(1000, (50000000 / etimet)))
-                        # creating a tmux session for logging
-                        os.system("tmux new-session -d -s ircam%dlog" %
-                                  (camid, ))
-                        tmux("logshim ircam%d %i %s" %
-                             (camid, nimsave, savepath),
-                             session="ircam%dlog" % (camid, ))
-                        os.system("log Chuckcam: start logging images")
-                        os.system(
-                            "scexaostatus set logchuck 'LOGGING         ' 3")
+                            ospath = os.path.dirname(savepath)
+                            if not os.path.exists(ospath):
+                                os.makedirs(ospath)
+                            nimsave = int(min(1000, (50000000 / etimet)))
+                            # creating a tmux session for logging
+                            os.system("tmux new-session -d -s ircam%dlog" %
+                                      (camid, ))
+                            tmux("logshim ircam%d %i %s" %
+                                 (camid, nimsave, savepath),
+                                 session="ircam%dlog" % (camid, ))
+                            os.system("log Chuckcam: start logging images")
+                            os.system(
+                                "scexaostatus set logchuck 'LOGGING         ' 3")
 
                     else:
                         tmux("logshimkill", session="ircam%dlog" % (camid, ))
@@ -1771,6 +1801,28 @@ while True:  # the main game loop
                         os.system("log Chuckcam: stop logging images")
                         os.system(
                             "scexaostatus set logchuck 'OFF             ' 1")
+            
+            # Start archiving images
+            #--------------------------
+            if event.key == K_RETURN and waitfordt:
+                cam.update_keyword("DATA-TYP",datatyp[idt])
+                timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
+                savepath = '/media/data/ARCHIVED_DATA/' + timestamp + \
+                           '/ircam%dlog/' % (camid, )
+                waitfordt = False
+                ospath = os.path.dirname(savepath)
+                if not os.path.exists(ospath):
+                    os.makedirs(ospath)
+                nimsave = int(min(1000, (50000000 / etimet)))
+                # creating a tmux session for logging
+                os.system("tmux new-session -d -s ircam%dlog" %
+                          (camid, ))
+                tmux("logshim ircam%d %i %s" %
+                     (camid, nimsave, savepath),
+                     session="ircam%dlog" % (camid, ))
+                os.system("log Chuckcam: start archiving images")
+                os.system(
+                    "scexaostatus set logchuck 'ARCHIVING       ' 3")
 
             # Save an HDR image/Subtract dark
             #--------------------------------
@@ -1996,8 +2048,8 @@ while True:  # the main game loop
                     else:
                         os.system('ircam_filter %d' % (what_key+1,))
 
-            # DM stage
-            #----------
+            # DM stage/select DATA-TYP for archiving
+            #-----------------------------------------
             if event.key == K_UP:
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
@@ -2005,6 +2057,10 @@ while True:  # the main game loop
                         tmux("dm_stage y push -100")
                     else:
                         tmux("dm_stage y push -20")
+                else:
+                    if waitfordt:
+                        idt -= 1
+                        idt %= ndt
 
             if event.key == K_DOWN:
                 mmods = pygame.key.get_mods()
@@ -2013,6 +2069,10 @@ while True:  # the main game loop
                         tmux("dm_stage y push +100")
                     else:
                         tmux("dm_stage y push +20")
+                else:
+                    if waitfordt:
+                        idt += 1
+                        idt %= ndt
 
             if event.key == K_LEFT:
                 mmods = pygame.key.get_mods()

@@ -40,7 +40,8 @@ class EDTCameraNoModes:
         'GAIN': (1., 'AD conversion factor (electron/ADU)'),
         'NDR': (1, 'Number of non-destructive reads'),
         'EXTTRIG':
-        ('False', 'Boolean indicating if an extrernal trigger is used')
+        ('False', 'Boolean indicating if an extrernal trigger is used'),
+        'DATA-TYP': ('TEST', 'Subaru-style exp. type')
     }
 
     EDTTAKE_CAST = False  # Only OCAM overrides that
