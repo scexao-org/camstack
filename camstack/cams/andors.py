@@ -2,7 +2,7 @@
     Andors are pretty dumb cameras in the current regard
     It's really only about managing the initialization file and the acquisition tmux
 '''
-
+import os
 from camstack.cams.edt_base import EDTCamera
 from camstack.core.utilities import CameraMode
 
@@ -17,7 +17,7 @@ class Andor897(EDTCamera):
                  unit: int = 2, channel: int = 0,
                  mode = 512):
         
-        basefile = '/home/scexao/src/camstack/config/andor_897.cfg'
+        basefile = os.environ['HOME'] + '/src/camstack/config/andor_897.cfg'
 
         # Call EDT camera init
         EDTCamera.__init__(self, name, stream_name,

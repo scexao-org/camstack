@@ -1,6 +1,7 @@
 '''
     Chuck, Rajni, GLINT
 '''
+import os
 import time
 from typing import Union
 
@@ -44,7 +45,7 @@ class CRED2(EDTCamera):
 
         # Allocate and start right in the appropriate binning mode
         self.synchro = False
-        basefile = '/home/scexao/src/camstack/config/cred2_16bit.cfg'
+        basefile = os.environ['HOME'] + '/src/camstack/config/cred2_16bit.cfg'
         self.NDR = None  # Grabbed in prepare_camera_finalize
 
         # Call EDT camera init

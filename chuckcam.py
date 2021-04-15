@@ -517,7 +517,7 @@ pup,reachphoto,gpin,rpin,slot,block,pap,pad = RDB_pull(rdb)
 
 pscale = 16.9  #mas per pixel in Chuckcam
 
-filename = "/home/scexao/conf/chuckcam_aux/hotspots_cor.txt"
+filename = home + "/conf/chuckcam_aux/hotspots_cor.txt"
 cors = [line.rstrip('\n') for line in open(filename)]
 ncor = len(cors)
 cort = np.zeros((2, ncor))
@@ -554,7 +554,7 @@ os.system("tmux new-session -d -s ircam%d" %
 os.system("tmux new-session -d -s ircam_synchro"
           )  #start a tmux session for FLC synchro
 res = subprocess.check_output("ps aux | grep ircam_synchro", shell=True)
-if b'/home/scexao/bin/devices/ircam_synchro' not in res:
+if bytes(home, 'utf8') + b'/bin/devices/ircam_synchro' not in res:
     tmux("ircam_synchro", session="ircam_synchro")
 
 # ------------------------------------------------------------------
@@ -1339,7 +1339,7 @@ while True:  # the main game loop
             time.sleep(0.1)
             if timeexpt[-1] - timeexpt[0] > 4:
                 os.system(
-                    "/home/scexao/bin/log Chuckcam: changing exposure time to %d"
+                    home + "/bin/log Chuckcam: changing exposure time to %d"
                     % etime)
                 timeexpt = []
                 logexpt = False
@@ -1349,7 +1349,7 @@ while True:  # the main game loop
             time.sleep(0.1)
             if timendr[-1] - timendr[0] > 4:
                 os.system(
-                    "/home/scexao/bin/log Chuckcam: changing exposure time to %d"
+                    home + "/bin/log Chuckcam: changing exposure time to %d"
                     % etime)
                 timendr = []
                 logndr = False

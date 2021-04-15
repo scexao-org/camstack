@@ -1,7 +1,7 @@
 '''
     Manage the ocam
 '''
-
+import os
 from camstack.cams.edt_base import EDTCamera
 from camstack.core.utilities import CameraMode
 
@@ -55,7 +55,7 @@ class OCAM2K(EDTCamera):
         # Allocate and start right in the appropriate binning mode
 
         mode_id = (1, 3)[binning]
-        basefile = '/home/scexao/src/camstack/config/ocam_full.cfg'
+        basefile = os.environ['HOME'] + '/src/camstack/config/ocam_full.cfg'
 
         self.synchro = True
         self.STREAMNAME_ocam2d = final_stream_name

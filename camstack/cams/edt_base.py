@@ -204,7 +204,7 @@ class EDTCameraNoModes:
             dep_process.start()
 
     def _start_taker_no_dependents(self):
-        exec_path = '/home/scexao/src/camstack/src/edttake'
+        exec_path = os.environ['HOME'] + '/src/camstack/src/edttake'
         self.edttake_tmux_command = f'{exec_path} -s {self.STREAMNAME} -u {self.pdv_unit} -c {self.pdv_channel} -l 0 -N 4'
         if self.EDTTAKE_CAST:
             self.edttake_tmux_command += ' -8'  # (byte pair) -> (ushort) casting.

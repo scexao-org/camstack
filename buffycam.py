@@ -517,7 +517,7 @@ pup,reachphoto,gpin,rpin,bpin,slot,block,pap,pad = RDB_pull(rdb)
 
 pscale = 16.9  #mas per pixel in Buffycam
 
-filename = "/home/scexao/conf/buffycam_aux/hotspots_cor.txt"
+filename = home + "/conf/buffycam_aux/hotspots_cor.txt"
 cors = [line.rstrip('\n') for line in open(filename)]
 ncor = len(cors)
 cort = np.zeros((2, ncor))
@@ -553,7 +553,7 @@ os.system("tmux new-session -d -s buffycam_misc")  #start a tmux session for mes
 os.system("tmux new-session -d -s ircam_synchro"
           )  #start a tmux session for FLC synchro
 res = subprocess.check_output("ps aux | grep ircam_synchro", shell=True)
-if b'/home/scexao/bin/devices/ircam_synchro' not in res:
+if bytes(home, 'utf8') + b'/bin/devices/ircam_synchro' not in res:
     tmux("ircam_synchro", session="ircam_synchro")
 
 # ------------------------------------------------------------------
@@ -1339,7 +1339,7 @@ while True:  # the main game loop
             time.sleep(0.1)
             if timeexpt[-1] - timeexpt[0] > 4:
                 tmux(
-                    "/home/scexao/bin/log Buffycam: changing exposure time to %d"
+                    home + "/bin/log Buffycam: changing exposure time to %d"
                     % etime)
                 timeexpt = []
                 logexpt = False
@@ -1349,7 +1349,7 @@ while True:  # the main game loop
             time.sleep(0.1)
             if timendr[-1] - timendr[0] > 4:
                 tmux(
-                    "/home/scexao/bin/log Buffycam: changing exposure time to %d"
+                    home + "/bin/log Buffycam: changing exposure time to %d"
                     % etime)
                 timendr = []
                 logndr = False
