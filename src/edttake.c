@@ -231,7 +231,7 @@ int main(int argc, char **argv)
     cameratype = pdv_get_cameratype(pdv_p);
 
     isiowidth = (BYTESHORTCAST != 0) ? width / 2 : width;
-    atype = ((BYTESHORTCAST != 0) || depth != 8) ? _DATATYPE_UINT16 : _DATATYPE_UINT8;
+    atype = ((BYTESHORTCAST != 0) || depth != 8) ? _DATATYPE_INT16 : _DATATYPE_UINT8;
     // 16 -> 16 OR 8 -> 16: bytewidth = isiowidth * 2
     // 8 -> 8: bytewidth = isiowidth
     // will be used to figure out the memcopy size
