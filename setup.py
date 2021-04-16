@@ -21,5 +21,5 @@ setup(
         author_email = 'vdeo@naoj.org',
         url = "http://www.github.com/milk-org/camstack",
         packages = ['camstack'],  # same as name
-        install_requires = ['docopt', 'libtmux'],
+        install_requires = ['docopt', 'libtmux', 'pygame'],
         scripts = ['./buffycam.py', './chuckcam.py'])

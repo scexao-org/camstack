@@ -164,7 +164,8 @@ class EDTCameraNoModes:
             raise AssertionError(
                 'Cannot change FG config while taker is running')
 
-        tmp_config = '/tmp/' + self.NAME + '.cfg'
+        tmp_config = '/tmp/' + os.environ['USER'] + '_' + self.NAME + '.cfg'
+	# Adding a username here, because we can't overwrite the file of another user !
         res = subprocess.run(['cp', self.base_config_file, tmp_config],
                              stdout=subprocess.PIPE)
         if res.returncode != 0:
