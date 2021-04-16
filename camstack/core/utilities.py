@@ -1,5 +1,7 @@
 from typing import Tuple, List
 from camstack.core import tmux
+import time
+
 
 class CameraMode:
     def __init__(self,
@@ -38,29 +40,37 @@ class DependentProcess:
         They're expected to live in a tmux (local or remote)
         This typically will include ocamdecode, and the TCP transfer.
     '''
-    
+    def __init__(self,
+                 tmux_name: str,
+                 cli_cmd: str,
+                 cli_args: List[str],
+                 cset: str = None,
+                 rtprio: int = None,
+                 kill_upon_create: bool = True):
 
-    def __init__(self, tmux_name: str, cli_cmd: str, cli_args: List[str], cset: str = None, rtprio: int = None):
-
-
-        self.enabled = True # Is this registered to run ?
+        self.enabled = True  # Is this registered to run ? #TODO UNUSED
 
         self.tmux_name = tmux_name
         self.cli_cmd = cli_cmd
         self.cli_args = cli_args
 
-        self.initialize_tmux()
+        self.start_order = 0
+        self.kill_order = 0
 
-    
-    def initialize_tmux(self):
+        self.initialize_tmux(kill_upon_create)
+
+    def initialize_tmux(self, kill_upon_create):
         self.tmux_pane = tmux.find_or_create(self.tmux_name)
-        tmux.kill_running(self.tmux_pane)
+        if kill_upon_create:
+            tmux.kill_running(self.tmux_pane)
 
     def start(self):
         tmux.send_keys(self.tmux_pane, self.cli_cmd % self.cli_args)
+        time.sleep(1)
 
     def stop(self):
         tmux.kill_running(self.tmux_pane)
+        time.sleep(1)
 
     def is_running(self):
         return self.get_pid() is not None
@@ -70,20 +80,31 @@ class DependentProcess:
 
 
 class RemoteDependentProcess(DependentProcess):
-    
-    def __init__(self, tmux_name, cli_cmd, cli_args, remote_host, cset: str = None, rt_prio: int = None):
-        
+    def __init__(self,
+                 tmux_name,
+                 cli_cmd,
+                 cli_args,
+                 remote_host,
+                 cset: str = None,
+                 rtprio: int = None,
+                 kill_upon_create: bool = True):
+
         self.remote_host = remote_host
 
-        DependentProcess.__init__(self, tmux_name, cli_cmd, cli_args, cset, rt_prio)
+        DependentProcess.__init__(self,
+                                  tmux_name,
+                                  cli_cmd,
+                                  cli_args,
+                                  cset=cset,
+                                  rtprio=rtprio,
+                                  kill_upon_create=kill_upon_create)
 
+    def initialize_tmux(self, kill_upon_create):
 
-    def initialize_tmux(self):
-
-        self.tmux_pane = tmux.find_or_create_remote(self.tmux_name, self.remote_host)
-        tmux.kill_running(self.tmux_pane)
-
-
+        self.tmux_pane = tmux.find_or_create_remote(self.tmux_name,
+                                                    self.remote_host)
+        if kill_upon_create:
+            tmux.kill_running(self.tmux_pane)
 
 
 def shellify_methods(instance_of_camera, top_level_globals):
@@ -91,4 +112,5 @@ def shellify_methods(instance_of_camera, top_level_globals):
         
     '''
     for method_name in instance_of_camera.INTERACTIVE_SHELL_METHODS:
-        top_level_globals[method_name] = getattr(instance_of_camera, method_name)
+        top_level_globals[method_name] = getattr(instance_of_camera,
+                                                 method_name)

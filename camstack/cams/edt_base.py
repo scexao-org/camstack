@@ -128,8 +128,10 @@ class EDTCameraNoModes:
         # TODO csets and RT prios - through CACAO ?
 
     def kill_taker_and_dependents(self):
-        # Kill the dependent processes in reverse order
-        for dep_process in self.dependent_processes[::-1]:
+
+        self.dependent_processes.sort(key=lambda x: x.kill_order)
+
+        for dep_process in self.dependent_processes:
             dep_process.stop()
 
         self._kill_taker_no_dependents()
@@ -196,8 +198,9 @@ class EDTCameraNoModes:
 
     def start_frame_taker_and_dependents(self):
         self._start_taker_no_dependents()
-        # Now handle the dependent processes
 
+        # Now handle the dependent processes
+        self.dependent_processes.sort(key=lambda x: x.start_order)
         for dep_process in self.dependent_processes:
             dep_process.start()
 
