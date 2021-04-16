@@ -210,9 +210,9 @@ class OCAM2K(EDTCamera):
         self.send_command('temp ' + ('off', 'on')[self.is_cooling])
         self.is_cooling = cooling
 
-    def set_temperature_setpoint(self, temp):
+    def set_temperature_setpoint(self, temp: float):
         self.send_command(f'temp {int(temp)}')
-        return self.get_temperature()[1]
+        return self.get_temperature()
 
 
 # Quick shorthand for testing
