@@ -29,8 +29,7 @@ class EDTCameraNoModes:
         'CROP_OR2': (0, 'Origin in Y of the cropped window (pixel)'),
         'CROP_EN1': (1, 'End in X of the cropped window (pixel)'),
         'CROP_EN2': (1, 'End in Y of the cropped window (pixel)'),
-        'CROPPED':
-        ('False', 'Boolean indicating if the image is windowed or full frame'),
+        'CROPPED': ('False', 'Image windowed or full frame'),
         'DET-TMP': (0.0, 'Detector temperature (K)'),
         'DETECTOR': ('DET', 'Name of the detector'),
         'DETGAIN': (1., 'Detector gain'),
@@ -39,8 +38,7 @@ class EDTCameraNoModes:
         'FRATE': (0., 'Frame rate of the acquisition (Hz)'),
         'GAIN': (1., 'AD conversion factor (electron/ADU)'),
         'NDR': (1, 'Number of non-destructive reads'),
-        'EXTTRIG':
-        ('False', 'Boolean indicating if an extrernal trigger is used'),
+        'EXTTRIG': ('False', 'Extrernal trigger'),
         'DATA-TYP': ('TEST', 'Subaru-style exp. type')
     }
 

@@ -44,21 +44,17 @@ ONES_NODIM = np.array(1., dtype=np.float32)
 #             short hands for opening and checking shm
 # ------------------------------------------------------------------
 def open_shm(shm_name, dims=(1, 1), check=False):
-
+    data = np.zeros((dims[1], dims[0]), dtype=np.float32).squeeze()
     if not os.path.isfile(MILK_SHM_DIR + "/%s.im.shm" % (shm_name, )):
-        tmux("creashmim %s %d %d" % (shm_name, dims[0], dims[1]))
-        time.sleep(.1)
-    shm_data = SHM(MILK_SHM_DIR + "/%s.im.shm" % (shm_name, ))
+        shm_data = SHM(MILK_SHM_DIR + "/%s.im.shm" % (shm_name, ), data = data, verbose=False)
+    else:
+        shm_data = SHM(MILK_SHM_DIR + "/%s.im.shm" % (shm_name, ))
     if check:
         tmp = shm_data.shape_c
         if tmp != dims:
             #if shm_data.mtdata['size'][:2] != dims:
-            tmux("rm %s/%s.im.shm" % (
-                MILK_SHM_DIR,
-                shm_name,
-            ))
-            tmux("creashmim %s %d %d" % (shm_name, dims[0], dims[1]))
-            shm_data = SHM(MILK_SHM_DIR + "/%s.im.shm" % (shm_name, ))
+            os.system("rm %s/%s.im.shm" % (MILK_SHM_DIR, shm_name, ))
+            shm_data = SHM(MILK_SHM_DIR + "/%s.im.shm" % (shm_name, ), data = data, verbose=False)
 
     return shm_data
 
