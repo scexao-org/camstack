@@ -327,13 +327,16 @@ class EDTCameraNoModes:
             ret = self.event.wait(10)
             if ret: # Signal to break the loop
                 break
-
+	
             # Dependents cset + RTprio checking
             for proc in self.dependent_processes:
                 proc.make_children_rt()
 
             # Camera specifics !
-            self.poll_camera_for_keywords()
+            try:
+                self.poll_camera_for_keywords()
+            except Exception as e:
+                print("Polling thread: error ", e)
 
             print(f'Thread is running at {time.time()}')
 

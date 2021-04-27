@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     tcp_send = DependentProcess(
         tmux_name='kcam_tcp',
-        cli_cmd='sleep 3; OMP_NUM_THREADS=1 /home/scexao/bin/shmimTCPtransmit %s %s %u',
+        cli_cmd='sleep 3; OMP_NUM_THREADS=1 /home/scexao/bin/shmimTCPtransmit-simple %s %s %u',
         cli_args=('kcam', '10.20.20.2', 30301),
         kill_upon_create = False,
         cset='kcam_tcp',

@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     tcp_send = DependentProcess(
         tmux_name='ircam0_tcp',
-        cli_cmd='sleep 3; OMP_NUM_THREADS=1 /home/scexao/bin/shmimTCPtransmit %s %s %u',
+        cli_cmd='sleep 3; OMP_NUM_THREADS=1 /home/scexao-op/bin/shmimTCPtransmit-simple %s %s %u',
         cli_args=('ircam0', '10.20.20.2', 30101),
         kill_upon_create = False,
         cset='ircam0_tcp',
