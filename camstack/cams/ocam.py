@@ -4,7 +4,6 @@
 import os
 
 from typing import Union
-
 from camstack.cams.edt_base import EDTCamera
 from camstack.core.utilities import CameraMode
 
@@ -127,9 +126,11 @@ class OCAM2K(EDTCamera):
         else:
             return res
 
+    '''
     def _get_SHM(self):
         # Overload to get a pointer to ocam2d instead of ocam2krc
         return SHM(self.STREAMNAME_ocam2d, symcode=0)
+    '''
 
     def _fill_keywords(self):
         # Do a little more filling than the subclass after changing a mode

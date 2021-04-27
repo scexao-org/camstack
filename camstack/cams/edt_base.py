@@ -9,6 +9,7 @@ import os
 import time
 import subprocess
 
+import threading
 
 class EDTCameraNoModes:
     '''
@@ -85,6 +86,10 @@ class EDTCameraNoModes:
         self.dependent_processes = dependent_processes
         self.taker_cset_prio = taker_cset_prio
 
+        # Thread:
+        self.event = None
+        self.thread = None
+
         #=======================
         # TMUX TAKE SESSION MGMT
         #=======================
@@ -129,8 +134,6 @@ class EDTCameraNoModes:
         # =================================
         self.prepare_camera_finalize()
 
-        # TODO csets and RT prios - through CACAO ?
-
     def kill_taker_and_dependents(self):
 
         self.dependent_processes.sort(key=lambda x: x.kill_order)
@@ -153,6 +156,9 @@ class EDTCameraNoModes:
         self.kill_taker_and_dependents()
 
     def _kill_taker_no_dependents(self):
+
+        self.stop_auxiliary_thread()
+
         self.edttake_tmux_name = f'{self.NAME}_edt'
         self.take_tmux_pane = tmux_util.find_or_create(self.edttake_tmux_name)
         tmux_util.kill_running(self.take_tmux_pane)
@@ -209,6 +215,7 @@ class EDTCameraNoModes:
         for dep_process in self.dependent_processes:
             dep_process.start()
 
+
     def _start_taker_no_dependents(self):
         exec_path = os.environ['HOME'] + '/src/camstack/src/edttake'
         self.edttake_tmux_command = f'{exec_path} -s {self.STREAMNAME} -u {self.pdv_unit} -c {self.pdv_channel} -l 0 -N 4'
@@ -229,6 +236,8 @@ class EDTCameraNoModes:
             ])
         self.grab_shm_fill_keywords()
         self.prepare_camera_finalize()
+
+        self.start_auxiliary_thread()
 
     def _start(self):
         '''
@@ -296,6 +305,38 @@ class EDTCameraNoModes:
             Just an alias
         '''
         return self.send_command(cmd)
+
+    def poll_camera_for_keywords(self):
+        print(
+            'Calling poll_camera_for_keywords on generic EDTCameraClass. Nothing happens here.'
+        )
+
+    def start_auxiliary_thread(self):
+        self.event = threading.Event()
+        self.thread = threading.Thread(target=self.auxiliary_thread_run_function)
+        self.thread.start()
+
+    def stop_auxiliary_thread(self):
+        if self.thread is not None:
+            self.event.set()
+            self.thread.join()
+
+
+    def auxiliary_thread_run_function(self):
+        while True:
+            ret = self.event.wait(10)
+            if ret: # Signal to break the loop
+                break
+
+            # Dependents cset + RTprio checking
+            for proc in self.dependent_processes:
+                proc.make_children_rt()
+
+            # Camera specifics !
+            self.poll_camera_for_keywords()
+
+            print(f'Thread is running at {time.time()}')
+
 
 
 class EDTCamera(EDTCameraNoModes):

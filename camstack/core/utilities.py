@@ -3,6 +3,7 @@ from camstack.core import tmux
 import time
 import subprocess
 
+
 class CameraMode:
     def __init__(self,
                  *,
@@ -72,15 +73,30 @@ class DependentProcess:
         time.sleep(1)
         self.make_children_rt()
 
-    def make_children_rt(self)
+    def make_children_rt(self):
         if self.rtprio is not None:
             # This works very partially.
             # Because some dependents start aux processes,
             # And because some dependents start by a sleep command...
             # D'oh.
-            # TODO: recursive descent over child processes.
-            # TODO: call this from the camera polling thread.
-            subprocess.run(['make_cset_and_rt', str(self.get_pid()), str(self.rtprio), self.cset])
+            pids = []
+            pid = self.get_pid()
+            if pid is not None:
+                pids = [pid]
+            while len(pids) > 0:
+                pid = pids.pop()
+                print('PID: ', pid)
+                ret = subprocess.run([
+                    'make_cset_and_rt',
+                    str(pid),
+                    str(self.rtprio), self.cset
+                ])
+                children = subprocess.run(['pgrep', '-P', str(pid)],
+                                   stdout=subprocess.PIPE).stdout.decode(
+                                       'utf8').strip().split('\n')
+                if children[0] != '':
+                    pids += [int(c) for c in children]
+                print('PIDs: ', pids)
 
     def stop(self):
         tmux.kill_running(self.tmux_pane)
