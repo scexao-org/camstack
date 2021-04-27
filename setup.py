@@ -23,6 +23,12 @@ class PreInstallCommand(develop):
 with open("README.md", 'r') as f:
     long_description = f.read()
 
+scripts = [
+    './viewers/buffycam.py',
+    './viewers/chuckcam.py',
+    './scripts/startOCAM',
+]
+
 setup(
         name = 'camstack',
         version = '0.01',
@@ -33,7 +39,7 @@ setup(
         url = "http://www.github.com/milk-org/camstack",
         packages = ['camstack'],  # same as name
         install_requires = ['docopt', 'libtmux', 'pygame'],
-        scripts = ['./viewers/buffycam.py', './viewers/chuckcam.py'],#, './camstack/core/make_cset_and_rt'],
+        scripts = scripts,#, './camstack/core/make_cset_and_rt'],
         cmdclass={'develop': PreInstallCommand},
     )
 

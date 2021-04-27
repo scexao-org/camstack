@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# RATIONALE
+# Kill and restart the ocam stuff
+# This is temporary until I get the edtcam python stack done
+
+# Sequence - performed by the ocam_ctrl python
+# (Re-)create tmuxes:
+# ocam_edt: framegrabbing
+# ocam_decode: OCAM2K demangling
+# ocam_serial: serial to OCAM2K
+# REMOTE @scexao5 streamTCPreceive_30107: shmimTCPreceive
+# ocam_tcp: TCP receive
+
+# EDT unit
+UNIT=3
+
+tnew="tmux new-session -d -s"
+tsend="tmux send-keys -t"
+
+# Create tmuxes and issue kills
+$tnew ocam_ctrl
+sleep 0.1
+$tsend ocam_ctrl C-c
+sleep 0.1
+$tsend ocam_ctrl "close()" Enter
+sleep 3
+$tsend ocam_ctrl C-c
+sleep 0.3
+$tsend ocam_ctrl C-z
+sleep 0.3
+$tsend ocam_ctrl "kill %" Enter
+
+echo ""
+read -p "Everything killed, proceed to startup ? Press enter to continue, Ctrl+C to abort."
+
+$tsend ocam_ctrl "python -i /home/scexao/src/camstack/camstack/cams/ocam.py" Enter
+
+echo "ocamstart completed."
