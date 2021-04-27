@@ -12,28 +12,27 @@
 # REMOTE @scexao5 streamTCPreceive_30107: shmimTCPreceive
 # ocam_tcp: TCP receive
 
-# EDT unit
-UNIT=3
-
 tnew="tmux new-session -d -s"
 tsend="tmux send-keys -t"
 
+tname="ocam_ctrl"
+
 # Create tmuxes and issue kills
-$tnew ocam_ctrl
+$tnew $tname
 sleep 0.1
-$tsend ocam_ctrl C-c
+$tsend $tname C-c
 sleep 0.1
-$tsend ocam_ctrl "close()" Enter
+$tsend $tname "close()" Enter
 sleep 3
-$tsend ocam_ctrl C-c
+$tsend $tname C-c
 sleep 0.3
-$tsend ocam_ctrl C-z
+$tsend $tname C-z
 sleep 0.3
-$tsend ocam_ctrl "kill %" Enter
+$tsend $tname "kill %" Enter
 
 echo ""
-read -p "Everything killed, proceed to startup ? Press enter to continue, Ctrl+C to abort."
+#read -p "Everything killed, proceed to startup ? Press enter to continue, Ctrl+C to abort."
 
-$tsend ocam_ctrl "python -i /home/scexao/src/camstack/camstack/cams/ocam.py" Enter
+$tsend $tname "python -im camstack.cam_mains.renocam" Enter
 
-echo "ocamstart completed."
+echo "startOCAM completed."

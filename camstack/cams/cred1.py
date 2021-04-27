@@ -43,7 +43,9 @@ class CRED1(EDTCamera):
                  stream_name: str,
                  mode_id: int = 'full',
                  unit: int = 1,
-                 channel: int = 0):
+                 channel: int = 0,
+                 taker_cset_prio: Union[str, int] = ('system', None),
+                 dependent_processes=[]):
 
         # Allocate and start right in the appropriate binning mode
         self.synchro = False
@@ -54,7 +56,7 @@ class CRED1(EDTCamera):
         # This should pre-kill dependent sessions
         # But we should be able to "prepare" the camera before actually starting
         EDTCamera.__init__(self, name, stream_name, mode_id, unit, channel,
-                           basefile)
+                           basefile, taker_cset_prio=taker_cset_prio, dependent_processes=dependent_processes)
 
         # ======
         # AD HOC

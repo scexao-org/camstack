@@ -27,6 +27,8 @@ scripts = [
     './viewers/buffycam.py',
     './viewers/chuckcam.py',
     './scripts/startOCAM',
+    './scripts/startChuck',
+    './scripts/startBuffy',
 ]
 
 setup(
