@@ -3,7 +3,7 @@ from camstack.core import tmux as tmux_util
 from camstack.core.edtinterface import EdtInterfaceSerial
 from pyMilk.interfacing.isio_shmlib import SHM
 
-from typing import List, Any
+from typing import List, Any, Union
 
 import os
 import time
@@ -17,7 +17,9 @@ class EDTCameraNoModes:
         And implements the server side management of the imgtake
     '''
 
-    INTERACTIVE_SHELL_METHODS = ['send_command', 'close', 'release', '_start', '_stop']
+    INTERACTIVE_SHELL_METHODS = [
+        'send_command', 'close', 'release', '_start', '_stop'
+    ]
 
     KEYWORDS = {  # Format is name: (value, description) - this list CAN be figured out from a redis query.
         'BIN-FCT1': (1, 'Binning factor of the X axis (pixel)'),
@@ -53,6 +55,7 @@ class EDTCameraNoModes:
                  channel: int,
                  basefile: str,
                  no_start: bool = False,
+                 taker_cset_prio: Union[str, int] = ('system', None),
                  dependent_processes: List[Any] = []):
         '''
             Run an SYSTEM init_cam with the cfg file
@@ -80,6 +83,7 @@ class EDTCameraNoModes:
         self.base_config_file = basefile
 
         self.dependent_processes = dependent_processes
+        self.taker_cset_prio = taker_cset_prio
 
         #=======================
         # TMUX TAKE SESSION MGMT
@@ -165,7 +169,7 @@ class EDTCameraNoModes:
                 'Cannot change FG config while taker is running')
 
         tmp_config = '/tmp/' + os.environ['USER'] + '_' + self.NAME + '.cfg'
-	# Adding a username here, because we can't overwrite the file of another user !
+        # Adding a username here, because we can't overwrite the file of another user !
         res = subprocess.run(['cp', self.base_config_file, tmp_config],
                              stdout=subprocess.PIPE)
         if res.returncode != 0:
@@ -185,6 +189,7 @@ class EDTCameraNoModes:
         print(
             'Calling prepare_camera on generic EDTCameraClass. Nothing happens here.'
         )
+
     def prepare_camera_finalize(self):
         print(
             'Calling prepare_camera on generic EDTCameraClass. Nothing happens here.'
@@ -195,7 +200,6 @@ class EDTCameraNoModes:
             Send a signal to the take process PID to figure out if it's alive
         '''
         return tmux_util.find_pane_running_pid(self.take_tmux_pane) is not None
-
 
     def start_frame_taker_and_dependents(self):
         self._start_taker_no_dependents()
@@ -215,16 +219,23 @@ class EDTCameraNoModes:
         tmux_util.send_keys(self.take_tmux_pane, self.edttake_tmux_command)
         # We recreated the SHM !
         time.sleep(1.)
+
+        if self.taker_cset_prio[1] is not None: # Set rtprio !
+            subprocess.run([
+                'make_cset_and_rt',
+                str(tmux_util.find_pane_running_pid(self.take_tmux_pane)), # PID
+                str(self.taker_cset_prio[1]), # PRIORITY
+                self.taker_cset_prio[0] # CPUSET
+            ])
         self.grab_shm_fill_keywords()
         self.prepare_camera_finalize()
-
 
     def _start(self):
         '''
         Alias
         '''
         self._start_taker_no_dependents()
-    
+
     def grab_shm_fill_keywords(self):
         # Only the init, or the regular updates ?
         self.camera_shm = self._get_SHM()
@@ -242,8 +253,8 @@ class EDTCameraNoModes:
 
         self.camera_shm.set_keywords(preex_keywords)
 
-        self.camera_shm.update_keyword('DETECTOR',
-                f'FG unit {self.pdv_unit} ch. {self.pdv_channel}')
+        self.camera_shm.update_keyword(
+            'DETECTOR', f'FG unit {self.pdv_unit} ch. {self.pdv_channel}')
         self.camera_shm.update_keyword('BIN-FCT1', 1)
         self.camera_shm.update_keyword('BIN-FCT2', 1)
         self.camera_shm.update_keyword('CROP_OR1', 0)
@@ -266,7 +277,6 @@ class EDTCameraNoModes:
 
         self.grab_shm_fill_keywords()
 
-
     def get_fg_parameters(self):
         # We don't need to get them, because we set them in init_pdv_configuration
         pass
@@ -274,7 +284,7 @@ class EDTCameraNoModes:
     def set_fg_parameters(self):
         pass
 
-    def send_command(self, cmd, base_timeout: float=100.):
+    def send_command(self, cmd, base_timeout: float = 100.):
         '''
             Wrap to the serial
             That supposes we HAVE serial... maybe we'll move this to a subclass
@@ -289,8 +299,9 @@ class EDTCameraNoModes:
 
 
 class EDTCamera(EDTCameraNoModes):
-    
-    INTERACTIVE_SHELL_METHODS = ['set_camera_mode'] + EDTCameraNoModes.INTERACTIVE_SHELL_METHODS
+
+    INTERACTIVE_SHELL_METHODS = ['set_camera_mode'
+                                 ] + EDTCameraNoModes.INTERACTIVE_SHELL_METHODS
 
     MODES = {}  # Define the format ?
     EDTTAKE_CAST = False
@@ -302,6 +313,7 @@ class EDTCamera(EDTCameraNoModes):
                  unit: int,
                  channel: int,
                  basefile: str,
+                 taker_cset_prio: Union[str, int] = ('system', None),
                  dependent_processes: List[Any] = []):
         width, height = self._fg_size_from_mode(mode_id)
 
@@ -316,6 +328,7 @@ class EDTCamera(EDTCameraNoModes):
                                   unit,
                                   channel,
                                   basefile,
+                                  taker_cset_prio = taker_cset_prio,
                                   dependent_processes=dependent_processes)
 
     def _fg_size_from_mode(self, mode_id):
@@ -370,7 +383,7 @@ class EDTCamera(EDTCameraNoModes):
         preex_keywords.update(self.KEYWORDS)
 
         self.camera_shm.set_keywords(preex_keywords)
-        
+
         cm = self.current_mode
 
         self.camera_shm.update_keyword('BIN-FCT1', cm.binx)

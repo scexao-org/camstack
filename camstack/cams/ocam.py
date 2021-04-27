@@ -2,6 +2,9 @@
     Manage the ocam
 '''
 import os
+
+from typing import Union
+
 from camstack.cams.edt_base import EDTCamera
 from camstack.core.utilities import CameraMode
 
@@ -50,6 +53,7 @@ class OCAM2K(EDTCamera):
                  binning: bool = True,
                  unit: int = 3,
                  channel: int = 0,
+                 taker_cset_prio: Union[str, int] = ('system', None),
                  dependent_processes=[]):
 
         # Allocate and start right in the appropriate binning mode
@@ -64,7 +68,7 @@ class OCAM2K(EDTCamera):
         # This should pre-kill dependent sessions
         # But we should be able to "prepare" the camera before actually starting
         EDTCamera.__init__(self, name, mangled_stream_name, mode_id, unit, channel,
-                           basefile, dependent_processes)
+                           basefile, taker_cset_prio=taker_cset_prio, dependent_processes=dependent_processes)
 
         # ======
         # AD HOC
@@ -228,7 +232,9 @@ if __name__ == "__main__":
         tmux_name='ocam_decode',
         cli_cmd='/home/scexao/src/camstack/ocamdecode/ocamdecoderun_mode %u',
         cli_args=(mode,),
-        kill_upon_create = False
+        kill_upon_create = False,
+        cset='ocam_decode',
+        rtprio=48,
     )
     ocam_decode.start_order = 0
     ocam_decode.kill_order = 2
@@ -240,18 +246,18 @@ if __name__ == "__main__":
         cli_cmd='milk-exec "creaushortimshm %s %u %u"; shmimTCPreceive -c aol0COM 30107',
         cli_args=('ocam2dalt', 120, 120),
         remote_host='133.40.161.194',
-        kill_upon_create = False
+        kill_upon_create = False,
     )
     tcp_recv.start_order = 1
     tcp_recv.kill_order = 0
-    
-    
 
     tcp_send = DependentProcess(
         tmux_name='ocam_tcp',
         cli_cmd='sleep 3; OMP_NUM_THREADS=1 /home/scexao/bin/shmimTCPtransmit %s %s %u',
         cli_args=('ocam2dalt', '10.20.70.1', 30107),
-        kill_upon_create = False
+        kill_upon_create = False,
+        cset='ocam_tcp',
+        rtprio=49,
     )
     tcp_send.start_order = 2
     tcp_send.kill_order = 1
@@ -262,6 +268,7 @@ if __name__ == "__main__":
                   unit=3,
                   channel=0,
                   binning=binning,
+                  taker_cset_prio=('ocam_edt', 49),
                   dependent_processes=[ocam_decode, tcp_recv, tcp_send])
     from camstack.core.utilities import shellify_methods
     shellify_methods(ocam, globals())

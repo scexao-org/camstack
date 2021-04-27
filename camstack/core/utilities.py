@@ -1,7 +1,7 @@
 from typing import Tuple, List
 from camstack.core import tmux
 import time
-
+import subprocess
 
 class CameraMode:
     def __init__(self,
@@ -44,7 +44,7 @@ class DependentProcess:
                  tmux_name: str,
                  cli_cmd: str,
                  cli_args: List[str],
-                 cset: str = None,
+                 cset: str = 'system',
                  rtprio: int = None,
                  kill_upon_create: bool = True):
 
@@ -57,6 +57,9 @@ class DependentProcess:
         self.start_order = 0
         self.kill_order = 0
 
+        self.cset = cset
+        self.rtprio = rtprio
+
         self.initialize_tmux(kill_upon_create)
 
     def initialize_tmux(self, kill_upon_create):
@@ -67,6 +70,17 @@ class DependentProcess:
     def start(self):
         tmux.send_keys(self.tmux_pane, self.cli_cmd % self.cli_args)
         time.sleep(1)
+        self.make_children_rt()
+
+    def make_children_rt(self)
+        if self.rtprio is not None:
+            # This works very partially.
+            # Because some dependents start aux processes,
+            # And because some dependents start by a sleep command...
+            # D'oh.
+            # TODO: recursive descent over child processes.
+            # TODO: call this from the camera polling thread.
+            subprocess.run(['make_cset_and_rt', str(self.get_pid()), str(self.rtprio), self.cset])
 
     def stop(self):
         tmux.kill_running(self.tmux_pane)
