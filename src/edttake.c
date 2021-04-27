@@ -53,8 +53,9 @@ int main(int argc, char **argv)
     float exposure = 0.05; // exposure time [ms]
     double meas_frate = 0.0; // Measured framerate, updated each frame
     double meas_frate_gain = 0.01; // smoothing for meas_frate
-    clock_t time1;
-    clock_t time2;
+    struct timespec time1;
+    struct timespec time2;
+    double time_elapsed;
 
     // Set RTprio and UID stuff - may need to migrate this after
     // arg parsing if we make prio and cset settable from args.
@@ -312,7 +313,7 @@ int main(int argc, char **argv)
     }
 
     // Prep time measurement
-    time1 = clock();
+    clock_gettime(CLOCK_REALTIME, &time1);
 
     printf("\n");
     i = 0;
@@ -386,13 +387,16 @@ int main(int argc, char **argv)
         image.md[0].cnt1++;
 
         // Write the timing !
-        time2 = clock();
+        clock_gettime(CLOCK_REALTIME, &time2);
+        time_elapsed = difftime( time2.tv_sec, time1.tv_sec);
+        time_elapsed += (time2.tv_nsec - time1.tv_nsec) / 1e9;
 
         meas_frate *= (1.0 - meas_frate_gain);
         // This is only CPU time - that sucks.
-        meas_frate += 1.0 / (double)(time2 - time1) * CLOCKS_PER_SEC * meas_frate_gain;
-        image.kw[0].value.numf = (float)meas_frate;
-        time1 = time2;
+        meas_frate += 1.0 / time_elapsed * meas_frate_gain;
+        image.kw[0].value.numf = (float) meas_frate;
+        time1.tv_sec = time2.tv_sec;
+        time1.tv_nsec = time2.tv_nsec;
 
         i++;
         if (i == loops)
