@@ -27,10 +27,18 @@ class CRED1(EDTCamera):
     MODES = {
         # FULL 320 x 256
         FULL: CameraMode(x0=0, x1=319, y0=0, y1=255, fps=1738.152),
-        # 128x128 centered
-        1: CameraMode(x0=96, x1=223, y0=64, y1=191, fps=7008.368),
         # 64x64 centered
-        2: CameraMode(x0=128, x1=191, y0=96, y1=159, fps=20679.012),
+        1: CameraMode(x0=128, x1=191, y0=96, y1=159, fps=20679.012),
+        # 128x128 centered
+        2: CameraMode(x0=96, x1=223, y0=64, y1=191, fps=7008.368),
+        # 160x160 16px offside
+        3: CameraMode(x0=64, x1=223, y0=64, y1=191, fps=1e4),
+        # 192x192 centered
+        4: CameraMode(x0=64, x1=255, y0=32, y1=223, fps=1e4),
+        # 224x224 16px offside
+        5: CameraMode(x0=32, x1=255, y0=32, y1=223, fps=1e4),
+        # 256x256 centered
+        6: CameraMode(x0=32, x1=287, y0=0, y1=255, fps=1e4), # TODO FIX FPS
     }
 
     KEYWORDS = {
