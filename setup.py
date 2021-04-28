@@ -29,6 +29,7 @@ scripts = [
     './scripts/startOCAM',
     './scripts/startChuck',
     './scripts/startBuffy',
+    './scripts/startVampires',
 ]
 
 setup(

@@ -13,15 +13,28 @@ class Andor897(EDTCamera):
         512: CameraMode(x0=0, x1=511, y0=0, y1=511),
     }
 
-    def __init__(self, name: str, stream_name:str,
-                 unit: int = 2, channel: int = 0,
-                 mode = 512):
-        
+    def __init__(self,
+                 name: str,
+                 stream_name: str,
+                 unit: int = 2,
+                 channel: int = 0,
+                 mode_id=512,
+                 taker_cset_prio=('system', None),
+                 dependent_processes=[]):
+
         basefile = os.environ['HOME'] + '/src/camstack/config/andor_897.cfg'
 
         # Call EDT camera init
-        EDTCamera.__init__(self, name, stream_name,
-                           mode, unit, channel, basefile)
+        EDTCamera.__init__(self,
+                           name,
+                           stream_name,
+                           mode_id,
+                           unit,
+                           channel,
+                           basefile,
+                           taker_cset_prio=taker_cset_prio,
+                           dependent_processes=dependent_processes)
+
 
 class Vampires(Andor897):
     MODES = {
@@ -38,6 +51,7 @@ class Vampires(Andor897):
 class First(Andor897):
     MODES = {
         # 512 x 204
-        1 : CameraMode(x0=0, x1=511, y0=0, y1=203), # TODO Get to know the actual y0-y1
+        1: CameraMode(x0=0, x1=511, y0=0,
+                      y1=203),  # TODO Get to know the actual y0-y1
     }
     MODES.update(Andor897.MODES)

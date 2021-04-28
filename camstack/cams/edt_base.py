@@ -381,8 +381,13 @@ class EDTCamera(EDTCameraNoModes):
         if mode_id is None:
             mode_id = self.current_mode_id
         print(
-            'Calling prepare_camera_for_size on generic EDTCameraClass. Nothing happens here.'
+            'Calling prepare_camera_for_size on generic EDTCameraClass. Setting size for shmimTCPreceive.'
         )
+        for dep_proc in self.dependent_processes:
+            if 'shmimTCPreceive' in dep_proc.cli_cmd:
+                cm = self.current_mode
+                h, w = (cm.x1 - cm.x0 + 1) // cm.binx, (cm.y1 - cm.y0 + 1) // cm.biny
+                dep_proc.cli_args = (dep_proc.cli_args[0], h, w)
 
     def prepare_camera_finalize(self, mode_id=None):
         # Gets called during constructor and set_mode

@@ -1,0 +1,34 @@
+#!/bin/bash
+
+tnew="tmux new-session -d -s"
+tsend="tmux send-keys -t"
+
+tname0="vcam0_ctrl"
+tname1="vcam1_ctrl"
+
+# Create tmuxes and issue kills
+$tnew $tname0
+$tnew $tname1
+sleep 0.1
+$tsend $tname0 C-c
+$tsend $tname1 C-c
+sleep 0.1
+$tsend $tname0 "close()" Enter
+$tsend $tname1 "close()" Enter
+sleep 3
+$tsend $tname0 C-c
+$tsend $tname1 C-c
+sleep 0.3
+$tsend $tname0 C-z
+$tsend $tname1 C-z
+sleep 0.3
+$tsend $tname0 "kill %" Enter
+$tsend $tname1 "kill %" Enter
+
+echo ""
+#read -p "Everything killed, proceed to startup ? Press enter to continue, Ctrl+C to abort."
+
+$tsend $tname0 "python -im camstack.cam_mains.vampires 0" Enter
+$tsend $tname1 "python -im camstack.cam_mains.vampires 1" Enter
+
+echo "startVampires completed."
