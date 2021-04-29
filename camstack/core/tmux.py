@@ -53,7 +53,7 @@ class RemotePanePatch:
         self.session_name = session_name
         self.host = host
 
-    def send_keys(self, keys: str, enter: bool = True, suppress_history: bool = True):
+    def send_keys(self, keys: str, enter: bool = True, suppress_history: bool = False):
         # Mind the quotes - we're gonna put keys between double quotes,
         # so we need to escape double quotes inside of keys
         # and we need to escape the backslash so that python knows it's a backslash

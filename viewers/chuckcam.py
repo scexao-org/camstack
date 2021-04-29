@@ -32,55 +32,32 @@ from scxkw.redisutil.typed_db import Redis
 
 from pyMilk.interfacing.isio_shmlib import SHM
 
-home = os.getenv('HOME')
+home = os.getenv('HOME') # Expected /home/scexao
+
 conf_dir = home + "/conf/chuckcam_aux/"
 sys.path.append(home + '/src/lib/python/')
 
-MILK_SHM_DIR = os.getenv('MILK_SHM_DIR')
+MILK_SHM_DIR = os.getenv('MILK_SHM_DIR') # Expected /tmp <- MULTIVERSE FIXING NEEDED
 
 import image_processing as impro
 
 ZERO_NODIM = np.array(0., dtype=np.float32)
 ONES_NODIM = np.array(1., dtype=np.float32)
 
-
 # ------------------------------------------------------------------
 #             short hands for opening and checking shm
 # ------------------------------------------------------------------
-def open_shm(shm_name, dims=(1, 1), check=False):
-    data = np.zeros((dims[1], dims[0]), dtype=np.float32).squeeze()
-    if not os.path.isfile(MILK_SHM_DIR + "/%s.im.shm" % (shm_name, )):
-        shm_data = SHM(MILK_SHM_DIR + "/%s.im.shm" % (shm_name, ), data = data, verbose=False)
-    else:
-        shm_data = SHM(MILK_SHM_DIR + "/%s.im.shm" % (shm_name, ))
-    if check:
-        tmp = shm_data.shape_c
-        if tmp != dims:
-            #if shm_data.mtdata['size'][:2] != dims:
-            os.system("rm %s/%s.im.shm" % (MILK_SHM_DIR, shm_name, ))
-            shm_data = SHM(MILK_SHM_DIR + "/%s.im.shm" % (shm_name, ), data = data, verbose=False)
-
-    return shm_data
-
+from camstack.viewer.common import open_shm, open_shm_fullpath
 
 # ------------------------------------------------------------------
 #             short hands for tmux commands
 # ------------------------------------------------------------------
-def tmux(cargs="", session="ircam0", command="send-keys"):
-    ''' ------------------------------------------------------------
-    Synthesizes and sends a tmux command. The default option was
-    chosen to match the most common one, hence making the code
-    below more concise.
-    ------------------------------------------------------------ '''
-    if cargs == "":
-        os.system("tmux %s -t %s" % (command, session))
-    else:
-        os.system("tmux %s -t %s '%s' Enter" % (command, session, cargs))
-
+from camstack.core import tmux as tmuxlib
 
 # ------------------------------------------------------------------
 #             short hands for shared memory data access
 # ------------------------------------------------------------------
+
 def get_img_data(bias=None,
                  badpixmap=None,
                  subt_ref=False,
@@ -94,7 +71,11 @@ def get_img_data(bias=None,
     Reads from the already-opened shared memory
     data structure.
     ---------------------------------------- '''
-    temp = cam.get_data(check, reform=True, timeout=1.0).astype('float')
+    # CHUCK IS ERRONEOUSLY IN UINT16 BUT ACTUALLY ITS INT16
+    temp = cam.get_data(check, reform=True, timeout=1.0)
+    temp.dtype = np.int16 # DIRTY CASTING
+    temp = temp.astype(np.float32) # CONVERSION
+
     if clean:
         if badpixmap is not None:
             temp *= badpixmap
@@ -486,7 +467,7 @@ if args != []:
 #                access to shared memory structures
 # ------------------------------------------------------------------
 camid = 0  # camera identifier (0: science camera)
-cam = SHM(MILK_SHM_DIR + "/ircam%d.im.shm" % (camid, ), verbose=False)
+cam = SHM("/milk/shm/ircam%d.im.shm" % (camid, ), verbose=False)
 xsizeim, ysizeim = cam.shape_c
 
 (xsize, ysize) = (320, 256)  #Force size of old chuck for the display
@@ -550,13 +531,13 @@ XW, YW = xsize * z1, (ysize + 100) * z1
 screen = pygame.display.set_mode((XW, YW), 0, 32)
 pygame.display.set_caption('SCIENCE camera display!')
 
-os.system("tmux new-session -d -s ircam%d" %
-          (camid, ))  #start a tmux session for messsages
-os.system("tmux new-session -d -s ircam_synchro"
-          )  #start a tmux session for FLC synchro
+tmux_ircam_ctrl = tmuxlib.find_or_create_remote('ircam%dctrl' % camid, 'scexao-op@localhost') # Control shell
+tmux_ircam = tmuxlib.find_or_create('ircam%d' % camid) # start a tmux session for messsages
+tmux_ircam_synchro = tmuxlib.find_or_create('ircam_synchro') # start a tmux session for FLC synchro
+
 res = subprocess.check_output("ps aux | grep ircam_synchro", shell=True)
 if bytes(home, 'utf8') + b'/bin/devices/ircam_synchro' not in res:
-    tmux("ircam_synchro", session="ircam_synchro")
+    tmux_ircam_synchro.send_keys("ircam_synchro")
 
 # ------------------------------------------------------------------
 #              !!! now we are in business !!!!
@@ -609,11 +590,11 @@ ndrs = np.array([1, 2, 4, 8, 16, 32, 64, 128, 255])
 nndr = np.size(ndrs)
 
 # get initial values for expt, fps and ndr
-tmux("get_tint()", session="ircam%dctrl" % (camid, ))
+tmux_ircam_ctrl.send_keys("get_tint()")
 time.sleep(1)
-tmux("get_NDR()", session="ircam%dctrl" % (camid, ))
+tmux_ircam_ctrl.send_keys("get_NDR()")
 time.sleep(1)
-tmux("get_fps()", session="ircam%dctrl" % (camid, ))
+tmux_ircam_ctrl.send_keys("get_fps()")
 time.sleep(1)
 sync_param = ircam_synchro.get_data().astype(np.int)
 lag = 7
@@ -942,11 +923,11 @@ while True:  # the main game loop
     # Relaod shared memory with different size due to change in window size
     if shmreload:
         print("reloading SHM")
-        cam = SHM(MILK_SHM_DIR + "/ircam%d.im.shm" % (camid, ), verbose=False)
+        cam = SHM("/milk/shm/ircam%d.im.shm" % (camid, ), verbose=False)
         xsizeim, ysizeim = cam.shape_c
         #(xsizeim, ysizeim) = cam.mtdata['size'][:2]#size[:cam.naxis]
         print("image xsize=%d, ysize=%d" % (xsizeim, ysizeim))
-        os.system("rm %s/ircam%d_*" % (MILK_SHM_DIR, camid, ))
+        #os.system("rm %s/ircam%d_*" % (MILK_SHM_DIR, camid, ))
         time.sleep(1)
         cam_dark = open_shm("ircam%d_dark" % (camid, ),
                             dims=(xsizeim, ysizeim),
@@ -956,11 +937,11 @@ while True:  # the main game loop
                                  check=True)
         #cam_clean = open_shm("ircam%d_clean" % (camid,), dims=(xsizeim, ysizeim), check=True)
         time.sleep(1)
-        tmux("get_tint()", session="ircam%dctrl" % (camid, ))
+        tmux_ircam_ctrl.send_keys("get_tint()")
         time.sleep(1)
-        tmux("get_NDR()", session="ircam%dctrl" % (camid, ))
+        tmux_ircam_ctrl.send_keys("get_NDR()")
         time.sleep(1)
-        tmux("get_fps()", session="ircam%dctrl" % (camid, ))
+        tmux_ircam_ctrl.send_keys("get_fps()")
         time.sleep(1)
         shmreload = False
     else:
@@ -1308,7 +1289,7 @@ while True:  # the main game loop
                 else:
                     exec("screen.blit(dtliner%d,rctliner%d)" %(i,i))
                     exec("rctlines += [rctliner%d]" %i)
-                
+
         # ------------------------------------------------------------------
         # saving images
         tmuxon = os.popen('tmux ls |grep ircam%dlog | awk \'{print $2}\'' %
@@ -1330,10 +1311,10 @@ while True:  # the main game loop
             screen.blit(savem2, rct_savem2)
             screen.blit(savem3, rct_savem3)
             rects += [rct_savem1, rct_savem2, rct_savem3]
-            
+
         if waitfordt:
             rects += rctlines
-            
+
         if logexpt:
             time.sleep(0.1)
             timeexpt = np.append(timeexpt, time.time())
@@ -1401,8 +1382,7 @@ while True:  # the main game loop
                     if (nindex < nndr - 1):
                         nindex += 1
                         ndrc = ndrs[nindex]
-                        tmux("set_NDR(%d)" % (ndrc, ),
-                             session="ircam%dctrl" % (camid, ))
+                        tmux_ircam_ctrl.send_keys("set_NDR(%d)" % ndrc)
                         time.sleep(1)
                         ndr = cam.get_ndr()
                         etimet = etime * ndr
@@ -1425,8 +1405,7 @@ while True:  # the main game loop
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
                         else:
-                            tmux("set_tint(%f)" % (etimec * 1.e-6, ),
-                                 session="ircam%dctrl" % (camid, ))
+                            tmux_ircam_ctrl.send_keys("set_tint(%f)" % (etimec * 1.e-6, ))
                             time.sleep(1)
                             etime = cam.get_expt() * 1e6
                             delay = 0
@@ -1443,8 +1422,7 @@ while True:  # the main game loop
                     if (nindex > 0):
                         nindex -= 1
                         ndrc = ndrs[nindex]
-                        tmux("set_NDR(%d)" % (ndrc, ),
-                             session="ircam%dctrl" % (camid, ))
+                        tmux_ircam_ctrl.send_keys("set_NDR(%d)" % (ndrc, ))
                         time.sleep(1)
                         ndr = cam.get_ndr()
                         etimet = etime * ndr
@@ -1467,8 +1445,7 @@ while True:  # the main game loop
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
                         else:
-                            tmux("set_tint(%f)" % (etimec * 1.e-6, ),
-                                 session="ircam%dctrl" % (camid, ))
+                            tmux_ircam_ctrl.send_keys("set_tint(%f)" % (etimec * 1.e-6, ))
                             time.sleep(1)
                             etime = cam.get_expt() * 1e6
                             delay = 0
@@ -1499,12 +1476,10 @@ while True:  # the main game loop
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
                         else:
-                            tmux("set_fps(%f)" % (fpsc, ),
-                                 session="ircam%dctrl" % (camid, ))
+                            tmux_ircam_ctrl.send_keys("set_fps(%f)" % (fpsc, ))
                             time.sleep(1)
                             fps = cam.get_fps()
-                            tmux("get_tint()",
-                                 session="ircam%dctrl" % (camid, ))
+                            tmux_ircam_ctrl.send_keys("get_tint()")
                             time.sleep(1)
                             etime = cam.get_expt() * 1e6
                             delay = 0
@@ -1538,12 +1513,10 @@ while True:  # the main game loop
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
                         else:
-                            tmux("set_fps(%f)" % (fpsc, ),
-                                 session="ircam%dctrl" % (camid, ))
+                            tmux_ircam_ctrl.send_keys("set_fps(%f)" % (fpsc, ))
                             time.sleep(1)
                             fps = cam.get_fps()
-                            tmux("get_tint()",
-                                 session="ircam%dctrl" % (camid, ))
+                            tmux_ircam_ctrl.send_keys("get_tint()")
                             time.sleep(1)
                             etime = cam.get_expt() * 1e6
                             delay = 0
@@ -1560,7 +1533,7 @@ while True:  # the main game loop
             if event.key == K_h:
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
-                    tmux("hotspotalign")
+                    tmux_ircam.send_keys("hotspotalign")
                 else:
                     print(hmsg)
 
@@ -1570,17 +1543,17 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if pup:
-                        tmux("chuck_pup")
+                        tmux_ircam.send_keys("chuck_pup")
                         if reachphoto:
-                            tmux("chuck_pup_fcs pupil &")
-                            tmux("reach_pickoff out &")
-                            tmux("buffy_pickoff out &")
-                        tmux("ircam_fcs chuck")
+                            tmux_ircam.send_keys("chuck_pup_fcs pupil &")
+                            tmux_ircam.send_keys("reach_pickoff out &")
+                            tmux_ircam.send_keys("buffy_pickoff out &")
+                        tmux_ircam.send_keys("ircam_fcs chuck")
                     else:
                         lin_scale = True
-                        tmux("chuck_pup")
-                        tmux("chuck_pup_fcs pupil &")
-                        tmux("ircam_fcs chuck_pup")
+                        tmux_ircam.send_keys("chuck_pup")
+                        tmux_ircam.send_keys("chuck_pup_fcs pupil &")
+                        tmux_ircam.send_keys("ircam_fcs chuck_pup")
                 else:
                     plot_pa = not plot_pa
 
@@ -1678,8 +1651,7 @@ while True:  # the main game loop
                                     np.int)
                                 tint = sync_param[2]
                             else:
-                                tmux("set_tint(%f)" % (tint * 1.e-6, ),
-                                     session="ircam%dctrl" % (camid, ))
+                                tmux_ircam_ctrl.send_keys("set_tint(%f)" % (tint * 1.e-6, ))
                                 time.sleep(1)
                                 tint = cam.get_expt() * 1e6
                             ndark = int(1 * fps /
@@ -1713,8 +1685,7 @@ while True:  # the main game loop
                             ircam_synchro.set_data(
                                 sync_param.astype(np.float32))
                         else:
-                            tmux("set_tint(%f)" % (tint * 1.e-6, ),
-                                 session="ircam%dctrl" % (camid, ))
+                            tmux_ircam_ctrl.send_keys("set_tint(%f)" % (tint * 1.e-6, ))
                         biashere = True
                         bpmhere = True
 
@@ -1767,24 +1738,17 @@ while True:  # the main game loop
                                 os.makedirs(ospath)
                             nimsave = int(min(10000, (50000000 / etimet)))
                             # creating a tmux session for logging
-                            os.system("tmux new-session -d -s ircam%dlog" %
-                                      (camid, ))
-                            tmux("logshim ircam%d %i %s" %
-                                 (camid, nimsave, savepath),
-                                 session="ircam%dlog" % (camid, ))
+                            tmux_ircamlog = tmuxlib.find_or_create("ircam%dlog" % (camid, ))
+                            tmux_ircamlog.send_keys("logshim ircam%d %i %s" %
+                                 (camid, nimsave, savepath))
                             os.system("log Chuckcam: start logging images")
-                            os.system(
-                                "scexaostatus set logchuck 'LOGGING         ' 3")
-
+                            os.system("scexaostatus set logchuck 'LOGGING         ' 3")
                     else:
-                        tmux("logshimkill", session="ircam%dlog" % (camid, ))
-                        tmux("",
-                             session="ircam%dlog" % (camid, ),
-                             command="kill-session")
+                        tmux_ircamlog.send_keys("logshimkill", session="ircam%dlog" % (camid, ))
+                        tmux_ircamlog.cmd("kill-session")
                         os.system("log Chuckcam: stop logging images")
-                        os.system(
-                            "scexaostatus set logchuck 'OFF             ' 1")
-            
+                        os.system("scexaostatus set logchuck 'OFF             ' 1")
+
             # Start archiving images
             #--------------------------
             if event.key == K_RETURN and waitfordt:
@@ -1798,14 +1762,11 @@ while True:  # the main game loop
                     os.makedirs(ospath)
                 nimsave = int(min(20000, (50000000 / etimet)))
                 # creating a tmux session for logging
-                os.system("tmux new-session -d -s ircam%dlog" %
-                          (camid, ))
-                tmux("logshim ircam%d %i %s" %
-                     (camid, nimsave, savepath),
-                     session="ircam%dlog" % (camid, ))
+                tmux_ircamlog = tmuxlib.find_or_create("ircam%dlog" % (camid, ))
+                tmux_ircamlog.send_keys("logshim ircam%d %i %s" %
+                                 (camid, nimsave, savepath))
                 os.system("log Chuckcam: start archiving images")
-                os.system(
-                    "scexaostatus set logchuck 'ARCHIVING       ' 3")
+                os.system("scexaostatus set logchuck 'ARCHIVING       ' 3")
 
             # Save an HDR image/Subtract dark
             #--------------------------------
@@ -1916,33 +1877,33 @@ while True:  # the main game loop
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
                         if rpin:
-                            tmux("reach_pickoff out &")
-                            tmux("oap4 onaxis &")
-                            tmux("steering onaxis &")
+                            tmux_ircam.send_keys("reach_pickoff out &")
+                            tmux_ircam.send_keys("oap4 onaxis &")
+                            tmux_ircam.send_keys("steering onaxis &")
                             keeprpin = False
                         else:
-                            tmux("reach_pickoff in &")
-                            tmux("oap4 reach &")
-                            tmux("steering reach &")
+                            tmux_ircam.send_keys("reach_pickoff in &")
+                            tmux_ircam.send_keys("oap4 reach &")
+                            tmux_ircam.send_keys("steering reach &")
                             keeprpin = True
                     else:
                         if reachphoto:
-                            tmux("chuck_pup")
-                            tmux("chuck_pup_fcs pupil &")
-                            tmux("buffy_pickoff out &")
+                            tmux_ircam.send_keys("chuck_pup")
+                            tmux_ircam.send_keys("chuck_pup_fcs pupil &")
+                            tmux_ircam.send_keys("buffy_pickoff out &")
                             if not keeprpin:
-                                tmux("reach_pickoff out &")
-                                tmux("oap4 onaxis &")
-                                tmux("steering onaxis &")
+                                tmux_ircam.send_keys("reach_pickoff out &")
+                                tmux_ircam.send_keys("oap4 onaxis &")
+                                tmux_ircam.send_keys("steering onaxis &")
                         else:
                             if not pup:
-                                tmux("chuck_pup")
-                            tmux("chuck_pup_fcs reach &")
-                            tmux("buffy_pickoff in &")
+                                tmux_ircam.send_keys("chuck_pup")
+                            tmux_ircam.send_keys("chuck_pup_fcs reach &")
+                            tmux_ircam.send_keys("buffy_pickoff in &")
                             if not rpin:
-                                tmux("reach_pickoff in &")
-                                tmux("oap4 reach &")
-                                tmux("steering reach &")
+                                tmux_ircam.send_keys("reach_pickoff in &")
+                                tmux_ircam.send_keys("oap4 reach &")
+                                tmux_ircam.send_keys("steering reach &")
                 else:
                     plot_history = not plot_history
 
@@ -2011,9 +1972,16 @@ while True:  # the main game loop
                         print('Camera already in full frame - skipping set_camera_mode()')
                     else:
                         cam_paused.set_data(ONES_NODIM)
-                        tmux("set_camera_mode(%s)" % mode_id,
-                            session="ircam%dctrl" % (camid, ))
-                        time.sleep(12)
+                        tmux_ircam_ctrl.send_keys("set_camera_mode(%s)" % mode_id)
+                        # Wait until we're confident the edttake has stopped
+                        time.sleep(5.0)
+                        # This will return once the SHM has been overwritten...
+                        # and hopefully recreated near-immediately after
+                        print('Hi')
+                        ret = cam.non_block_wait_semaphore()
+                        time.sleep(0.1) # Safe
+                        print('Hi again')
+                        time.sleep(3.0) # Safe
                         cam_paused.set_data(ZERO_NODIM)
                         shmreload = True
 
@@ -2037,9 +2005,9 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux("dm_stage y push -100")
+                        tmux_ircam.send_keys("dm_stage y push -100")
                     else:
-                        tmux("dm_stage y push -20")
+                        tmux_ircam.send_keys("dm_stage y push -20")
                 else:
                     if waitfordt:
                         idt -= 1
@@ -2049,9 +2017,9 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux("dm_stage y push +100")
+                        tmux_ircam.send_keys("dm_stage y push +100")
                     else:
-                        tmux("dm_stage y push +20")
+                        tmux_ircam.send_keys("dm_stage y push +20")
                 else:
                     if waitfordt:
                         idt += 1
@@ -2061,17 +2029,17 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux("dm_stage x push -100")
+                        tmux_ircam.send_keys("dm_stage x push -100")
                     else:
-                        tmux("dm_stage x push -20")
+                        tmux_ircam.send_keys("dm_stage x push -20")
 
             if event.key == K_RIGHT:
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux("dm_stage x push +100")
+                        tmux_ircam.send_keys("dm_stage x push +100")
                     else:
-                        tmux("dm_stage x push +20")
+                        tmux_ircam.send_keys("dm_stage x push +20")
 
     pygame.display.update(rects)
 
