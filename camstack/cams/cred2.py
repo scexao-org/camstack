@@ -89,6 +89,8 @@ class CRED2(EDTCamera):
         mode = self.MODES[mode_id]
         self._set_check_cropping(mode.x0, mode.x1, mode.y0, mode.y1)
 
+        EDTCamera.prepare_camera_for_size(self, mode_id=mode_id)
+
 
     def prepare_camera_finalize(self, mode_id: int = None):
 

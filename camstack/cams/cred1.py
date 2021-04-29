@@ -31,15 +31,23 @@ class CRED1(EDTCamera):
         1: CameraMode(x0=128, x1=191, y0=96, y1=159, fps=20679.012),
         # 128x128 centered
         2: CameraMode(x0=96, x1=223, y0=64, y1=191, fps=7008.368),
+        #6068.84 for CameraMode(x0=64, x1=223, y0=64, y1=191, fps=),
         # 160x160 16px offside
-        3: CameraMode(x0=64, x1=223, y0=64, y1=191, fps=1e4),
+        3: CameraMode(x0=64, x1=223, y0=48, y1=207, fps=4926.47),
         # 192x192 centered
-        4: CameraMode(x0=64, x1=255, y0=32, y1=223, fps=1e4),
+        4: CameraMode(x0=64, x1=255, y0=32, y1=223, fps=3570.159),
         # 224x224 16px offside
-        5: CameraMode(x0=32, x1=255, y0=32, y1=223, fps=1e4),
+        5: CameraMode(x0=32, x1=255, y0=16, y1=239, fps=2704.52),
         # 256x256 centered
-        6: CameraMode(x0=32, x1=287, y0=0, y1=255, fps=1e4), # TODO FIX FPS
+        6: CameraMode(x0=32, x1=287, y0=0, y1=255, fps=2117.126),
+        # 160x80 centered
+        7: CameraMode(x0=64, x1=223, y0=88, y1=167, fps=9305.555),
+        # 160x80 centered
+        8: CameraMode(x0=64, x1=255, y0=88, y1=167, fps=8065.61),
     }
+    
+    # Add mode 0 alias of mode FULL
+    MODES[0] = MODES[FULL]
 
     KEYWORDS = {
         'DET-PRES': (0.0, 'Detector pressure (mbar)'),
@@ -92,6 +100,8 @@ class CRED1(EDTCamera):
 
         mode = self.MODES[mode_id]
         self._set_check_cropping(mode.x0, mode.x1, mode.y0, mode.y1)
+
+        EDTCamera.prepare_camera_for_size(self, mode_id=mode_id)
 
 
     def prepare_camera_finalize(self, mode_id: int = None):
