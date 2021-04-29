@@ -1,0 +1,196 @@
+#!/bin/bash
+
+# CRED1 camera startup script
+
+# number of arguments to script
+NBARGS=1
+
+
+# ======================= PROCESS NAME =================================
+pname=`basename "$0"`
+
+
+SRCDIR="/home/scexao/frantz/CRED1/KCAM/kcam"
+EDTCONFFILE="${SRCDIR}/cred1_FGSetup_16bit.cfg"
+
+
+
+function printHELP {
+echo "------------------------------------------------------------------------"
+echo "$(tput bold) $pname : CRED1 CAMERA STARTUP SCRIPT $(tput sgr0)"
+echo " Full path name: $0"
+echo "------------------------------------------------------------------------"
+echo "  Start processes for CRED1 camera acquisition (server and acquisition)"
+echo "  Processes are running in tmux sessions"
+echo "   "
+echo " $(tput bold)USAGE:$(tput sgr0)"
+echo "     $0 [-hHLNCc] <CAM number>"
+echo ""
+echo " $(tput bold)OPTIONS:$(tput sgr0)"
+echo "     $(tput bold)-h$(tput sgr0)          help"
+echo ""
+echo " $(tput bold)INPUT:$(tput sgr0)"
+echo "     <CAM number>     camera number (0 or 1)"
+echo ""
+echo "------------------------------------------------------------------------"
+}
+
+
+printHELP1 ()
+{
+    printf "%20s       CRED1 camera startup script\n" "$0" 
+}
+
+
+EXITSTATUS=0
+
+
+function checkFile {
+if [ -f $1 ]
+  then
+    echo "[$(tput setaf 2)$(tput bold)   OK   $(tput sgr0)] File $(tput bold)$1$(tput sgr0) found"
+   else
+    echo "[$(tput setaf 1)$(tput bold) FAILED $(tput sgr0)] File $(tput bold)$1$(tput sgr0) not found"
+    EXITSTATUS=1
+fi
+}
+
+
+
+function checkDir {
+if [ -d $1 ]
+  then
+    echo "[$(tput setaf 2)$(tput bold)   OK   $(tput sgr0)] Directory $(tput bold)$1$(tput sgr0) found"
+   else
+    echo "[$(tput setaf 1)$(tput bold) FAILED $(tput sgr0)] Directory $(tput bold)$1$(tput sgr0) not found"
+    EXITSTATUS=1
+fi
+}
+
+
+
+function cmdexists()
+{
+  command -v "$1" >/dev/null 2>&1
+}
+
+
+
+function checkCommand {
+if cmdexists $1; then
+    echo "[$(tput setaf 2)$(tput bold)   OK   $(tput sgr0)] Command $(tput bold)$1$(tput sgr0) found"
+else
+    echo "[$(tput setaf 1)$(tput bold) FAILED $(tput sgr0)] Command $(tput bold)$1$(tput sgr0) not installed.  Aborting."; EXITSTATUS=1;
+fi
+}
+
+
+
+
+
+# ================= OPTIONS =============================
+# Transform long options to short ones
+singlelinehelp=0
+for arg in "$@"; do
+  shift
+  case "$arg" in
+    "--help") set -- "$@" "-h" ;;
+    "--help1") 
+set -- "$@" "-h" 
+singlelinehelp=1;
+;;
+    *)        set -- "$@" "$arg"
+  esac
+done
+
+
+
+while getopts :hH:L:N:Cc FLAG; do
+  case $FLAG in
+    h)  #show help
+      if [ "$singlelinehelp" -eq "0" ]; then
+      printHELP
+      else
+      printHELP1
+      fi
+      exit
+      ;;
+    \?) #unrecognized option - show help
+      echo -e \\n"Option -${BOLD}$OPTARG${NORM} not allowed."
+      printHELP
+      ;;
+  esac
+done
+
+
+
+shift $((OPTIND-1))  #This tells getopts to move on to the next argument.
+### End getopts code ###
+if [ "$1" = "help" ] || [ "$#" -ne $NBARGS ]; then
+if [ "$#" -ne $NBARGS ]; then
+    echo "$(tput setaf 1)$(tput bold) Illegal number of parameters ($NBARGS params required, $# entered) $(tput sgr0)"
+fi
+printHELP
+        exit
+fi
+
+
+
+
+# ======================= CHECK REQUIRED FILES =================================
+echo ""
+checkFile ${EDTCONFFILE}
+
+
+
+
+# ============================= CHECK IF COMMAND EXISTS ==========================
+checkCommand tmux
+
+
+
+
+if [ $EXITSTATUS -eq 1 ]; then
+echo ""
+echo "$(tput setaf 1)$(tput bold) REQUIRED FILES, COMMANDS NOT FOUND: EXITING $(tput sgr0)"
+echo ""
+exit
+else
+echo ""
+fi
+
+
+
+
+
+# ======================= SCRIPT CODE STARTS HERE =================================
+
+
+unit="$1"
+
+echo "STARTING CRED1 CAMERA UNIT $unit"
+
+
+
+/opt/EDTpdv/initcam -c 0 -u $unit -f ${EDTCONFFILE}
+
+tmux new-session -d -s kcamctrl
+tmux new-session -d -s kcam_fetcher
+
+
+tmux send-keys -t kcamctrl "" C-c
+tmux send-keys -t kcamctrl "" C-c
+tmux send-keys -t kcam_fetcher "" C-c
+tmux send-keys -t kcam_fetcher "" C-c
+
+
+tmux send-keys -t kcamctrl "cd ${SRCDIR}" C-m
+tmux send-keys -t kcam_fetcher "cd ${SRCDIR}" C-m
+sleep 0.5
+
+tmux send-keys -t kcamctrl "./kcamserver" C-m
+
+#tmux send-keys -t kcamctrl "start" C-m
+
+
+
