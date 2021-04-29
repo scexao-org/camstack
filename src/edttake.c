@@ -262,7 +262,7 @@ int main(int argc, char **argv)
     }
 
     ImageStreamIO_createIm(&image, streamname, naxis, imsize, atype, shared,
-                           NBkw);
+                           NBkw, 10);
     free(imsize);
 
     // Add keywords
@@ -378,12 +378,14 @@ int main(int argc, char **argv)
 
         // printf("Copying %d x %d bytes", bytewidth, height);
         memcpy(image.array.UI8, image_p, bytewidth * height);
+        
+        ImageStreamIO_UpdateIm(&image);
+        /*
         image.md[0].write = 0;
-        // POST ALL SEMAPHORES
         ImageStreamIO_sempost(&image, -1);
-
         image.md[0].write = 0; // Done writing data
         image.md[0].cnt0++;
+        */
         image.md[0].cnt1++;
 
         // Write the timing !
