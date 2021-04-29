@@ -42,7 +42,7 @@ class CRED1(EDTCamera):
         6: CameraMode(x0=32, x1=287, y0=0, y1=255, fps=2117.126),
         # 160x80 centered
         7: CameraMode(x0=64, x1=223, y0=88, y1=167, fps=9305.555),
-        # 160x80 centered
+        # 192x80 centered
         8: CameraMode(x0=64, x1=255, y0=88, y1=167, fps=8065.61),
     }
     

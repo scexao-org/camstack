@@ -37,8 +37,8 @@ class EDTCameraNoModes:
         'DETECTOR': ('DET', 'Name of the detector'),
         'DETGAIN': (1., 'Detector gain'),
         'DETMODE': ('base', 'Detector mode'),
-        'EXPTIME': (0.0, 'Total integration time of the frame (sec)'),
-        'FRATE': (0., 'Frame rate of the acquisition (Hz)'),
+        'EXPTIME': (0.001, 'Total integration time of the frame (sec)'),
+        'FRATE': (100., 'Frame rate of the acquisition (Hz)'),
         'GAIN': (1., 'AD conversion factor (electron/ADU)'),
         'NDR': (1, 'Number of non-destructive reads'),
         'EXTTRIG': ('False', 'Extrernal trigger'),
@@ -118,8 +118,10 @@ class EDTCameraNoModes:
 
         # ====================
         # START THE TAKE - and thus expect the SHM to be created
+        # - we only start the take because we want the keywords to be populated ASAP
+        # and starting dependents is the long part.
         # ====================
-        self.start_frame_taker_and_dependents()
+        self._start_taker_no_dependents()
 
         # ====================
         # ALLOCATE KEYWORDS
@@ -128,6 +130,11 @@ class EDTCameraNoModes:
         self.camera_shm = None
         self.grab_shm_fill_keywords()
         # Maybe we can use a class variable as well to define what the expected keywords are ?
+
+        # ================
+        # Start dependents
+        # ================
+        self.start_frame_taker_and_dependents(skip_taker = True)
 
         # =================================
         # FINALIZE A FEW DETAILS POST-START
@@ -207,8 +214,10 @@ class EDTCameraNoModes:
         '''
         return tmux_util.find_pane_running_pid(self.take_tmux_pane) is not None
 
-    def start_frame_taker_and_dependents(self):
-        self._start_taker_no_dependents()
+    def start_frame_taker_and_dependents(self, skip_taker=False):
+        
+        if not skip_taker:
+            self._start_taker_no_dependents()
 
         # Now handle the dependent processes
         self.dependent_processes.sort(key=lambda x: x.start_order)
@@ -260,15 +269,14 @@ class EDTCameraNoModes:
         preex_keywords = self.camera_shm.get_keywords(True)
         preex_keywords.update(self.KEYWORDS)
 
-        self.camera_shm.set_keywords(preex_keywords)
+        preex_keywords['DETECTOR'] =  f'FG unit {self.pdv_unit} ch. {self.pdv_channel}'
+        preex_keywords['BIN-FCT1'] =  1
+        preex_keywords['BIN-FCT2'] =  1
+        preex_keywords['CROP_OR1'] =  0
+        preex_keywords['CROP_OR2'] =  0
+        preex_keywords['CROPPED'] = 'N/A'
 
-        self.camera_shm.update_keyword(
-            'DETECTOR', f'FG unit {self.pdv_unit} ch. {self.pdv_channel}')
-        self.camera_shm.update_keyword('BIN-FCT1', 1)
-        self.camera_shm.update_keyword('BIN-FCT2', 1)
-        self.camera_shm.update_keyword('CROP_OR1', 0)
-        self.camera_shm.update_keyword('CROP_OR2', 0)
-        self.camera_shm.update_keyword('CROPPED', 'N/A')
+        self.camera_shm.set_keywords(preex_keywords)
 
     def set_camera_size(self, height: int, width: int):
         '''

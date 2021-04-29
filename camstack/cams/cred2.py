@@ -132,12 +132,13 @@ class CRED2(EDTCamera):
 
         EDTCamera._fill_keywords(self)
 
-        self.camera_shm.update_keyword('DETECTOR', 'CRED2')
-        self.camera_shm.update_keyword('CROPPED',
-                                       self.current_mode_id != 'full')
         self.get_NDR()  # Sets 'NDR'
         self.get_tint()  # Sets 'EXPTIME'
         self.get_fps()  # Sets 'FRATE'
+        
+        self.camera_shm.update_keyword('DETECTOR', 'CRED2')
+        self.camera_shm.update_keyword('CROPPED',
+                                       self.current_mode_id != 'full')
 
         # Additional fill-up of the camera state
         self.get_gain()  # Sets 'DETGAIN'
