@@ -1,9 +1,17 @@
 import numpy as np
 from pyMilk.interfacing.isio_shmlib import SHM
 
+import os
+import sys
+
+MILK_SHM_DIR = os.getenv(
+    'MILK_SHM_DIR')  # Expected /tmp <- MULTIVERSE FIXING NEEDED
+
 
 def open_shm(shm_name, dims=(1, 1), check=False):
-    return open_shm_fullpath(MILK_SHM_DIR + "/" + shm_name + ".im.shm")
+    return open_shm_fullpath(MILK_SHM_DIR + "/" + shm_name + ".im.shm",
+                             dims=dims,
+                             check=check)
 
 
 def open_shm_fullpath(shm_name, dims=(1, 1), check=False):
@@ -24,8 +32,11 @@ def open_shm_fullpath(shm_name, dims=(1, 1), check=False):
 
     return shm_data
 
+
 CRED1_str = 'cred1'
 CRED2_str = 'cred2'
+
+
 def get_img_data(cam,
                  cam_type,
                  bias=None,
@@ -47,8 +58,8 @@ def get_img_data(cam,
     elif cam_type == CRED2_str:
         # CHUCK IS ERRONEOUSLY IN UINT16 BUT ACTUALLY ITS INT16
         temp = cam.get_data(check, reform=True, timeout=1.0)
-        temp.dtype = np.int16 # DIRTY CASTING
-        temp = temp.astype(np.float32) # CONVERSION
+        temp.dtype = np.int16  # DIRTY CASTING
+        temp = temp.astype(np.float32)  # CONVERSION
     else:
         temp = cam.get_data(check, reform=True, timeout=1.0).astype('float')
 
@@ -72,19 +83,22 @@ def get_img_data(cam,
 
     return (temp, isat)
 
+
 def get_img_data_cred1(cam, *args, **kwargs):
     return get_img_data(cam, CRED1_str, *args, **kwargs)
+
 
 def get_img_data_cred2(cam, *args, **kwargs):
     return get_img_data(cam, CRED2_str, *args, **kwargs)
 
 
-def ave_img_data(get_img_data, nave,
-                 bias=None,
-                 badpixmap=None,
-                 clean=True,
-                 disp=False,
-                 tint=0):
+def ave_img_data_from_callable(get_img_data,
+                               nave,
+                               bias=None,
+                               badpixmap=None,
+                               clean=True,
+                               disp=False,
+                               tint=0):
 
     for i in range(nave):
         if disp:
@@ -92,12 +106,10 @@ def ave_img_data(get_img_data, nave,
                              (tint * 1.e-6, i))
             sys.stdout.flush()
         if i == 0:
-            ave_im = get_img_data(
-                cam, bias=bias, badpixmap=badpixmap,
-                clean=clean)[0] / float(nave)
+            ave_im = get_img_data(bias=bias, badpixmap=badpixmap,
+                                  clean=clean)[0] / float(nave)
         else:
-            ave_im += get_img_data(
-                cam, bias=bias, badpixmap=badpixmap,
-                clean=clean)[0] / float(nave)
+            ave_im += get_img_data(bias=bias, badpixmap=badpixmap,
+                                   clean=clean)[0] / float(nave)
 
     return (ave_im)

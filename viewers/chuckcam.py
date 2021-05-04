@@ -47,7 +47,7 @@ ONES_NODIM = np.array(1., dtype=np.float32)
 # ------------------------------------------------------------------
 #             short hands for opening and checking shm
 # ------------------------------------------------------------------
-from camstack.viewer.common import open_shm, open_shm_fullpath
+from camstack.viewer_common import open_shm, open_shm_fullpath
 
 # ------------------------------------------------------------------
 #             short hands for tmux commands
@@ -57,74 +57,25 @@ from camstack.core import tmux as tmuxlib
 # ------------------------------------------------------------------
 #             short hands for shared memory data access
 # ------------------------------------------------------------------
+from camstack.viewer_common import get_img_data_cred2
 
-def get_img_data(bias=None,
-                 badpixmap=None,
-                 subt_ref=False,
-                 ref=None,
-                 line_scale=True,
-                 clean=True,
-                 check=True):
-    ''' ----------------------------------------
-    Return the current image data content,
-    formatted as a 2D numpy array.
-    Reads from the already-opened shared memory
-    data structure.
-    ---------------------------------------- '''
-    # CHUCK IS ERRONEOUSLY IN UINT16 BUT ACTUALLY ITS INT16
-    temp = cam.get_data(check, reform=True, timeout=1.0)
-    temp.dtype = np.int16 # DIRTY CASTING
-    temp = temp.astype(np.float32) # CONVERSION
-
-    if clean:
-        if badpixmap is not None:
-            temp *= badpixmap
-        #isat = np.percentile(temp, 99.995)
-        isat = np.max(temp)
-        if bias is not None:
-            temp -= bias
-    else:
-        #isat = np.percentile(temp, 99.995)
-        isat = np.max(temp)
-
-    #cam_clean.set_data(temp.astype(np.float32))
-
-    if subt_ref:
-        temp -= ref
-        if not lin_scale:
-            temp = np.abs(temp)
-
-    return (temp, isat)
-
+def get_img_data(*args, **kwargs):
+    # Arguments: bias, badpixmap, subt_ref, ref, line_scale, clean, check
+    return get_img_data_cred2(cam, *args, **kwargs)
 
 # ------------------------------------------------------------------
 #             short hands for image averaging
 # ------------------------------------------------------------------
-def ave_img_data(nave,
-                 bias=None,
-                 badpixmap=None,
-                 clean=True,
-                 disp=False,
-                 tint=0):
-
-    for i in range(nave):
-        if disp:
-            sys.stdout.write('\r tint = %8.6f s: acq. #%5d' %
-                             (tint * 1.e-6, i))
-            sys.stdout.flush()
-        if i == 0:
-            ave_im = get_img_data(bias=bias, badpixmap=badpixmap,
-                                  clean=clean)[0] / float(nave)
-        else:
-            ave_im += get_img_data(bias=bias, badpixmap=badpixmap,
-                                   clean=clean)[0] / float(nave)
-
-    return (ave_im)
+from camstack.viewer_common import ave_img_data_from_callable
+def ave_img_data(nave, *args, **kwargs):
+    # Arguments: bias, badpixmap, clean, disp, tint
+    return ave_img_data_from_callable(get_img_data, nave, *args, **kwargs)
 
 
 # ------------------------------------------------------------------
 #  another short hand to convert numpy array into image for display
 # ------------------------------------------------------------------
+
 def arr2im(arr,
            vmin=0.,
            vmax=10000.0,
@@ -1610,6 +1561,9 @@ while True:  # the main game loop
                             "scexaostatus set darkchuck 'OFF             ' 1")
                         os.system(
                             "log Chuckcam: Done saving current internal dark")
+                        print(bias.shape)
+                        print(cam_dark.shape)
+                        print(cam_dark.shape_c)
                         cam_dark.set_data(bias.astype(np.float32))
                         cam_badpixmap.set_data(badpixmap.astype(np.float32))
 

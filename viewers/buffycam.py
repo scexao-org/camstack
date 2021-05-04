@@ -43,7 +43,7 @@ ONES_NODIM = np.array(1., dtype=np.float32)
 # ------------------------------------------------------------------
 #             short hands for opening and checking shm
 # ------------------------------------------------------------------
-from camstack.viewer.common import open_shm, open_shm_fullpath
+from camstack.viewer_common import open_shm, open_shm_fullpath
 
 # ------------------------------------------------------------------
 #             short hands for tmux commands
@@ -53,72 +53,25 @@ from camstack.core import tmux as tmuxlib
 # ------------------------------------------------------------------
 #             short hands for shared memory data access
 # ------------------------------------------------------------------
+from camstack.viewer_common import get_img_data_cred1
 
-def get_img_data(bias=None,
-                 badpixmap=None,
-                 subt_ref=False,
-                 ref=None,
-                 line_scale=True,
-                 clean=True,
-                 check=True):
-    ''' ----------------------------------------
-    Return the current image data content,
-    formatted as a 2D numpy array.
-    Reads from the already-opened shared memory
-    data structure.
-    ---------------------------------------- '''
-    temp = cam.get_data(check, reform=True, timeout=1.0).astype('float')
-    temp[temp == 65535] = 1.
-
-    if clean:
-        if badpixmap is not None:
-            temp *= badpixmap
-        #isat = np.percentile(temp, 99.995)
-        isat = np.max(temp)
-        if bias is not None:
-            temp -= bias
-    else:
-        # isat = np.percentile(temp, 99.995)
-        isat = np.max(temp)
-
-    #cam_clean.set_data(temp.astype(np.float32))
-
-    if subt_ref:
-        temp -= ref
-        if not lin_scale:
-            temp = np.abs(temp)
-
-    return (temp, isat)
-
+def get_img_data(*args, **kwargs):
+    # Arguments: bias, badpixmap, subt_ref, ref, line_scale, clean, check
+    return get_img_data_cred1(cam, *args, **kwargs)
 
 # ------------------------------------------------------------------
 #             short hands for image averaging
 # ------------------------------------------------------------------
-def ave_img_data(nave,
-                 bias=None,
-                 badpixmap=None,
-                 clean=True,
-                 disp=False,
-                 tint=0):
-
-    for i in range(nave):
-        if disp:
-            sys.stdout.write('\r tint = %8.6f s: acq. #%5d' %
-                             (tint * 1.e-6, i))
-            sys.stdout.flush()
-        if i == 0:
-            ave_im = get_img_data(bias=bias, badpixmap=badpixmap,
-                                  clean=clean)[0] / float(nave)
-        else:
-            ave_im += get_img_data(bias=bias, badpixmap=badpixmap,
-                                   clean=clean)[0] / float(nave)
-
-    return (ave_im)
+from camstack.viewer_common import ave_img_data_from_callable
+def ave_img_data(nave, *args, **kwargs):
+    # Arguments: bias, badpixmap, clean, disp, tint
+    return ave_img_data_from_callable(get_img_data, nave, *args, **kwargs)
 
 
 # ------------------------------------------------------------------
 #  another short hand to convert numpy array into image for display
 # ------------------------------------------------------------------
+
 def arr2im(arr,
            vmin=0.,
            vmax=10000.0,
@@ -586,11 +539,11 @@ ndrs = np.array([1, 2, 4, 8, 16, 32, 64, 128, 255])
 nndr = np.size(ndrs)
 
 # get initial values for expt, fps and ndr
-tmux_kcam_ctrl("get_tint()")
+tmux_kcam_ctrl.send_keys("get_tint()")
 time.sleep(1)
-tmux_kcam_ctrl("get_NDR()")
+tmux_kcam_ctrl.send_keys("get_NDR()")
 time.sleep(1)
-tmux_kcam_ctrl("get_fps()")
+tmux_kcam_ctrl.send_keys("get_fps()")
 time.sleep(1)
 sync_param = ircam_synchro.get_data().astype(np.int)
 lag = 7
@@ -882,14 +835,14 @@ while True:  # the main game loop
         msg = "  !! Acquiring a dark !!  "
         dinfo2 = font3.render(msg, True, BGCOL, SACOL)
         screen.blit(dinfo2, rct_dinfo2)
-        tmux_kcam("scexaostatus set darkbuffy 'NEW INT DARK    ' 0")
-        tmux_kcam("log Buffycam: Saving current internal dark")
+        tmux_kcam.send_keys("scexaostatus set darkbuffy 'NEW INT DARK    ' 0")
+        tmux_kcam.send_keys("log Buffycam: Saving current internal dark")
 
         print("In the time it takes Buffy to dust a")
         print("vampire, we'll acquire this dark.")
 
         if not block and bpin:
-            tmux_kcam("ircam_block")  # blocking the light
+            tmux_kcam.send_keys("ircam_block")  # blocking the light
         msgwhl = "     BLOCK      "
         wh = font1.render(msgwhl, True, RED1)
         screen.blit(wh, rct_wh)
@@ -910,9 +863,9 @@ while True:  # the main game loop
         bias = ave_dark * badpixmap
         time.sleep(0.2)
 
-        tmux_kcam("ircam_block")  # blocking the light
-        tmux_kcam("scexaostatus set darkbuffy 'OFF             ' 1")
-        tmux_kcam("log Buffycam: Done saving current internal dark")
+        tmux_kcam.send_keys("ircam_block")  # blocking the light
+        tmux_kcam.send_keys("scexaostatus set darkbuffy 'OFF             ' 1")
+        tmux_kcam.send_keys("log Buffycam: Done saving current internal dark")
         cam_dark.set_data(bias.astype(np.float32))
         cam_badpixmap.set_data(badpixmap.astype(np.float32))
         new_dark.set_data(ONES_NODIM)
@@ -933,11 +886,11 @@ while True:  # the main game loop
                                  check=True)
         #cam_clean = open_shm("ircam%d_clean" % (camid,), dims=(xsizeim, ysizeim), check=True)
         time.sleep(1)
-        tmux_kcam_ctrl("get_tint()")
+        tmux_kcam_ctrl.send_keys("get_tint()")
         time.sleep(1)
-        tmux_kcam_ctrl("get_NDR()")
+        tmux_kcam_ctrl.send_keys("get_NDR()")
         time.sleep(1)
-        tmux_kcam_ctrl("get_fps()")
+        tmux_kcam_ctrl.send_keys("get_fps()")
         time.sleep(1)
         shmreload = False
     else:
@@ -1317,7 +1270,7 @@ while True:  # the main game loop
             timeexpt = np.append(timeexpt, time.time())
             time.sleep(0.1)
             if timeexpt[-1] - timeexpt[0] > 4:
-                tmux_kcam(
+                tmux_kcam.send_keys(
                     home + "/bin/log Buffycam: changing exposure time to %d"
                     % etime)
                 timeexpt = []
@@ -1327,7 +1280,7 @@ while True:  # the main game loop
             timendr = np.append(timendr, time.time())
             time.sleep(0.1)
             if timendr[-1] - timendr[0] > 4:
-                tmux_kcam(
+                tmux_kcam.send_keys(
                     home + "/bin/log Buffycam: changing exposure time to %d"
                     % etime)
                 timendr = []
@@ -1379,7 +1332,7 @@ while True:  # the main game loop
                     if (nindex < nndr - 1):
                         nindex += 1
                         ndrc = ndrs[nindex]
-                        tmux_kcam_ctrl("set_NDR(%d)" % (ndrc, ))
+                        tmux_kcam_ctrl.send_keys("set_NDR(%d)" % (ndrc, ))
                         time.sleep(1)
                         ndr = cam.get_ndr()
                         etimet = etime * ndr
@@ -1413,7 +1366,7 @@ while True:  # the main game loop
                     if (nindex > 0):
                         nindex -= 1
                         ndrc = ndrs[nindex]
-                        tmux_kcam_ctrl("set_NDR(%d)" % (ndrc, ))
+                        tmux_kcam_ctrl.send_keys("set_NDR(%d)" % (ndrc, ))
                         time.sleep(1)
                         ndr = cam.get_ndr()
                         etimet = etime * ndr
@@ -1435,7 +1388,7 @@ while True:  # the main game loop
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
                         else:
-                            tmux_kcam_ctrl("set_tint(%f)" % (etimec * 1.e-6, ))
+                            tmux_kcam_ctrl.send_keys("set_tint(%f)" % (etimec * 1.e-6, ))
                             time.sleep(1)
                             etime = cam.get_expt() * 1e3
                             delay = 0
@@ -1465,10 +1418,10 @@ while True:  # the main game loop
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
                         else:
-                            tmux_kcam_ctrl("set_fps(%f)" % (fpsc, ))
+                            tmux_kcam_ctrl.send_keys("set_fps(%f)" % (fpsc, ))
                             time.sleep(1)
                             fps = cam.get_fps()
-                            tmux_kcam_ctrl("get_tint()")
+                            tmux_kcam_ctrl.send_keys("get_tint()")
                             time.sleep(1)
                             etime = cam.get_expt() * 1e3
                             delay = 0
@@ -1501,10 +1454,10 @@ while True:  # the main game loop
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
                         else:
-                            tmux_kcam_ctrl("set_fps(%f)" % (fpsc, ))
+                            tmux_kcam_ctrl.send_keys("set_fps(%f)" % (fpsc, ))
                             time.sleep(1)
                             fps = cam.get_fps()
-                            tmux_kcam_ctrl("get_tint()")
+                            tmux_kcam_ctrl.send_keys("get_tint()")
                             time.sleep(1)
                             etime = cam.get_expt() * 1e3
                             delay = 0
@@ -1521,7 +1474,7 @@ while True:  # the main game loop
             if event.key == K_h:
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
-                    tmux_kcam("hotspotalign")
+                    tmux_kcam.send_keys("hotspotalign")
                 else:
                     print(hmsg)
 
@@ -1531,15 +1484,15 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if pup:
-                        tmux_kcam("buffy_pup")
+                        tmux_kcam.send_keys("buffy_pup")
                         if reachphoto:
-                            tmux_kcam("reach_pickoff out &")
-                            tmux_kcam("buffycam_pickoff out &")
-                        tmux_kcam("ircam_fcs buffy")
+                            tmux_kcam.send_keys("reach_pickoff out &")
+                            tmux_kcam.send_keys("buffycam_pickoff out &")
+                        tmux_kcam.send_keys("ircam_fcs buffy")
                     else:
                         lin_scale = True
-                        tmux_kcam("buffy_pup")
-                        tmux_kcam("ircam_fcs buffy_pup")
+                        tmux_kcam.send_keys("buffy_pup")
+                        tmux_kcam.send_keys("ircam_fcs buffy_pup")
                 else:
                     plot_pa = not plot_pa
 
@@ -1554,9 +1507,9 @@ while True:  # the main game loop
                         msg = "  !! Acquiring a dark !!  "
                         dinfo2 = font3.render(msg, True, BGCOL, SACOL)
                         screen.blit(dinfo2, rct_dinfo2)
-                        tmux_kcam(
+                        tmux_kcam.send_keys(
                             "scexaostatus set darkbuffy 'NEW INT DARK    ' 0")
-                        tmux_kcam("log Buffycam: Saving current internal dark")
+                        tmux_kcam.send_keys("log Buffycam: Saving current internal dark")
 
                         print("In the time it takes Buffy to dust a")
                         print("vampire, we'll acquire this dark.")
@@ -1586,9 +1539,9 @@ while True:  # the main game loop
                         time.sleep(0.2)
                         if bpin:
                             os.system("ircam_block")          # blocking the light
-                        tmux_kcam(
+                        tmux_kcam.send_keys(
                             "scexaostatus set darkbuffy 'OFF             ' 1")
-                        tmux_kcam(
+                        tmux_kcam.send_keys(
                             "log Buffycam: Done saving current internal dark")
                         cam_dark.set_data(bias.astype(np.float32))
                         cam_badpixmap.set_data(badpixmap.astype(np.float32))
@@ -1599,14 +1552,14 @@ while True:  # the main game loop
                         msg = "  !! Acquiring darks !!   "
                         dinfo2 = font3.render(msg, True, BGCOL, SACOL)
                         screen.blit(dinfo2, rct_dinfo2)
-                        tmux_kcam(
+                        tmux_kcam.send_keys(
                             "scexaostatus set darkbuffy 'ALL INT DARKS   ' 0")
-                        tmux_kcam("log Buffycam: Saving internal darks")
+                        tmux_kcam.send_keys("log Buffycam: Saving internal darks")
 
                         print("In the time it takes Buffy to dust all the")
                         print("vampires, we'll acquire all biases.")
                         if bpin:
-                            tmux_kcam("ircam_block")  # blocking the light
+                            tmux_kcam.send_keys("ircam_block")  # blocking the light
                         msgwhl = "     BLOCK      "
                         wh = font1.render(msgwhl, True, RED1)
                         screen.blit(wh, rct_wh)
@@ -1625,7 +1578,7 @@ while True:  # the main game loop
                                 sync_param = ircam_synchro.get_data().astype(np.int)
                                 tint = sync_param[2]
                             else:
-                                tmux_kcam_ctrl("set_tint(%f)" % (tint * 1.e-6, ))
+                                tmux_kcam_ctrl.send_keys("set_tint(%f)" % (tint * 1.e-6, ))
                                 time.sleep(1)
                                 tint = cam.get_expt() * 1e3
                             ndark = int(1 * fps /
@@ -1646,10 +1599,10 @@ while True:  # the main game loop
                         print(
                             "\nBuffy dusted the crap out of the poor vampire.")
                         if bpin:
-                            tmux_kcam("ircam_block")  # opening the shutter
-                        tmux_kcam(
+                            tmux_kcam.send_keys("ircam_block")  # opening the shutter
+                        tmux_kcam.send_keys(
                             "scexaostatus set darkbuffy 'OFF             ' 1")
-                        tmux_kcam("log Buffycam: Done saving internal darks")
+                        tmux_kcam.send_keys("log Buffycam: Done saving internal darks")
 
                         if not sync_param[0] and sync_param[1]:
                             sync_param[2] = tint
@@ -1657,7 +1610,7 @@ while True:  # the main game loop
                             ircam_synchro.set_data(
                                 sync_param.astype(np.float32))
                         else:
-                            tmux_kcam_ctrl("set_tint(%f)" % (tint * 1.e-6, ))
+                            tmux_kcam_ctrl.send_keys("set_tint(%f)" % (tint * 1.e-6, ))
                         biashere = True
                         bpmhere = True
 
@@ -1721,8 +1674,8 @@ while True:  # the main game loop
                     else:
                         tmux_buffylog.send_keys("logshimkill")
                         tmux_buffylog.cmd('kill-session')
-                        tmux_kcam("log Buffycam: stop logging images")
-                        tmux_kcam("scexaostatus set logbuffy 'OFF             ' 1")
+                        tmux_kcam.send_keys("log Buffycam: stop logging images")
+                        tmux_kcam.send_keys("scexaostatus set logbuffy 'OFF             ' 1")
 
             # Start archiving images
             #--------------------------
@@ -1852,32 +1805,32 @@ while True:  # the main game loop
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
                         if rpin:
-                            tmux_kcam("reach_pickoff out &")
-                            tmux_kcam("oap4 onaxis &")
-                            tmux_kcam("steering onaxis &")
+                            tmux_kcam.send_keys("reach_pickoff out &")
+                            tmux_kcam.send_keys("oap4 onaxis &")
+                            tmux_kcam.send_keys("steering onaxis &")
                             keeprpin = False
                         else:
-                            tmux_kcam("reach_pickoff in &")
-                            tmux_kcam("oap4 reach &")
-                            tmux_kcam("steering reach &")
+                            tmux_kcam.send_keys("reach_pickoff in &")
+                            tmux_kcam.send_keys("oap4 reach &")
+                            tmux_kcam.send_keys("steering reach &")
                             keeprpin = True
                     else:
                         if reachphoto:
-                            tmux_kcam("chuck_pup")
-                            tmux_kcam("chuck_pup_fcs pupil &")
-                            tmux_kcam("buffycam_pickoff out &")
+                            tmux_kcam.send_keys("chuck_pup")
+                            tmux_kcam.send_keys("chuck_pup_fcs pupil &")
+                            tmux_kcam.send_keys("buffycam_pickoff out &")
                             if not keeprpin:
-                                tmux_kcam("reach_pickoff out &")
-                                tmux_kcam("oap4 onaxis &")
-                                tmux_kcam("steering onaxis &")
+                                tmux_kcam.send_keys("reach_pickoff out &")
+                                tmux_kcam.send_keys("oap4 onaxis &")
+                                tmux_kcam.send_keys("steering onaxis &")
                         else:
                             if not pup:
-                                tmux_kcam("buffy_pup")
-                            tmux_kcam("buffycam_pickoff in &")
+                                tmux_kcam.send_keys("buffy_pup")
+                            tmux_kcam.send_keys("buffycam_pickoff in &")
                             if not rpin:
-                                tmux_kcam("reach_pickoff in &")
-                                tmux_kcam("oap4 reach &")
-                                tmux_kcam("steering reach &")
+                                tmux_kcam.send_keys("reach_pickoff in &")
+                                tmux_kcam.send_keys("oap4 reach &")
+                                tmux_kcam.send_keys("steering reach &")
                 else:
                     plot_history = not plot_history
 
@@ -1981,9 +1934,9 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_kcam("dm_stage x push -100")
+                        tmux_kcam.send_keys("dm_stage x push -100")
                     else:
-                        tmux_kcam("dm_stage x push -20")
+                        tmux_kcam.send_keys("dm_stage x push -20")
                 else:
                     if waitfordt:
                         idt -= 1
@@ -1993,9 +1946,9 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_kcam("dm_stage x push +100")
+                        tmux_kcam.send_keys("dm_stage x push +100")
                     else:
-                        tmux_kcam("dm_stage x push +20")
+                        tmux_kcam.send_keys("dm_stage x push +20")
                 else:
                     if waitfordt:
                         idt += 1
@@ -2005,17 +1958,17 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_kcam("dm_stage y push +100")
+                        tmux_kcam.send_keys("dm_stage y push +100")
                     else:
-                        tmux_kcam("dm_stage y push +20")
+                        tmux_kcam.send_keys("dm_stage y push +20")
 
             if event.key == K_RIGHT:
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_kcam("dm_stage y push -100")
+                        tmux_kcam.send_keys("dm_stage y push -100")
                     else:
-                        tmux_kcam("dm_stage y push -20")
+                        tmux_kcam.send_keys("dm_stage y push -20")
 
     pygame.display.update(rects)
 
