@@ -212,6 +212,7 @@ class CRED1(EDTCamera):
 
     def get_readout_mode(self):
         res = self.send_command('mode raw')
+        res = res[:6] + res[11:] # Removing "reset" after "global", otherwise too long for shm keywords
         self.camera_shm.update_keyword('DETMODE', res)
         return res
 
@@ -234,7 +235,7 @@ class CRED1(EDTCamera):
         self.NDR = int(self.send_command('nbreadworeset raw'))
         self.camera_shm.update_keyword('NDR', self.NDR)
         self.camera_shm.update_keyword('DETMODE',
-                                       ('globalresetsingle', 'globalresetcds')[self.NDR > 1])
+                                       ('globalsingle', 'globalcds')[self.NDR > 1])
         return self.NDR
 
     def set_fps(self, fps: float):
