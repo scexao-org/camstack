@@ -11,7 +11,7 @@ if __name__ == "__main__":
     
     ocam_decode = DependentProcess(
         tmux_name='ocam_decode',
-        cli_cmd='/home/scexao/src/camstack/ocamdecode/ocamdecoderun_mode %u',
+        cli_cmd='cd /home/scexao/src/camstack/ocamdecode; /home/scexao/src/camstack/ocamdecode/ocamdecoderun_mode %u',
         cli_args=(mode,),
         kill_upon_create = False,
         cset='ocam_decode',
