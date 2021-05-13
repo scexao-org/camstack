@@ -43,7 +43,7 @@ def get_img_data(cam,
                  badpixmap=None,
                  subt_ref=False,
                  ref=None,
-                 line_scale=True,
+                 lin_scale=True,
                  clean=True,
                  check=True):
     ''' ----------------------------------------

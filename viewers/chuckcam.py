@@ -60,7 +60,7 @@ from camstack.core import tmux as tmuxlib
 from camstack.viewer_common import get_img_data_cred2
 
 def get_img_data(*args, **kwargs):
-    # Arguments: bias, badpixmap, subt_ref, ref, line_scale, clean, check
+    # Arguments: bias, badpixmap, subt_ref, ref, lin_scale, clean, check
     return get_img_data_cred2(cam, *args, **kwargs)
 
 # ------------------------------------------------------------------
