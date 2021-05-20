@@ -6,8 +6,6 @@ tsend="tmux send-keys -t"
 tname="ircam0ctrl"
 
 # Create tmuxes and issue kills
-$tnew $tname
-sleep 0.1
 $tsend $tname C-c
 sleep 0.1
 $tsend $tname "close()" Enter
@@ -17,6 +15,12 @@ sleep 0.3
 $tsend $tname C-z
 sleep 0.3
 $tsend $tname "kill %" Enter
+
+sleep 0.1
+tmux kill-session -t $tname
+sleep 1.0
+$tnew $tname
+
 
 echo ""
 #read -p "Everything killed, proceed to startup ? Press enter to continue, Ctrl+C to abort."

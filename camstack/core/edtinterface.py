@@ -2,6 +2,8 @@ from ctypes import (create_string_buffer, c_uint, c_int, byref)
 
 from camstack.core.edtdll import EdtDLL
 
+from threading import Lock
+
 import datetime, time
 import traceback
 
@@ -17,9 +19,14 @@ class EdtInterfaceSerial:
         self.pdvObj = EdtDLL.pdv_open_channel(b'pdv', unit, channel)
 
         self.camName = f'pdv_{unit}_{channel}'
+        
         self.initialize()
 
+
+
     def initialize(self):
+
+        self.serial_lock = Lock()
         self.width, self.height = self.get_image_size()
         EdtDLL.pdv_flush_fifo(self.pdvObj)
 
@@ -63,6 +70,10 @@ class EdtInterfaceSerial:
 
     def send_command(self, cmd, base_timeout: float = 10):
         #CRED2: Confirmed and tested
+
+        # Adding a lock for the graceful handling between shell and polling thread
+        self.serial_lock.acquire()
+
         try:  # Try to flush the serial buffer, just in case.
             _ = self._serial_read()
         except:
@@ -85,6 +96,9 @@ class EdtInterfaceSerial:
                         return recRes
                 except:
                     continue
+
+        self.serial_lock.release()
+
         if recRes is None:
             raise Exception("Error in sendCommand")
         return recRes # Which is an empty string at this point
