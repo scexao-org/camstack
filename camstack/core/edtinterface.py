@@ -89,15 +89,13 @@ class EdtInterfaceSerial:
                 try:
                     recRes = self._serial_read(int(base_timeout) * 2**i)
                     if len(recRes) > 0:
-                        #print(f'Command {cmd}')
-                        #print(f'Attempted sends: {k+1}')
-                        #print(f'Attempted receives: {i+1}')
-                        #print('----')
+                        self.serial_lock.release()
                         return recRes
                 except:
                     continue
 
         self.serial_lock.release()
+        
 
         if recRes is None:
             raise Exception("Error in sendCommand")
