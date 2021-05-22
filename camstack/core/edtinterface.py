@@ -72,29 +72,25 @@ class EdtInterfaceSerial:
         #CRED2: Confirmed and tested
 
         # Adding a lock for the graceful handling between shell and polling thread
-        self.serial_lock.acquire()
+        with self.serial_lock:
+            try:  # Try to flush the serial buffer, just in case.
+                _ = self._serial_read()
+            except:
+                pass
 
-        try:  # Try to flush the serial buffer, just in case.
-            _ = self._serial_read()
-        except:
-            pass
-
-        recRes = None
-        # Number of attempts in sending the command
-        for k in range(3):
-            _ = self._serial_command(cmd)
-            # Number of attemps at receiving the command, with exp
-            # increasing timeouts
-            for i in range(8):
-                try:
-                    recRes = self._serial_read(int(base_timeout) * 2**i)
-                    if len(recRes) > 0:
-                        self.serial_lock.release()
-                        return recRes
-                except:
-                    continue
-
-        self.serial_lock.release()
+            recRes = None
+            # Number of attempts in sending the command
+            for k in range(3):
+                _ = self._serial_command(cmd)
+                # Number of attemps at receiving the command, with exp
+                # increasing timeouts
+                for i in range(8):
+                    try:
+                        recRes = self._serial_read(int(base_timeout) * 2**i)
+                        if len(recRes) > 0:
+                            return recRes
+                    except:
+                        continue
         
 
         if recRes is None:
