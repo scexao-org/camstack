@@ -411,7 +411,8 @@ args = sys.argv[1:]
 z1 = 1  # zoom for the display (default is 1)
 if args != []:
     if isinstance(int(args[0]), int):
-        z1 = min(2, max(2, z1))
+        z1 = int(args[0])
+        z1 = min(2, max(1, z1))
 
 # ------------------------------------------------------------------
 #                access to shared memory structures
@@ -1306,7 +1307,7 @@ while True:  # the main game loop
 
         # exit ChuckCam
         #------------------------------------------------------------------
-        if event.type == QUIT:
+        if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
             pygame.quit()
 
             cam.close()
@@ -1316,17 +1317,8 @@ while True:  # the main game loop
             new_dark.close()
             print("Chuckcam has ended normally.")
             sys.exit()
-        elif event.type == KEYDOWN:
 
-            if event.key == K_ESCAPE:
-                pygame.quit()
-                cam.close()
-                cam_dark.close()
-                cam_badpixmap.close()
-                #cam_clean.close()
-                new_dark.close()
-                print("Chuckcam has ended normally.")
-                sys.exit()
+        elif event.type == KEYDOWN:
 
             # CAMERA CONTROLS
             #--------------------------------------------------------------
@@ -1356,8 +1348,7 @@ while True:  # the main game loop
                             ircam_synchro.set_data(
                                 sync_param.astype(np.float32))
                             time.sleep(1)
-                            sync_param = ircam_synchro.get_data().astype(
-                                np.int)
+                            sync_param = ircam_synchro.get_data().astype(np.int)
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
@@ -1396,8 +1387,7 @@ while True:  # the main game loop
                             ircam_synchro.set_data(
                                 sync_param.astype(np.float32))
                             time.sleep(1)
-                            sync_param = ircam_synchro.get_data().astype(
-                                np.int)
+                            sync_param = ircam_synchro.get_data().astype(np.int)
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
@@ -1463,8 +1453,7 @@ while True:  # the main game loop
                             ircam_synchro.set_data(
                                 sync_param.astype(np.float32))
                             time.sleep(1)
-                            sync_param = ircam_synchro.get_data().astype(
-                                np.int)
+                            sync_param = ircam_synchro.get_data().astype(np.int)
                             fps = sync_param[3]
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
@@ -1567,9 +1556,6 @@ while True:  # the main game loop
                             "scexaostatus set darkchuck 'OFF             ' 1")
                         os.system(
                             "log Chuckcam: Done saving current internal dark")
-                        print(bias.shape)
-                        print(cam_dark.shape)
-                        print(cam_dark.shape_c)
                         cam_dark.set_data(bias.astype(np.float32))
                         cam_badpixmap.set_data(badpixmap.astype(np.float32))
 
@@ -1725,8 +1711,8 @@ while True:  # the main game loop
                 nimsave = int(min(20000, (50000000 / etimet)))
                 # creating a tmux session for logging
                 os.system("ln -s /tmp/fits/chuck.fits /milk/shm/ircam0.auxFITSheader.shm")
-                tmux_ircamlog = tmuxlib.find_or_create("ircam%dlog" % (camid, ))
-                tmux_ircamlog.send_keys("milk-logshim ircam%d %i %s" %
+                tmux_ircamlog = tmuxlib.find_or_create_remote("ircam%dlog" % (camid, ), "scexao-op@localhost")
+                tmux_ircamlog.send_keys("milk-logshim ircam%d %i %s &" %
                                  (camid, nimsave, savepath))
                 os.system("log Chuckcam: start archiving images")
                 os.system("scexaostatus set logchuck 'ARCHIVING       ' 3")
@@ -1898,7 +1884,8 @@ while True:  # the main game loop
                     msgzm = "  "
                 zm = font1.render(msgzm, True, CYAN)
 
-            # Ext trig
+
+            # Exttrig stuff
             #---------------------
             if event.key == K_n:
                 mmods = pygame.key.get_mods()

@@ -927,7 +927,7 @@ while True:  # the main game loop
             nindex = np.where(ndrs >= ndr)[0][0]
         # ------------------------------------------------------------------
         # read image
-        temp, isat = get_img_data(bias, badpixmap, subt_ref, ref_im, lin_scale)
+        temp, isat = get_img_data(bias, badpixmap, subt_ref, ref_im, lin_scale, check=False)
         # ------------------------------------------------------------------
         # averaging
         if average:
@@ -1236,9 +1236,17 @@ while True:  # the main game loop
 
         # ------------------------------------------------------------------
         # saving images
-        tmuxon = os.popen('tmux ls |grep kcamlog | awk \'{print $2}\'').read()
+        tmuxon = os.popen('ssh scexao-op@localhost "tmux ls" | grep kcamlog | awk \'{print $2}\'' %
+                          (camid, )).read()
         if tmuxon:
             saveim = True
+            try: # Assign tmux_ircamlog only if it doesn't exist in the namespace.
+                # This avoid spurious prompts of "duplicate session ircamlog" when logging
+                tmux_kcamlog
+            except:
+                # Create a handle to the logging tmux
+                # This allows to get back on track if it already exists when we start chuckcam
+                tmux_kcamlog = tmuxlib.find_or_create_remote('kcamlog', 'scexao-op@localhost')
         else:
             saveim = False
         if cnti % 20:
@@ -1292,7 +1300,7 @@ while True:  # the main game loop
 
         # exit BuffyCam
         #------------------------------------------------------------------
-        if event.type == QUIT:
+        if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
             pygame.quit()
 
             cam.close()
@@ -1302,17 +1310,8 @@ while True:  # the main game loop
             new_dark.close()
             print("Buffycam has ended normally.")
             sys.exit()
-        elif event.type == KEYDOWN:
 
-            if event.key == K_ESCAPE:
-                pygame.quit()
-                cam.close()
-                cam_dark.close()
-                cam_badpixmap.close()
-                #cam_clean.close()
-                new_dark.close()
-                print("Buffycam has ended normally.")
-                sys.exit()
+        elif event.type == KEYDOWN:
 
             # CAMERA CONTROLS
             #--------------------------------------------------------------
@@ -1655,8 +1654,8 @@ while True:  # the main game loop
                                 os.makedirs(ospath)
                             nimsave = int(min(10000, (50000000 / etimet)))
                             # creating a tmux session for logging
-
-                            tmux_buffylog = tmuxlib.find_or_create("kcamlog" % (camid, ))
+                            os.system("ln -s /tmp/fits/buffy.fits /milk/shm/kcam.auxFITSheader.shm")
+                            tmux_buffylog = tmuxlib.find_or_create_remote("kcamlog", "scexao-op@localhost")
                             tmux_buffylog.send_keys("logshim kcam %i %s" %
                                  (nimsave, savepath))
 
@@ -1665,7 +1664,7 @@ while True:  # the main game loop
                                 "scexaostatus set logbuffy 'LOGGING         ' 3")
 
                     else:
-                        tmux_buffylog.send_keys("logshimkill")
+                        tmux_buffylog.send_keys("milk-logshimkill kcam")
                         tmux_buffylog.cmd('kill-session')
                         tmux_kcam.send_keys("log Buffycam: stop logging images")
                         tmux_kcam.send_keys("scexaostatus set logbuffy 'OFF             ' 1")
@@ -1683,8 +1682,9 @@ while True:  # the main game loop
                     os.makedirs(ospath)
                 nimsave = int(min(20000, (50000000 / etimet)))
                 # creating a tmux session for logging
-                tmux_buffylog = tmuxlib.find_or_create("kcamlog" % (camid, ))
-                tmux_buffylog.send_keys("logshim kcam %i %s" %
+                os.system("ln -s /tmp/fits/buffy.fits /milk/shm/kcam.auxFITSheader.shm")
+                tmux_buffylog = tmuxlib.find_or_create_remote("kcamlog", "scexao-op@localhost")
+                tmux_buffylog.send_keys("milk-logshim kcam %i %s &" %
                                  (nimsave, savepath))
                 tmux_buffylog.send_keys("logshim kcam %i %s" %
                                  (nimsave, savepath))
@@ -1877,7 +1877,7 @@ while True:  # the main game loop
                             time.sleep(1)
 
             # Crop modes and full frame
-            #--------------------------
+            #---------------------
             CROP_KEYLIST = [
                 K_0, K_1, K_2, K_3, K_4, K_5, K_6, K_7, K_8, K_9, K_MINUS,
                 K_EQUALS, K_f
