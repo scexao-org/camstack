@@ -47,7 +47,7 @@ if __name__ == "__main__":
     cam = Vampires(
         'vcam%u' % camnum,
         'vcamim%u' % camnum,
-        unit=2,
+        unit=0,
         channel=camnum,
         mode_id=mode,
         taker_cset_prio=('vcam_edt', 49),

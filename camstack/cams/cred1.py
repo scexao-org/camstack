@@ -54,6 +54,8 @@ class CRED1(EDTCamera):
     }
     KEYWORDS.update(EDTCamera.KEYWORDS)
 
+    EDTTAKE_UNSIGNED = True
+
     def __init__(self,
                  name: str,
                  stream_name: str,

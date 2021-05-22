@@ -30,6 +30,8 @@ scripts = [
     './scripts/startChuck',
     './scripts/startBuffy',
     './scripts/startVampires',
+    './scripts/startRajni',
+    './scripts/startGLINT', # FIXME change names - "start" is too vague for something available system-wide
 ]
 
 setup(

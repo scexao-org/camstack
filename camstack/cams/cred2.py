@@ -1,6 +1,7 @@
 '''
     Chuck, Rajni, GLINT
 '''
+from camstack.core.edtinterface import EdtInterfaceSerial
 import os
 import time
 from typing import Union
@@ -255,23 +256,24 @@ class CRED2(EDTCamera):
 
 class Rajni(CRED2):
 
-    INTERACTIVE_SHELL_METHODS = [] + CRED2.INTERACTIVE_SHELL_METHODS
-
     MODES = {}
     MODES.update(CRED2.MODES)
+    
+    def _fill_keywords(self):
+        CRED2._fill_keywords(self)
 
-    KEYWORDS = {}  # TODO: see about that later.
-
-    def __init__(self,
-                 name: str,
-                 stream_name: str,
-                 mode_id: int,
-                 unit: int = 0,
-                 channel: int = 0):
-        CRED2.__init__(self, name, stream_name, mode_id, unit, channel)
+        # Override detector name
+        self.camera_shm.update_keyword('DETECTOR', 'CRED2 - RAJNI')
 
 
-class GLINT(CRED2):
+#class GLINT(CRED2):
+'''
+    FIXME
+    GLINT is not a CRED2 for now, because we decided not to send commands to the camera
+    Better, we need to define a passive CRED2, which could send serial commands
+    But wouldn't try to alter the camera state
+'''
+class GLINT(EDTCamera):
     MODES = {
         # GLINT
         12:
@@ -282,7 +284,36 @@ class GLINT(CRED2):
                    fps=1394.833104000,
                    tint=0.000711851),
     }
-    MODES.update(CRED2.MODES)
+    MODES.update(EDTCamera.MODES)
+
+    def __init__(self,
+                 name: str,
+                 stream_name: str,
+                 unit: int = 2,
+                 channel: int = 0,
+                 mode_id=12,
+                 taker_cset_prio=('system', None),
+                 dependent_processes=[]):
+
+        basefile = os.environ['HOME'] + '/src/camstack/config/cred2_glint.cfg'
+
+        # Call EDT camera init
+        EDTCamera.__init__(self,
+                           name,
+                           stream_name,
+                           mode_id,
+                           unit,
+                           channel,
+                           basefile,
+                           taker_cset_prio=taker_cset_prio,
+                           dependent_processes=dependent_processes)
+
+
+    def _fill_keywords(self):
+        EDTCamera._fill_keywords(self)
+
+        # Override detector name
+        self.camera_shm.update_keyword('DETECTOR', 'CRED2 - GLINT')
 
 
 class Chuck(CRED2):

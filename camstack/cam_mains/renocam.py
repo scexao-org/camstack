@@ -30,18 +30,20 @@ if __name__ == "__main__":
         kill_upon_create = False,
     )
     tcp_recv.start_order = 1
-    tcp_recv.kill_order = 0
+    tcp_recv.kill_order = 1
 
     tcp_send = DependentProcess(
         tmux_name='ocam_tcp',
         cli_cmd='sleep 3; OMP_NUM_THREADS=1 /home/scexao/bin/shmimTCPtransmit %s %s %u',
         cli_args=('ocam2dalt', '10.20.70.1', 30107),
-        kill_upon_create = False,
+        # Sender is kill_upon_create - rather than when starting. that ensures it dies well before the receiver
+        # Which is better for flushing TCP sockets
+        kill_upon_create = True,
         cset='ocam_tcp',
         rtprio=49,
     )
     tcp_send.start_order = 2
-    tcp_send.kill_order = 1
+    tcp_send.kill_order = 0
 
     ocam = OCAM2K('ocam',
                   'ocam2krc',

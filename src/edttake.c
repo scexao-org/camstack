@@ -61,6 +61,7 @@ int main(int argc, char **argv)
     // arg parsing if we make prio and cset settable from args.
     set_rt_priority();
 
+    int UNSIGNED_OUT = 0;
     int BYTESHORTCAST = 0;
     int STREAMNAMEINIT = 0;
 
@@ -94,7 +95,12 @@ int main(int argc, char **argv)
             }
             break;
 
+        case 'U':
+            UNSIGNED_OUT = 1;
+            break;
+
         case '8':
+            UNSIGNED_OUT = 1;
             BYTESHORTCAST = 1;
             break;
 
@@ -232,7 +238,16 @@ int main(int argc, char **argv)
     cameratype = pdv_get_cameratype(pdv_p);
 
     isiowidth = (BYTESHORTCAST != 0) ? width / 2 : width;
+
+    // Do we want 8 bit or 16 bit output (cast implies unsigned)?
     atype = ((BYTESHORTCAST != 0) || depth != 8) ? _DATATYPE_UINT16 : _DATATYPE_UINT8;
+    // Do we want signed or unsigned 16 bit output ?
+    if (atype == _DATATYPE_UINT8 && !UNSIGNED_OUT) {
+        atype = _DATATYPE_INT8;
+    } else if (atype == _DATATYPE_UINT16 && !UNSIGNED_OUT) {
+        atype = _DATATYPE_INT16;
+    }
+
     // 16 -> 16 OR 8 -> 16: bytewidth = isiowidth * 2
     // 8 -> 8: bytewidth = isiowidth
     // will be used to figure out the memcopy size
@@ -357,18 +372,19 @@ int main(int argc, char **argv)
              * pdv_timeout_cleanup helps recover gracefully after a timeout,
              * particularly if multiple buffers were prestarted
              */
+            printf("timeout..... @ %s", ctime((time_t*) &time1));
+
             pdv_timeout_restart(pdv_p, TRUE);
             last_timeouts = timeouts;
             recovering_timeout = TRUE;
-            printf("\ntimeout....\n");
+            pdv_timeout_restart(pdv_p, TRUE);
             continue;
         }
         else if (recovering_timeout)
         {
+            printf("restarted... @ %s\n", ctime((time_t*) &time1));
             pdv_timeout_restart(pdv_p, TRUE);
             recovering_timeout = FALSE;
-
-            printf("\nrestarted....\n");
         }
 
         // printf("line = %d\n", __LINE__);
@@ -437,7 +453,8 @@ usage(char *progname, char *errmsg)
     printf("usage: %s [-n streamname] [-l loops] [-N numbufs] [-u unit] [-c channel]\n",
            progname);
     printf("  -s streamname   output stream name (default: edtcam<unit><chan>\n");
-    printf("  -8              enable 8->16 bit casting mode, width divided by 2\n");
+    printf("  -8              enable 8->16 bit casting mode, width divided by 2 - implies -U \n");
+    printf("  -U              unsigned 16 bit output (default: signed)\n");
     printf("  -u unit         set unit\n");
     printf("  -c chan         set channel (1 tap, 1 cable)\n");
     printf("  -l loops        number of loops (images to take)\n");

@@ -44,6 +44,7 @@ class OCAM2K(EDTCamera):
     KEYWORDS.update(EDTCamera.KEYWORDS)
 
     EDTTAKE_CAST = True
+    EDTTAKE_UNSIGNED = True
 
     def __init__(self,
                  name: str,
