@@ -411,8 +411,7 @@ args = sys.argv[1:]
 z1 = 1  # zoom for the display (default is 1)
 if args != []:
     if isinstance(int(args[0]), int):
-        z1 = int(args[0])
-        z1 = min(2, max(1, z1))
+        z1 = min(2, max(2, z1))
 
 # ------------------------------------------------------------------
 #                access to shared memory structures
@@ -1243,10 +1242,17 @@ while True:  # the main game loop
 
         # ------------------------------------------------------------------
         # saving images
-        tmuxon = os.popen('tmux ls |grep ircam%dlog | awk \'{print $2}\'' %
+        tmuxon = os.popen('ssh scexao-op@localhost "tmux ls" | grep ircam%dlog | awk \'{print $2}\'' %
                           (camid, )).read()
         if tmuxon:
             saveim = True
+            try: # Assign tmux_ircamlog only if it doesn't exist in the namespace.
+                # This avoid spurious prompts of "duplicate session ircamlog" when logging
+                tmux_ircamlog
+            except:
+                # Create a handle to the logging tmux
+                # This allows to get back on track if it already exists when we start chuckcam
+                tmux_ircamlog = tmuxlib.find_or_create_remote(f'ircam{camid}log', 'scexao-op@localhost')
         else:
             saveim = False
         if cnti % 20:
@@ -1692,13 +1698,15 @@ while True:  # the main game loop
                                 os.makedirs(ospath)
                             nimsave = int(min(10000, (50000000 / etimet)))
                             # creating a tmux session for logging
-                            tmux_ircamlog = tmuxlib.find_or_create("ircam%dlog" % (camid, ))
-                            tmux_ircamlog.send_keys("logshim ircam%d %i %s" %
+                            os.system("ln -s /tmp/fits/chuck.fits /milk/shm/ircam0.auxFITSheader.shm")
+                            tmux_ircamlog = tmuxlib.find_or_create_remote("ircam%dlog" % (camid, ), "scexao-op@localhost")
+                            #tmux_ircamlog = tmuxlib.find_or_create("ircam%dlog" % (camid, ))
+                            tmux_ircamlog.send_keys("milk-logshim ircam%d %i %s &" %
                                  (camid, nimsave, savepath))
                             os.system("log Chuckcam: start logging images")
                             os.system("scexaostatus set logchuck 'LOGGING         ' 3")
                     else:
-                        tmux_ircamlog.send_keys("logshimkill", session="ircam%dlog" % (camid, ))
+                        tmux_ircamlog.send_keys("milk-logshimkill ircam%d" % camid)
                         tmux_ircamlog.cmd("kill-session")
                         os.system("log Chuckcam: stop logging images")
                         os.system("scexaostatus set logchuck 'OFF             ' 1")
@@ -1716,8 +1724,9 @@ while True:  # the main game loop
                     os.makedirs(ospath)
                 nimsave = int(min(20000, (50000000 / etimet)))
                 # creating a tmux session for logging
+                os.system("ln -s /tmp/fits/chuck.fits /milk/shm/ircam0.auxFITSheader.shm")
                 tmux_ircamlog = tmuxlib.find_or_create("ircam%dlog" % (camid, ))
-                tmux_ircamlog.send_keys("logshim ircam%d %i %s" %
+                tmux_ircamlog.send_keys("milk-logshim ircam%d %i %s" %
                                  (camid, nimsave, savepath))
                 os.system("log Chuckcam: start archiving images")
                 os.system("scexaostatus set logchuck 'ARCHIVING       ' 3")
@@ -1845,6 +1854,7 @@ while True:  # the main game loop
                             tmux_ircam.send_keys("chuck_pup")
                             tmux_ircam.send_keys("chuck_pup_fcs pupil &")
                             tmux_ircam.send_keys("buffy_pickoff out &")
+                            tmux_ircam.send_keys("ircam_fcs chuck &")
                             if not keeprpin:
                                 tmux_ircam.send_keys("reach_pickoff out &")
                                 tmux_ircam.send_keys("oap4 onaxis &")
@@ -1854,6 +1864,7 @@ while True:  # the main game loop
                                 tmux_ircam.send_keys("chuck_pup")
                             tmux_ircam.send_keys("chuck_pup_fcs reach &")
                             tmux_ircam.send_keys("buffy_pickoff in &")
+                            tmux_ircam.send_keys("ircam_fcs buffy &")
                             if not rpin:
                                 tmux_ircam.send_keys("reach_pickoff in &")
                                 tmux_ircam.send_keys("oap4 reach &")

@@ -67,7 +67,7 @@ class RemotePanePatch:
 
         subprocess.run(['ssh', self.host] + cmdstring, stdout=subprocess.PIPE)
 
-    def cmd(self, command: str, args: str):
+    def cmd(self, command: str, args: str = ''):
         '''
             Carefully mind the single and double quotes
         '''

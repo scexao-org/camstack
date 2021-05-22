@@ -367,23 +367,16 @@ CTRL+7      : ircam block
 CTRL+ARROW  : move PSF in focal plane
 CTRL+ALT+f  : change to full frame
 CTRL+ALT+0-=: change window size:
-        FULL/0: CameraMode(x0=0, x1=319, y0=0, y1=255, fps=1738.152),
-        # 64x64 centered
-        1: CameraMode(x0=128, x1=191, y0=96, y1=159, fps=20679.012),
-        # 128x128 centered
-        2: CameraMode(x0=96, x1=223, y0=64, y1=191, fps=7008.368),
-        # 160x160 16px offside
-        3: CameraMode(x0=64, x1=223, y0=48, y1=207, fps=4926.47),
-        # 192x192 centered
-        4: CameraMode(x0=64, x1=255, y0=32, y1=223, fps=3570.159),
-        # 224x224 16px offside
-        5: CameraMode(x0=32, x1=255, y0=16, y1=239, fps=2704.52),
-        # 256x256 centered
-        6: CameraMode(x0=32, x1=287, y0=0, y1=255, fps=2117.126),
-        # 160x80 centered
-        7: CameraMode(x0=64, x1=223, y0=88, y1=167, fps=9305.555),
-        # 192x80 centered
-        8: CameraMode(x0=64, x1=255, y0=88, y1=167, fps=8065.61),
+        FULL/0:
+        [0] 320 x 256    (   0-319,  0-255 ) fps =  1738.15 Hz
+        [1]  64 x  64    ( 128-191, 96-159 ) fps = 20679.01 Hz
+        [2] 128 x 128    (  96-223, 64-191 ) fps =  7008.36 Hz
+        [3] 160 x 160    (  64-223, 48-207 ) fps =  4926.47 Hz
+        [4] 192 x 192    (  64-255, 32-223 ) fps =  3570.15 Hz
+        [5] 224 x 224    (  32-255, 16-239 ) fps =  2704.52 Hz
+        [6] 256 x 256    (  32-287,  0-255 ) fps =  2117.12 Hz
+        [7] 160 x  80    (  64-223, 88-167 ) fps =  9305.55 Hz
+        [8] 192 x  80    (  64-255, 88-167 ) fps =  8065.61 Hz
 
 display controls:
 ----------------
