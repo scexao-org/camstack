@@ -372,6 +372,7 @@ int main(int argc, char **argv)
              * pdv_timeout_cleanup helps recover gracefully after a timeout,
              * particularly if multiple buffers were prestarted
              */
+            clock_gettime(CLOCK_REALTIME, &time1);
             printf("timeout..... @ %s", ctime((time_t*) &time1));
 
             pdv_timeout_restart(pdv_p, TRUE);
@@ -382,6 +383,7 @@ int main(int argc, char **argv)
         }
         else if (recovering_timeout)
         {
+            clock_gettime(CLOCK_REALTIME, &time1);
             printf("restarted... @ %s\n", ctime((time_t*) &time1));
             pdv_timeout_restart(pdv_p, TRUE);
             recovering_timeout = FALSE;
