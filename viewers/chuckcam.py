@@ -9,6 +9,13 @@
 #                                                    #
 # -------------------------------------------------- #
 
+import signal
+
+def print_linenum(signum, frame):
+    print("Currently at line", frame.f_lineno, 'in file', frame.f_code.co_filename)
+signal.signal(signal.SIGTTIN, print_linenum)
+
+
 import pygame
 from pygame.locals import *
 
@@ -26,6 +33,8 @@ import copy
 import datetime as dt
 from astropy.io import fits as pf
 import subprocess
+from astropy.modeling import models, fitting
+from scipy.ndimage import shift
 
 from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT
 from scxkw.redisutil.typed_db import Redis
@@ -395,6 +404,7 @@ o         : bullseye on the PSF
 i         : history of PSF positions
 v         : start/stop accumulating and averaging frames
 g         : seeing measurement (averaging must be on)
+t         : Strehl measurement (averaging must be on)
 z         : zoom/unzoom on the center of the image
 r         : subtract a reference image
 
@@ -448,7 +458,7 @@ except:
 
 pup,reachphoto,gpin,rpin,slot,block,pap,pad = RDB_pull(rdb)
 
-pscale = 16.9  #mas per pixel in Chuckcam
+pscale = 16.2  #mas per pixel in Chuckcam
 
 filename = home + "/conf/chuckcam_aux/hotspots_cor.txt"
 cors = [line.rstrip('\n') for line in open(filename)]
@@ -600,19 +610,19 @@ info0 = font3.render(msg0, True, FGCOL, BGCOL)
 rct_info0 = info0.get_rect()
 rct_info0.center = (110 * z1, 295 * z1)
 
-msg1 = ("t = %f" % (etime))[:8] + (" us FPS = %4d NDR = %3d" % (fps, ndr))
+msg1 = ("t = %f" % (etime))[:8] + (" us FPS = %4d NDR = %3d   " % (fps, ndr))
 info1 = font3.render(msg1, True, FGCOL, BGCOL)
 rct_info1 = info1.get_rect()
 rct_info1.center = (110 * z1, 305 * z1)
 
 imin, imax = 10000, 10000
-msg2 = ("t = %f" % (etimet))[:8] + (" min,max = %5d,%5d" % (imin, imax))
+msg2 = ("t = %f" % (etimet))[:8] + (" min,max = %5d,%5d   " % (imin, imax))
 info2 = font3.render(msg2, True, FGCOL, BGCOL)
 rct_info2 = info2.get_rect()
 rct_info2.center = (110 * z1, 315 * z1)
 
 xmou, ymou, fmou = 100, 100, 10000
-msg3 = " mouse = %3d,%3d flux = %5d" % (xmou, ymou, fmou)
+msg3 = " mouse = %3d,%3d flux = %5d   " % (xmou, ymou, fmou)
 info3 = font3.render(msg3, True, FGCOL, BGCOL)
 rct_info3 = info3.get_rect()
 rct_info3.center = (110 * z1, 325 * z1)
@@ -636,6 +646,11 @@ msgsee = "                                     "
 msee = font4.render(msgsee, True, CYAN)
 rct_msee = msee.get_rect()
 rct_msee.center = (xws / 2, 30 * z1)
+
+msgstr = "Strehl = 1.00"
+mstr = font5.render(msgstr, True, CYAN)
+rct_mstr = mstr.get_rect()
+rct_mstr.center = (xws / 2, 30 * z1)
 
 dinfo = font3.render("                     ", True, FGCOL, BGCOL)
 rct_dinfo = dinfo.get_rect()
@@ -771,6 +786,8 @@ logexpt = False  # flag to log the exposure time
 logndr = False  # flag to log the exposure time
 seeing = False
 seeing_plot = False
+strehl = False
+strehl_plot = False
 plot_pa = False
 clr_scale = 0  # flag for the display color scale
 shmreload = 0
@@ -944,20 +961,73 @@ while True:  # the main game loop
             else:
                 temp2 *= float(cnta - 1) / float(cnta)
                 temp2 += temp / float(cnta)
-            if seeing:
-                #try:
-                pf.writeto("seeing.fits", temp2, overwrite=True)
-                [cx, cy] = impro.centroid(temp2)
-                radc = m.sqrt(np.sum(temp2 > (temp2.max() / 4.)) / m.pi)
-                se_param = impro.fit_TwoD_Gaussian(temp2, cy, cx, radc)
-                seeing = False
-                seeing_plot = True
-                se_ystd = se_param.x_stddev.value
-                se_xstd = se_param.y_stddev.value
-                se_yc = se_param.x_mean.value
-                se_xc = se_param.y_mean.value
-                se_theta = se_param.theta.value
-
+            if seeing or strehl:
+                timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
+                savepath = '/media/data/' + timestamp + \
+                           '/ircam%dlog/' % (camid, )
+                ospath = os.path.dirname(savepath)
+                if not os.path.exists(ospath):
+                    os.makedirs(ospath)
+                timestamp2 = dt.datetime.utcnow().strftime('%H%M%S')
+                corim = np.median(temp2[:int(ysizeim/10),:], axis=0)+np.median(temp2[-int(ysizeim/10):,:], axis=0)
+                corim /= 2.
+                corim2 = np.tile(corim, (ysizeim,1))
+                temp2 -= corim2
+                if seeing:
+                    pf.writeto("%s%s_seeing.fits" %(savepath, timestamp2), temp2, overwrite=True)
+                    [cx, cy] = impro.centroid(temp2)
+                    radc = m.sqrt(np.sum(temp2 > (temp2.max() / 4.)) / m.pi)
+                    se_param = impro.fit_TwoD_Gaussian(temp2, cy, cx, radc)
+                    se_ystd = se_param.x_stddev.value
+                    se_xstd = se_param.y_stddev.value
+                    se_yc = se_param.x_mean.value
+                    se_xc = se_param.y_mean.value
+                    se_theta = se_param.theta.value
+                    msgsee = "x = %.2f as, y = %.2f as, t = %d deg" % (
+                        se_ystd * pscale / 1000. * 2.355,
+                        se_xstd * pscale / 1000. * 2.355, np.rad2deg(se_theta))
+                    print(home + "/bin/log SEEING %s FILTER: %s" %(slot,msgsee))
+                    os.system(
+                    home + "/bin/log SEEING %s FILTER: %s"
+                        %(slot,msgsee))
+                    seeing = False
+                    seeing_plot = True
+                else:
+                    if "H-band" in msgwhl:
+                        flt = "H"
+                    elif "J-band" in msgwhl:
+                        flt = "J"
+                    elif "y-band" in msgwhl:
+                        flt = "y"
+                    else:
+                        flt = ""
+                        print("Strehl calculation not setup for this filter")
+                    if flt != "":
+                        cx = int(xsizeim/2)
+                        cy = int(ysizeim/2)
+                        a = 256
+                        a2 = 32
+                        ca = min(int(a/2), cx, cy)
+                        ca2 = min(int(a2/2), cx, cy)
+                        x,y = np.mgrid[:a2,:a2]
+                        imgstr1 = temp2[cy-ca2:cy+ca2,cx-ca2:cx+ca2]
+                        indmaxce = np.argmax(imgstr1)
+                        posce = np.unravel_index(indmaxce, (a2, a2))
+                        os.system('cp %s/src/lib/python/Chuckcam_PSF_%s.fits %s/src/lib/python/simref.fits' %(home,flt,home))
+                        model_init = impro.SubaruPSF(amplitude=np.max(imgstr1), x_0=posce[1],y_0=posce[0])
+                        fitter1 = fitting.LevMarLSQFitter()
+                        psf_fitce = fitter1(model_init,x,y,imgstr1,maxiter=2000)
+                        xoff = psf_fitce.x_0.value-ca2
+                        yoff = psf_fitce.y_0.value-ca2
+                        imgstr2 = shift(temp2, (-yoff, -xoff))[cy-ca:cy+ca,cx-ca:cx+ca]
+                        strehlv,dia_core,dia_ring = impro.calculate_strehl(imgstr2,mas_pix = pscale, filt=flt)
+                        msgstr = "Strehl = %.2f" % (strehlv)
+                        os.system(
+                            home + "/bin/log STREHL %s FILTER: %s"
+                            %(slot,msgstr))
+                        pf.writeto("%s%s_strehl.fits" %(savepath, timestamp2), imgstr2/np.max(imgstr2)*strehlv, overwrite=True)
+                        strehl = False
+                        strehl_plot = True
         else:
             temp2 = copy.deepcopy(temp)
             cnta = 0
@@ -972,23 +1042,35 @@ while True:  # the main game loop
         pygame.surfarray.blit_array(surf_live, myim)
         screen.blit(surf_live, rect1)
         if average and seeing_plot:
-            msgsee = "x = %.2f as, y = %.2f as, t = %d deg" % (
-                se_ystd * pscale / 1000. * 2.355,
-                se_xstd * pscale / 1000. * 2.355, np.rad2deg(se_theta))
             msee = font4.render(msgsee, True, CYAN)
             screen.blit(msee, rct_msee)
             cx = (se_xc + 0.5 - xmin + xshift) * z1 * z2 * z3
-            cy = (se_yc - ymin + yshift) * z1 * z2 * z3
+            cy = (se_yc + 0.5 - ymin + yshift) * z1 * z2 * z3
             stdx = se_xstd * z1 * z2 * z3 * 2.355 / 2.
             stdy = se_ystd * z1 * z2 * z3 * 2.355 / 2.
             pygame.draw.line(
                 screen, RED1,
-                (cx - stdx * m.cos(se_theta), cy - stdx * m.sin(se_theta)),
-                (cx + stdx * m.cos(se_theta), cy + stdx * m.sin(se_theta)), 1)
+                (cx - stdx * m.cos(se_theta), cy + stdx * m.sin(se_theta)),
+                (cx + stdx * m.cos(se_theta), cy - stdx * m.sin(se_theta)), 1)
             pygame.draw.line(
                 screen, RED1,
-                (cx - stdy * m.sin(se_theta), cy + stdy * m.cos(se_theta)),
-                (cx + stdy * m.sin(se_theta), cy - stdy * m.cos(se_theta)), 1)
+                (cx - stdy * m.sin(se_theta), cy - stdy * m.cos(se_theta)),
+                (cx + stdy * m.sin(se_theta), cy + stdy * m.cos(se_theta)), 1)
+        elif average and strehl_plot:
+            mstr = font5.render(msgstr, True, CYAN)
+            screen.blit(mstr, rct_mstr)
+            cx = (int(xsizeim/2) + 0.5 - xmin + xshift + xoff) * z1 * z2 * z3
+            cy = (int(ysizeim/2) + 0.5 - ymin + yshift + yoff) * z1 * z2 * z3
+            pygame.draw.line(screen, RED1, (cx - bl * z2, cy),
+                             (cx + bl * z2, cy), 1)
+            pygame.draw.line(screen, RED1, (cx, cy - bl * z2),
+                             (cx, cy + bl * z2), 1)
+            pygame.draw.circle(screen, RED1, (int(cx), int(cy)), int(dia_core/2 * z2),
+                               1)
+            if dia_ring/2 * z2 <= yws/2:
+                pygame.draw.circle(screen, RED1, (int(cx), int(cy)), int(dia_ring/2 * z2),
+                                   1)
+            
 
         # ------------------------------------------------------------------
         # display expt and image information
@@ -998,15 +1080,15 @@ while True:  # the main game loop
         screen.blit(info0, rct_info0)
 
         if etime < 1e3:
-            msg1 = ("t = %f" % (etime))[:8] + (" us FPS = %4d NDR = %3d" %
+            msg1 = ("t = %f" % (etime))[:8] + (" us FPS = %4d NDR = %3d   " %
                                                (fps, ndr))
         elif etime >= 1e3 and etime < 1e6:
             msg1 = ("t = %f" %
-                    (etime / 1.e3))[:8] + (" ms FPS = %4d NDR = %3d" %
+                    (etime / 1.e3))[:8] + (" ms FPS = %4d NDR = %3d   " %
                                            (fps, ndr))
         else:
             msg1 = ("t = %f" %
-                    (etime / 1.e6))[:8] + (" s  FPS = %4d NDR = %3d" %
+                    (etime / 1.e6))[:8] + (" s  FPS = %4d NDR = %3d   " %
                                            (fps, ndr))
 
         info1 = font3.render(msg1, True, FGCOL, BGCOL)
@@ -1039,7 +1121,7 @@ while True:  # the main game loop
                 info3 = font3.render(msg3, True, FGCOL, BGCOL)
                 screen.blit(info3, rct_info3)
             cx = (cx + 0.5 - xmin + xshift) * z1 * z2 * z3
-            cy = (cy - ymin + yshift) * z1 * z2 * z3
+            cy = (cy + 0.5 - ymin + yshift) * z1 * z2 * z3
             pygame.draw.line(screen, RED1, (cx - bl * z2, cy),
                              (cx + bl * z2, cy), 1)
             pygame.draw.line(screen, RED1, (cx, cy - bl * z2),
@@ -1060,7 +1142,7 @@ while True:  # the main game loop
             info3 = font3.render(msg3, True, FGCOL, BGCOL)
             screen.blit(info3, rct_info3)
             coor2[0, ih] = (coor[0, ih] + 0.5 - xmin + xshift) * z1 * z2 * z3
-            coor2[1, ih] = (coor[1, ih] - ymin + yshift) * z1 * z2 * z3
+            coor2[1, ih] = (coor[1, ih] + 0.5 - ymin + yshift) * z1 * z2 * z3
             for ih2 in range(nhist):
                 pygame.draw.line(screen, RED1,
                                  (coor2[0, ih2] - 1, coor2[1, ih2] - 1),
@@ -1243,8 +1325,8 @@ while True:  # the main game loop
 
         # ------------------------------------------------------------------
         # saving images
-        tmuxon = os.popen('ssh scexao-op@localhost "tmux ls" | grep ircam%dlog | awk \'{print $2}\'' %
-                          (camid, )).read()
+        tmuxon = subprocess.check_output('ssh scexao-op@localhost "tmux ls" | grep ircam%dlog | awk \'{print $2}\'' %
+                          (camid, ), shell=True, input=b'')
         if tmuxon:
             saveim = True
             try: # Assign tmux_ircamlog only if it doesn't exist in the namespace.
@@ -1863,6 +1945,7 @@ while True:  # the main game loop
             if event.key == K_v:
                 average = not average
                 seeing_plot = False
+                strehl_plot = False
 
             # Start/stop seeing measurement
             #------------------------------
@@ -1871,6 +1954,14 @@ while True:  # the main game loop
                     seeing = True
                 else:
                     seeing = False
+
+            # Start/stop strehl measurement
+            #------------------------------
+            if event.key == K_t:
+                if average:
+                    strehl = True
+                else:
+                    strehl = False
 
             # Zoom/unzoom
             #------------
