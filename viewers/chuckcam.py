@@ -33,8 +33,6 @@ import copy
 import datetime as dt
 from astropy.io import fits as pf
 import subprocess
-from astropy.modeling import models, fitting
-from scipy.ndimage import shift
 
 from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT
 from scxkw.redisutil.typed_db import Redis
@@ -289,7 +287,7 @@ def make_badpix(bias, filt=3.5):
 # ------------------------------------------------------------------
 def RDB_pull(rdb):
 
-    fits_keys_to_pull = {'X_IRCFLT','X_IRCBLK','X_CHKPUP','X_CHKPUS','X_NULPKO','X_RCHPKO','D_IMRPAD','D_IMRPAP'}
+    fits_keys_to_pull = {'X_IRCFLT','X_IRCBLK','X_CHKPUP','X_CHKPUS','X_NULPKO','X_RCHPKO','D_IMRPAD','D_IMRPAP','OBJECT'}
     # Now Getting the keys
     with rdb.pipeline() as pipe:
         for key in fits_keys_to_pull:
@@ -306,8 +304,9 @@ def RDB_pull(rdb):
     block = status['X_IRCBLK'].strip() == 'IN'
     pap = float(status['D_IMRPAP'])
     pad = float(status['D_IMRPAD'])
+    target = status['OBJECT']
 
-    return(pup,reachphoto,gpin,rpin,slot,block,pap,pad)
+    return(pup,reachphoto,gpin,rpin,slot,block,pap,pad,target)
 
 # ------------------------------------------------------------------
 #  Filter message
@@ -456,7 +455,7 @@ except:
     print('Error: can\'t ping redis DB.')
     sys.exit(1)
 
-pup,reachphoto,gpin,rpin,slot,block,pap,pad = RDB_pull(rdb)
+pup,reachphoto,gpin,rpin,slot,block,pap,pad,target = RDB_pull(rdb)
 
 pscale = 16.2  #mas per pixel in Chuckcam
 
@@ -788,6 +787,8 @@ seeing = False
 seeing_plot = False
 strehl = False
 strehl_plot = False
+binary = False
+binary_plot = False
 plot_pa = False
 clr_scale = 0  # flag for the display color scale
 shmreload = 0
@@ -806,6 +807,9 @@ cnta = 0
 cnti = 0
 timeexpt = []
 timendr = []
+nst = 1
+rm = 10
+a = 128
 
 nhist = 100
 ih = 0
@@ -961,10 +965,9 @@ while True:  # the main game loop
             else:
                 temp2 *= float(cnta - 1) / float(cnta)
                 temp2 += temp / float(cnta)
-            if seeing or strehl:
+            if seeing or strehl or binary:
                 timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
-                savepath = '/media/data/' + timestamp + \
-                           '/ircam%dlog/' % (camid, )
+                savepath = '/media/data/'+timestamp+'/ircam%dlog/' %camid
                 ospath = os.path.dirname(savepath)
                 if not os.path.exists(ospath):
                     os.makedirs(ospath)
@@ -975,25 +978,14 @@ while True:  # the main game loop
                 temp2 -= corim2
                 if seeing:
                     pf.writeto("%s%s_seeing.fits" %(savepath, timestamp2), temp2, overwrite=True)
-                    [cx, cy] = impro.centroid(temp2)
-                    radc = m.sqrt(np.sum(temp2 > (temp2.max() / 4.)) / m.pi)
-                    se_param = impro.fit_TwoD_Gaussian(temp2, cy, cx, radc)
-                    se_ystd = se_param.x_stddev.value
-                    se_xstd = se_param.y_stddev.value
-                    se_yc = se_param.x_mean.value
-                    se_xc = se_param.y_mean.value
-                    se_theta = se_param.theta.value
+                    se_xstd,se_ystd,se_xc,se_yc,se_theta = impro.calculate_seeing(temp2)
                     msgsee = "x = %.2f as, y = %.2f as, t = %d deg" % (
-                        se_ystd * pscale / 1000. * 2.355,
-                        se_xstd * pscale / 1000. * 2.355, np.rad2deg(se_theta))
-                    print(home + "/bin/log SEEING %s FILTER: %s" %(slot,msgsee))
-                    os.system(
-                    home + "/bin/log SEEING %s FILTER: %s"
-                        %(slot,msgsee))
+                        se_ystd * pscale / 1000., se_xstd * pscale / 1000., np.rad2deg(se_theta))
+                    os.system(home + "/bin/log SEEING %s: %s" %(slot,msgsee))
                     seeing = False
                     seeing_plot = True
                 else:
-                    if "H-band" in msgwhl:
+                    if "H-band" or "1550" in msgwhl:
                         flt = "H"
                     elif "J-band" in msgwhl:
                         flt = "J"
@@ -1003,31 +995,17 @@ while True:  # the main game loop
                         flt = ""
                         print("Strehl calculation not setup for this filter")
                     if flt != "":
-                        cx = int(xsizeim/2)
-                        cy = int(ysizeim/2)
-                        a = 256
-                        a2 = 32
-                        ca = min(int(a/2), cx, cy)
-                        ca2 = min(int(a2/2), cx, cy)
-                        x,y = np.mgrid[:a2,:a2]
-                        imgstr1 = temp2[cy-ca2:cy+ca2,cx-ca2:cx+ca2]
-                        indmaxce = np.argmax(imgstr1)
-                        posce = np.unravel_index(indmaxce, (a2, a2))
-                        os.system('cp %s/src/lib/python/Chuckcam_PSF_%s.fits %s/src/lib/python/simref.fits' %(home,flt,home))
-                        model_init = impro.SubaruPSF(amplitude=np.max(imgstr1), x_0=posce[1],y_0=posce[0])
-                        fitter1 = fitting.LevMarLSQFitter()
-                        psf_fitce = fitter1(model_init,x,y,imgstr1,maxiter=2000)
-                        xoff = psf_fitce.x_0.value-ca2
-                        yoff = psf_fitce.y_0.value-ca2
-                        imgstr2 = shift(temp2, (-yoff, -xoff))[cy-ca:cy+ca,cx-ca:cx+ca]
-                        strehlv,dia_core,dia_ring = impro.calculate_strehl(imgstr2,mas_pix = pscale, filt=flt)
-                        msgstr = "Strehl = %.2f" % (strehlv)
-                        os.system(
-                            home + "/bin/log STREHL %s FILTER: %s"
-                            %(slot,msgstr))
-                        pf.writeto("%s%s_strehl.fits" %(savepath, timestamp2), imgstr2/np.max(imgstr2)*strehlv, overwrite=True)
-                        strehl = False
-                        strehl_plot = True
+                        if strehl:
+                            strehlv,dia_core,dia_ring, xoff, yoff, imgstr3 = impro.calculate_strehl(temp2, mas_pix=pscale, flt=flt, savepath=savepath, timestamp=timestamp2, target=target)
+                            msgstr = "Strehl = %.2f" % (strehlv)
+                            os.system(home + "/bin/log STREHL %s: %s" %(slot,msgstr))
+                            strehl = False
+                            strehl_plot = True
+                        else:
+                            posst,xoff,yoff,strehlv,dia_ring,distco,angleco,contrastco = impro.binary_processing(temp2, target=target, mas_pix=pscale, pad=pad, nst=nst, a=a, rm=rm, flt=flt, savepath=savepath, timestamp=timestamp2)
+                            os.system(home + "/bin/log BINARY %s: %i-star fit" %(slot,nst))
+                            binary = False
+                            binary_plot = True
         else:
             temp2 = copy.deepcopy(temp)
             cnta = 0
@@ -1046,8 +1024,8 @@ while True:  # the main game loop
             screen.blit(msee, rct_msee)
             cx = (se_xc + 0.5 - xmin + xshift) * z1 * z2 * z3
             cy = (se_yc + 0.5 - ymin + yshift) * z1 * z2 * z3
-            stdx = se_xstd * z1 * z2 * z3 * 2.355 / 2.
-            stdy = se_ystd * z1 * z2 * z3 * 2.355 / 2.
+            stdx = se_xstd * z1 * z2 * z3 / 2.
+            stdy = se_ystd * z1 * z2 * z3 / 2.
             pygame.draw.line(
                 screen, RED1,
                 (cx - stdx * m.cos(se_theta), cy + stdx * m.sin(se_theta)),
@@ -1065,12 +1043,23 @@ while True:  # the main game loop
                              (cx + bl * z2, cy), 1)
             pygame.draw.line(screen, RED1, (cx, cy - bl * z2),
                              (cx, cy + bl * z2), 1)
-            pygame.draw.circle(screen, RED1, (int(cx), int(cy)), int(dia_core/2 * z2),
-                               1)
+            pygame.draw.circle(screen, RED1, (int(cx), int(cy)), int(dia_core/2 * z2), 1)
             if dia_ring/2 * z2 <= yws/2:
-                pygame.draw.circle(screen, RED1, (int(cx), int(cy)), int(dia_ring/2 * z2),
-                                   1)
-            
+                pygame.draw.circle(screen, RED1, (int(cx), int(cy)), int(dia_ring/2 * z2), 1)
+        elif average and binary_plot:
+            for i in range(nst):
+                cx = (int(xsizeim/2) + 0.5 - xmin + xshift + xoff + posst[i,0]) * z1 * z2 * z3
+                cy = (int(ysizeim/2) + 0.5 - ymin + yshift + yoff + posst[i,1]) * z1 * z2 * z3
+                if i == 0 and dia_ring/2 * z2 <= yws/2:
+                    pygame.draw.circle(screen, RED1, (int(cx), int(cy)), int(dia_ring/2 * z2), 1)
+                if cy < yws:
+                    pygame.draw.line(screen, RED1, (cx - bl * z2, cy),
+                                     (cx + bl * z2, cy), 1)
+                if cy - bl * z2 < yws:
+                    pygame.draw.line(screen, RED1, (cx, cy - bl * z2),
+                                     (cx, min(cy + bl * z2, yws-1)), 1)
+                if cx-rm*z2 >= 0 and cx+rm*z2 <= xws and cy-rm*z2 >= 0 and cy+rm*z2 <= yws:
+                    pygame.draw.circle(screen, RED1, (int(cx), int(cy)), int(rm * z2), 1)
 
         # ------------------------------------------------------------------
         # display expt and image information
@@ -1376,7 +1365,7 @@ while True:  # the main game loop
                 timendr = []
                 logndr = False
         if cnti % 20 == 0:
-            pup,reachphoto,gpin,rpin,slot,block,pap,pad = RDB_pull(rdb)
+            pup,reachphoto,gpin,rpin,slot,block,pap,pad,target = RDB_pull(rdb)
             msgwhl = whatfilter(reachphoto, slot, block)
             wh = font1.render(msgwhl, True, CYAN)
             msgtop = whatmsg(pup, reachphoto, gpin, rpin)
@@ -1946,6 +1935,9 @@ while True:  # the main game loop
                 average = not average
                 seeing_plot = False
                 strehl_plot = False
+                binary_plot = False
+                nst = 1
+                a = 128
 
             # Start/stop seeing measurement
             #------------------------------
@@ -1962,6 +1954,20 @@ while True:  # the main game loop
                     strehl = True
                 else:
                     strehl = False
+
+            # Start/stop binary measurement
+            #------------------------------
+            if event.key == K_y:
+                mmods = pygame.key.get_mods()
+                if average:
+                    nst += 1
+                    binary = True
+                    if (mmods & KMOD_LSHIFT):
+                        a = 256
+                else:
+                    nst = 1
+                    a = 128
+                    binary = False
 
             # Zoom/unzoom
             #------------
