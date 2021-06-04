@@ -342,6 +342,9 @@ camera controls:
 ---------------
 q           : increase exposure time
 a           : decrease exposure time
+e           : display  CRED1 gain
+w           : increase CRED1 gain
+s           : decrease CRED1 gain
 CTRL+q      : increase number of NDR
 CTRL+a      : decrease number of NDR
 CRTL+o      : increase frame rate
@@ -538,6 +541,8 @@ tmux_kcam_ctrl.send_keys("get_NDR()")
 time.sleep(1)
 tmux_kcam_ctrl.send_keys("get_fps()")
 time.sleep(1)
+tmux_kcam_ctrl.send_keys("get_gain()")
+time.sleep(1)
 sync_param = ircam_synchro.get_data().astype(np.int)
 lag = 7
 cam_ro = 22 - lag
@@ -592,19 +597,19 @@ info0 = font3.render(msg0, True, FGCOL, BGCOL)
 rct_info0 = info0.get_rect()
 rct_info0.center = (110 * z1, 295 * z1)
 
-msg1 = ("t = %f" % (etime))[:8] + (" us FPS = %4d NDR = %3d" % (fps, ndr))
+msg1 = ("t = %f" % (etime))[:8] + (" us FPS = %4d NDR = %3d   " % (fps, ndr))
 info1 = font3.render(msg1, True, FGCOL, BGCOL)
 rct_info1 = info1.get_rect()
 rct_info1.center = (110 * z1, 305 * z1)
 
 imin, imax = 10000, 10000
-msg2 = ("t = %f" % (etimet))[:8] + (" min,max = %5d,%5d" % (imin, imax))
+msg2 = ("t = %f" % (etimet))[:8] + (" min,max = %5d,%5d   " % (imin, imax))
 info2 = font3.render(msg2, True, FGCOL, BGCOL)
 rct_info2 = info2.get_rect()
 rct_info2.center = (110 * z1, 315 * z1)
 
 xmou, ymou, fmou = 100, 100, 10000
-msg3 = " mouse = %3d,%3d flux = %5d" % (xmou, ymou, fmou)
+msg3 = " mouse = %3d,%3d flux = %5d    " % (xmou, ymou, fmou)
 info3 = font3.render(msg3, True, FGCOL, BGCOL)
 rct_info3 = info3.get_rect()
 rct_info3.center = (110 * z1, 325 * z1)
@@ -885,6 +890,8 @@ while True:  # the main game loop
         time.sleep(1)
         tmux_kcam_ctrl.send_keys("get_fps()")
         time.sleep(1)
+        tmux_kcam_ctrl.send_keys("get_gain()")
+        time.sleep(1)
         shmreload = False
     else:
         # ------------------------------------------------------------------
@@ -991,15 +998,15 @@ while True:  # the main game loop
         screen.blit(info0, rct_info0)
 
         if etime < 1e3:
-            msg1 = ("t = %f" % (etime))[:8] + (" us FPS = %4d NDR = %3d" %
+            msg1 = ("t = %f" % (etime))[:8] + (" us FPS = %4d NDR = %3d   " %
                                                (fps, ndr))
         elif etime >= 1e3 and etime < 1e6:
             msg1 = ("t = %f" %
-                    (etime / 1.e3))[:8] + (" ms FPS = %4d NDR = %3d" %
+                    (etime / 1.e3))[:8] + (" ms FPS = %4d NDR = %3d   " %
                                            (fps, ndr))
         else:
             msg1 = ("t = %f" %
-                    (etime / 1.e6))[:8] + (" s  FPS = %4d NDR = %3d" %
+                    (etime / 1.e6))[:8] + (" s  FPS = %4d NDR = %3d   " %
                                            (fps, ndr))
 
         info1 = font3.render(msg1, True, FGCOL, BGCOL)
@@ -1236,8 +1243,8 @@ while True:  # the main game loop
 
         # ------------------------------------------------------------------
         # saving images
-        tmuxon = os.popen('ssh scexao-op@localhost "tmux ls" | grep kcamlog | awk \'{print $2}\'' %
-                          (camid, )).read()
+        tmuxon = subprocess.check_output('ssh scexao-op@localhost "tmux ls" | grep kcamlog | awk \'{print $2}\'', shell=True, input='')
+
         if tmuxon:
             saveim = True
             try: # Assign tmux_ircamlog only if it doesn't exist in the namespace.
@@ -1962,6 +1969,31 @@ while True:  # the main game loop
                         tmux_kcam.send_keys("dm_stage y push -100")
                     else:
                         tmux_kcam.send_keys("dm_stage y push -20")
+
+            # Print / incr/decr gain
+            if event.key in [K_w, K_s, K_e]:
+                # No modifiers to avoid conflict with ctrl+S
+                mmods = pygame.key.get_mods()
+                #tmux_kcam_ctrl.send_keys("get_gain()")
+                #sleep(.5)
+                gain = cam.get_keywords()['DETGAIN']
+                if not (mmods & KMOD_LSHIFT) and not (mmods & KMOD_LCTRL):
+                    if event.key == K_w:
+                        tar_gain = min(2*gain, 121)
+                        print(f"set_gain({int(tar_gain)})")
+                        tmux_kcam_ctrl.send_keys(f"set_gain({int(tar_gain)})")
+                        time.sleep(.5)
+                    elif event.key == K_s:
+                        if gain == 121:
+                            tar_gain = 64
+                        else:
+                            tar_gain = max(1, gain // 2)
+                        print(f"set_gain({int(tar_gain)})")
+                        tmux_kcam_ctrl.send_keys(f"set_gain({int(tar_gain)})")
+                        time.sleep(.5)
+
+                    gain = cam.get_keywords()['DETGAIN']
+                    print(f"\n=== Buffy camera gain: {gain} ===\n")
 
     pygame.display.update(rects)
 
