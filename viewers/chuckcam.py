@@ -441,6 +441,7 @@ cam_badpixmap = open_shm("ircam%d_badpixmap" % (camid, ),
 cam_paused = open_shm("ircam%d_paused" % (camid, ))
 new_dark = open_shm("ircam%d_newdark" % (camid, ))
 ircam_synchro = open_shm("ircam_synchro", dims=(6, 1))
+ircam_retroinj = open_shm("ircam%d_retroinj" % (camid, ), dims=(20, 1))
 
 # ------------------------------------------------------------------
 #            Configure communication with SCExAO's redis
@@ -682,6 +683,7 @@ cy = ysize / 2.
 #bullseye size
 bc = 2 + 4 * z1
 bl = 2 * bc
+bl2 = 10 * z1
 
 #scale
 ktot = 500 / pscale * z1
@@ -959,13 +961,16 @@ while True:  # the main game loop
         # ------------------------------------------------------------------
         # averaging
         if average:
+            if rpin:
+                cnta %= 20
             cnta += 1
+            binary2 = binary and (cnta == 20)
             if cnta == 1:
                 temp2 = copy.deepcopy(temp)
             else:
                 temp2 *= float(cnta - 1) / float(cnta)
                 temp2 += temp / float(cnta)
-            if seeing or strehl or binary:
+            if seeing or strehl or binary2:
                 timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
                 savepath = '/media/data/'+timestamp+'/ircam%dlog/' %camid
                 ospath = os.path.dirname(savepath)
@@ -1002,9 +1007,9 @@ while True:  # the main game loop
                             strehl = False
                             strehl_plot = True
                         else:
-                            posst,xoff,yoff,strehlv,dia_ring,distco,angleco,contrastco = impro.binary_processing(temp2, target=target, mas_pix=pscale, pad=pad, nst=nst, a=a, rm=rm, flt=flt, savepath=savepath, timestamp=timestamp2)
+                            posst,xoff,yoff,strehlv,dia_ring,distco,angleco,contrastco = impro.binary_processing(temp2, target=target, mas_pix=pscale, pad=pad, nst=nst-int(rpin), a=a, rm=rm, flt=flt, savepath=savepath, timestamp=timestamp2,retroinj=rpin)
                             os.system(home + "/bin/log BINARY %s: %i-star fit" %(slot,nst))
-                            binary = False
+                            binary = True
                             binary_plot = True
         else:
             temp2 = copy.deepcopy(temp)
@@ -1017,15 +1022,17 @@ while True:  # the main game loop
                           subt_ref=subt_ref,
                           lin_scale=lin_scale,
                           pos=pos2)
+        zg = z1 * z2 * z3
+        zi = z2 * z3
         pygame.surfarray.blit_array(surf_live, myim)
         screen.blit(surf_live, rect1)
         if average and seeing_plot:
             msee = font4.render(msgsee, True, CYAN)
             screen.blit(msee, rct_msee)
-            cx = (se_xc + 0.5 - xmin + xshift) * z1 * z2 * z3
-            cy = (se_yc + 0.5 - ymin + yshift) * z1 * z2 * z3
-            stdx = se_xstd * z1 * z2 * z3 / 2.
-            stdy = se_ystd * z1 * z2 * z3 / 2.
+            cx = (se_xc + 0.5 - xmin + xshift) * zg
+            cy = (se_yc + 0.5 - ymin + yshift) * zg
+            stdx = se_xstd * zg / 2.
+            stdy = se_ystd * zg / 2.
             pygame.draw.line(
                 screen, RED1,
                 (cx - stdx * m.cos(se_theta), cy + stdx * m.sin(se_theta)),
@@ -1037,30 +1044,49 @@ while True:  # the main game loop
         elif average and strehl_plot:
             mstr = font5.render(msgstr, True, CYAN)
             screen.blit(mstr, rct_mstr)
-            cx = (int(xsizeim/2) + 0.5 - xmin + xshift + xoff) * z1 * z2 * z3
-            cy = (int(ysizeim/2) + 0.5 - ymin + yshift + yoff) * z1 * z2 * z3
-            pygame.draw.line(screen, RED1, (cx - bl * z2, cy),
-                             (cx + bl * z2, cy), 1)
-            pygame.draw.line(screen, RED1, (cx, cy - bl * z2),
-                             (cx, cy + bl * z2), 1)
+            cx = (int(xsizeim/2) + 0.5 - xmin + xshift + xoff) * zg
+            cy = (int(ysizeim/2) + 0.5 - ymin + yshift + yoff) * zg
+            pygame.draw.line(screen, RED1, (cx - bl * zg, cy),
+                             (cx + bl * zg, cy), 1)
+            pygame.draw.line(screen, RED1, (cx, cy - bl * zg),
+                             (cx, cy + bl * zg), 1)
             pygame.draw.circle(screen, RED1, (int(cx), int(cy)), int(dia_core/2 * z2), 1)
             if dia_ring/2 * z2 <= yws/2:
                 pygame.draw.circle(screen, RED1, (int(cx), int(cy)), int(dia_ring/2 * z2), 1)
         elif average and binary_plot:
-            for i in range(nst):
-                cx = (int(xsizeim/2) + 0.5 - xmin + xshift + xoff + posst[i,0]) * z1 * z2 * z3
-                cy = (int(ysizeim/2) + 0.5 - ymin + yshift + yoff + posst[i,1]) * z1 * z2 * z3
-                if i == 0 and dia_ring/2 * z2 <= yws/2:
-                    pygame.draw.circle(screen, RED1, (int(cx), int(cy)), int(dia_ring/2 * z2), 1)
-                if cy < yws:
-                    pygame.draw.line(screen, RED1, (cx - bl * z2, cy),
-                                     (cx + bl * z2, cy), 1)
-                if cy - bl * z2 < yws:
-                    pygame.draw.line(screen, RED1, (cx, cy - bl * z2),
-                                     (cx, min(cy + bl * z2, yws-1)), 1)
-                if cx-rm*z2 >= 0 and cx+rm*z2 <= xws and cy-rm*z2 >= 0 and cy+rm*z2 <= yws:
-                    pygame.draw.circle(screen, RED1, (int(cx), int(cy)), int(rm * z2), 1)
-
+            try:
+                for i in range(nst):
+                    cx = (int(xsizeim/2) + 0.5 - xmin + xshift + xoff + posst[i,0]) * zg
+                    cy = (int(ysizeim/2) + 0.5 - ymin + yshift + yoff + posst[i,1]) * zg
+                    if rpin and i == 1 and cy < yws:
+                        if cy + bl * zg < yws:
+                            pygame.draw.polygon(screen, GREEN, [(cx, cy + bl2 *z2),
+                                                                (cx + bl2 *z2 *m.sqrt(3)/2, cy + bl2 *z2 /2),
+                                                                (cx + bl2 *z2 *m.sqrt(3)/2, cy - bl2 *z2 /2),
+                                                                (cx, cy - bl2 *z2),
+                                                                (cx - bl2 *z2 *m.sqrt(3)/2, cy - bl2 *z2 /2),
+                                                                (cx - bl2 *z2 *m.sqrt(3)/2, cy + bl2 *z2 /2)],
+                                                1)
+                            pygame.draw.line(screen, GREEN, (cx, cy),
+                                             (cx, cy + bl2 *z2), 1)
+                        pygame.draw.line(screen, GREEN, (cx, cy),
+                                         (cx + bl2 *z2 *m.sqrt(3)/2, cy - bl2 *z2 /2), 1)
+                        pygame.draw.line(screen, GREEN, (cx, cy),
+                                         (cx - bl2 *z2 *m.sqrt(3)/2, cy - bl2 *z2 /2), 1)
+                    else:
+                        if i == 0 and dia_ring/2 * z2 <= yws/2:
+                            pygame.draw.circle(screen, RED1, (int(cx), int(cy)), int(dia_ring/2 * z2), 1)
+                        if cy < yws:
+                            pygame.draw.line(screen, RED1, (cx - bl * zg, cy),
+                                             (cx + bl * zg, cy), 1)
+                        if cy - bl * zg < yws:
+                            pygame.draw.line(screen, RED1, (cx, cy - bl * zg),
+                                             (cx, min(cy + bl * zg, yws-1)), 1)
+                        if cx-rm*z2 >= 0 and cx+rm*z2 <= xws and cy-rm*z2 >= 0 and cy+rm*z2 <= yws:
+                            pygame.draw.circle(screen, RED1, (int(cx), int(cy)), int(rm * z2), 1)
+            except:
+                print("waiting for new fit")
+        
         # ------------------------------------------------------------------
         # display expt and image information
         msg0 = "x0,y0 = %3d,%3d sx,sy = %3d,%3d" % (crop[0], crop[2], xsizeim,
@@ -1103,18 +1129,55 @@ while True:  # the main game loop
         # ------------------------------------------------------------------
         # display the bullseye on the PSF
         if plot_hotspot:
-            [cx, cy] = impro.centroid(temp2)
-            if (cx >= 0) and (cx < xsizeim) and (cy >= 0) and (cy < ysizeim):
-                fh = temp2[int(cy), int(cx)]
-                msg3 = "center = %3d,%3d flux = %5d" % (cx, cy, fh)
-                info3 = font3.render(msg3, True, FGCOL, BGCOL)
-                screen.blit(info3, rct_info3)
-            cx = (cx + 0.5 - xmin + xshift) * z1 * z2 * z3
-            cy = (cy + 0.5 - ymin + yshift) * z1 * z2 * z3
-            pygame.draw.line(screen, RED1, (cx - bl * z2, cy),
-                             (cx + bl * z2, cy), 1)
-            pygame.draw.line(screen, RED1, (cx, cy - bl * z2),
-                             (cx, cy + bl * z2), 1)
+            if rpin:
+                coord = ircam_retroinj.get_data()
+                cx = coord[0]
+                cy = coord[1]
+                cxr = coord[2]
+                cyr = coord[3]
+                cxr = (int(xsizeim/2) + cxr + cx + 0.5 - xmin + xshift) * zg
+                cyr = (int(ysizeim/2) + cyr + cy + 0.5 - ymin + yshift) * zg
+                for i in range(8):
+                    cxi = coord[4+2*i]
+                    cyi = coord[5+2*i]
+                    if cxi*cyi != 0:
+                        cxi = (int(xsizeim/2) + cxi + cx + 0.5 - xmin + xshift) * zg
+                        cyi = (int(ysizeim/2) + cyi + cy + 0.5 - ymin + yshift) * zg
+                        pygame.draw.line(screen, RED1, (cxi - bl * zg, cyi),
+                                         (cxi + bl * zg, cyi), 1)
+                        pygame.draw.line(screen, RED1, (cxi, cyi - bl * zg),
+                                         (cxi, cyi + bl * zg), 1)
+                        pygame.draw.circle(screen, RED1, (int(cxi), int(cyi)), int(bc * z2),
+                                           1)
+                cx = (int(xsizeim/2) + cx + 0.5 - xmin + xshift) * zg
+                cy = (int(ysizeim/2) + cy + 0.5 - ymin + yshift) * zg
+                pygame.draw.line(screen, GREEN, (cxr, cyr),
+                                 (cxr, cyr + bl2 *z2), 1)
+                pygame.draw.line(screen, GREEN, (cxr, cyr),
+                                 (cxr + bl2 *z2 *m.sqrt(3)/2, cyr - bl2 *z2 /2), 1)
+                pygame.draw.line(screen, GREEN, (cxr, cyr),
+                                 (cxr - bl2 *z2 *m.sqrt(3)/2, cyr - bl2 *z2 /2), 1)
+                pygame.draw.polygon(screen, GREEN, [(cxr, cyr + bl2 *z2),
+                                                    (cxr + bl2 *z2 *m.sqrt(3)/2, cyr + bl2 *z2 /2),
+                                                    (cxr + bl2 *z2 *m.sqrt(3)/2, cyr - bl2 *z2 /2),
+                                                    (cxr, cyr - bl2 *z2),
+                                                    (cxr - bl2 *z2 *m.sqrt(3)/2, cyr - bl2 *z2 /2),
+                                                    (cxr - bl2 *z2 *m.sqrt(3)/2, cyr + bl2 *z2 /2)], 1)
+                        
+                    
+            else:
+                [cx, cy] = impro.centroid(temp2)
+                if (cx >= 0) and (cx < xsizeim) and (cy >= 0) and (cy < ysizeim):
+                    fh = temp2[int(cy), int(cx)]
+                    msg3 = "center = %3d,%3d flux = %5d" % (cx, cy, fh)
+                    info3 = font3.render(msg3, True, FGCOL, BGCOL)
+                    screen.blit(info3, rct_info3)
+                    cx = (cx + 0.5 - xmin + xshift) * zg
+                    cy = (cy + 0.5 - ymin + yshift) * zg
+            pygame.draw.line(screen, RED1, (cx - bl * zg, cy),
+                             (cx + bl * zg, cy), 1)
+            pygame.draw.line(screen, RED1, (cx, cy - bl * zg),
+                             (cx, cy + bl * zg), 1)
             pygame.draw.circle(screen, RED1, (int(cx), int(cy)), int(bc * z2),
                                1)
 
@@ -1130,8 +1193,8 @@ while True:  # the main game loop
             msg3 = "center = %3d,%3d flux = %5d" % (cx, cy, fh)
             info3 = font3.render(msg3, True, FGCOL, BGCOL)
             screen.blit(info3, rct_info3)
-            coor2[0, ih] = (coor[0, ih] + 0.5 - xmin + xshift) * z1 * z2 * z3
-            coor2[1, ih] = (coor[1, ih] + 0.5 - ymin + yshift) * z1 * z2 * z3
+            coor2[0, ih] = (coor[0, ih] + 0.5 - xmin + xshift) * zg
+            coor2[1, ih] = (coor[1, ih] + 0.5 - ymin + yshift) * zg
             for ih2 in range(nhist):
                 pygame.draw.line(screen, RED1,
                                  (coor2[0, ih2] - 1, coor2[1, ih2] - 1),
@@ -1159,8 +1222,8 @@ while True:  # the main game loop
             # ------------------------------------------------------------------
             # display mouse information
             [xmou, ymou] = pygame.mouse.get_pos()
-            xim = int(xmou / z1 / z2 / z3 + xmin - xshift)
-            yim = int(ymou / z1 / z2 / z3 + ymin - yshift)
+            xim = int(xmou / zg + xmin - xshift)
+            yim = int(ymou / zg + ymin - yshift)
             if not plot_hotspot and not plot_history:
                 try:
                     fim = temp2[yim, xim]
@@ -1208,16 +1271,16 @@ while True:  # the main game loop
 
         # ------------------------------------------------------------------
         # display the scale
-        pygame.draw.line(screen, CYAN, (xsc, ysc), (xsc + ktot * z2 * z3, ysc))
-        pygame.draw.line(screen, CYAN, (xsc, ysc), (xsc, ysc - ktot * z2 * z3))
+        pygame.draw.line(screen, CYAN, (xsc, ysc), (xsc + ktot * zi, ysc))
+        pygame.draw.line(screen, CYAN, (xsc, ysc), (xsc, ysc - ktot * zi))
         for k in range(5):
-            pygame.draw.line(screen, CYAN, (xsc, ysc - kstep[k] * z2 * z3),
-                             (xsc + ksize[k], ysc - kstep[k] * z2 * z3))
-            pygame.draw.line(screen, CYAN, (xsc + kstep[k] * z2 * z3, ysc),
-                             (xsc + kstep[k] * z2 * z3, ysc - ksize[k]))
-        rct_sc1.center = (xsc + ktot * z2 * z3 + 2 * z1 + 3, ysc + 5 * z1)
+            pygame.draw.line(screen, CYAN, (xsc, ysc - kstep[k] * zi),
+                             (xsc + ksize[k], ysc - kstep[k] * zi))
+            pygame.draw.line(screen, CYAN, (xsc + kstep[k] * zi, ysc),
+                             (xsc + kstep[k] * zi, ysc - ksize[k]))
+        rct_sc1.center = (xsc + ktot * zi + 2 * z1 + 3, ysc + 5 * z1)
         screen.blit(sc1, rct_sc1)
-        rct_sc2.bottomleft = (5 * z1 - 4, ysc - ktot * z2 * z3)
+        rct_sc2.bottomleft = (5 * z1 - 4, ysc - ktot * zi)
         screen.blit(sc2, rct_sc2)
         screen.blit(zm, rct_zm)
         screen.blit(wh, rct_wh)
@@ -1230,10 +1293,10 @@ while True:  # the main game loop
                 #REACH spot positions
                 for i in range(8):
                     pygame.draw.circle(screen, GREEN,
-                                       (int(xws / 2 + xreachphoto * z2 * z3 +
-                                            (i - 3.5) * preachphoto * z2 * z3),
-                                        int(yws / 2 + yreachphoto * z2 * z3)),
-                                       int(reachphotoc * z2 * z3), 1)
+                                       (int(xws / 2 + xreachphoto * zi +
+                                            (i - 3.5) * preachphoto * zi),
+                                        int(yws / 2 + yreachphoto * zi)),
+                                       int(reachphotoc * zi), 1)
             else:
                 if pup:
                     #Pupil cross
@@ -1244,9 +1307,9 @@ while True:  # the main game loop
                     pos2 = pos[0, :]
                     color = RED
                 ycross = (256 - crop[2] + pos2[1] + cor[1] - ymin +
-                          yshift) * z1 * z2 * z3
+                          yshift) * zg
                 xcross = (320 - crop[0] + pos2[0] + cor[0] - xmin +
-                          xshift) * z1 * z2 * z3
+                          xshift) * zg
                 pygame.draw.line(screen, color, (0, ycross), (xws, ycross), 1)
                 pygame.draw.line(screen, color, (xcross, 0), (xcross, yws), 1)
 
@@ -1286,7 +1349,7 @@ while True:  # the main game loop
                 else:
                     pygame.draw.line(screen, RED1, (xl1, yl1), (xmou, ymou))
                     dist = m.sqrt((xmou - xl1)**2 +
-                                  (ymou - yl1)**2) * pscale / z1 / z2 / z3
+                                  (ymou - yl1)**2) * pscale / zg
                     msgli = "%.1f mas" % (dist, )
                     mli = font4.render(msgli, True, CYAN)
                     rct_mli = mli.get_rect()
@@ -1936,6 +1999,7 @@ while True:  # the main game loop
                 seeing_plot = False
                 strehl_plot = False
                 binary_plot = False
+                binary = False
                 nst = 1
                 a = 128
 
