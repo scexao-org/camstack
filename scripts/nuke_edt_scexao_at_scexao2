@@ -1,0 +1,39 @@
+#!/bin/bash
+
+echo "\n---- Killing all displays. ----"
+cmd="killall chuckcam"
+echo $cmd
+#$cmd
+
+cmd="killall buffycam"
+echo $cmd
+#$cmd
+sleep 1
+
+echo "\n---- Nuking camera servers ----"
+cmd="ssh scexao-op@localhost \"tmux kill-server\""
+echo $cmd
+#$cmd
+sleep 5
+
+echo "\n---- Reloading edt module (sudo password) ----"
+cmd="sudo /opt/EDTpdv/edtinit restart"
+#$cmd
+sleep 2
+
+echo "\n---- start chuck ----"
+cmd="startCRED2"
+#$cmd
+sleep 1
+echo "\n---- start Buffy ----"
+cmd="startKCAM"
+#$cmd
+sleep 1
+
+
+sleep 10
+chuckcam &
+buffycam &
+
+
+
