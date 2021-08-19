@@ -64,7 +64,7 @@ rm /milk/shm/vcamim${NUM}.im.shm
 rm /dev/shm/sem..milk.shm.vcamim${NUM}_*
 # Start the take
 $tsend vcam${NUM}_edt "/opt/EDTpdv/initcam -u 0 -c ${NUM} -f ${TMP_FILE}" Enter
-$tsend vcam${NUM}_edt "/home/scexao/src/camstack/src/edttake -s vcamim${NUM} -u 0 -c ${NUM} -l 0 -N 4" Enter
+$tsend vcam${NUM}_edt "/home/scexao/src/camstack/src/edttake -s vcamim${NUM} -u 0 -c ${NUM} -l 0 -N 4 -U" Enter
 sleep 1
 # Then TCP, receiver, then transmitter
 ssh $SC5 "$tsend $SC5tmux \"milk\" Enter"

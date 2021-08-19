@@ -37,6 +37,8 @@ class CRED2(EDTCamera):
     KEYWORDS = {}
     KEYWORDS.update(EDTCamera.KEYWORDS)
 
+    EDTTAKE_UNSIGNED = False
+
     def __init__(self,
                  name: str,
                  stream_name: str,
@@ -274,6 +276,9 @@ class Rajni(CRED2):
     But wouldn't try to alter the camera state
 '''
 class GLINT(EDTCamera):
+
+    EDTTAKE_UNSIGNED=False
+
     MODES = {
         # GLINT
         12:

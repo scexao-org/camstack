@@ -21,6 +21,16 @@ $tsend $tname "kill %" Enter
 echo ""
 #read -p "Everything killed, proceed to startup ? Press enter to continue, Ctrl+C to abort."
 
+echo "Resetting KAYA boxes config - will require sudo password (until next reboot ?)"
+echo "FIXME: how to identify the proper ttyUSB ??" 
+for NUM in {0, 1}; do
+	sudo stty -F /dev/ttyUSB${NUM} 115200 raw -echo -echoe -echok -echoctl -echoke
+	sleep 1
+	echo -e -n 'FORMAT 3 1\r' | sudo tee /dev/ttyUSB${NUM}
+	echo -e -n 'UARTBAUD 0 4\r' | sudo tee /dev/ttyUSB${NUM}
+done
+
+
 $tsend $tname "python -im camstack.cam_mains.glintcam" Enter
 
 echo "startGLINT completed."

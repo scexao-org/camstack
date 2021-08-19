@@ -46,7 +46,7 @@ class EDTCameraNoModes:
     }
 
     EDTTAKE_CAST = False  # Only OCAM overrides that
-    EDTTAKE_UNSIGNED = False
+    EDTTAKE_UNSIGNED = True
 
     def __init__(self,
                  name: str,
