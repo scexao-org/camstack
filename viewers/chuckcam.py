@@ -810,7 +810,7 @@ cnti = 0
 timeexpt = []
 timendr = []
 nst = 1
-rm = 10
+rm = 30
 a = 128
 
 nhist = 100
@@ -1007,6 +1007,7 @@ while True:  # the main game loop
                             strehl = False
                             strehl_plot = True
                         else:
+                            print("start binary fit")
                             posst,xoff,yoff,strehlv,dia_ring,distco,angleco,contrastco = impro.binary_processing(temp2, target=target, mas_pix=pscale, pad=pad, nst=nst-int(rpin), a=a, rm=rm, flt=flt, savepath=savepath, timestamp=timestamp2,retroinj=rpin)
                             os.system(home + "/bin/log BINARY %s: %i-star fit" %(slot,nst))
                             binary = True
@@ -2024,9 +2025,11 @@ while True:  # the main game loop
             if event.key == K_y:
                 mmods = pygame.key.get_mods()
                 if average:
+                    print("binary fit")
                     nst += 1
                     binary = True
                     if (mmods & KMOD_LSHIFT):
+                        print("big window")
                         a = 256
                 else:
                     nst = 1
