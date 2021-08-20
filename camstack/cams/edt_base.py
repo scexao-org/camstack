@@ -241,10 +241,10 @@ class EDTCameraNoModes:
 
         if self.taker_cset_prio[1] is not None: # Set rtprio !
             subprocess.run([
-                'make_cset_and_rt',
+                'milk-makecsetandrt',
                 str(tmux_util.find_pane_running_pid(self.take_tmux_pane)), # PID
-                str(self.taker_cset_prio[1]), # PRIORITY
-                self.taker_cset_prio[0] # CPUSET
+                self.taker_cset_prio[0], # CPUSET
+                str(self.taker_cset_prio[1]) # PRIORITY
             ])
         self.grab_shm_fill_keywords()
         self.prepare_camera_finalize()

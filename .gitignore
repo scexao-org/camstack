@@ -18,9 +18,6 @@ camstack.egg-info
 config/first_tmp.cfg
 config/vampires_tmp.cfg
 
-camstack/core/make_cset_and_rt
-camstack/core/make_cset_and_rt.o
-camstack/core/make_cset_and_rt.c
 
 dump/
 build/

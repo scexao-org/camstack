@@ -87,9 +87,9 @@ class DependentProcess:
                 pid = pids.pop()
                 print('PID: ', pid)
                 ret = subprocess.run([
-                    'make_cset_and_rt',
-                    str(pid),
-                    str(self.rtprio), self.cset
+                    'milk-makecsetandrt',
+                    str(pid), self.cset,
+                    str(self.rtprio)
                 ])
                 children = subprocess.run(['pgrep', '-P', str(pid)],
                                    stdout=subprocess.PIPE).stdout.decode(

@@ -16,8 +16,8 @@ import os
 
 class PreInstallCommand(develop):
     def run(self):
-        os.system('cd camstack/core; sudo make clean all; cd ../..')
-        # A manual copy to the PATH maybe necessary - it doesn't seem the script line works for this.
+        # Add custom make commands here !
+        os.system('cd src; ./compile; cd ..')
         develop.run(self)
 
 with open("README.md", 'r') as f:
@@ -41,10 +41,10 @@ setup(
         long_description = long_description,
         author = 'Vincent Deo',
         author_email = 'vdeo@naoj.org',
-        url = "http://www.github.com/milk-org/camstack",
+        url = "http://www.github.com/scexao-org/camstack",
         packages = ['camstack'],  # same as name
         install_requires = ['docopt', 'libtmux', 'pygame'],
-        scripts = scripts,#, './camstack/core/make_cset_and_rt'],
+        scripts = scripts,
         cmdclass={'develop': PreInstallCommand},
     )
 
