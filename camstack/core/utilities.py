@@ -85,18 +85,18 @@ class DependentProcess:
                 pids = [pid]
             while len(pids) > 0:
                 pid = pids.pop()
-                print('PID: ', pid)
+                #print('PID: ', pid)
                 ret = subprocess.run([
                     'milk-makecsetandrt',
                     str(pid), self.cset,
                     str(self.rtprio)
-                ])
+                ], stdout=subprocess.DEVNULL)
                 children = subprocess.run(['pgrep', '-P', str(pid)],
                                    stdout=subprocess.PIPE).stdout.decode(
                                        'utf8').strip().split('\n')
                 if children[0] != '':
                     pids += [int(c) for c in children]
-                print('PIDs: ', pids)
+                #print('PIDs: ', pids)
 
     def stop(self):
         tmux.kill_running(self.tmux_pane)

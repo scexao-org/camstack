@@ -349,7 +349,7 @@ class EDTCameraNoModes:
             except Exception as e:
                 print("Polling thread: error ", e)
 
-            print(f'Thread is running at {time.time()}')
+            #print(f'Thread is running at {time.time()}')
 
 
 
