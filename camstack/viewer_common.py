@@ -56,9 +56,7 @@ def get_img_data(cam,
         temp = cam.get_data(check, reform=True, timeout=1.0).astype('float')
         temp[temp == 65535] = 1.
     elif cam_type == CRED2_str:
-        # CHUCK IS ERRONEOUSLY IN UINT16 BUT ACTUALLY ITS INT16
         temp = cam.get_data(check, reform=True, timeout=1.0)
-        temp.dtype = np.int16  # DIRTY CASTING
         temp = temp.astype(np.float32)  # CONVERSION
     else:
         temp = cam.get_data(check, reform=True, timeout=1.0).astype('float')
