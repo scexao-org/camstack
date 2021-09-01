@@ -11,12 +11,12 @@ if __name__ == "__main__":
     tcp_recv = RemoteDependentProcess(
         tmux_name='streamTCPreceive_' + str(port),
         # Urrrrrh this is getting messy
-        cli_cmd='milk-exec "creasshortimshm %s %u %u"; shmimTCPreceive -c ircam ' + str(port),
+        cli_cmd='milk-exec "creashmim %s %u %u"; shmimTCPreceive -c ircam ' + str(port),
         cli_args=('ircam0', 320, 256),
         remote_host='133.40.161.194',
         kill_upon_create = False,
     )
-    tcp_recv.start_order = 0
+    tcp_recv.start_order = 1
     tcp_recv.kill_order = 1
 
     tcp_send = DependentProcess(
@@ -29,16 +29,29 @@ if __name__ == "__main__":
         cset='ircam0_tcp',
         rtprio=49,
     )
-    tcp_send.start_order = 1
+    tcp_send.start_order = 2
     tcp_send.kill_order = 0
 
+    utr_red = DependentProcess(
+        tmux_name='ircam0_utr',
+        cli_cmd='milk-exec "mload milkimageformat; readshmim ircam0_raw; imgformat.cred_ql_utr ..procinfo 1; imgformat.cred_ql_utr ..triggermode 1; imgformat.cred_ql_utr ..loopcntMax -1; imgformat.cred_ql_utr ircam0_raw ircam0_ql ircam0 5000"',
+        cli_args=(),
+        kill_upon_create = True,
+        cset='ircam0_utr',
+        rtprio=49,
+    )
+    utr_red.start_order = 0
+    utr_red.kill_order = 2
+
+
+
     cam = Chuck('ircam0',
-                 'ircam0',
+                 'ircam0_raw',
                   unit=0,
                   channel=0,
                   mode_id=mode,
                   taker_cset_prio=('ircam0_edt', 49),
-                  dependent_processes=[tcp_recv, tcp_send])
+                  dependent_processes=[tcp_recv, tcp_send, utr_red])
 
     from camstack.core.utilities import shellify_methods
     shellify_methods(cam, globals())
