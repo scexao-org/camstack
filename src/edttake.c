@@ -320,10 +320,12 @@ int main(int argc, char **argv)
 
     if (pdv_p->dd_p->force_single)
     {
+        printf("Using pdv_start_image.\n");
         pdv_start_image(pdv_p);
     }
     else
     {
+        printf("Using pdv_start_imageS\n");
         pdv_start_images(pdv_p, numbufs);
     }
 
@@ -354,6 +356,8 @@ int main(int argc, char **argv)
         if ((overrun = (edt_reg_read(pdv_p, PDV_STAT) & PDV_OVERRUN))) // Does that work ??
         {
             ++overruns;
+            printf("overrun @ %s", ctime((time_t*) &time1));
+            recovering_timeout = TRUE;
         }
 
         pdv_start_image(pdv_p);
