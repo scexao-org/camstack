@@ -7,7 +7,7 @@ tname="kcamctrl"
 
 # Create tmuxes and issue kills
 $tnew $tname
-sleep 0.1
+sleep 3.0 # MUST NOT SEND the C-c to interrupt the bashrc !
 $tsend $tname C-c
 sleep 0.1
 $tsend $tname "close()" Enter

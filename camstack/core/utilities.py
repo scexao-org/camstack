@@ -66,6 +66,7 @@ class DependentProcess:
     def initialize_tmux(self, kill_upon_create):
         self.tmux_pane = tmux.find_or_create(self.tmux_name)
         if kill_upon_create:
+            time.sleep(3.0) # MUST NOT KILL the sourcing of bashrc/profile
             tmux.kill_running(self.tmux_pane)
 
     def start(self):

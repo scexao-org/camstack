@@ -10,7 +10,7 @@ if __name__ == "__main__":
     tcp_recv = RemoteDependentProcess(
         tmux_name='streamTCPreceive_30301',
         # Urrrrrh this is getting messy
-        cli_cmd='milk-exec "creashmim %s %u %u"; shmimTCPreceive -c ircam 30301',
+        cli_cmd='creashmim %s %u %u; shmimTCPreceive -c ircam 30301',
         cli_args=('kcam', 320, 256),
         remote_host='133.40.161.194',
         kill_upon_create = False,
@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     utr_red = DependentProcess(
         tmux_name='kcam_utr',
-        cli_cmd='milk-exec "mload milkimageformat; readshmim kcam_raw; imgformat.cred_ql_utr ..procinfo 1; imgformat.cred_ql_utr ..triggermode 1; imgformat.cred_ql_utr ..loopcntMax -1; imgformat.cred_ql_utr kcam_raw kcam_ql kcam 30000"',
+        cli_cmd='milk-exec "mload milkimageformat; readshmim kcam_raw; imgformat.cred_ql_utr ..procinfo 1; imgformat.cred_ql_utr ..triggermode 3; imgformat.cred_ql_utr ..loopcntMax -1; imgformat.cred_ql_utr kcam_raw kcam_ql kcam 30000"',
         cli_args=(),
         kill_upon_create = True,
         cset='kcam_utr',
