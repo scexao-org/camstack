@@ -954,7 +954,7 @@ while True:  # the main game loop
             ndr = ndrn
             crop = cropn
             etimet = etime * ndr
-            nindex = np.where(ndrs >= ndr)[0][0]
+            #nindex = np.where(ndrs >= ndr)[0][0] # Commented out for when control server goes to > 255
         # ------------------------------------------------------------------
         # read image
         temp, isat = get_img_data(bias, badpixmap, subt_ref, ref_im, lin_scale, check=False)

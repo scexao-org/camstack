@@ -162,9 +162,9 @@ def whatfps(fps, crop):
     #define if we are in a predifined crop mode and set max FPS
     cropmode = -1
     fpsmax = max(
-        fps, 3502.
+        fps, 32000.
     )  # if unknow configuration, set current fps as max or 3502Hz (full frame) as a safeguard. Usually the current frame rate is the max one.
-    for i in range(12):
+    for i in range(setcrops.shape[1]):
         if np.all(crop == setcrops[:, i]):
             cropmode = i
             fpsmax = fpsmaxs[i]
@@ -507,29 +507,24 @@ background = background.convert()
 etimes = np.array([
     10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000,
     200000, 500000
-])
+]) # Irrelevant for CRED1
 net = np.size(etimes)
 
-fpss = np.array([1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000])
+fpss = np.array([1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 15000, 20000, 25000])
 nfps = np.size(fpss)
 fpsmaxs = np.array([
-    1500.2, 2050.2, 4500.6, 9203.6, 2200.0, 8002.6, 1500.2, 2050.2, 4500.6,
-    9203.6, 2200.0, 8002.6
-])
+    3460., 32000., 14331., 9805., 7115., 5390., 4225., 18460., 16020.])
 
-setcrops = np.zeros((4, 12))
-setcrops[:, 0] = [160, 479, 128, 383]
-setcrops[:, 1] = [192, 415, 160, 347]
-setcrops[:, 2] = [256, 383, 192, 319]
-setcrops[:, 3] = [288, 351, 224, 287]
-setcrops[:, 4] = [224, 415, 160, 351]
-setcrops[:, 5] = [256, 351, 220, 291]
-setcrops[:, 6] = [128, 447, 128, 383]
-setcrops[:, 7] = [160, 383, 160, 347]
-setcrops[:, 8] = [224, 351, 192, 319]
-setcrops[:, 9] = [256, 319, 224, 287]
-setcrops[:, 10] = [192, 383, 160, 351]
-setcrops[:, 11] = [224, 319, 220, 291]
+setcrops = np.zeros((4, 9))
+setcrops[:, 0] = [0, 319, 0, 255]
+setcrops[:, 1] = [128, 191, 96, 159]
+setcrops[:, 2] = [96, 223, 64, 191]
+setcrops[:, 3] = [64, 223, 48, 207]
+setcrops[:, 4] = [64, 255, 32, 223]
+setcrops[:, 5] = [32, 255, 16, 239]
+setcrops[:, 6] = [32, 287, 0, 255]
+setcrops[:, 7] = [64, 223, 88, 167]
+setcrops[:, 8] = [64, 255, 88, 167]
 
 ndrs = np.array([1, 2, 4, 8, 16, 32, 64, 128, 255])
 nndr = np.size(ndrs)
