@@ -124,7 +124,7 @@ def arr2im(arr,
         mask = arr2 > 0
         arr2 *= mask
     arr3 = arr2**pwr
-    mmin, mmax = arr3.min(), arr3.max()
+    mmin, mmax = arr3[1:].min(), arr3[1:].max() # IGNORE THE FIRST ROW, clock pixels etc.
     if subt_ref and lin_scale:
         if mmax > abs(mmin):
             arr3[0, 0] = -mmax
