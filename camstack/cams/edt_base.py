@@ -226,13 +226,15 @@ class EDTCameraNoModes:
             dep_process.start()
 
 
-    def _start_taker_no_dependents(self):
+    def _start_taker_no_dependents(self, reuse_shm = False):
         exec_path = os.environ['HOME'] + '/src/camstack/src/edttake'
         self.edttake_tmux_command = f'{exec_path} -s {self.STREAMNAME} -u {self.pdv_unit} -c {self.pdv_channel} -l 0 -N 4'
         if self.EDTTAKE_CAST:
             self.edttake_tmux_command += ' -8'  # (byte pair) -> (ushort) casting.
         if self.EDTTAKE_UNSIGNED:
             self.edttake_tmux_command += ' -U'  # Maintain unsigned output (CRED1, OCAM)
+        if reuse_shm:
+            self.edttake_tmux_command += ' -R'  # Do not overwrite the SHM.
 
         # Let's do it.
         tmux_util.send_keys(self.take_tmux_pane, self.edttake_tmux_command)

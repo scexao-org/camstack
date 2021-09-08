@@ -11,9 +11,9 @@ from camstack.core.utilities import CameraMode
 
 
 class ROMODES:
-    globalresetsingle = 'globalresetsingle'
-    globalresetcds = 'globalresetcds'
-
+    single = 'globalresetsingle'
+    cds = 'globalresetcds'
+    bursts = 'globalresetbursts'
 
 class CRED1(EDTCamera):
 
@@ -26,26 +26,26 @@ class CRED1(EDTCamera):
     FULL = 'full'
     MODES = {
         # FULL 320 x 256
-        FULL: CameraMode(x0=0, x1=319, y0=0, y1=255, fps=1738.152),
+        FULL: CameraMode(x0=0, x1=319, y0=0, y1=255, fps=3460.),
+        0: CameraMode(x0=0, x1=319, y0=0, y1=255, fps=3460.),
         # 64x64 centered
-        1: CameraMode(x0=128, x1=191, y0=96, y1=159, fps=20679.012),
+        1: CameraMode(x0=128, x1=191, y0=96, y1=159, fps=40647.), # 40647. Limiting for now
         # 128x128 centered
-        2: CameraMode(x0=96, x1=223, y0=64, y1=191, fps=7008.368),
-        #6068.84 for CameraMode(x0=64, x1=223, y0=64, y1=191, fps=),
+        2: CameraMode(x0=96, x1=223, y0=64, y1=191, fps=14331.),
         # 160x160 16px offside
-        3: CameraMode(x0=64, x1=223, y0=48, y1=207, fps=4926.47),
+        3: CameraMode(x0=64, x1=223, y0=48, y1=207, fps=9805.),
         # 192x192 centered
-        4: CameraMode(x0=64, x1=255, y0=32, y1=223, fps=3570.159),
+        4: CameraMode(x0=64, x1=255, y0=32, y1=223, fps=7115.),
         # 224x224 16px offside
-        5: CameraMode(x0=32, x1=255, y0=16, y1=239, fps=2704.52),
+        5: CameraMode(x0=32, x1=255, y0=16, y1=239, fps=5390.),
         # 256x256 centered
-        6: CameraMode(x0=32, x1=287, y0=0, y1=255, fps=2117.126),
-        # 160x80 centered
-        7: CameraMode(x0=64, x1=223, y0=88, y1=167, fps=9305.555),
-        # 192x80 centered
-        8: CameraMode(x0=64, x1=255, y0=88, y1=167, fps=8065.61),
+        6: CameraMode(x0=32, x1=287, y0=0, y1=255, fps=4225.),
+        # 160x80
+        7: CameraMode(x0=64, x1=223, y0=88, y1=167, fps=18460.),
+        # 192x80
+        8: CameraMode(x0=64, x1=255, y0=88, y1=167, fps=16020.),
     }
-    
+
     # Add mode 0 alias of mode FULL
     MODES[0] = MODES[FULL]
 
@@ -73,8 +73,15 @@ class CRED1(EDTCamera):
         # Call EDT camera init
         # This should pre-kill dependent sessions
         # But we should be able to "prepare" the camera before actually starting
-        EDTCamera.__init__(self, name, stream_name, mode_id, unit, channel,
-                           basefile, taker_cset_prio=taker_cset_prio, dependent_processes=dependent_processes)
+        EDTCamera.__init__(self,
+                           name,
+                           stream_name,
+                           mode_id,
+                           unit,
+                           channel,
+                           basefile,
+                           taker_cset_prio=taker_cset_prio,
+                           dependent_processes=dependent_processes)
 
         # ======
         # AD HOC
@@ -83,13 +90,17 @@ class CRED1(EDTCamera):
         # Issue a few standards for CRED1
         self.send_command('set led off')
         self.send_command('set events off')
+
+        self.send_command('set rawimages on')
+        self.send_command('set imagetags on')
+
         self.set_gain(50)
 
     # =====================
     # AD HOC PREPARE CAMERA
     # =====================
 
-    def prepare_camera_for_size(self, mode_id = None):
+    def prepare_camera_for_size(self, mode_id=None):
 
         if mode_id is None:
             mode_id = self.current_mode_id
@@ -105,7 +116,6 @@ class CRED1(EDTCamera):
 
         EDTCamera.prepare_camera_for_size(self, mode_id=mode_id)
 
-
     def prepare_camera_finalize(self, mode_id: int = None):
 
         if mode_id is None:
@@ -117,7 +127,7 @@ class CRED1(EDTCamera):
 
         # Initialization of the camera: reset the NDR to globalresetcds, NDR2.
         if self.NDR is None:
-            self.set_readout_mode(ROMODES.globalresetcds)
+            self.set_readout_mode(ROMODES.cds)
             self.set_NDR(2)
 
         if cm.fps is not None:
@@ -134,7 +144,7 @@ class CRED1(EDTCamera):
             # We might have gotten a double answer
             # Seems to happen when requesting pressure
             cut = res.index('>')
-            res = res[cut+1:]
+            res = res[cut + 1:]
 
         if format and ':' in res:
             return res.split(':')
@@ -157,15 +167,15 @@ class CRED1(EDTCamera):
 
         # Additional fill-up of the camera state
         self.get_gain()  # Sets 'DETGAIN'
-        self.get_readout_mode() # Set DETMODE
+        self.get_readout_mode()  # Set DETMODE
 
         # Call the stuff that we can't know otherwise
         self.poll_camera_for_keywords()  # Sets 'DET-TMP'
 
     def poll_camera_for_keywords(self):
-        self.get_temperature() # Sets DET-TMP
+        self.get_temperature()  # Sets DET-TMP
         time.sleep(.1)
-        self.get_cryo_pressure() # Sets DET-PRES
+        self.get_cryo_pressure()  # Sets DET-PRES
         time.sleep(.1)
 
     # ===========================================
@@ -176,9 +186,9 @@ class CRED1(EDTCamera):
         # We mimicked the definition of the cropmodes from the CRED2
         # BUT the CRED1 is 1-base indexed.... remove 1
         xx, yy = self.send_command('cropping raw')[1:]
-        x0, x1 = [(int(xxx)-1) for xxx in xx.split('-')]
+        x0, x1 = [(int(xxx) - 1) for xxx in xx.split('-')]
         x0 = 32 * x0
-        x1 = 32 * x1 + 31 # column blocks of 32
+        x1 = 32 * x1 + 31  # column blocks of 32
         y0, y1 = [int(yyy) - 1 for yyy in yy.split('-')]
         return x0, x1, y0, y1
 
@@ -189,7 +199,8 @@ class CRED1(EDTCamera):
                 return x0, x1, y0, y1
             if gx0 != x0 or gx1 != x1:
                 # BUT the CRED1 is 1-base indexed.... add 1
-                self.send_command('set cropping columns %u-%u' % (x0 // 32 + 1, x1 // 32 + 1))
+                self.send_command('set cropping columns %u-%u' %
+                                  (x0 // 32 + 1, x1 // 32 + 1))
                 # CRED2s are finnicky with cropping, we'll add a wait
                 time.sleep(.5)
             if gy0 != y0 or gy1 != y1:
@@ -214,7 +225,8 @@ class CRED1(EDTCamera):
 
     def get_readout_mode(self):
         res = self.send_command('mode raw')
-        res = res[:6] + res[11:] # Removing "reset" after "global", otherwise too long for shm keywords
+        res = res[:6] + res[
+            11:]  # Removing "reset" after "global", otherwise too long for shm keywords
         self.camera_shm.update_keyword('DETMODE', res)
         return res
 
@@ -230,14 +242,37 @@ class CRED1(EDTCamera):
     def set_NDR(self, NDR: int):
         if NDR < 1 or not type(NDR) is int:
             raise AssertionError(f'Illegal NDR value: {NDR}')
+
+        # Attempt: stabilize by re-setting always readout mode and maxfps
+        clippedNDR = min(3, NDR)
+        readout_mode = {
+            1: ROMODES.single,
+            2: ROMODES.cds,
+            3: ROMODES.bursts
+        }[clippedNDR]
+        # DO NOT set the mode, this reverts setting the NDR... or does it ? Getting the mode seems to unlock the weird behavior.
+
         self.send_command(f'set nbreadworeset {NDR}')
+        time.sleep(1.)
+        self._kill_taker_no_dependents()
+        self._start_taker_no_dependents(True)
+        
+        print(self.get_readout_mode())
+        print(self.get_NDR())
+
+        time.sleep(1.)
+        self.set_readout_mode(readout_mode)
+
+
+        self.set_fps(self.current_mode.fps) # Systematically - because AUTO rescaling of fps occurs when changing NDR...
+
         return self.get_NDR()
 
     def get_NDR(self):
         self.NDR = int(self.send_command('nbreadworeset raw'))
         self.camera_shm.update_keyword('NDR', self.NDR)
-        self.camera_shm.update_keyword('DETMODE',
-                                       ('globalsingle', 'globalcds')[self.NDR > 1])
+        self.camera_shm.update_keyword('DETMODE', ('globalsingle',
+                                                   'globalcds')[self.NDR > 1])
         return self.NDR
 
     def set_fps(self, fps: float):
@@ -271,9 +306,10 @@ class CRED1(EDTCamera):
         self.camera_shm.update_keyword('DET-TMP', temp)
         return temp
 
-
     def _shutdown(self):
-        input(f'Detector temperature {self.get_temperature()} K; proceed anyway ? Ctrl+C aborts.')
+        input(
+            f'Detector temperature {self.get_temperature()} K; proceed anyway ? Ctrl+C aborts.'
+        )
         res = self.send_command('shutdown')
         if 'OK' in res:
             while True:

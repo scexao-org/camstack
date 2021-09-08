@@ -50,8 +50,8 @@ int main(int argc, char **argv)
     int channel = 0; // same as cam
     char streamname[200];
 
-    float exposure = 0.05; // exposure time [ms]
-    double meas_frate = 0.0; // Measured framerate, updated each frame
+    float exposure = 0.05;         // exposure time [ms]
+    double meas_frate = 0.0;       // Measured framerate, updated each frame
     double meas_frate_gain = 0.01; // smoothing for meas_frate
     struct timespec time1;
     struct timespec time2;
@@ -61,6 +61,7 @@ int main(int argc, char **argv)
     // arg parsing if we make prio and cset settable from args.
     set_rt_priority();
 
+    int REUSE_SHM = 0;
     int UNSIGNED_OUT = 0;
     int BYTESHORTCAST = 0;
     int STREAMNAMEINIT = 0;
@@ -97,6 +98,10 @@ int main(int argc, char **argv)
 
         case 'U':
             UNSIGNED_OUT = 1;
+            break;
+
+        case 'R':
+            REUSE_SHM = 1;
             break;
 
         case '8':
@@ -225,8 +230,8 @@ int main(int argc, char **argv)
     pdv_flush_fifo(pdv_p);
 
     IMAGE image;      // pointer to array of images
-    long naxis;       // number of axis
     uint8_t atype;    // data type
+    long naxis;       // number of axis
     uint32_t *imsize; // image size
     int shared;       // 1 if image in shared memory
     int NBkw;         // number of keywords supported
@@ -242,9 +247,12 @@ int main(int argc, char **argv)
     // Do we want 8 bit or 16 bit output (cast implies unsigned)?
     atype = ((BYTESHORTCAST != 0) || depth != 8) ? _DATATYPE_UINT16 : _DATATYPE_UINT8;
     // Do we want signed or unsigned 16 bit output ?
-    if (atype == _DATATYPE_UINT8 && !UNSIGNED_OUT) {
+    if (atype == _DATATYPE_UINT8 && !UNSIGNED_OUT)
+    {
         atype = _DATATYPE_INT8;
-    } else if (atype == _DATATYPE_UINT16 && !UNSIGNED_OUT) {
+    }
+    else if (atype == _DATATYPE_UINT16 && !UNSIGNED_OUT)
+    {
         atype = _DATATYPE_INT16;
     }
 
@@ -260,45 +268,66 @@ int main(int argc, char **argv)
     printf("Camera type : %s\n", cameratype);
     fflush(stdout);
 
-    // allocate memory for array of images
-    //image = malloc(sizeof(IMAGE));
-    naxis = 2;
-    imsize = (uint32_t *)malloc(sizeof(uint32_t) * naxis);
-    imsize[0] = isiowidth;
-    imsize[1] = height;
-    // image will be in shared memory
-    shared = 1;
-    // allocate space for keywords
-    NBkw = 50;
-
     if (STREAMNAMEINIT == 0)
     {
         sprintf(streamname, "edtcam%d%d", unit, channel);
     }
 
-    ImageStreamIO_createIm(&image, streamname, naxis, imsize, atype, shared,
-                           NBkw, 10);
-    free(imsize);
+    if (REUSE_SHM)
+    {
+        ImageStreamIO_openIm(&image, streamname);
+    }
+    else
+    {
+        // allocate memory for array of images
+        //image = malloc(sizeof(IMAGE));
+        naxis = 2;
+        imsize = (uint32_t *)malloc(sizeof(uint32_t) * naxis);
+        imsize[0] = isiowidth;
+        imsize[1] = height;
+        // image will be in shared memory
+        shared = 1;
+        // allocate space for keywords
+        NBkw = 50;
+        ImageStreamIO_createIm(&image, streamname, naxis, imsize, atype, shared,
+                               NBkw, 10);
+        free(imsize);
+    }
 
     // Add keywords
     int N_KEYWORDS = 3;
 
     // Warning: the order of *kws* may change, because we're gonna allocate the other ones from python.
-    const char *KW_NAMES[] = {"MFRATE", "FG_SIZE1", "FG_SIZE2"};      // "tint", "fps", "NDR", "x0", "x1", "y0", "y1", "temp"};
-    const char KW_TYPES[] = {'D', 'L', 'L'};           // {'D', 'D', 'L', 'L', 'L', 'L', 'L', 'D'};
+    const char *KW_NAMES[] = {"MFRATE", "FG_SIZE1", "FG_SIZE2"};                   // "tint", "fps", "NDR", "x0", "x1", "y0", "y1", "temp"};
+    const char KW_TYPES[] = {'D', 'L', 'L'};                                       // {'D', 'D', 'L', 'L', 'L', 'L', 'L', 'D'};
     const char *KW_COM[] = {"Measured frame rate (Hz)", "FG n rows", "FG n cols"}; // {"exposure time", "frame rate", "NDR", "x0", "x1", "y0", "y1", "detector temperature"};
 
-    for (int kw = 0; kw < N_KEYWORDS; ++kw)
+    int KW_POS[] = {0, 1, 2};
+
+    if (!REUSE_SHM)
     {
-        strcpy(image.kw[kw].name, KW_NAMES[kw]);
-        image.kw[kw].type = KW_TYPES[kw];
-        strcpy(image.kw[kw].comment, KW_COM[kw]);
+        for (int kw = 0; kw < N_KEYWORDS; ++kw)
+        {
+            strcpy(image.kw[kw].name, KW_NAMES[kw]);
+            image.kw[kw].type = KW_TYPES[kw];
+            strcpy(image.kw[kw].comment, KW_COM[kw]);
+        }
+    }
+    else
+    {
+        for (int kw = 0; kw < image.md->NBkw; ++kw) {
+            for (int i = 0; i < N_KEYWORDS; ++i) {
+                if (strcmp(KW_NAMES[i], image.kw[kw].name) == 0) {
+                    KW_POS[i] = kw;
+                }
+            }
+        }
+
     }
     // Initial values
-    image.kw[0].value.numf = 0.0;
-    image.kw[1].value.numl = height;
-    image.kw[2].value.numl = isiowidth;
-
+    image.kw[KW_POS[0]].value.numf = 0.0;
+    image.kw[KW_POS[1]].value.numl = height;
+    image.kw[KW_POS[2]].value.numl = isiowidth;
 
     /*
      * allocate four buffers for optimal pdv ring buffer pipeline (reduce if
@@ -335,7 +364,7 @@ int main(int argc, char **argv)
     printf("\n");
     i = 0;
     int loopOK = 1;
-    
+
     while (loopOK == 1)
     {
         /*
@@ -356,7 +385,7 @@ int main(int argc, char **argv)
         if ((overrun = (edt_reg_read(pdv_p, PDV_STAT) & PDV_OVERRUN))) // Does that work ??
         {
             ++overruns;
-            printf("overrun @ %s", ctime((time_t*) &time1));
+            printf("overrun @ %s", ctime((time_t *)&time1));
             recovering_timeout = TRUE;
         }
 
@@ -377,7 +406,7 @@ int main(int argc, char **argv)
              * particularly if multiple buffers were prestarted
              */
             clock_gettime(CLOCK_REALTIME, &time1);
-            printf("timeout..... @ %s", ctime((time_t*) &time1));
+            printf("timeout..... @ %s", ctime((time_t *)&time1));
 
             pdv_timeout_restart(pdv_p, TRUE);
             last_timeouts = timeouts;
@@ -388,7 +417,7 @@ int main(int argc, char **argv)
         else if (recovering_timeout)
         {
             clock_gettime(CLOCK_REALTIME, &time1);
-            printf("restarted... @ %s\n", ctime((time_t*) &time1));
+            printf("restarted... @ %s\n", ctime((time_t *)&time1));
             pdv_timeout_restart(pdv_p, TRUE);
             recovering_timeout = FALSE;
         }
@@ -400,7 +429,7 @@ int main(int argc, char **argv)
 
         // printf("Copying %d x %d bytes", bytewidth, height);
         memcpy(image.array.UI8, image_p, bytewidth * height);
-        
+
         ImageStreamIO_UpdateIm(&image);
         /*
         image.md[0].write = 0;
@@ -412,13 +441,13 @@ int main(int argc, char **argv)
 
         // Write the timing !
         clock_gettime(CLOCK_REALTIME, &time2);
-        time_elapsed = difftime( time2.tv_sec, time1.tv_sec);
+        time_elapsed = difftime(time2.tv_sec, time1.tv_sec);
         time_elapsed += (time2.tv_nsec - time1.tv_nsec) / 1e9;
 
         meas_frate *= (1.0 - meas_frate_gain);
         // This is only CPU time - that sucks.
         meas_frate += 1.0 / time_elapsed * meas_frate_gain;
-        image.kw[0].value.numf = (float) meas_frate;
+        image.kw[KW_POS[0]].value.numf = (float)meas_frate;
         time1.tv_sec = time2.tv_sec;
         time1.tv_nsec = time2.tv_nsec;
 
