@@ -549,7 +549,7 @@ if not sync_param[0] and sync_param[1]:
     fps = sync_param[3]
     delay = cam_ro + flc_oft + 3 * lag
 else:
-    etime = cam.get_expt() * 1e3
+    etime = cam.get_expt() * 1e6
     fps = cam.get_fps()
     delay = 0
 ndr = int(cam.get_ndr())
@@ -901,7 +901,7 @@ while True:  # the main game loop
             # This is where we're going to crash if the FG just stopped / restarted
             # and we try between the FG starts and the keywords are put in.
             try:
-                etimen = cam.get_expt() * 1e3
+                etimen = cam.get_expt() * 1e6
             except KeyError:
                 time.sleep(5.)
                 shmreload = True
@@ -1384,7 +1384,7 @@ while True:  # the main game loop
                         else:
                             tmux_kcam_ctrl.send_keys("set_tint(%f)" % (etimec * 1.e-6, ))
                             time.sleep(1)
-                            etime = cam.get_expt() * 1e3
+                            etime = cam.get_expt() * 1e6
                             delay = 0
                         etimet = etime * ndr
                         (etimes2, net2, tindex) = whatexpt(etime, fps, delay)
@@ -1417,7 +1417,7 @@ while True:  # the main game loop
                             fps = cam.get_fps()
                             tmux_kcam_ctrl.send_keys("get_tint()")
                             time.sleep(1)
-                            etime = cam.get_expt() * 1e3
+                            etime = cam.get_expt() * 1e6
                             delay = 0
                         (etimes2, net2, tindex) = whatexpt(etime, fps, delay)
                         (fpss2, nfps2, findex) = whatfps(fps, crop)
@@ -1453,7 +1453,7 @@ while True:  # the main game loop
                             fps = cam.get_fps()
                             tmux_kcam_ctrl.send_keys("get_tint()")
                             time.sleep(1)
-                            etime = cam.get_expt() * 1e3
+                            etime = cam.get_expt() * 1e6
                             delay = 0
                         (etimes2, net2, tindex) = whatexpt(etime, fps, delay)
                         (fpss2, nfps2, findex) = whatfps(fps, crop)
