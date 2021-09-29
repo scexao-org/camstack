@@ -428,6 +428,7 @@ if args != []:
 # ------------------------------------------------------------------
 camid = 0  # camera identifier (0: science camera)
 cam = SHM("/milk/shm/ircam%d.im.shm" % (camid, ), verbose=False)
+cam_rawdata = SHM("/milk/shm/ircam%d_raw.im.shm" % (camid, ), verbose=False)
 xsizeim, ysizeim = cam.shape_c
 
 (xsize, ysize) = (320, 256)  #Force size of old chuck for the display
@@ -810,7 +811,7 @@ cnti = 0
 timeexpt = []
 timendr = []
 nst = 1
-rm = 30
+rm = 10
 a = 128
 
 nhist = 100
@@ -898,6 +899,7 @@ while True:  # the main game loop
     if shmreload:
         print("reloading SHM")
         cam = SHM("/milk/shm/ircam%d.im.shm" % (camid, ), verbose=False)
+        cam_rawdata = SHM("/milk/shm/ircam%d_raw.im.shm" % (camid, ), verbose=False)
         xsizeim, ysizeim = cam.shape_c
         #(xsizeim, ysizeim) = cam.mtdata['size'][:2]#size[:cam.naxis]
         print("image xsize=%d, ysize=%d" % (xsizeim, ysizeim))
@@ -1835,7 +1837,7 @@ while True:  # the main game loop
             # Start archiving images
             #--------------------------
             if event.key == K_RETURN and waitfordt:
-                cam.update_keyword("DATA-TYP",datatyp[idt])
+                cam_rawdata.update_keyword("DATA-TYP", datatyp[idt])
                 timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
                 savepath = '/media/data/ARCHIVED_DATA/' + timestamp + \
                            '/ircam%dlog/' % (camid, )

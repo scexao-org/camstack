@@ -414,6 +414,7 @@ if args != []:
 #                access to shared memory structures
 # ------------------------------------------------------------------
 cam = SHM("/milk/shm/kcam.im.shm", verbose=False)
+cam_rawdata = SHM("/milk/shm/kcam_raw.im.shm", verbose=False)
 xsizeim, ysizeim = cam.shape_c
 
 (xsize, ysize) = (320, 256)  #Force size of buffy for the display
@@ -426,6 +427,7 @@ cam_badpixmap = open_shm("buffycam_badpixmap",
 cam_paused = open_shm("buffycam_paused")
 new_dark = open_shm("buffycam_newdark")
 ircam_synchro = open_shm("ircam_synchro", dims=(6, 1))
+ircam_retroinj = open_shm("ircam0_retroinj", dims=(20, 1))
 
 # ------------------------------------------------------------------
 #            Configure communication with SCExAO's redis
@@ -660,6 +662,7 @@ cy = ysize / 2.
 #bullseye size
 bc = 2 + 4 * z1
 bl = 2 * bc
+bl2 = 10 * z1
 
 #scale
 ktot = 500 / pscale * z1
@@ -676,13 +679,6 @@ rct_sc1.center = (xsc + ktot + 2 * z1 + 3, ysc + 5 * z1)
 sc2 = font4.render(msgsc1, True, CYAN)
 rct_sc2 = sc2.get_rect()
 rct_sc2.bottomleft = (5 * z1 - 4, ysc - ktot)
-
-#REACH Photometry parameters
-dreachphoto = 64. * z1
-xreachphoto = -3.5 * z1
-yreachphoto = -11.5 * z1
-preachphoto = dreachphoto / 7.
-reachphotoc = preachphoto / 2.
 
 #parallactic angles
 xcpa = xws - 25 * z1
@@ -768,7 +764,7 @@ plot_pa = False
 clr_scale = 0  # flag for the display color scale
 shmreload = 0
 keeprpin = False
-waitfordt = False
+wait_for_archive_datatype = False
 
 (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
 
@@ -868,6 +864,7 @@ while True:  # the main game loop
     if shmreload:
         print("reloading SHM")
         cam = SHM("/milk/shm/kcam.im.shm", verbose=False)
+        cam_rawdata = SHM("/milk/shm/kcam_raw.im.shm", verbose=False)
         xsizeim, ysizeim = cam.shape_c
         #(xsizeim, ysizeim) = cam.mtdata['size'][:2]#size[:cam.naxis]
         print("image xsize=%d, ysize=%d" % (xsizeim, ysizeim))
@@ -956,14 +953,16 @@ while True:  # the main game loop
         else:
             temp2 = copy.deepcopy(temp)
             cnta = 0
-        imax = np.max(temp2)
-        imin = np.min(temp2)
+        imax = np.max(temp2[1:])
+        imin = np.min(temp2[1:])
         (myim, z3, xmin, xmax, ymin, ymax, xshift,
          yshift) = arr2im(temp2,
                           pwr=pwr0,
                           subt_ref=subt_ref,
                           lin_scale=lin_scale,
                           pos=pos2)
+        zg = z1 * z2 * z3
+        zi = z2 * z3
         pygame.surfarray.blit_array(surf_live, myim)
         screen.blit(surf_live, rect1)
         if average and seeing_plot:
@@ -972,10 +971,10 @@ while True:  # the main game loop
                 se_xstd * pscale / 1000. * 2.355, np.rad2deg(se_theta))
             msee = font4.render(msgsee, True, CYAN)
             screen.blit(msee, rct_msee)
-            cx = (se_xc + 0.5 - xmin + xshift) * z1 * z2 * z3
-            cy = (se_yc - ymin + yshift) * z1 * z2 * z3
-            stdx = se_xstd * z1 * z2 * z3 * 2.355 / 2.
-            stdy = se_ystd * z1 * z2 * z3 * 2.355 / 2.
+            cx = (se_xc + 0.5 - xmin + xshift) * zg
+            cy = (se_yc - ymin + yshift) * zg
+            stdx = se_xstd * zg * 2.355 / 2.
+            stdy = se_ystd * zg * 2.355 / 2.
             pygame.draw.line(
                 screen, RED1,
                 (cx - stdx * m.cos(se_theta), cy - stdx * m.sin(se_theta)),
@@ -1027,14 +1026,51 @@ while True:  # the main game loop
         # ------------------------------------------------------------------
         # display the bullseye on the PSF
         if plot_hotspot:
-            [cx, cy] = impro.centroid(temp2)
-            if (cx >= 0) and (cx < xsizeim) and (cy >= 0) and (cy < ysizeim):
-                fh = temp2[int(cy), int(cx)]
-                msg3 = "center = %3d,%3d flux = %5d" % (cx, cy, fh)
-                info3 = font3.render(msg3, True, FGCOL, BGCOL)
-                screen.blit(info3, rct_info3)
-            cx = (cx + 0.5 - xmin + xshift) * z1 * z2 * z3
-            cy = (cy - ymin + yshift) * z1 * z2 * z3
+            if rpin:
+                coord = ircam_retroinj.get_data()
+                cx = coord[0]
+                cy = coord[1]
+                cxr = coord[2]
+                cyr = coord[3]
+                cxr = (int(xsizeim/2) + cxr + cx + 0.5 - xmin + xshift) * zg
+                cyr = (int(ysizeim/2) + cyr + cy + 0.5 - ymin + yshift) * zg
+                for i in range(8):
+                    cxi = coord[4+2*i]
+                    cyi = coord[5+2*i]
+                    if cxi*cyi != 0:
+                        cxi = (int(xsizeim/2) + cxi + cx + 0.5 - xmin + xshift) * zg
+                        cyi = (int(ysizeim/2) + cyi + cy + 0.5 - ymin + yshift) * zg
+                        pygame.draw.line(screen, RED1, (cxi - bl * zg, cyi),
+                                         (cxi + bl * zg, cyi), 1)
+                        pygame.draw.line(screen, RED1, (cxi, cyi - bl * zg),
+                                         (cxi, cyi + bl * zg), 1)
+                        pygame.draw.circle(screen, RED1, (int(cxi), int(cyi)), int(bc * z2),
+                                           1)
+                cx = (int(xsizeim/2) + cx + 0.5 - xmin + xshift) * zg
+                cy = (int(ysizeim/2) + cy + 0.5 - ymin + yshift) * zg
+                pygame.draw.line(screen, GREEN, (cxr, cyr),
+                                 (cxr - bl2 *z2, cyr), 1)
+                pygame.draw.line(screen, GREEN, (cxr, cyr),
+                                 (cxr + bl2 *z2 /2, cyr - bl2 *z2 *m.sqrt(3)/2), 1)
+                pygame.draw.line(screen, GREEN, (cxr, cyr),
+                                 (cxr + bl2 *z2 /2, cyr + bl2 *z2 *m.sqrt(3)/2), 1)
+                pygame.draw.polygon(screen, GREEN, [(cxr + bl2 *z2, cyr),
+                                                    (cxr + bl2 *z2 /2, cyr + bl2 *z2 *m.sqrt(3)/2),
+                                                    (cxr - bl2 *z2 /2, cyr + bl2 *z2 *m.sqrt(3)/2),
+                                                    (cxr - bl2 *z2, cyr),
+                                                    (cxr - bl2 *z2 /2, cyr - bl2 *z2 *m.sqrt(3)/2),
+                                                    (cxr + bl2 *z2 /2, cyr - bl2 *z2 *m.sqrt(3)/2)], 1)
+                        
+                    
+            else:
+                [cx, cy] = impro.centroid(temp2)
+                if (cx >= 0) and (cx < xsizeim) and (cy >= 0) and (cy < ysizeim):
+                    fh = temp2[int(cy), int(cx)]
+                    msg3 = "center = %3d,%3d flux = %5d" % (cx, cy, fh)
+                    info3 = font3.render(msg3, True, FGCOL, BGCOL)
+                    screen.blit(info3, rct_info3)
+                    cx = (cx + 0.5 - xmin + xshift) * zg
+                    cy = (cy - ymin + yshift) * zg
             pygame.draw.line(screen, RED1, (cx - bl * z2, cy),
                              (cx + bl * z2, cy), 1)
             pygame.draw.line(screen, RED1, (cx, cy - bl * z2),
@@ -1054,8 +1090,8 @@ while True:  # the main game loop
             msg3 = "center = %3d,%3d flux = %5d" % (cx, cy, fh)
             info3 = font3.render(msg3, True, FGCOL, BGCOL)
             screen.blit(info3, rct_info3)
-            coor2[0, ih] = (coor[0, ih] + 0.5 - xmin + xshift) * z1 * z2 * z3
-            coor2[1, ih] = (coor[1, ih] - ymin + yshift) * z1 * z2 * z3
+            coor2[0, ih] = (coor[0, ih] + 0.5 - xmin + xshift) * zg
+            coor2[1, ih] = (coor[1, ih] - ymin + yshift) * zg
             for ih2 in range(nhist):
                 pygame.draw.line(screen, RED1,
                                  (coor2[0, ih2] - 1, coor2[1, ih2] - 1),
@@ -1083,8 +1119,8 @@ while True:  # the main game loop
             # ------------------------------------------------------------------
             # display mouse information
             [xmou, ymou] = pygame.mouse.get_pos()
-            xim = int(xmou / z1 / z2 / z3 + xmin - xshift)
-            yim = int(ymou / z1 / z2 / z3 + ymin - yshift)
+            xim = int(xmou / zg + xmin - xshift)
+            yim = int(ymou / zg + ymin - yshift)
             if not plot_hotspot and not plot_history:
                 try:
                     fim = temp2[yim, xim]
@@ -1132,16 +1168,16 @@ while True:  # the main game loop
 
         # ------------------------------------------------------------------
         # display the scale
-        pygame.draw.line(screen, CYAN, (xsc, ysc), (xsc + ktot * z2 * z3, ysc))
-        pygame.draw.line(screen, CYAN, (xsc, ysc), (xsc, ysc - ktot * z2 * z3))
+        pygame.draw.line(screen, CYAN, (xsc, ysc), (xsc + ktot * zi, ysc))
+        pygame.draw.line(screen, CYAN, (xsc, ysc), (xsc, ysc - ktot * zi))
         for k in range(5):
-            pygame.draw.line(screen, CYAN, (xsc, ysc - kstep[k] * z2 * z3),
-                             (xsc + ksize[k], ysc - kstep[k] * z2 * z3))
-            pygame.draw.line(screen, CYAN, (xsc + kstep[k] * z2 * z3, ysc),
-                             (xsc + kstep[k] * z2 * z3, ysc - ksize[k]))
-        rct_sc1.center = (xsc + ktot * z2 * z3 + 2 * z1 + 3, ysc + 5 * z1)
+            pygame.draw.line(screen, CYAN, (xsc, ysc - kstep[k] * zi),
+                             (xsc + ksize[k], ysc - kstep[k] * zi))
+            pygame.draw.line(screen, CYAN, (xsc + kstep[k] * zi, ysc),
+                             (xsc + kstep[k] * zi, ysc - ksize[k]))
+        rct_sc1.center = (xsc + ktot * zi + 2 * z1 + 3, ysc + 5 * z1)
         screen.blit(sc1, rct_sc1)
-        rct_sc2.bottomleft = (5 * z1 - 4, ysc - ktot * z2 * z3)
+        rct_sc2.bottomleft = (5 * z1 - 4, ysc - ktot * zi)
         screen.blit(sc2, rct_sc2)
         screen.blit(zm, rct_zm)
         screen.blit(wh, rct_wh)
@@ -1150,51 +1186,42 @@ while True:  # the main game loop
         # ------------------------------------------------------------------
         # display the cross
         if plot_cross:
-            if reachphoto:
-                #REACH spot positions
-                for i in range(8):
-                    pygame.draw.circle(screen, GREEN,
-                                       (int(xws / 2 + xreachphoto * z2 * z3 +
-                                            (i - 3.5) * preachphoto * z2 * z3),
-                                        int(yws / 2 + yreachphoto * z2 * z3)),
-                                       int(reachphotoc * z2 * z3), 1)
+            if pup:
+                #Pupil cross
+                pos2 = pos[1, :]
+                color = GREEN
             else:
-                if pup:
-                    #Pupil cross
-                    pos2 = pos[1, :]
-                    color = GREEN
-                else:
-                    #Focus cross
-                    pos2 = pos[0, :]
-                    color = RED
-                ycross = (128 - crop[2] + pos2[1] + cor[1] - ymin +
-                          yshift) * z1 * z2 * z3
-                xcross = (160 - crop[0] + pos2[0] + cor[0] - xmin +
-                          xshift) * z1 * z2 * z3
-                pygame.draw.line(screen, color, (0, ycross), (xws, ycross), 1)
-                pygame.draw.line(screen, color, (xcross, 0), (xcross, yws), 1)
+                #Focus cross
+                pos2 = pos[0, :]
+                color = RED
+            ycross = (128 - crop[2] + pos2[1] + cor[1] - ymin +
+                      yshift) * zg
+            xcross = (160 - crop[0] + pos2[0] + cor[0] - xmin +
+                      xshift) * zg
+            pygame.draw.line(screen, color, (0, ycross), (xws, ycross), 1)
+            pygame.draw.line(screen, color, (xcross, 0), (xcross, yws), 1)
 
         if plot_pa:
             pygame.draw.line(screen, RED, (xcpa, ycpa),
+                             (xcpa + 20 * z1 * m.sin(m.radians(pad)),
+                              ycpa - 20 * z1 * m.cos(m.radians(pad))), 1)
+            pygame.draw.line(screen, RED, (xcpa, ycpa),
                              (xcpa - 20 * z1 * m.cos(m.radians(pad)),
                               ycpa - 20 * z1 * m.sin(m.radians(pad))), 1)
-            pygame.draw.line(screen, RED, (xcpa, ycpa),
-                             (xcpa - 20 * z1 * m.sin(m.radians(pad)),
-                              ycpa + 20 * z1 * m.cos(m.radians(pad))), 1)
+            pygame.draw.line(screen, GREEN, (xcpa, ycpa),
+                             (xcpa - 20 * z1 * m.sin(m.radians(pap)),
+                              ycpa + 20 * z1 * m.cos(m.radians(pap))), 1)
             pygame.draw.line(screen, GREEN, (xcpa, ycpa),
                              (xcpa + 20 * z1 * m.cos(m.radians(pap)),
                               ycpa + 20 * z1 * m.sin(m.radians(pap))), 1)
-            pygame.draw.line(screen, GREEN, (xcpa, ycpa),
-                             (xcpa + 20 * z1 * m.sin(m.radians(pap)),
-                              ycpa - 20 * z1 * m.cos(m.radians(pap))), 1)
-            rct_pa1.center = (xcpa - 23 * z1 * m.cos(m.radians(pad)),
+            rct_pa1.center = (xcpa + 23 * z1 * m.sin(m.radians(pad)),
+                              ycpa - 23 * z1 * m.cos(m.radians(pad)))
+            rct_pa2.center = (xcpa - 23 * z1 * m.cos(m.radians(pad)),
                               ycpa - 23 * z1 * m.sin(m.radians(pad)))
-            rct_pa2.center = (xcpa - 23 * z1 * m.sin(m.radians(pad)),
-                              ycpa + 23 * z1 * m.cos(m.radians(pad)))
-            rct_pa3.center = (xcpa + 23 * z1 * m.cos(m.radians(pap)),
+            rct_pa3.center = (xcpa - 23 * z1 * m.sin(m.radians(pap)),
+                              ycpa + 23 * z1 * m.cos(m.radians(pap)))
+            rct_pa4.center = (xcpa + 23 * z1 * m.cos(m.radians(pap)),
                               ycpa + 23 * z1 * m.sin(m.radians(pap)))
-            rct_pa4.center = (xcpa + 23 * z1 * m.sin(m.radians(pap)),
-                              ycpa - 23 * z1 * m.cos(m.radians(pap)))
             screen.blit(pa1, rct_pa1)
             screen.blit(pa2, rct_pa2)
             screen.blit(pa3, rct_pa3)
@@ -1210,7 +1237,7 @@ while True:  # the main game loop
                 else:
                     pygame.draw.line(screen, RED1, (xl1, yl1), (xmou, ymou))
                     dist = m.sqrt((xmou - xl1)**2 +
-                                  (ymou - yl1)**2) * pscale / z1 / z2 / z3
+                                  (ymou - yl1)**2) * pscale / zg
                     msgli = "%.1f mas" % (dist, )
                     mli = font4.render(msgli, True, CYAN)
                     rct_mli = mli.get_rect()
@@ -1225,7 +1252,7 @@ while True:  # the main game loop
 
         # ------------------------------------------------------------------
         # Menu for the DATA-TYP for archiving
-        if waitfordt:
+        if wait_for_archive_datatype:
             pygame.draw.rect(screen, BGCOL, (xws/4,yws/2-dth*ndt,xws/2, 2*dth*ndt), 0)
             rctlines = []
             for i in range(ndt):
@@ -1237,10 +1264,13 @@ while True:  # the main game loop
                     exec("rctlines += [rctliner%d]" %i)
 
         # ------------------------------------------------------------------
-        # saving images
-        tmuxon = subprocess.check_output('ssh scexao-op@localhost "tmux ls" | grep kcamlog | awk \'{print $2}\'', shell=True, input='')
+        # saving images ?
+        # Using this construct to find the logger and only itself
+        # Will ret 1 if no processes are found, 0 if the logger is found. Hence the "not"
+        saving_on = not subprocess.run('ps ax | grep "milk-logshim kcam" | grep -v grep',
+                                       shell=True, input='',stdout=subprocess.DEVNULL).returncode
 
-        if tmuxon:
+        if saving_on:
             saveim = True
             try: # Assign tmux_ircamlog only if it doesn't exist in the namespace.
                 # This avoid spurious prompts of "duplicate session ircamlog" when logging
@@ -1265,7 +1295,7 @@ while True:  # the main game loop
             screen.blit(savem3, rct_savem3)
             rects += [rct_savem1, rct_savem2, rct_savem3]
 
-        if waitfordt:
+        if wait_for_archive_datatype:
             rects += rctlines
 
         if logexpt:
@@ -1648,7 +1678,8 @@ while True:  # the main game loop
                     if saveim:
                         timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
                         if (mmods & KMOD_LSHIFT):
-                            waitfordt = True
+                            # Trigger prompt for datatype
+                            wait_for_archive_datatype = True
                         else:
                             savepath = '/media/data/' + timestamp + '/kcamlog/'
                             ospath = os.path.dirname(savepath)
@@ -1658,7 +1689,7 @@ while True:  # the main game loop
                             # creating a tmux session for logging
                             os.system("ln -s /tmp/fits/buffy.fits /milk/shm/kcam.auxFITSheader.shm")
                             tmux_buffylog = tmuxlib.find_or_create_remote("kcamlog", "scexao-op@localhost")
-                            tmux_buffylog.send_keys("logshim kcam %i %s" %
+                            tmux_buffylog.send_keys("milk-logshim kcam %i %s &" %
                                  (nimsave, savepath))
 
                             os.system("log Buffycam: start logging images")
@@ -1667,28 +1698,27 @@ while True:  # the main game loop
 
                     else:
                         tmux_buffylog.send_keys("milk-logshimkill kcam")
-                        tmux_buffylog.cmd('kill-session')
+                        #tmux_buffylog.cmd('kill-session')
                         tmux_kcam.send_keys("log Buffycam: stop logging images")
                         tmux_kcam.send_keys("scexaostatus set logbuffy 'OFF             ' 1")
 
-            # Start archiving images
+            # Start archiving images (after prompt to select datatype)
             #--------------------------
-            if event.key == K_RETURN and waitfordt:
-                cam.update_keyword("DATA-TYP",datatyp[idt])
+            if event.key == K_RETURN and wait_for_archive_datatype:
+                cam_rawdata.update_keyword("DATA-TYP", datatyp[idt])
                 timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
                 savepath = '/media/data/ARCHIVED_DATA/' + timestamp + \
                            '/kcamlog/'
-                waitfordt = False
+                wait_for_archive_datatype = False
                 ospath = os.path.dirname(savepath)
                 if not os.path.exists(ospath):
                     os.makedirs(ospath)
                 nimsave = int(min(20000, (50000000 / etimet)))
                 # creating a tmux session for logging
+                #TODO TODO TODO
                 os.system("ln -s /tmp/fits/buffy.fits /milk/shm/kcam.auxFITSheader.shm")
                 tmux_buffylog = tmuxlib.find_or_create_remote("kcamlog", "scexao-op@localhost")
                 tmux_buffylog.send_keys("milk-logshim kcam %i %s &" %
-                                 (nimsave, savepath))
-                tmux_buffylog.send_keys("logshim kcam %i %s" %
                                  (nimsave, savepath))
                 os.system("log Buffycam: start archiving images")
                 os.system("scexaostatus set logbuffy 'ARCHIVING       ' 3")
@@ -1915,8 +1945,7 @@ while True:  # the main game loop
             if event.key in FILT_KEYLIST:
                 what_key = FILT_KEYLIST.index(event.key)
                 mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL) and not (
-                        mmods & KMOD_LALT):  # Ctrl but no alt, filter set
+                if (mmods & KMOD_LCTRL) and not (mmods & KMOD_LALT):  # Ctrl but no alt, filter set
                     if what_key == 6:
                         os.system('ircam_block')
                     else:
@@ -1933,7 +1962,7 @@ while True:  # the main game loop
                     else:
                         tmux_kcam.send_keys("dm_stage x push -20")
                 else:
-                    if waitfordt:
+                    if wait_for_archive_datatype:
                         idt -= 1
                         idt %= ndt
 
@@ -1945,7 +1974,7 @@ while True:  # the main game loop
                     else:
                         tmux_kcam.send_keys("dm_stage x push +20")
                 else:
-                    if waitfordt:
+                    if wait_for_archive_datatype:
                         idt += 1
                         idt %= ndt
 
@@ -1987,8 +2016,16 @@ while True:  # the main game loop
                         tmux_kcam_ctrl.send_keys(f"set_gain({int(tar_gain)})")
                         time.sleep(.5)
 
+                    # All cases, K_w, K_s, K_e
                     gain = cam.get_keywords()['DETGAIN']
                     print(f"\n=== Buffy camera gain: {gain} ===\n")
+
+                if not (mmods & KMOD_LSHIFT) and (mmods & KMOD_LCTRL):
+                    # Shortcut to 121
+                    print("set_gain(121)")
+                    tmux_kcam_ctrl.send_keys("set_gain(121)")
+                    time.sleep(.5)
+
 
     pygame.display.update(rects)
 
