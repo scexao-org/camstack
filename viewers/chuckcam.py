@@ -285,26 +285,37 @@ def make_badpix(bias, filt=3.5):
 # ------------------------------------------------------------------
 #  Read database for some stage status
 # ------------------------------------------------------------------
-def RDB_pull(rdb):
+def RDB_pull(rdb, alive):
 
-    fits_keys_to_pull = {'X_IRCFLT','X_IRCBLK','X_CHKPUP','X_CHKPUS','X_NULPKO','X_RCHPKO','D_IMRPAD','D_IMRPAP','OBJECT'}
-    # Now Getting the keys
-    with rdb.pipeline() as pipe:
-        for key in fits_keys_to_pull:
-            pipe.hget(key, 'FITS header')
-            pipe.hget(key, 'value')
-        values = pipe.execute()
-    status = {k: v for k,v in zip(values[::2], values[1::2])}
-
-    pup = status['X_CHKPUP'].strip() == 'IN'
-    reachphoto = status['X_CHKPUS'].strip() == 'REACH'
-    gpin = status['X_NULPKO'].strip() == 'IN'
-    rpin = status['X_RCHPKO'].strip() == 'IN'
-    slot = status['X_IRCFLT']
-    block = status['X_IRCBLK'].strip() == 'IN'
-    pap = float(status['D_IMRPAP'])
-    pad = float(status['D_IMRPAD'])
-    target = status['OBJECT']
+    if alive:
+        fits_keys_to_pull = {'X_IRCFLT','X_IRCBLK','X_CHKPUP','X_CHKPUS','X_NULPKO','X_RCHPKO','D_IMRPAD','D_IMRPAP','OBJECT'}
+        # Now Getting the keys
+        with rdb.pipeline() as pipe:
+            for key in fits_keys_to_pull:
+                pipe.hget(key, 'FITS header')
+                pipe.hget(key, 'value')
+            values = pipe.execute()
+        status = {k: v for k,v in zip(values[::2], values[1::2])}
+        
+        pup = status['X_CHKPUP'].strip() == 'IN'
+        reachphoto = status['X_CHKPUS'].strip() == 'REACH'
+        gpin = status['X_NULPKO'].strip() == 'IN'
+        rpin = status['X_RCHPKO'].strip() == 'IN'
+        slot = status['X_IRCFLT']
+        block = status['X_IRCBLK'].strip() == 'IN'
+        pap = float(status['D_IMRPAP'])
+        pad = float(status['D_IMRPAD'])
+        target = status['OBJECT']
+    else:
+        pup = False
+        reachphoto = False
+        gpin = False
+        rpin = False
+        slot = 'H-band'
+        block = False
+        pap = 0
+        pad = 0
+        target = ''
 
     return(pup,reachphoto,gpin,rpin,slot,block,pap,pad,target)
 
@@ -423,6 +434,13 @@ if args != []:
         z1 = int(args[0])
         z1 = min(2, max(1, z1))
 
+# pygame fps 1-20 - only used at very end of file
+FPSdisp = 20
+if len(args) >= 2:
+    if isinstance(int(args[1]), int):
+        FPSdisp = max(1., min(20., int(args[1])))
+
+
 # ------------------------------------------------------------------
 #                access to shared memory structures
 # ------------------------------------------------------------------
@@ -455,9 +473,10 @@ try:
         raise ConnectionError
 except:
     print('Error: can\'t ping redis DB.')
-    sys.exit(1)
+    alive = False
+    #sys.exit(1)
 
-pup,reachphoto,gpin,rpin,slot,block,pap,pad,target = RDB_pull(rdb)
+pup,reachphoto,gpin,rpin,slot,block,pap,pad,target = RDB_pull(rdb, alive)
 
 pscale = 16.2  #mas per pixel in Chuckcam
 
@@ -486,7 +505,7 @@ mycmap = cm.gray
 pygame.display.init()
 pygame.font.init()
 
-FPSdisp = 20  # frames per second setting
+#FPSdisp = 20  # frames per second setting
 fpsClock = pygame.time.Clock()  # start the pygame clock!
 XW, YW = xsize * z1, (ysize + 100) * z1
 
@@ -1431,7 +1450,7 @@ while True:  # the main game loop
                 timendr = []
                 logndr = False
         if cnti % 20 == 0:
-            pup,reachphoto,gpin,rpin,slot,block,pap,pad,target = RDB_pull(rdb)
+            pup,reachphoto,gpin,rpin,slot,block,pap,pad,target = RDB_pull(rdb, alive)
             msgwhl = whatfilter(reachphoto, slot, block)
             wh = font1.render(msgwhl, True, CYAN)
             msgtop = whatmsg(pup, reachphoto, gpin, rpin)

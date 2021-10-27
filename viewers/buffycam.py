@@ -410,6 +410,12 @@ if args != []:
         z1 = int(args[0])
         z1 = min(2, max(1, z1))
 
+# pygame fps 1-20 - only used at very end of file
+FPSdisp = 20
+if len(args) >= 2:
+    if isinstance(int(args[1]), int):
+        FPSdisp = max(1., min(20., int(args[1])))
+
 # ------------------------------------------------------------------
 #                access to shared memory structures
 # ------------------------------------------------------------------
@@ -471,7 +477,7 @@ mycmap = cm.gray
 pygame.display.init()
 pygame.font.init()
 
-FPSdisp = 20  # frames per second setting
+#FPSdisp = 20  # frames per second setting # Now in argv at top
 fpsClock = pygame.time.Clock()  # start the pygame clock!
 XW, YW = xsize * z1, (ysize + 100) * z1
 
