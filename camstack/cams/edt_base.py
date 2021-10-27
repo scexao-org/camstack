@@ -40,7 +40,7 @@ class EDTCameraNoModes:
         'EXPTIME': (0.001, 'Total integration time of the frame (sec)'),
         'FRATE': (100., 'Frame rate of the acquisition (Hz)'),
         'GAIN': (1., 'AD conversion factor (electron/ADU)'),
-        'NDR': (1, 'Number of non-destructive reads'),
+        'DET-NSMP': (1, 'Number of non-destructive reads'),
         'EXTTRIG': ('False', 'Extrernal trigger'),
         'DATA-TYP': ('TEST', 'Subaru-style exp. type')
     }

@@ -280,7 +280,7 @@ class CRED1(EDTCamera):
 
     def get_NDR(self):
         self.NDR = int(self.send_command('nbreadworeset raw'))
-        self.camera_shm.update_keyword('NDR', self.NDR)
+        self.camera_shm.update_keyword('DET-NSMP', self.NDR)
         self.camera_shm.update_keyword('DETMODE', ('globalsingle',
                                                    'globalcds')[self.NDR > 1])
         return self.NDR

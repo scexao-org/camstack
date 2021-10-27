@@ -298,7 +298,7 @@ int main(int argc, char **argv)
     int N_KEYWORDS = 3;
 
     // Warning: the order of *kws* may change, because we're gonna allocate the other ones from python.
-    const char *KW_NAMES[] = {"MFRATE", "FG_SIZE1", "FG_SIZE2"};                   // "tint", "fps", "NDR", "x0", "x1", "y0", "y1", "temp"};
+    const char *KW_NAMES[] = {"MFRATE", "FG_SIZE1", "FG_SIZE2"};                   // "tint", "fps", "DET-NSMP", "x0", "x1", "y0", "y1", "temp"}; // DET-NSMP is ex-NDR
     const char KW_TYPES[] = {'D', 'L', 'L'};                                       // {'D', 'D', 'L', 'L', 'L', 'L', 'L', 'D'};
     const char *KW_COM[] = {"Measured frame rate (Hz)",
                             "Size of frame grabber for the X axis (pixel)",

@@ -148,7 +148,7 @@ class OCAM2K(EDTCamera):
         
 
         self.camera_shm.update_keyword('CROPPED', 'False') # Ocam bins but never crops.
-        self.camera_shm.update_keyword('NDR', 1)
+        self.camera_shm.update_keyword('DET-NSMP', 1)
 
         # Additional fill-up of the camera state
         self.get_gain() # Sets 'DETGAIN'
