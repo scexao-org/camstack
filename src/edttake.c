@@ -300,7 +300,9 @@ int main(int argc, char **argv)
     // Warning: the order of *kws* may change, because we're gonna allocate the other ones from python.
     const char *KW_NAMES[] = {"MFRATE", "FG_SIZE1", "FG_SIZE2"};                   // "tint", "fps", "NDR", "x0", "x1", "y0", "y1", "temp"};
     const char KW_TYPES[] = {'D', 'L', 'L'};                                       // {'D', 'D', 'L', 'L', 'L', 'L', 'L', 'D'};
-    const char *KW_COM[] = {"Measured frame rate (Hz)", "FG n rows", "FG n cols"}; // {"exposure time", "frame rate", "NDR", "x0", "x1", "y0", "y1", "detector temperature"};
+    const char *KW_COM[] = {"Measured frame rate (Hz)",
+                            "Size of frame grabber for the X axis (pixel)",
+                            "Size of frame grabber for the Y axis (pixel)"}; // {"exposure time", "frame rate", "NDR", "x0", "x1", "y0", "y1", "detector temperature"};
 
     int KW_POS[] = {0, 1, 2};
 

@@ -243,28 +243,38 @@ class CRED1(EDTCamera):
         if NDR < 1 or not type(NDR) is int:
             raise AssertionError(f'Illegal NDR value: {NDR}')
 
+        gain_now = self.get_gain() # Setting detmode seems to reset the EM gain to 1.
+
         # Attempt: stabilize by re-setting always readout mode and maxfps
         clippedNDR = min(3, NDR)
-        readout_mode = {
+        currentNDR = min(3, self.get_NDR())
+        readout_modes = {
             1: ROMODES.single,
             2: ROMODES.cds,
             3: ROMODES.bursts
-        }[clippedNDR]
-        # DO NOT set the mode, this reverts setting the NDR... or does it ? Getting the mode seems to unlock the weird behavior.
+        }
+        
+        readout_mode = readout_modes[clippedNDR]
+        curr_readout_mode = readout_modes[currentNDR]
 
+        # DO NOT set the mode, this reverts setting the NDR... or does it ? Getting the mode seems to unlock the weird behavior.
         self.send_command(f'set nbreadworeset {NDR}')
+
+        if readout_mode != current_readout_mode:
+            # These two lines to help iron out firmware glitches at mode/ndr changes
+            self.get_readout_mode()
+            self.get_NDR()
+
         time.sleep(1.)
         self._kill_taker_no_dependents()
-        self._start_taker_no_dependents(True)
-        
-        print(self.get_readout_mode())
-        print(self.get_NDR())
+        self._start_taker_no_dependents(reuse_shm=True)
 
         time.sleep(1.)
         self.set_readout_mode(readout_mode)
 
-
         self.set_fps(self.current_mode.fps) # Systematically - because AUTO rescaling of fps occurs when changing NDR...
+
+        self.set_gain(gain_now)
 
         return self.get_NDR()
 
