@@ -1188,7 +1188,7 @@ while True:  # the main game loop
                         
                     
             else:
-                [cx, cy] = impro.centroid(temp2)
+                [cx, cy] = impro.centroid(temp2, method = "airy")
                 if (cx >= 0) and (cx < xsizeim) and (cy >= 0) and (cy < ysizeim):
                     fh = temp2[int(cy), int(cx)]
                     msg3 = "center = %3d,%3d flux = %5d" % (cx, cy, fh)
@@ -1206,7 +1206,7 @@ while True:  # the main game loop
         # ------------------------------------------------------------------
         # display of position history
         if plot_history:
-            [cx, cy] = impro.centroid(temp2)
+            [cx, cy] = impro.centroid(temp2, method = "airy")
             try:
                 fh = temp2[int(cy), int(cx)]
             except:
@@ -2142,9 +2142,9 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_ircam.send_keys("dm_stage y push -100")
+                        tmux_ircam.send_keys("dm_stage phi push 100")
                     else:
-                        tmux_ircam.send_keys("dm_stage y push -20")
+                        tmux_ircam.send_keys("dm_stage phi push 20")
                 else:
                     if waitfordt:
                         idt -= 1
@@ -2154,9 +2154,9 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_ircam.send_keys("dm_stage y push +100")
+                        tmux_ircam.send_keys("dm_stage phi push -100")
                     else:
-                        tmux_ircam.send_keys("dm_stage y push +20")
+                        tmux_ircam.send_keys("dm_stage phi push -20")
                 else:
                     if waitfordt:
                         idt += 1
@@ -2166,17 +2166,17 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_ircam.send_keys("dm_stage x push -100")
+                        tmux_ircam.send_keys("dm_stage theta push -100")
                     else:
-                        tmux_ircam.send_keys("dm_stage x push -20")
+                        tmux_ircam.send_keys("dm_stage theta push -20")
 
             if event.key == K_RIGHT:
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_ircam.send_keys("dm_stage x push +100")
+                        tmux_ircam.send_keys("dm_stage theta push +100")
                     else:
-                        tmux_ircam.send_keys("dm_stage x push +20")
+                        tmux_ircam.send_keys("dm_stage theta push +20")
 
     pygame.display.update(rects)
 
