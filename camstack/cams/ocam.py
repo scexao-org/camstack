@@ -9,7 +9,6 @@ from camstack.core.utilities import CameraMode
 
 from pyMilk.interfacing.isio_shmlib import SHM
 
-
 class OCAM2K(EDTCamera):
 
     INTERACTIVE_SHELL_METHODS = [
