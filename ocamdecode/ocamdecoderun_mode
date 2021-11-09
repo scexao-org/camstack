@@ -48,6 +48,6 @@ OMP_NUM_THREADS=1 milk -n ocamdecode << EOF
 readshmim ocam2krc
 loadfits "${PIXIFILE}" ocam2kpixi
 csetpmove ${CSET}
-impixdecodeU ocam2krc ${npixr} ${npixc} ${PIXSLICEFILE} ocam2kpixi ocam2dalt ${SLICEINDFILE} ${REVERSE}
+impixdecodeU ocam2krc ${npixr} ${npixc} ${PIXSLICEFILE} ocam2kpixi ocam2d ${SLICEINDFILE} ${REVERSE}
 exitCLI
 EOF

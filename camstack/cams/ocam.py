@@ -88,6 +88,12 @@ class OCAM2K(EDTCamera):
     # =====================
 
     def prepare_camera_for_size(self, mode_id: int = None):
+        
+        # This function called during the EDTCamera.__init__ from self.__init__
+
+        # The "interface 0" in the constructor does not happen early enough.
+        # We need format=False because if the camera was verbose til now, output is not yet parsable.
+        self.send_command('interface 0', format=False)
 
         if mode_id is None:
             mode_id = self.current_mode_id

@@ -125,15 +125,15 @@ int main(int argc, char **argv)
             --argc;
             if (argc < 1)
             {
-                printf("Error: option 'u' requires a numeric argument (0-3)\n");
+                printf("Error: option 'u' requires a numeric argument (0-9)\n");
             }
-            if ((argv[0][0] >= '0') && (argv[0][0] <= '3'))
+            if ((argv[0][0] >= '0') && (argv[0][0] <= '9'))
             {
                 unit = atoi(argv[0]);
             }
             else
             {
-                printf("Error: option 'u' requires a numeric argument (0, 1 or 2)\n");
+                printf("Error: option 'u' requires a numeric argument (0-9)\n");
             }
             break;
 

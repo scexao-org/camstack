@@ -22,8 +22,6 @@ class EdtInterfaceSerial:
         
         self.initialize()
 
-
-
     def initialize(self):
 
         self.serial_lock = Lock()

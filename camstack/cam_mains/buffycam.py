@@ -24,12 +24,12 @@ if __name__ == "__main__":
     tcp_send = DependentProcess(
         tmux_name='kcam_tcp',
         cli_cmd=
-        'sleep 3; OMP_NUM_THREADS=1 /home/scexao-op/bin/shmimTCPtransmit-simple %s %s %u',
+        'sleep 3; OMP_NUM_THREADS=1 shmimTCPtransmit %s %s %u',
         cli_args=('kcam', scxconf.IP_SC6_P2P70, scxconf.BUFFY_PORT),
         # Sender is kill_upon_create - rather than when starting. that ensures it dies well before the receiver
         # Which is better for flushing TCP sockets
         kill_upon_create=True,
-        cset='buffy_tcp',
+        cset='kcam_tcp',
         rtprio=49,
     )
     tcp_send.start_order = 2
@@ -53,12 +53,12 @@ if __name__ == "__main__":
     tcp_send_raw = DependentProcess(
         tmux_name='kcam_raw_tcp',
         cli_cmd=
-        'sleep 3; OMP_NUM_THREADS=1 /home/scexao-op/bin/shmimTCPtransmit-simple %s %s %u',
+        'sleep 3; OMP_NUM_THREADS=1 shmimTCPtransmit %s %s %u',
         cli_args=('kcam_raw', scxconf.IP_SC6_P2P70, scxconf.BUFFY_PORT_RAW),
         # Sender is kill_upon_create - rather than when starting. that ensures it dies well before the receiver
         # Which is better for flushing TCP sockets
         kill_upon_create=True,
-        cset='buffy_tcp',
+        cset='kcam_tcp',
         rtprio=48,
     )
     tcp_send.start_order = 4
@@ -70,7 +70,7 @@ if __name__ == "__main__":
         'milk-exec "mload milkimageformat; readshmim kcam_raw; imgformat.cred_ql_utr ..procinfo 1; imgformat.cred_ql_utr ..triggermode 3; imgformat.cred_ql_utr ..loopcntMax -1; imgformat.cred_ql_utr kcam_raw kcam 55000"',
         cli_args=(),
         kill_upon_create=True,
-        cset='buffy_utr',
+        cset='kcam_utr',
         rtprio=49,
     )
     utr_red.start_order = 0
@@ -81,10 +81,9 @@ if __name__ == "__main__":
                 unit=1,
                 channel=0,
                 mode_id='full',
-                taker_cset_prio=('buffy_edt', 49),
+                taker_cset_prio=('kcam_edt', 49),
                 dependent_processes=[tcp_recv, tcp_send,
                                      utr_red])  #, tcp_send_raw, tcp_recv_raw])
 
     from camstack.core.utilities import shellify_methods
     shellify_methods(cam, globals())
-s

@@ -260,7 +260,7 @@ class CRED1(EDTCamera):
         # DO NOT set the mode, this reverts setting the NDR... or does it ? Getting the mode seems to unlock the weird behavior.
         self.send_command(f'set nbreadworeset {NDR}')
 
-        if readout_mode != current_readout_mode:
+        if readout_mode != curr_readout_mode:
             # These two lines to help iron out firmware glitches at mode/ndr changes
             self.get_readout_mode()
             self.get_NDR()

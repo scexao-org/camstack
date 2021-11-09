@@ -11,7 +11,7 @@ if __name__ == "__main__":
 
     # Prepare dependent processes
     tcp_recv = RemoteDependentProcess(
-        tmux_name=f'streamTCPreceive_{GLINT_PORT}',
+        tmux_name=f'streamTCPreceive_{scxconf.GLINT_PORT}',
         # Urrrrrh this is getting messy
         cli_cmd=
         'milk-exec "creasshortimshm %s %u %u"; shmimTCPreceive -c ircam ' +
@@ -26,7 +26,7 @@ if __name__ == "__main__":
     tcp_send = DependentProcess(
         tmux_name='glint_tcp',
         cli_cmd=
-        'sleep 3; OMP_NUM_THREADS=1 /home/scexao/bin/shmimTCPtransmit %s %s %u',
+        'sleep 3; OMP_NUM_THREADS=1 shmimTCPtransmit %s %s %u',
         cli_args=('glint', scxconf.IP_SC6_P2P70, scxconf.GLINT_PORT),
         # Sender is kill_upon_create - rather than when starting. that ensures it dies well before the receiver
         # Which is better for flushing TCP sockets
@@ -44,8 +44,8 @@ if __name__ == "__main__":
 
     fits_dump = DependentProcess(
         tmux_name='glint_fits',
-        cli_cmd='OMP_NUM_THREADS=1 shmim2rollingFits %s %s %d',
-        cli_args=('glint', os.environ['MILK_SHM_DIR'] + "/smb/", .05),
+        cli_cmd='OMP_NUM_THREADS=1 shmim2rollingFits %s %s %f glint_fits',
+        cli_args=('glint', os.environ['MILK_SHM_DIR'] + "/smb/", 0.03),
         kill_upon_create=False,
     )
     fits_dump.start_order = 2

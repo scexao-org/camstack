@@ -38,7 +38,7 @@ if __name__ == "__main__":
     tcp_send = DependentProcess(
         tmux_name='ocam_tcp',
         cli_cmd=
-        'sleep 3; OMP_NUM_THREADS=1 /home/scexao/bin/shmimTCPtransmit %s %s %u',
+        'sleep 3; OMP_NUM_THREADS=1 shmimTCPtransmit %s %s %u',
         cli_args=('ocam2d', scxconf.IP_SC6_P2P70, scxconf.OCAM_PORT),
         # Sender is kill_upon_create - rather than when starting. that ensures it dies well before the receiver
         # Which is better for flushing TCP sockets
@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
     cam = OCAM2K('ocam',
                  'ocam2krc',
-                 'ocam2dalt',
+                 'ocam2d',
                  unit=0,
                  channel=0,
                  binning=binning,

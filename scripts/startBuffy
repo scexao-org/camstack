@@ -3,7 +3,7 @@
 tnew="tmux new-session -d -s"
 tsend="tmux send-keys -t"
 
-tname="kcamctrl"
+tname="kcam_ctrl"
 
 # Create tmuxes and issue kills
 $tnew $tname
