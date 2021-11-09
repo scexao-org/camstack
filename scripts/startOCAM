@@ -19,7 +19,7 @@ tname="ocam_ctrl"
 
 # Create tmuxes and issue kills
 $tnew $tname
-sleep 0.1
+sleep 3.0 # Don't send the ctrl+C too fast, it'll nuke the bashrc sourcing !
 $tsend $tname C-c
 sleep 0.1
 $tsend $tname "close()" Enter

@@ -9,7 +9,7 @@ tname1="vcam1_ctrl"
 # Create tmuxes and issue kills
 $tnew $tname0
 $tnew $tname1
-sleep 0.1
+sleep 3.0 # Don't send the ctrl+C too fast, it'll nuke the bashrc sourcing !
 $tsend $tname0 C-c
 $tsend $tname1 C-c
 sleep 0.1
