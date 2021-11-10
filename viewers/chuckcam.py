@@ -288,7 +288,7 @@ def make_badpix(bias, filt=3.5):
 def RDB_pull(rdb, alive):
 
     if alive:
-        fits_keys_to_pull = {'X_IRCFLT','X_IRCBLK','X_CHKPUP','X_CHKPUS','X_NULPKO','X_RCHPKO','D_IMRPAD','D_IMRPAP','OBJECT'}
+        fits_keys_to_pull = {'X_IRCFLT','X_IRCBLK','X_CHKPUP','X_CHKPUS','X_NULPKO','X_RCHPKO','X_BUFPKO','D_IMRPAD','D_IMRPAP','OBJECT'}
         # Now Getting the keys
         with rdb.pipeline() as pipe:
             for key in fits_keys_to_pull:
@@ -301,6 +301,7 @@ def RDB_pull(rdb, alive):
         reachphoto = status['X_CHKPUS'].strip() == 'REACH'
         gpin = status['X_NULPKO'].strip() == 'IN'
         rpin = status['X_RCHPKO'].strip() == 'IN'
+        bpin = status['X_BUFPKO'].strip() == 'IN'
         slot = status['X_IRCFLT']
         block = status['X_IRCBLK'].strip() == 'IN'
         pap = float(status['D_IMRPAP'])
@@ -311,13 +312,14 @@ def RDB_pull(rdb, alive):
         reachphoto = False
         gpin = False
         rpin = False
+        bpin = False
         slot = 'H-band'
         block = False
         pap = 0
         pad = 0
         target = ''
 
-    return(pup,reachphoto,gpin,rpin,slot,block,pap,pad,target)
+    return(pup,reachphoto,gpin,rpin,bpin,slot,block,pap,pad,target)
 
 # ------------------------------------------------------------------
 #  Filter message
@@ -335,10 +337,10 @@ def whatfilter(reachphoto, slot, block):
 # ------------------------------------------------------------------
 #  Top message
 # ------------------------------------------------------------------
-def whatmsg(pup, reachphoto, gpin, rpin):
+def whatmsg(pup, reachphoto, gpin, rpin,bpin):
     msgtops = [
         "                ", "     PUPIL      ", "     REACH      ",
-        "REACH PHOTOMETRY", "     GLINT      "
+        "REACH PHOTOMETRY", "     GLINT      ", "     BUFFY      "
     ]
     if reachphoto:
         msgtop = msgtops[3]
@@ -352,7 +354,10 @@ def whatmsg(pup, reachphoto, gpin, rpin):
             if gpin:
                 msgtop = msgtops[4]
             else:
-                msgtop = msgtops[0]
+                if bpin:
+                    msgtop = msgtops[5]
+                else:
+                    msgtop = msgtops[0]
     return (msgtop)
 
 
@@ -368,6 +373,7 @@ q           : increase exposure time
 a           : decrease exposure time
 CTRL+q      : increase number of NDR
 CTRL+a      : decrease number of NDR
+CTRL+SHIFT+<number>: jump to NDR 2**<number>
 CRTL+o      : increase frame rate
 CTRL+l      : decrease frame rate
 CTRL+h      : hotspotalign
@@ -476,7 +482,7 @@ except:
     alive = False
     #sys.exit(1)
 
-pup,reachphoto,gpin,rpin,slot,block,pap,pad,target = RDB_pull(rdb, alive)
+pup,reachphoto,gpin,rpin,bpin,slot,block,pap,pad,target = RDB_pull(rdb, alive)
 
 pscale = 16.2  #mas per pixel in Chuckcam
 
@@ -760,7 +766,7 @@ rct_wh = wh.get_rect()
 rct_wh.topright = (xws - 8 * z1, 5 * z1)
 
 #pupil lens
-msgtop = whatmsg(pup, reachphoto, gpin, rpin)
+msgtop = whatmsg(pup, reachphoto, gpin, rpin,bpin)
 topm = font1.render(msgtop, True, CYAN)
 rct_top = topm.get_rect()
 rct_top.midtop = (xws / 2, 5 * z1)
@@ -1188,14 +1194,16 @@ while True:  # the main game loop
                         
                     
             else:
-                [cx, cy] = impro.centroid(temp2, method = "airy")
+                [cx, cy] = impro.centroid(temp2, method = "default")
                 if (cx >= 0) and (cx < xsizeim) and (cy >= 0) and (cy < ysizeim):
                     fh = temp2[int(cy), int(cx)]
                     msg3 = "center = %3d,%3d flux = %5d" % (cx, cy, fh)
                     info3 = font3.render(msg3, True, FGCOL, BGCOL)
                     screen.blit(info3, rct_info3)
+                    print(cx,cy)
                     cx = (cx + 0.5 - xmin + xshift) * zg
                     cy = (cy + 0.5 - ymin + yshift) * zg
+                    print(cx,cy)
             pygame.draw.line(screen, RED1, (cx - bl * zg, cy),
                              (cx + bl * zg, cy), 1)
             pygame.draw.line(screen, RED1, (cx, cy - bl * zg),
@@ -1206,7 +1214,7 @@ while True:  # the main game loop
         # ------------------------------------------------------------------
         # display of position history
         if plot_history:
-            [cx, cy] = impro.centroid(temp2, method = "airy")
+            [cx, cy] = impro.centroid(temp2, method = "default")
             try:
                 fh = temp2[int(cy), int(cx)]
             except:
@@ -1450,10 +1458,10 @@ while True:  # the main game loop
                 timendr = []
                 logndr = False
         if cnti % 20 == 0:
-            pup,reachphoto,gpin,rpin,slot,block,pap,pad,target = RDB_pull(rdb, alive)
+            pup,reachphoto,gpin,rpin,bpin,slot,block,pap,pad,target = RDB_pull(rdb, alive)
             msgwhl = whatfilter(reachphoto, slot, block)
             wh = font1.render(msgwhl, True, CYAN)
-            msgtop = whatmsg(pup, reachphoto, gpin, rpin)
+            msgtop = whatmsg(pup, reachphoto, gpin, rpin,bpin)
             topm = font1.render(msgtop, True, CYAN)
 
     # =====================================================================
@@ -1556,6 +1564,20 @@ while True:  # the main game loop
                         (etimes2, net2, tindex) = whatexpt(etime, fps, delay)
                         logexpt = True
                 (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
+
+            # NDR direct jumps
+            #-----------------
+            DIRECT_NDR_KEYLIST = [K_0, K_1, K_2, K_3, K_4, K_5, K_6, K_7, K_8]
+            if event.key in DIRECT_NDR_KEYLIST:
+                what_key = DIRECT_NDR_KEYLIST.index(event.key)
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL) and (mmods & KMOD_LSHIFT):
+                    tmux_ircam_ctrl.send_keys("set_NDR(%d)" % min(255, 2**what_key))
+                    time.sleep(1)
+                    ndr = cam.get_ndr()
+                    etimet = etime * ndr
+                    nindex = whatndr(ndr)
+                    logndr = True
 
             # Increase frame rate/display target on PSF
             #---------------------------
@@ -1961,13 +1983,22 @@ while True:  # the main game loop
             # Display hotspot crosses
             #------------------------
             if event.key == K_c:
-                plot_cross = not plot_cross
-                if plot_cross:
-                    with open(conf_dir + 'hotspots.txt') as file:
-                        pos = np.array(
-                            [[float(digit) for digit in line.split()]
-                             for line in file])
-                    pos2 = pos[0, :]
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    if bpin:
+                        os.system("buffy_pickoff out &")
+                        os.system("ircam_fcs chuck &")
+                    else:
+                        os.system("buffy_pickoff in &")
+                        os.system("ircam_fcs buffy &")
+                else:
+                    plot_cross = not plot_cross
+                    if plot_cross:
+                        with open(conf_dir + 'hotspots.txt') as file:
+                            pos = np.array(
+                                [[float(digit) for digit in line.split()]
+                                 for line in file])
+                        pos2 = pos[0, :]
 
             # Color/grayscale map
             #--------------------

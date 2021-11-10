@@ -347,6 +347,7 @@ w           : increase CRED1 gain
 s           : decrease CRED1 gain
 CTRL+q      : increase number of NDR
 CTRL+a      : decrease number of NDR
+CTRL+SHIFT+<number>: jump to NDR 2**<number>
 CRTL+o      : increase frame rate
 CTRL+l      : decrease frame rate
 CTRL+h      : hotspotalign
@@ -398,7 +399,7 @@ mouse controls:
 --------------
 mouse     : display of the flux under the mouse pointer
 left click: measure distances in mas
- 
+
 ESC       : quit buffycam
 
 """
@@ -484,7 +485,7 @@ XW, YW = xsize * z1, (ysize + 100) * z1
 screen = pygame.display.set_mode((XW, YW), 0, 32)
 pygame.display.set_caption('SCIENCE camera display!')
 
-tmux_kcam_ctrl = tmuxlib.find_or_create_remote('kcamctrl', 'scexao-op@localhost') # Control shell
+tmux_kcam_ctrl = tmuxlib.find_or_create_remote('kcam_ctrl', 'scexao@10.20.30.5') # Control shell
 tmux_kcam = tmuxlib.find_or_create('buffycam_misc') # start a tmux session for messsages
 tmux_ircam_synchro = tmuxlib.find_or_create('ircam_synchro') # start a tmux session for FLC synchro
 
@@ -1426,6 +1427,20 @@ while True:  # the main game loop
                         (etimes2, net2, tindex) = whatexpt(etime, fps, delay)
                         logexpt = True
                 (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
+
+            # NDR direct jumps
+            #-----------------
+            DIRECT_NDR_KEYLIST = [K_0, K_1, K_2, K_3, K_4, K_5, K_6, K_7, K_8]
+            if event.key in DIRECT_NDR_KEYLIST:
+                what_key = DIRECT_NDR_KEYLIST.index(event.key)
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL) and (mmods & KMOD_LSHIFT):
+                    tmux_kcam_ctrl.send_keys("set_NDR(%d)" % min(255, 2**what_key))
+                    time.sleep(1)
+                    ndr = cam.get_ndr()
+                    etimet = etime * ndr
+                    nindex = whatndr(ndr)
+                    logndr = True
 
             # Increase frame rate/display target on PSF
             #---------------------------

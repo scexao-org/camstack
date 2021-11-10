@@ -51,7 +51,7 @@ class RemotePanePatch:
         Provide a virtual handle to a tmux pane on a remote server
         It's only based on system tmux commands over ssh
     '''
-    
+
     def __init__(self, session_name:str, host: str):
         self.session_name = session_name
         self.host = host
