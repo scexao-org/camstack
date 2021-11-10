@@ -76,6 +76,27 @@ if __name__ == "__main__":
     utr_red.start_order = 0
     utr_red.kill_order = 2
 
+    # PIPE over ZMQ into the LAN until we find a better solution (receiver)
+    zmq_recv = RemoteDependentProcess(
+        tmux_name='kcam_zmq',
+        cli_cmd='zmq_recv.py %s:%u %s',
+        cli_args=(scxconf.IP_SC5_LAN, scxconf.ZMQPORT_KCAM, 'kcam'),
+        remote_host=f'scexao-op@{scxconf.IP_SC2_LAN}',
+        kill_upon_create=False,
+    )
+    zmq_recv.start_order = 5
+    zmq_recv.kill_order = 6
+
+    # PIPE over ZMQ into the LAN until we find a better solution (sender)
+    zmq_send = DependentProcess(
+        tmux_name='kcam_zmq',
+        cli_cmd='zmq_send.py %s:%u %s',
+        cli_args=(scxconf.IP_SC5_LAN, scxconf.ZMQPORT_KCAM, 'kcam'),
+        kill_upon_create=True,
+    )
+    zmq_send.start_order = 6
+    zmq_send.kill_order = 5
+
     cam = Buffy('kcam',
                 'kcam_raw',
                 unit=1,
@@ -83,7 +104,7 @@ if __name__ == "__main__":
                 mode_id='full',
                 taker_cset_prio=('kcam_edt', 49),
                 dependent_processes=[tcp_recv, tcp_send,
-                                     utr_red])  #, tcp_send_raw, tcp_recv_raw])
+                                     utr_red, zmq_recv, zmq_send])  #, tcp_send_raw, tcp_recv_raw])
 
     from camstack.core.utilities import shellify_methods
     shellify_methods(cam, globals())

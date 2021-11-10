@@ -18,6 +18,7 @@ camstack.egg-info
 config/first_tmp.cfg
 config/vampires_tmp.cfg
 
+__*
 
 dump/
 build/
