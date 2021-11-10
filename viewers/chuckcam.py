@@ -2160,8 +2160,7 @@ while True:  # the main game loop
             if event.key in FILT_KEYLIST:
                 what_key = FILT_KEYLIST.index(event.key)
                 mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL) and not (
-                        mmods & KMOD_LALT):  # Ctrl but no alt, filter set
+                if (mmods & KMOD_LCTRL) and not (mmods & KMOD_LALT) and not (mmods & KMOD_LSHIFT):  # Ctrl but no alt, filter set
                     if what_key == 6:
                         os.system('ircam_block')
                     else:
