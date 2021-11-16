@@ -15,7 +15,7 @@ if __name__ == "__main__":
         cli_cmd='creashmim %s %u %u; shmimTCPreceive -c ircam ' +
         f'{scxconf.TCPPORT_BUFFY}',
         cli_args=('kcam', 320, 256),
-        remote_host=scxconf.IP_SC6_LAN,
+        remote_host=scxconf.IPLAN_SC6,
         kill_upon_create=False,
     )
     tcp_recv.start_order = 1
