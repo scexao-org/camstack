@@ -23,13 +23,13 @@ if __name__ == "__main__":
     ocam_decode.kill_order = 2
 
     tcp_recv = RemoteDependentProcess(
-        tmux_name=f'streamTCPreceive_{scxconf.OCAM_PORT}',
+        tmux_name=f'streamTCPreceive_{scxconf.TCPPORT_OCAM}',
         # Urrrrrh this is getting messy
         cli_cmd=
         'milk-exec "creaushortimshm %s %u %u"; shmimTCPreceive -c aol0COM ' +
-        f'{scxconf.OCAM_PORT}',
+        f'{scxconf.TCPPORT_OCAM}',
         cli_args=('ocam2d', 120, 120),
-        remote_host=scxconf.IP_SC6_LAN,
+        remote_host=scxconf.IPLAN_SC6,
         kill_upon_create=False,
     )
     tcp_recv.start_order = 1
@@ -39,7 +39,7 @@ if __name__ == "__main__":
         tmux_name='ocam_tcp',
         cli_cmd=
         'sleep 3; OMP_NUM_THREADS=1 shmimTCPtransmit %s %s %u',
-        cli_args=('ocam2d', scxconf.IP_SC6_P2P70, scxconf.OCAM_PORT),
+        cli_args=('ocam2d', scxconf.IPP2P_SC6FROM5, scxconf.TCPPORT_OCAM),
         # Sender is kill_upon_create - rather than when starting. that ensures it dies well before the receiver
         # Which is better for flushing TCP sockets
         kill_upon_create=True,

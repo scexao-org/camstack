@@ -21,7 +21,7 @@ if __name__ == "__main__":
     mode = 256
 
     # Prepare dependent processes
-    port = {0: scxconf.VCAM0_PORT, 1: scxconf.VCAM1_PORT}[camnum]
+    port = {0: scxconf.TCPPORT_VCAM0, 1: scxconf.TCPPORT_VCAM1}[camnum]
 
     tcp_recv = RemoteDependentProcess(
         tmux_name='streamTCPreceive_%u' % port,
@@ -29,7 +29,7 @@ if __name__ == "__main__":
         cli_cmd=
         f'milk-exec "creaushortimshm %s %u %u"; shmimTCPreceive -c ircam {port}',
         cli_args=('vcamim%u' % camnum, 256, 256),
-        remote_host=scxconf.IP_SC6_LAN,
+        remote_host=scxconf.IPLAN_SC6,
         kill_upon_create=False,
     )
     tcp_recv.start_order = 0
@@ -39,7 +39,7 @@ if __name__ == "__main__":
         tmux_name='vcam%u_tcp' % camnum,
         cli_cmd=
         'sleep 3; OMP_NUM_THREADS=1 /home/scexao/bin/shmimTCPtransmit %s %s %u',
-        cli_args=('vcamim%u' % camnum, scxconf.IP_SC6_P2P70, port),
+        cli_args=('vcamim%u' % camnum, scxconf.IPP2P_SC6FROM5, port),
         kill_upon_create=False,
         cset='vcam_tcp',
         rtprio=49,

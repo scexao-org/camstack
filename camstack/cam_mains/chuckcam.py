@@ -10,12 +10,12 @@ if __name__ == "__main__":
 
     # Prepare dependent processes
     tcp_recv = RemoteDependentProcess(
-        tmux_name=f'streamTCPreceive_{scxconf.CHUCK_PORT}',
+        tmux_name=f'streamTCPreceive_{scxconf.TCPPORT_CHUCK}',
         # Urrrrrh this is getting messy
         cli_cmd='creashmim %s %u %u; shmimTCPreceive -c ircam ' +
-        f'{scxconf.IP_SC6_LAN}',
+        f'{scxconf.TCPPORT_CHUCK}',
         cli_args=('ircam0', 320, 256),
-        remote_host=scxconf.IP_SC6_LAN,
+        remote_host=scxconf.IPLAN_SC6,
         kill_upon_create=False,
     )
     tcp_recv.start_order = 1
@@ -25,7 +25,7 @@ if __name__ == "__main__":
         tmux_name='ircam0_tcp',
         cli_cmd=
         'sleep 3; OMP_NUM_THREADS=1 /home/scexao-op/bin/shmimTCPtransmit-simple %s %s %u',
-        cli_args=('ircam0', scxconf.IP_SC6_LAN, scxconf.CHUCK_PORT),
+        cli_args=('ircam0', scxconf.IPLAN_SC6, scxconf.TCPPORT_CHUCK),
         # Sender is kill_upon_create - rather than when starting. that ensures it dies well before the receiver
         # Which is better for flushing TCP sockets
         kill_upon_create=True,

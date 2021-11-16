@@ -11,13 +11,13 @@ if __name__ == "__main__":
 
     # Prepare dependent processes
     tcp_recv = RemoteDependentProcess(
-        tmux_name=f'streamTCPreceive_{scxconf.GLINT_PORT}',
+        tmux_name=f'streamTCPreceive_{scxconf.TCPPORT_GLINT}',
         # Urrrrrh this is getting messy
         cli_cmd=
         'milk-exec "creasshortimshm %s %u %u"; shmimTCPreceive -c ircam ' +
-        f'{scxconf.GLINT_PORT}',
+        f'{scxconf.TCPPORT_GLINT}',
         cli_args=('glint', 320, 256),
-        remote_host=scxconf.IP_SC6_LAN,
+        remote_host=scxconf.IPLAN_SC6,
         kill_upon_create=False,
     )
     tcp_recv.start_order = 0
@@ -27,7 +27,7 @@ if __name__ == "__main__":
         tmux_name='glint_tcp',
         cli_cmd=
         'sleep 3; OMP_NUM_THREADS=1 shmimTCPtransmit %s %s %u',
-        cli_args=('glint', scxconf.IP_SC6_P2P70, scxconf.GLINT_PORT),
+        cli_args=('glint', scxconf.IPP2P_SC6FROM5, scxconf.TCPPORT_GLINT),
         # Sender is kill_upon_create - rather than when starting. that ensures it dies well before the receiver
         # Which is better for flushing TCP sockets
         kill_upon_create=True,
