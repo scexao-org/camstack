@@ -26,12 +26,13 @@ with open("README.md", 'r') as f:
 scripts = [
     './viewers/buffycam.py',
     './viewers/chuckcam.py',
-    './scripts/startOCAM',
-    './scripts/startChuck',
-    './scripts/startBuffy',
-    './scripts/startVampires',
-    './scripts/startRajni',
-    './scripts/startGLINT', # FIXME change names - "start" is too vague for something available system-wide
+
+    './scripts/cam-buffystart',
+    './scripts/cam-chuckstart',
+    './scripts/cam-glintstart',
+    './scripts/cam-ocamstart',
+    './scripts/cam-rajnistart',
+    './scripts/vcamstart', # FIXME change names - "start" is too vague for something available system-wide
 ]
 
 setup(
