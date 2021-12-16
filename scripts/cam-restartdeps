@@ -1,0 +1,46 @@
+#!/bin/env python
+
+'''
+    Restart only the dependent of the provided cameras
+
+    Convenient for restarting TCP streaming.
+    Side effect is it restarts ALL dependent registered processes,
+    which also includes ZMQ streaming, UTR, and ocam_decode
+
+    Usage:
+        cam-restartdeps (ocam|buffy|rajni|glint)...
+'''
+
+
+import time
+from docopt import docopt
+from typing import List
+from camstack.core import tmux
+
+def main(tmux_list: List[str]) -> None:
+    
+    for tmux_name in tmux_list:
+        tmux_sess = tmux.find_or_create(tmux_name)
+        tmux_sess.send_keys("cam.kill_taker_and_dependents(skip_taker=True)", suppress_history=False)
+
+    time.sleep(10.0)
+
+    for tmux_name in tmux_list:
+        tmux_sess = tmux.find_or_create(tmux_name)
+        tmux_sess.send_keys("cam.start_frame_taker_and_dependents(skip_taker=True)", suppress_history=False)
+
+
+if __name__ == "__main__":
+
+    args = docopt(__doc__)
+
+    NAME_MAPPING = {
+        'rajni': 'rajni_ctrl',
+        'glint': 'glint_ctrl',
+        'buffy': 'kcam_ctrl',
+        'ocam': 'ocam_ctrl',
+    }
+
+    tmuxes = [NAME_MAPPING[cam] for cam in args if args[cam]]
+
+    main(tmuxes)

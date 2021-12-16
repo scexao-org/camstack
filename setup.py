@@ -27,6 +27,8 @@ scripts = [
     './viewers/buffycam.py',
     './viewers/chuckcam.py',
 
+    './scripts/cam-restartdeps',
+
     './scripts/cam-buffystart',
     './scripts/cam-chuckstart',
     './scripts/cam-glintstart',

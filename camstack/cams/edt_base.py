@@ -142,41 +142,6 @@ class EDTCameraNoModes:
         # =================================
         self.prepare_camera_finalize()
 
-    def kill_taker_and_dependents(self):
-
-        self.dependent_processes.sort(key=lambda x: x.kill_order)
-
-        for dep_process in self.dependent_processes:
-            dep_process.stop()
-
-        self._kill_taker_no_dependents()
-
-    def close(self):
-        '''
-            Just an alias
-        '''
-        self.kill_taker_and_dependents()
-
-    def release(self):
-        '''
-            Just an alias
-        '''
-        self.kill_taker_and_dependents()
-
-    def _kill_taker_no_dependents(self):
-
-        self.stop_auxiliary_thread()
-
-        self.edttake_tmux_name = f'{self.NAME}_edt'
-        self.take_tmux_pane = tmux_util.find_or_create(self.edttake_tmux_name)
-        tmux_util.kill_running(self.take_tmux_pane)
-
-    def _stop(self):
-        '''
-        Alias
-        '''
-        self._kill_taker_no_dependents()
-
     def init_pdv_configuration(self):
         if self.is_taker_running():
             raise AssertionError(
@@ -225,6 +190,27 @@ class EDTCameraNoModes:
         for dep_process in self.dependent_processes:
             dep_process.start()
 
+    def kill_taker_and_dependents(self, skip_taker=False):
+
+        self.dependent_processes.sort(key=lambda x: x.kill_order)
+        for dep_process in self.dependent_processes:
+            dep_process.stop()
+
+        if not skip_taker:
+            self._kill_taker_no_dependents()
+
+    def close(self):
+        '''
+            Just an alias
+        '''
+        self.kill_taker_and_dependents()
+
+    def release(self):
+        '''
+            Just an alias
+        '''
+        self.kill_taker_and_dependents()
+
 
     def _start_taker_no_dependents(self, reuse_shm = False):
         exec_path = os.environ['HOME'] + '/src/camstack/src/edttake'
@@ -258,6 +244,20 @@ class EDTCameraNoModes:
         Alias
         '''
         self._start_taker_no_dependents()
+
+    def _kill_taker_no_dependents(self):
+
+        self.stop_auxiliary_thread()
+
+        self.edttake_tmux_name = f'{self.NAME}_edt'
+        self.take_tmux_pane = tmux_util.find_or_create(self.edttake_tmux_name)
+        tmux_util.kill_running(self.take_tmux_pane)
+
+    def _stop(self):
+        '''
+        Alias
+        '''
+        self._kill_taker_no_dependents()
 
     def grab_shm_fill_keywords(self):
         # Only the init, or the regular updates ?
