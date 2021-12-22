@@ -5,11 +5,6 @@ cmd="killall chuckcam"
 echo $cmd
 $cmd
 
-cmd="killall buffycam"
-echo $cmd
-$cmd
-sleep 1
-
 echo "\n---- Nuking camera servers ----"
 cmd="ssh scexao-op@localhost \"tmux kill-server\""
 echo $cmd
@@ -25,15 +20,21 @@ echo "\n---- start chuck ----"
 cmd="startCRED2"
 $cmd
 sleep 1
-echo "\n---- start Buffy ----"
-cmd="startKCAM"
-$cmd
+# echo "\n---- start Buffy ----"
+# cmd="startKCAM"
+# $cmd
+# sleep 1
+
+cmd="ssh scexao-op@localhost \"tmux new -d -s kcam_zmq\""
+echo $cmd
+bash -c "$cmd"
 sleep 1
 
+cmd="ssh scexao-op@localhost tmux send-keys -t kcam_zmq \"zmq_recv.py\ 10.20.30.5:33000\ kcam\" Enter"
+echo $cmd
+bash -c "$cmd"
 
 sleep 10
 chuckcam &
-buffycam &
-
-
+# buffycam &
 

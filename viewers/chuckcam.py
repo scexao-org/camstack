@@ -729,7 +729,7 @@ rct_sc2.bottomleft = (5 * z1 - 4, ysc - ktot)
 
 #REACH Photometry parameters
 dreachphoto = 64. * z1
-xreachphoto = 7.5 * z1
+xreachphoto = -0.5 * z1
 yreachphoto = -11.5 * z1
 preachphoto = dreachphoto / 7.
 reachphotoc = preachphoto / 2.
@@ -1194,16 +1194,14 @@ while True:  # the main game loop
                         
                     
             else:
-                [cx, cy] = impro.centroid(temp2, method = "default")
+                [cx, cy] = impro.centroid(temp2, method = "airy")
                 if (cx >= 0) and (cx < xsizeim) and (cy >= 0) and (cy < ysizeim):
                     fh = temp2[int(cy), int(cx)]
                     msg3 = "center = %3d,%3d flux = %5d" % (cx, cy, fh)
                     info3 = font3.render(msg3, True, FGCOL, BGCOL)
                     screen.blit(info3, rct_info3)
-                    print(cx,cy)
                     cx = (cx + 0.5 - xmin + xshift) * zg
                     cy = (cy + 0.5 - ymin + yshift) * zg
-                    print(cx,cy)
             pygame.draw.line(screen, RED1, (cx - bl * zg, cy),
                              (cx + bl * zg, cy), 1)
             pygame.draw.line(screen, RED1, (cx, cy - bl * zg),
@@ -1214,7 +1212,7 @@ while True:  # the main game loop
         # ------------------------------------------------------------------
         # display of position history
         if plot_history:
-            [cx, cy] = impro.centroid(temp2, method = "default")
+            [cx, cy] = impro.centroid(temp2, method = "airy")
             try:
                 fh = temp2[int(cy), int(cx)]
             except:
