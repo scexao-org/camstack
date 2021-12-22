@@ -79,6 +79,7 @@ class OCAM2K(EDTCamera):
         self.toggle_cooling(True)
         self.set_temperature_setpoint(-45.0)
         self.send_command('led off')
+        self.send_command('temp reset')
         self.gain_protection_reset()
         self.set_gain(1)
         self.set_synchro(True)  # Is called by the setmode in the constructor.
