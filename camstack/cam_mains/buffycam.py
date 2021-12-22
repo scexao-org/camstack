@@ -15,7 +15,7 @@ if __name__ == "__main__":
         cli_cmd='creashmim %s %u %u; shmimTCPreceive -c ircam ' +
         f'{scxconf.TCPPORT_BUFFY}',
         cli_args=('kcam', 320, 256),
-        remote_host=scxconf.IPLAN_SC6,
+        remote_host=scxconf.IP_SC6,
         kill_upon_create=False,
     )
     tcp_recv.start_order = 1
@@ -44,7 +44,7 @@ if __name__ == "__main__":
         'milk-exec "creaushortimshm %s %u %u"; shmimTCPreceive -c ircam ' +
         f'{scxconf.TCPPORT_BUFFY_RAW}',
         cli_args=('kcam_raw', 320, 256),
-        remote_host=scxconf.IPLAN_SC6,
+        remote_host=scxconf.IP_SC6,
         kill_upon_create=False,
     )
     tcp_recv.start_order = 3
@@ -54,7 +54,7 @@ if __name__ == "__main__":
         tmux_name='kcam_raw_tcp',
         cli_cmd=
         'sleep 3; OMP_NUM_THREADS=1 shmimTCPtransmit %s %s %u',
-        cli_args=('kcam_raw', scxconf.IPLAN_SC6, scxconf.TCPPORT_BUFFY_RAW),
+        cli_args=('kcam_raw', scxconf.IP_SC6, scxconf.TCPPORT_BUFFY_RAW),
         # Sender is kill_upon_create - rather than when starting. that ensures it dies well before the receiver
         # Which is better for flushing TCP sockets
         kill_upon_create=True,
@@ -81,7 +81,7 @@ if __name__ == "__main__":
         tmux_name='kcam_zmq',
         cli_cmd='zmq_recv.py %s:%u %s',
         cli_args=(scxconf.IPLAN_SC5, scxconf.ZMQPORT_KCAM, 'kcam'),
-        remote_host=f'scexao-op@{scxconf.IPLAN_SC2}',
+        remote_host=f'scexao-op@{scxconf.IP_SC2}',
         kill_upon_create=False,
     )
     zmq_recv.start_order = 5

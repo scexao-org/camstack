@@ -16,7 +16,7 @@ if __name__ == "__main__":
         'milk-exec "creasshortimshm %s %u %u"; shmimTCPreceive -c ircam ' +
         f'{scxconf.TCPPORT_RAJNI}',
         cli_args=('rajni', 320, 256),
-        remote_host=scxconf.IPLAN_SC6,
+        remote_host=scxconf.IP_SC6,
         kill_upon_create=False,
     )
     tcp_recv.start_order = 0
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     tcp_send = DependentProcess(
         tmux_name='rajni_tcp',
         cli_cmd=
-        'sleep 3; OMP_NUM_THREADS=1 /home/scexao/bin/shmimTCPtransmit %s %s %u',
+        'sleep 3; OMP_NUM_THREADS=1 shmimTCPtransmit %s %s %u',
         cli_args=('rajni', scxconf.IPP2P_SC6FROM5, scxconf.TCPPORT_RAJNI),
         # Sender is kill_upon_create - rather than when starting. that ensures it dies well before the receiver
         # Which is better for flushing TCP sockets

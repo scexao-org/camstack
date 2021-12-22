@@ -17,7 +17,7 @@ if __name__ == "__main__":
         'milk-exec "creasshortimshm %s %u %u"; shmimTCPreceive -c ircam ' +
         f'{scxconf.TCPPORT_GLINT}',
         cli_args=('glint', 320, 256),
-        remote_host=scxconf.IPLAN_SC6,
+        remote_host=scxconf.IP_SC6,
         kill_upon_create=False,
     )
     tcp_recv.start_order = 0
