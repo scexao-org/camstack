@@ -33,8 +33,12 @@ class CameraMode:
             self.fgsize = (self.x1 - self.x0 + 1, self.y1 - self.y0 + 1)
 
     def __str__(self):
-        s = f'Camera Mode: {self.x0}-{self.x1}, {self.y0}-{self.y1} ({self.x1 - self.x0 + 1} x {self.y1 - self.y0 + 1}) ' +\
-            f'- {self.fps:.2f} Hz - {self.tint * 1e3:.1f} ms - bin {self.binx} x {self.biny} - FGsize {self.fgsize}'
+        s = f'Camera Mode: {self.x0}-{self.x1}, {self.y0}-{self.y1} ({self.x1 - self.x0 + 1} x {self.y1 - self.y0 + 1})'
+        if self.fps is not None:
+            s += f' - {self.fps:.2f} Hz'
+        if self.tint is not None:
+            s += f' - {self.tint * 1e3:.1f} ms'
+        s += f' - bin {self.binx} x {self.biny} - FGsize {self.fgsize}'
 
         return s
 
