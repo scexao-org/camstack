@@ -32,6 +32,12 @@ class CameraMode:
         else:
             self.fgsize = (self.x1 - self.x0 + 1, self.y1 - self.y0 + 1)
 
+    def __str__(self):
+        s = f'Camera Mode: {self.x0}-{self.x1}, {self.y0}-{self.y1} ({self.x1 - self.x0 + 1} x {self.y1 - self.y0 + 1}) ' +\
+            f'- {self.fps:.2f} Hz - {self.tint * 1e3:.1f} ms - bin {self.binx} x {self.biny} - FGsize {self.fgsize}'
+
+        return s
+
 
 class DependentProcess:
     '''
@@ -66,7 +72,7 @@ class DependentProcess:
     def initialize_tmux(self, kill_upon_create):
         self.tmux_pane = tmux.find_or_create(self.tmux_name)
         if kill_upon_create:
-            time.sleep(3.0) # MUST NOT KILL the sourcing of bashrc/profile
+            time.sleep(3.0)  # MUST NOT KILL the sourcing of bashrc/profile
             tmux.kill_running(self.tmux_pane)
 
     def start(self):
@@ -91,10 +97,12 @@ class DependentProcess:
                     'milk-makecsetandrt',
                     str(pid), self.cset,
                     str(self.rtprio)
-                ], stdout=subprocess.DEVNULL)
-                children = subprocess.run(['pgrep', '-P', str(pid)],
-                                   stdout=subprocess.PIPE).stdout.decode(
-                                       'utf8').strip().split('\n')
+                ],
+                                     stdout=subprocess.DEVNULL)
+                children = subprocess.run(
+                    ['pgrep', '-P', str(pid)],
+                    stdout=subprocess.PIPE).stdout.decode(
+                        'utf8').strip().split('\n')
                 if children[0] != '':
                     pids += [int(c) for c in children]
                 #print('PIDs: ', pids)
