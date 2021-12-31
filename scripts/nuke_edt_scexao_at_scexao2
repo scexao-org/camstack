@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Trigger sudo pw prompt
+sudo ls
+
 echo "\n---- Killing all displays. ----"
 cmd="killall chuckcam"
 echo $cmd
