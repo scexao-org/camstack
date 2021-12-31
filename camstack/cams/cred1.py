@@ -15,10 +15,11 @@ class ROMODES:
     cds = 'globalresetcds'
     bursts = 'globalresetbursts'
 
+
 class CRED1(EDTCamera):
 
     INTERACTIVE_SHELL_METHODS = [
-        'set_readout_mode', 'get_readout_mode', 'set_gain','get_gain',
+        'set_synchro', 'set_readout_mode', 'get_readout_mode', 'set_gain', 'get_gain',
         'set_NDR', 'get_NDR', 'set_fps',
         'get_fps', 'set_tint', 'get_tint', 'get_temperature', 'FULL'] + \
         EDTCamera.INTERACTIVE_SHELL_METHODS
@@ -29,7 +30,8 @@ class CRED1(EDTCamera):
         FULL: CameraMode(x0=0, x1=319, y0=0, y1=255, fps=3460.),
         0: CameraMode(x0=0, x1=319, y0=0, y1=255, fps=3460.),
         # 64x64 centered
-        1: CameraMode(x0=128, x1=191, y0=96, y1=159, fps=40647.), # 40647. Limiting for now
+        1: CameraMode(x0=128, x1=191, y0=96, y1=159,
+                      fps=40647.),  # 40647. Limiting for now
         # 128x128 centered
         2: CameraMode(x0=96, x1=223, y0=64, y1=191, fps=14331.),
         # 160x160 16px offside
@@ -243,17 +245,14 @@ class CRED1(EDTCamera):
         if NDR < 1 or not type(NDR) is int:
             raise AssertionError(f'Illegal NDR value: {NDR}')
 
-        gain_now = self.get_gain() # Setting detmode seems to reset the EM gain to 1.
+        gain_now = self.get_gain(
+        )  # Setting detmode seems to reset the EM gain to 1.
 
         # Attempt: stabilize by re-setting always readout mode and maxfps
         clippedNDR = min(3, NDR)
         currentNDR = min(3, self.get_NDR())
-        readout_modes = {
-            1: ROMODES.single,
-            2: ROMODES.cds,
-            3: ROMODES.bursts
-        }
-        
+        readout_modes = {1: ROMODES.single, 2: ROMODES.cds, 3: ROMODES.bursts}
+
         readout_mode = readout_modes[clippedNDR]
         curr_readout_mode = readout_modes[currentNDR]
 
@@ -272,7 +271,9 @@ class CRED1(EDTCamera):
         time.sleep(1.)
         self.set_readout_mode(readout_mode)
 
-        self.set_fps(self.current_mode.fps) # Systematically - because AUTO rescaling of fps occurs when changing NDR...
+        self.set_fps(
+            self.current_mode.fps
+        )  # Systematically - because AUTO rescaling of fps occurs when changing NDR...
 
         self.set_gain(gain_now)
 
