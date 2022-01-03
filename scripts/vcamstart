@@ -25,9 +25,10 @@ echo ""
 read -p "cpusets looking OK ? Press enter to continue, Ctrl+C to abort."
 
 # aliases
-TARG_IP=$IP_SC6_LAN
-name=VCAM${NUM}_PORT
-PORT=echo(${!name})
+SSH_IP=$IPLAN_SC6
+LINK_IP=$IPP2P_SC6FROM5
+name=TCPPORT_VCAM${NUM}
+PORT=${!name}
 targ_tmux="streamTCPreceive_${PORT}"
 
 tnew="tmux new-session -d -s"
@@ -37,8 +38,8 @@ tsend="tmux send-keys -t"
 $tnew vcam${NUM}_edt
 $tnew vcam${NUM}_tcp
 $tnew vcam${NUM}_serial # Tentative
-echo "ssh $TARG_IP \"$tnew $TARG_IPtmux -d\""
-ssh $TARG_IP "$tnew $targ_tmux -d"
+echo "ssh $SSH_IP \"$tnew $targ_tmux -d\""
+ssh $SSH_IP "$tnew $targ_tmux -d"
 
 $tsend vcam${NUM}_tcp C-c
 sleep 0.2
@@ -46,8 +47,8 @@ $tsend vcam${NUM}_edt C-c
 sleep 0.2
 $tsend vcam${NUM}_serial C-c
 sleep 0.2
-echo "ssh $TARG_IP \"$tsend $targ_tmux C-c\""
-ssh $TARG_IP $tsend $targ_tmux C-c
+echo "ssh $SSH_IP \"$tsend $targ_tmux C-c\""
+ssh $SSH_IP $tsend $targ_tmux C-c
 sleep 0.2
 
 echo ""
@@ -68,26 +69,26 @@ $tsend vcam${NUM}_edt "/opt/EDTpdv/initcam -u 2 -c ${NUM} -f ${TMP_FILE}" Enter
 $tsend vcam${NUM}_edt "/home/scexao/src/camstack/src/edttake -s vcamim${NUM} -u 2 -c ${NUM} -l 0 -N 4 -U" Enter
 sleep 1
 # Then TCP, receiver, then transmitter
-ssh $TARG_IP "$tsend $targ_tmux \"milk\" Enter"
-ssh $TARG_IP "$tsend $targ_tmux \"creaushortimshm vcamim${NUM} ${SIZE} ${SIZE}\" Enter"
-ssh $TARG_IP "$tsend $targ_tmux \"exit\" Enter"
-ssh $TARG_IP "$tsend $targ_tmux \"shmimTCPreceive -c aol0COM ${PORT}\" Enter"
+ssh $SSH_IP "$tsend $targ_tmux \"milk\" Enter"
+ssh $SSH_IP "$tsend $targ_tmux \"creaushortimshm vcamim${NUM} ${SIZE} ${SIZE}\" Enter"
+ssh $SSH_IP "$tsend $targ_tmux \"exit\" Enter"
+ssh $SSH_IP "$tsend $targ_tmux \"shmimTCPreceive -c aol0COM ${PORT}\" Enter"
 sleep .5
-$tsend vcam${NUM}_tcp "OMP_NUM_THREADS=1 /home/scexao/bin/shmimTCPtransmit vcamim${NUM} ${IP_SC6_P2P70} ${PORT}" Enter
+$tsend vcam${NUM}_tcp "OMP_NUM_THREADS=1 shmimTCPtransmit vcamim${NUM} ${LINK_IP} ${PORT}" Enter
 sleep 1
 
 # Then send the RT prio and cset setting
 PID=$(pgrep -f "edttake -s vcamim${NUM}")
-sudo cset proc --threads -m $PID vcam_edt > /dev/null
+sudo cset proc --threads -m $PID vcam${NUM}_edt > /dev/null
 sudo chrt -f -p 49 $PID > /dev/null
 
 PID=$(pgrep -f shmimTCPtransmit-vcamim${NUM})
-sudo cset proc --threads -m $PID vcam_tcp > /dev/null
+sudo cset proc --threads -m $PID vcam${NUM}_tcp > /dev/null
 sudo chrt -f -p 47 $PID > /dev/null
 
 echo ""
 echo ""
-cset proc vcam_edt
-cset proc vcam_tcp
+cset proc vcam${NUM}_edt
+cset proc vcam${NUM}_tcp
 
 echo "vcamstart ${NUM} ${SIZE} completed."
