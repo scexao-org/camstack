@@ -37,6 +37,8 @@ tsend="tmux send-keys -t"
 # Create tmuxes and issue kills
 $tnew vcam${NUM}_edt
 $tnew vcam${NUM}_tcp
+$tnew vcam${NUM}_log
+
 $tnew vcam${NUM}_serial # Tentative
 echo "ssh $SSH_IP \"$tnew $targ_tmux -d\""
 ssh $SSH_IP "$tnew $targ_tmux -d"
@@ -51,7 +53,7 @@ echo "ssh $SSH_IP \"$tsend $targ_tmux C-c\""
 ssh $SSH_IP $tsend $targ_tmux C-c
 sleep 0.2
 
-ssh $TARG_IP "milk-logshimkill vcamim${NUM}"
+ssh $SSH_IP "milk-logshimkill vcamim${NUM}"
 
 echo ""
 read -p "Everything killed, proceed to startup ? Press enter to continue, Ctrl+C to abort."
@@ -66,8 +68,8 @@ sed s/SED_HW_HERE/${SIZE}/ $CFG_FILE > $TMP_FILE
 # Clear shmim and sems
 rm /milk/shm/vcamim${NUM}.im.shm
 rm /dev/shm/sem..milk.shm.vcamim${NUM}_*
-ssh $TARG_IP "rm /milk/shm/vcamim${NUM}.im.shm"
-ssh $TARG_IP "rm /dev/shm/sem..milk.shm.vcamim${NUM}_*"
+ssh $SSH_IP "rm /milk/shm/vcamim${NUM}.im.shm"
+ssh $SSH_IP "rm /dev/shm/sem..milk.shm.vcamim${NUM}_*"
 # Start the take
 $tsend vcam${NUM}_edt "/opt/EDTpdv/initcam -u 2 -c ${NUM} -f ${TMP_FILE}" Enter
 $tsend vcam${NUM}_edt "/home/scexao/src/camstack/src/edttake -s vcamim${NUM} -u 2 -c ${NUM} -l 0 -N 4 -U" Enter
@@ -101,7 +103,7 @@ read -p "DO YOU WANT TO LOG on scexaoRTC? ENTER to continue, Ctrl+C to abort."
 read -p "Enter log FITS cube length (int):   " CUBESIZE
 
 TODAY=$(date '+%Y%m%d')
-ssh ${TARG_IP} "milk-logshim -c aollog vcamim${NUM} ${CUBESIZE} /mnt/tier0/${TODAY}/vcamim${NUM}"
+$tsend vcam${NUM}_log "ssh ${SSH_IP} \"milk-logshim -c aollog vcamim${NUM} ${CUBESIZE} /mnt/tier0/${TODAY}/vcamim${NUM}\"" Enter
 
 
 
