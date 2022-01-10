@@ -20,9 +20,9 @@ echo ""
 read -p "Starting camera ${NUM} with size ${SIZE} ?"
 
 # Inspect csets
-cset set
-echo ""
-read -p "cpusets looking OK ? Press enter to continue, Ctrl+C to abort."
+# cset set
+# echo ""
+# read -p "cpusets looking OK ? Press enter to continue, Ctrl+C to abort."
 
 # aliases
 SSH_IP=$IPLAN_SC6
@@ -51,6 +51,8 @@ echo "ssh $SSH_IP \"$tsend $targ_tmux C-c\""
 ssh $SSH_IP $tsend $targ_tmux C-c
 sleep 0.2
 
+ssh $TARG_IP "milk-logshimkill vcamim${NUM}"
+
 echo ""
 read -p "Everything killed, proceed to startup ? Press enter to continue, Ctrl+C to abort."
 
@@ -64,6 +66,8 @@ sed s/SED_HW_HERE/${SIZE}/ $CFG_FILE > $TMP_FILE
 # Clear shmim and sems
 rm /milk/shm/vcamim${NUM}.im.shm
 rm /dev/shm/sem..milk.shm.vcamim${NUM}_*
+ssh $TARG_IP "rm /milk/shm/vcamim${NUM}.im.shm"
+ssh $TARG_IP "rm /dev/shm/sem..milk.shm.vcamim${NUM}_*"
 # Start the take
 $tsend vcam${NUM}_edt "/opt/EDTpdv/initcam -u 2 -c ${NUM} -f ${TMP_FILE}" Enter
 $tsend vcam${NUM}_edt "/home/scexao/src/camstack/src/edttake -s vcamim${NUM} -u 2 -c ${NUM} -l 0 -N 4 -U" Enter
@@ -90,5 +94,15 @@ echo ""
 echo ""
 cset proc vcam${NUM}_edt
 cset proc vcam${NUM}_tcp
+
+
+echo "==================================================="
+read -p "DO YOU WANT TO LOG on scexaoRTC? ENTER to continue, Ctrl+C to abort."
+read -p "Enter log FITS cube length (int):   " CUBESIZE
+
+TODAY=$(date '+%Y%m%d')
+ssh ${TARG_IP} "milk-logshim -c aollog vcamim${NUM} ${CUBESIZE} /mnt/tier0/${TODAY}/vcamim${NUM}"
+
+
 
 echo "vcamstart ${NUM} ${SIZE} completed."
