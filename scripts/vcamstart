@@ -1,110 +1,25 @@
-#!/bin/bash
+#!/bin/env python
 
-# SYNTAX
-# ./vcamstart (0|1) <size>
+'''
+    vcamstart python argument checker
+    Will fail if the syntax is wrong, will proceed to the bash script if OK.
 
-# RATIONALE
-# Kill and restart the vampires cam stuff
-# This is temporary until I get the edtcam python stack done
+    Usage:
+        vcamstart 0 <size>
+        vcamstart 1 <size>
+'''
 
-# Sequence
-# (Re-)create tmuxes:
-# first_edt: framegrabbing
-# REMOTE @scexao5 streamTCPreceive_30106: shmimTCPreceive
-# first_tcp: TCP receive
+from docopt import docopt
+import sys
+import subprocess
 
-# Input
-NUM=$1
-SIZE=$2
-echo ""
-read -p "Starting camera ${NUM} with size ${SIZE} ?"
+if __name__ == "__main__":
 
-# Inspect csets
-# cset set
-# echo ""
-# read -p "cpusets looking OK ? Press enter to continue, Ctrl+C to abort."
+    args = docopt(__doc__) # Argument checking really
 
-# aliases
-SSH_IP=$IPLAN_SC6
-LINK_IP=$IPP2P_SC6FROM5
-name=TCPPORT_VCAM${NUM}
-PORT=${!name}
-targ_tmux="streamTCPreceive_${PORT}"
+    if int(args["<size>"]) not in [32, 64, 128, 256, 512]:
+        raise ValueError("<size> not in [32, 64, 128, 256, 512]")
 
-tnew="tmux new-session -d -s"
-tsend="tmux send-keys -t"
-
-# Create tmuxes and issue kills
-$tnew vcam${NUM}_edt
-$tnew vcam${NUM}_tcp
-$tnew vcam${NUM}_log
-
-$tnew vcam${NUM}_serial # Tentative
-echo "ssh $SSH_IP \"$tnew $targ_tmux -d\""
-ssh $SSH_IP "$tnew $targ_tmux -d"
-
-$tsend vcam${NUM}_tcp C-c
-sleep 0.2
-$tsend vcam${NUM}_edt C-c
-sleep 0.2
-$tsend vcam${NUM}_serial C-c
-sleep 0.2
-echo "ssh $SSH_IP \"$tsend $targ_tmux C-c\""
-ssh $SSH_IP $tsend $targ_tmux C-c
-sleep 0.2
-
-ssh $SSH_IP "milk-logshimkill vcamim${NUM}"
-
-echo ""
-read -p "Everything killed, proceed to startup ? Press enter to continue, Ctrl+C to abort."
-
-# STARTUP
-# EDT FG
-# Gen file at right size
-CFG_FILE="/home/scexao/src/camstack/config/vampires_sedfile.cfg"
-TMP_FILE="/home/scexao/src/camstack/config/vampires_tmp.cfg"
-sed s/SED_HW_HERE/${SIZE}/ $CFG_FILE > $TMP_FILE
-
-# Clear shmim and sems
-rm /milk/shm/vcamim${NUM}.im.shm
-rm /dev/shm/sem..milk.shm.vcamim${NUM}_*
-ssh $SSH_IP "rm /milk/shm/vcamim${NUM}.im.shm"
-ssh $SSH_IP "rm /dev/shm/sem..milk.shm.vcamim${NUM}_*"
-# Start the take
-$tsend vcam${NUM}_edt "/opt/EDTpdv/initcam -u 2 -c ${NUM} -f ${TMP_FILE}" Enter
-$tsend vcam${NUM}_edt "/home/scexao/src/camstack/src/edttake -s vcamim${NUM} -u 2 -c ${NUM} -l 0 -N 4 -U" Enter
-sleep 1
-# Then TCP, receiver, then transmitter
-ssh $SSH_IP "$tsend $targ_tmux \"milk\" Enter"
-ssh $SSH_IP "$tsend $targ_tmux \"creaushortimshm vcamim${NUM} ${SIZE} ${SIZE}\" Enter"
-ssh $SSH_IP "$tsend $targ_tmux \"exit\" Enter"
-ssh $SSH_IP "$tsend $targ_tmux \"shmimTCPreceive -c aol0COM ${PORT}\" Enter"
-sleep .5
-$tsend vcam${NUM}_tcp "OMP_NUM_THREADS=1 shmimTCPtransmit vcamim${NUM} ${LINK_IP} ${PORT}" Enter
-sleep 1
-
-# Then send the RT prio and cset setting
-PID=$(pgrep -f "edttake -s vcamim${NUM}")
-sudo cset proc --threads -m $PID vcam${NUM}_edt > /dev/null
-sudo chrt -f -p 49 $PID > /dev/null
-
-PID=$(pgrep -f shmimTCPtransmit-vcamim${NUM})
-sudo cset proc --threads -m $PID vcam${NUM}_tcp > /dev/null
-sudo chrt -f -p 47 $PID > /dev/null
-
-echo ""
-echo ""
-cset proc vcam${NUM}_edt
-cset proc vcam${NUM}_tcp
-
-
-echo "==================================================="
-read -p "DO YOU WANT TO LOG on scexaoRTC? ENTER to continue, Ctrl+C to abort."
-read -p "Enter log FITS cube length (int):   " CUBESIZE
-
-TODAY=$(date '+%Y%m%d')
-$tsend vcam${NUM}_log "ssh ${SSH_IP} \"milk-logshim -c aollog vcamim${NUM} ${CUBESIZE} /mnt/tier0/${TODAY}/vcamim${NUM}\"" Enter
-
-
-
-echo "vcamstart ${NUM} ${SIZE} completed."
+    run_line = ['vcamstart-bash'] + sys.argv[1:]
+    print(run_line)
+    subprocess.run(run_line)
