@@ -149,6 +149,17 @@ class RemoteDependentProcess(DependentProcess):
         if kill_upon_create:
             tmux.kill_running(self.tmux_pane)
 
+    def start(self):
+        try:
+            tmux.send_keys(self.tmux_pane, self.cli_cmd % self.cli_args)
+        except subprocess.CalledProcessError as err:
+            print(f"Remote {self.tmux_name} on {self.remote_host} tmux may be dead - attempting re-initialize")
+            self.initialize_tmux(False)
+            tmux.send_keys(self.tmux_pane, self.cli_cmd % self.cli_args)
+
+        time.sleep(1)
+        self.make_children_rt()
+
 
 def shellify_methods(instance_of_camera, top_level_globals):
     '''

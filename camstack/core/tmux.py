@@ -21,6 +21,8 @@ def find_or_create(session_name: str):
     return pane
 
 def send_keys(pane, keys, enter=True):
+    # This does NOT error if the tmux was destroyed !
+    # Mind the different behavior with RemotePanePatch
     pane.send_keys(keys, enter=enter, suppress_history=False)
 
 def kill_running(pane):
@@ -68,7 +70,8 @@ class RemotePanePatch:
         if enter:
             cmdstring += ["Enter"]
 
-        subprocess.run(['ssh', self.host] + cmdstring, stdout=subprocess.PIPE)
+        # Use check call to return a CalledProcessError
+        subprocess.check_call(['ssh', self.host] + cmdstring, stdout=subprocess.PIPE)
 
     def cmd(self, command: str, args: str = ''):
         '''
