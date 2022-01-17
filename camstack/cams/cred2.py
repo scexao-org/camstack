@@ -65,11 +65,11 @@ class CRED2(EDTCamera):
 
         # Issue a few standards for CRED2
         self.send_command('set cropping on')
-        self.send_command('set fan mode manual')
-        self.send_command('set fan speed 0')
         self.send_command('set led off')
         self.set_gain('high')
-        self.set_temperature_setpoint(-40.0)
+
+        # Abstract method - subclassed by Rajni/Chuck/GLINT
+        self._thermal_init_commands()
 
     # =====================
     # AD HOC PREPARE CAMERA
@@ -267,6 +267,12 @@ class Rajni(CRED2):
         # Override detector name
         self.camera_shm.update_keyword('DETECTOR', 'CRED2 - RAJNI')
 
+    def _thermal_init_commands(self):
+        # Rajni + chuck: water cooling, 
+        self.send_command('set fan speed 0')
+        self.send_command('set fan mode manual')
+        self.set_temperature_setpoint(-40.0)
+
 
 #class GLINT(CRED2):
 '''
@@ -384,6 +390,12 @@ class Chuck(CRED2):
 
         # Override detector name
         self.camera_shm.update_keyword('DETECTOR', 'CRED2 - CHUCK')
+
+    def _thermal_init_commands(self):
+        # Rajni / Chuck: water cooling
+        self.send_command('set fan speed 0')
+        self.send_command('set fan mode manual')
+        self.set_temperature_setpoint(-40.0)
 
 # Quick shorthand for testing
 if __name__ == "__main__":

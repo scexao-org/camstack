@@ -15,7 +15,7 @@ if __name__ == "__main__":
         cli_cmd='creashmim %s %u %u; shmimTCPreceive -c ircam ' +
         f'{scxconf.TCPPORT_CHUCK}',
         cli_args=('ircam0', 320, 256),
-        remote_host=scxconf.IPLAN_SC6,
+        remote_host='scexao@' + scxconf.IPLAN_SC6,
         kill_upon_create=False,
     )
     tcp_recv.start_order = 1
