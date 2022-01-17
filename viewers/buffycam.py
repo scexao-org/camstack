@@ -1913,21 +1913,10 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LALT):
-                        sync_param = ircam_synchro.get_data().astype(np.int)
-                        if not sync_param[0] and not sync_param[1]:
-                            sync_param[2] = etime
-                            sync_param[3] = fps
-                            sync_param[0] = 1
-                            sync_param[1] = 1
-                            ircam_synchro.set_data(
-                                sync_param.astype(np.float32))
-                            time.sleep(1)
-                        else:
-                            sync_param[0] = 1
-                            sync_param[1] = 0
-                            ircam_synchro.set_data(
-                                sync_param.astype(np.float32))
-                            time.sleep(1)
+                        # Ctrl+Alt+n -> enable exttrig
+                        tmux_kcam_ctrl.send_keys("set_synchro(1)")
+                    else: # Ctrl+n -> disable exttrig
+                        tmux_kcam_ctrl.send_keys("set_synchro(0)")
 
             # Crop modes and full frame
             #---------------------
