@@ -70,7 +70,7 @@ class NUVU(EDTCamera):
                  taker_cset_prio: Union[str, int] = ('system', None),
                  dependent_processes=[]):
 
-        debug=1
+        debug=0
         basefile = os.environ['HOME'] + '/src/camstack/config/nuvu_kalao.cfg'
 
         # Call EDT camera init
@@ -95,61 +95,27 @@ class NUVU(EDTCamera):
         if not success:
             return None
 
-        #self.camera_shm.update_keyword('DETECTOR', "NUVU - %s"%(self.cfgdict['CCDPartNumber']))
-
+        self.SetEMRawGain(0)
+        self.SetSeqRegisters(11,4,[128,0,0,0,0,8,1,0,0,128,6])
+        self.SetSeqRegisters(10,0,[131,0,0,3,128,0,0,0,0,5])
+        self.SetAnalogicGain(1)
+        self.SetEMCalibratedGain(1.0)
+        self.SetWaitingTime(0)
+        self.SetAnalogicOffset(-1000)
         self.SetCCDTemperature(-60.0)
-        self.SetExposureTime(1) # milliseconds
+        self.SetSeqRegisters(13,1,[1,0,1,0,67,0,0,0,1,1,5,0,64])
+        self.SetBinning(2)
+        self.SetExposureTime(0) # milliseconds
+        self.SetWaitingTime(0)
+        self.SetEMCalibratedGain(1.0)
+        self.SetShutterMode(2)
+        self.SetTriggerMode(0,1)
+        self.SetContinuousAcquisition()
+
+        #self.camera_shm.update_keyword('DETECTOR', "NUVU - %s"%(self.cfgdict['CCDPartNumber']))
 
         if debug:
             print(self.cfgdict)
-
-
-        #rsrt
-        #sw
-        #cdsgain
-        #cdsgain 1
-        #seg
-        #seg 1
-        #sw 0
-        #stm
-        #sw
-        #cdsoffset
-        #cdsoffset -1000
-        # rsrt
-        # tsp 1 -60
-
-        ###################################
-        # ssva 13 1
-
-        self.SetBinning()
-
-        #self.SetRegister()
-        #############################################
-
-        self.GetReadoutTime()
-
-        self.GetWaitingTime()
-
-        self.SetExposureTime(0)
-
-        self.SetWaitingTime(0)
-
-        GetTriggerMode
-
-        self.GetWaitingTime()
-
-        self.SetEMCalibratedGain(1)
-
-        self.SetShutterMode(2)
-
-        self.GetTriggerMode()
-
-        self.GetWaitingTime()
-
-        self.GetTriggerMode()
-
-        # Starting continuous acquisition
-        self.SetContinuousAcquisition()
 
 
     def _get_nuvu_response(self, response, verbose=0):
@@ -211,19 +177,27 @@ class NUVU(EDTCamera):
             for i in range(len(resdict)):  self.RO_MODES.append(resdict[str(i)].split()[0])
         return success
 
-    def SetRegister(self):
+    def SetSeqRegisters(self, nbreg: int = 0, start: int = 0, values = []):
         #           0    1    2    3    4    5    6    7    8    9   10   11   12   13   14
-        values = [131,   1,   0,   1,   0,  67,   0,   0,   0,   1,   1,   5,   0,  64,   6]
-        values = [130,   1,   1, 128,   0,   1, 128,   0,   0,   0,   0,   7,   4,  64,   1]
-        values = [130,   1,   1,  64,   0,   1,   0,  64,   0,   0,   0,   7,   4,  64,   1]
-        values = [130,   0,   0,  1,   0,   67,   0,  0,   0,   1,   1,   5,   0,  64,   0]
+        #values = [131,   1,   0,   1,   0,  67,   0,   0,   0,   1,   1,   5,   0,  64,   6]
+        #values = [130,   1,   1, 128,   0,   1, 128,   0,   0,   0,   0,   7,   4,  64,   1]
+        #values = [130,   1,   1,  64,   0,   1,   0,  64,   0,   0,   0,   7,   4,  64,   1]
+        #values = [130,   0,   0,  1,   0,   67,   0,  0,   0,   1,   1,   5,   0,  64,   0]
 
-        idx = 0
-        for bval in values:
+        if len(values) < nbreg:
+            return 'failed'
+
+        (success,resdict) = self.send_command("dsv 15")
+        ovalues = list(map(int,resdict.values()))
+
+        idx = start
+        for i in range(nbreg):
+            bval = values[i]
             (success,resdict) = self.send_command(f'ssv {idx} {bval}')
+            ovalues[idx] = bval
             idx = idx+1
         (success,resdict) = self.send_command("dsv 15")
-        x = set(values)
+        x = set(ovalues)
         responses = list(map(int,resdict.values()))
         y = set(responses)
         if  x == y:
@@ -232,11 +206,11 @@ class NUVU(EDTCamera):
         return 'failed'
 
 
-    def SetBinning2(self):
-        (success,answer) = self.send_command("cdsbinmode 2")
+    def SetBinning(self, binning: int):
+        (success,answer) = self.send_command(f'cdsbinmode {binning}')
+        'CDS binning mode'
         if success:
-            return(int(answer),self.RO_MODES[int(answer)])
-            # Read serial data :  CDS binning mode: 2\r
+            return int(answer['CDS binning mode'])
         return 'failed'
 
 
@@ -417,6 +391,7 @@ class NUVU(EDTCamera):
         (success,answer) = self.send_command("{cmd}".format(cmd=self.cfgdict['EMGetRawGainCmd']))
         if success:
             return(int(answer['4'].split()[0]),answer['4'].split(' ',2)[2])
+        return 'failed'
 
     def GetAnalogicGain(self):
         (success,answer) = self.send_command("{cmd}".format(cmd=self.cfgdict['AnalogicGetGainCmd']))
@@ -424,11 +399,13 @@ class NUVU(EDTCamera):
             gain = int(answer['Gain 1'])
             self.camera_shm.update_keyword('GAIN', gain)
             return gain
+        return 'failed'
 
     def GetAnalogicOffset(self):
         (success,answer) = self.send_command("{cmd}".format(cmd=self.cfgdict['AnalogicGetOffsetCmd']))
         if success:
             return int(answer['CDS offset'])
+        return 'failed'
 
     def SetAnalogicGain(self, value: int):
         if not str(value) in self.cfgdict['AnalogicGainRange']:
@@ -437,6 +414,7 @@ class NUVU(EDTCamera):
         (success,answer) = self.send_command(f"{cmdstring}")
         if success:
             return int(answer['Gain 1'])
+        return 'failed'
 
     def SetAnalogicOffset(self, value: int):
         minv = int(self.cfgdict['AnalogicOffsetRange'].split(',')[0])
@@ -447,8 +425,9 @@ class NUVU(EDTCamera):
         (success,answer) = self.send_command(f"{cmdstring}")
         if success:
             return int(answer['CDS offset'])
+        return 'failed'
 
-    def SetEMRawGain(self, value: int, verbose = 1):
+    def SetEMRawGain(self, value: int, verbose = 0):
         minv = int(self.cfgdict['EMRawGainRange'].split(',')[0])
         maxv = int(self.cfgdict['EMRawGainRange'].split(',')[1])
         maxv = 200
@@ -460,11 +439,13 @@ class NUVU(EDTCamera):
         (success,answer) = self.send_command(f"{cmdstring}")
         if success:
             return(int(answer['4'].split()[0]),answer['4'].split(' ',2)[2])
+        return 'failed'
 
     def GetEMCalibratedGain(self):
         (success,answer) = self.send_command("seg")
         if success:
             return float(answer['emgain'].split(',')[0])
+        return 'failed'
 
     def SetEMCalibratedGain(self, emcgain: float):
         minv = 1.0
@@ -478,17 +459,20 @@ class NUVU(EDTCamera):
             return(self.GetEMCalibratedGain())
         (success,answer) = self.send_command(f'seg {emcgain}\n')
         if success:
-            return float(answer['emgain'])
+            return float(answer['emgain'].split(',')[0])
+        return 'failed'
 
     def SetContinuousAcquisition(self):
         (success,answer) = self.send_command("re -1")
         if success:
-            return float(answer)
+            return answer
+        return 'failed'
 
     def AbortAcquisition(self):
         (success,answer) = self.send_command("abort")
         if success:
-            return float(answer)
+            return answer
+        return 'failed'
 
 
     def mytemptests(self):
