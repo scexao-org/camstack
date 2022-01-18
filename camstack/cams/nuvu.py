@@ -102,7 +102,51 @@ class NUVU(EDTCamera):
 
         if debug:
             print(self.cfgdict)
+
+
+        #rsrt
+        #sw
+        #cdsgain
+        #cdsgain 1
+        #seg
+        #seg 1
+        #sw 0
+        #stm
+        #sw
+        #cdsoffset
+        #cdsoffset -1000
+        # rsrt
+        # tsp 1 -60
+
+        ###################################
+        # ssva 13 1
+
         self.SetBinning()
+
+        #self.SetRegister()
+        #############################################
+
+        self.GetReadoutTime()
+
+        self.GetWaitingTime()
+
+        self.SetExposureTime(0)
+
+        self.SetWaitingTime(0)
+
+        GetTriggerMode
+
+        self.GetWaitingTime()
+
+        self.SetEMCalibratedGain(1)
+
+        self.SetShutterMode(2)
+
+        self.GetTriggerMode()
+
+        self.GetWaitingTime()
+
+        self.GetTriggerMode()
 
         # Starting continuous acquisition
         self.SetContinuousAcquisition()
@@ -167,12 +211,12 @@ class NUVU(EDTCamera):
             for i in range(len(resdict)):  self.RO_MODES.append(resdict[str(i)].split()[0])
         return success
 
-    def SetBinning(self):
+    def SetRegister(self):
         #           0    1    2    3    4    5    6    7    8    9   10   11   12   13   14
         values = [131,   1,   0,   1,   0,  67,   0,   0,   0,   1,   1,   5,   0,  64,   6]
         values = [130,   1,   1, 128,   0,   1, 128,   0,   0,   0,   0,   7,   4,  64,   1]
         values = [130,   1,   1,  64,   0,   1,   0,  64,   0,   0,   0,   7,   4,  64,   1]
-        values = [130,   0,   1,  65,   0,   0,   0,  68,   0,   0,   0,   0,   0,  64,   0]
+        values = [130,   0,   0,  1,   0,   67,   0,  0,   0,   1,   1,   5,   0,  64,   0]
 
         idx = 0
         for bval in values:
@@ -186,6 +230,15 @@ class NUVU(EDTCamera):
             print(success,resdict)
             return(success,resdict)
         return 'failed'
+
+
+    def SetBinning2(self):
+        (success,answer) = self.send_command("cdsbinmode 2")
+        if success:
+            return(int(answer),self.RO_MODES[int(answer)])
+            # Read serial data :  CDS binning mode: 2\r
+        return 'failed'
+
 
     def GetReadoutMode(self):
         (success,answer) = self.send_command("ld")
