@@ -1,0 +1,31 @@
+#!/bin/bash
+
+tnew="tmux new-session -d -s"
+tsend="tmux send-keys -t"
+
+tname="nuvu0ctrl"
+
+# Create tmuxes and issue kills
+$tsend $tname C-c
+sleep 3.0 # MUST NOT SEND the C-c to interrupt the bashrc !
+sleep 0.1
+$tsend $tname "close()" Enter
+sleep 3
+$tsend $tname C-c
+sleep 0.3
+$tsend $tname C-z
+sleep 0.3
+$tsend $tname "kill %" Enter
+
+sleep 0.1
+tmux kill-session -t $tname
+sleep 1.0
+$tnew $tname
+
+
+echo ""
+#read -p "Everything killed, proceed to startup ? Press enter to continue, Ctrl+C to abort."
+
+$tsend $tname "python -im camstack.cam_mains.kalaocam" Enter
+
+echo "startNuvu completed."
