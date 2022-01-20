@@ -9,15 +9,19 @@
 #                                              #
 # -------------------------------------------- #
 
-import pdb; pdb.set_trace()
-
+import os
+_CORES = os.sched_getaffinity(0) # Go around pygame import
 
 import pygame, sys
 from pygame.locals import *
+
+# Pygame import (on AMD Epyc) make affinity drop to CPU 0 only !
+os.sched_setaffinity(0, _CORES) # Fix the CPU affinity
+
+
 import numpy as np
 import matplotlib.cm as cm
 import struct
-import os
 from PIL import Image
 import time
 import math as m
