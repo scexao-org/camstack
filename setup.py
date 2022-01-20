@@ -24,6 +24,7 @@ with open("README.md", 'r') as f:
     long_description = f.read()
 
 scripts = [
+    './viewers/renocam.py',
     './viewers/buffycam.py',
     './viewers/chuckcam.py',
 
