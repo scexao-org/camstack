@@ -4,12 +4,17 @@
 import os,sys
 import datetime, time
 import json
+import logging
 ###from struct import pack,unpack
 from enum import Enum
 from typing import Union
 
+
+camstack_home = '/home/kalao/kalao-camstack'
+
 sys.path.insert(0, "/home/kalao/kalao-cacao/src/pyMilk")
-sys.path.insert(0, "/home/kalao/src/camstack")
+#sys.path.insert(0, "/home/kalao/kalaco-camstack")
+sys.path.insert(0, camstack_home)
 
 #from camstack.core.edtinterface import EdtInterfaceSerial
 from camstack.core.utilities import CameraMode
@@ -60,6 +65,7 @@ class NUVU(EDTCamera):
     cfgdict = {}
     edt_iface = None
     RO_MODES=[]
+    logging.basicConfig(filename='kalao_nuvu.log', format='kalao_nuvu %(asctime)s %(message)s',level=logging.INFO)
 
     def __init__(self,
                  name: str,
@@ -71,7 +77,9 @@ class NUVU(EDTCamera):
                  dependent_processes=[]):
 
         debug=0
-        basefile = os.environ['HOME'] + '/src/camstack/config/nuvu_kalao.cfg'
+        #basefile = os.environ['HOME'] + '/src/camstack/config/nuvu_kalao_16bit.cfg'
+        basefile = camstack_home + '/config/nuvu_kalao_16bit.cfg'
+
 
         # Call EDT camera init
         # This should pre-kill dependent sessions
@@ -114,8 +122,7 @@ class NUVU(EDTCamera):
 
         #self.camera_shm.update_keyword('DETECTOR', "NUVU - %s"%(self.cfgdict['CCDPartNumber']))
 
-        if debug:
-            print(self.cfgdict)
+        logging.debug(self.cfgdict)
 
 
     def _get_nuvu_response(self, response, verbose=0):
@@ -134,15 +141,15 @@ class NUVU(EDTCamera):
         rlist=[x.split(":") for x in rlines]
         rdict = dict(zip(list(map(lambda x: x[0], rlist)), list(map(lambda x: x[1], rlist))))
         if verbose:
+            pass
             #print(rdict.keys())
             #print(rdict.values())
-            print(rdict)
+        logging.debug(rdict)
         return(True, rdict)
 
-    def send_command(self, cmd, timeout: float = 100., verbose=0):
+    def send_command(self, cmd, timeout: float = 100.):
         # Just a little bit of parsing to handle the NUVU answer
-        if verbose:
-            print(cmd)
+        logging.info(cmd)
         resp = EDTCamera.send_command(self, "{command}\n".format(command=cmd), base_timeout=timeout)
         (success,resdict) = self._get_nuvu_response(resp)
         return(success,resdict)
@@ -427,12 +434,11 @@ class NUVU(EDTCamera):
             return int(answer['CDS offset'])
         return 'failed'
 
-    def SetEMRawGain(self, value: int, verbose = 0):
+    def SetEMRawGain(self, value: int):
         minv = int(self.cfgdict['EMRawGainRange'].split(',')[0])
         maxv = int(self.cfgdict['EMRawGainRange'].split(',')[1])
         maxv = 200
-        if verbose:
-            print(f'{minv} <= {value} <= {maxv}')
+        logging.debug(f'SetEMRawGain({minv} <= {value} <= {maxv})')
         if maxv < value and value < minv:
             return(self.GetEMRawGain())
         cmdstring=self.cfgdict['EMSetRawGainCmd']%(value)
@@ -453,8 +459,10 @@ class NUVU(EDTCamera):
         ccdtemp = self.GetCCDTemperature()
         mint = float(self.cfgdict['EmGainCalibrationTemperatureRange'].split(',')[0])
         maxt = float(self.cfgdict['EmGainCalibrationTemperatureRange'].split(',')[1])
+        logging.debug(f'SetEMCalibratedGain({mint} <= {ccdtemp} <= {maxt})')
         if maxt < ccdtemp and ccdtemp < mint:
             return(self.GetEMCalibratedGain())
+        logging.debug(f'SetEMCalibratedGain({minv} <= {emcgain} <= {maxv})')
         if maxv < emcgain and emcgain < minv:
             return(self.GetEMCalibratedGain())
         (success,answer) = self.send_command(f'seg {emcgain}\n')

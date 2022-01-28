@@ -3,7 +3,7 @@
 import sys
 
 sys.path.insert(0, "/home/kalao/kalao-cacao/src/pyMilk")
-sys.path.insert(0, "/home/kalao/src/camstack")
+sys.path.insert(0, "/home/kalao/kalao-camstack")
 
 
 from camstack.core.utilities import DependentProcess, RemoteDependentProcess
