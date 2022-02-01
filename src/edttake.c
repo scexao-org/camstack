@@ -298,13 +298,14 @@ int main(int argc, char **argv)
     int N_KEYWORDS = 3;
 
     // Warning: the order of *kws* may change, because we're gonna allocate the other ones from python.
-    const char *KW_NAMES[] = {"MFRATE", "FG_SIZE1", "FG_SIZE2"};                   // "tint", "fps", "DET-NSMP", "x0", "x1", "y0", "y1", "temp"}; // DET-NSMP is ex-NDR
-    const char KW_TYPES[] = {'D', 'L', 'L'};                                       // {'D', 'D', 'L', 'L', 'L', 'L', 'L', 'D'};
+    const char *KW_NAMES[] = {"MFRATE", "MACQTMUS", "FG_SIZE1", "FG_SIZE2"};                   // "tint", "fps", "DET-NSMP", "x0", "x1", "y0", "y1", "temp"}; // DET-NSMP is ex-NDR
+    const char KW_TYPES[] = {'D', 'L', 'L', 'L'};                                       // {'D', 'D', 'L', 'L', 'L', 'L', 'L', 'D'};
     const char *KW_COM[] = {"Measured frame rate (Hz)",
+                            "Frame acq time (us, CLOCK_REALTIME)",
                             "Size of frame grabber for the X axis (pixel)",
                             "Size of frame grabber for the Y axis (pixel)"}; // {"exposure time", "frame rate", "NDR", "x0", "x1", "y0", "y1", "detector temperature"};
 
-    int KW_POS[] = {0, 1, 2};
+    int KW_POS[] = {0, 1, 2, 3};
 
     if (!REUSE_SHM)
     {
@@ -328,8 +329,9 @@ int main(int argc, char **argv)
     }
     // Initial values
     image.kw[KW_POS[0]].value.numf = 0.0;
-    image.kw[KW_POS[1]].value.numl = height;
-    image.kw[KW_POS[2]].value.numl = isiowidth;
+    image.kw[KW_POS[1]].value.numf = 0;
+    image.kw[KW_POS[2]].value.numl = height;
+    image.kw[KW_POS[3]].value.numl = isiowidth;
 
     /*
      * allocate four buffers for optimal pdv ring buffer pipeline (reduce if
@@ -449,7 +451,9 @@ int main(int argc, char **argv)
         meas_frate *= (1.0 - meas_frate_gain);
         // This is only CPU time - that sucks.
         meas_frate += 1.0 / time_elapsed * meas_frate_gain;
-        image.kw[KW_POS[0]].value.numf = (float)meas_frate;
+        image.kw[KW_POS[0]].value.numf = (float)meas_frate; // MFRATE
+        image.kw[KW_POS[1]].value.numl = ((long) time2.tv_sec * 1000000) + (time2.tv_nsec / 1000); // MACQTMUS
+        
         time1.tv_sec = time2.tv_sec;
         time1.tv_nsec = time2.tv_nsec;
 
