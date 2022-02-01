@@ -25,9 +25,9 @@ class EDTCameraNoModes:
     KEYWORDS = {  # Format is name: (value, description) - this list CAN be figured out from a redis query.
         'BIN-FCT1': (1, 'Binning factor of the X axis (pixel)'),
         'BIN-FCT2': (1, 'Binning factor of the Y axis (pixel)'),
-        'BSCALE': (1.0, 'Real=fits-value*BSCALE+BZERO'),
+        #'BSCALE': (1.0, 'Real=fits-value*BSCALE+BZERO'),
         'BUNIT': ('ADU', 'Unit of original values'),
-        'BZERO': (0.0, 'Real=fits-value*BSCALE+BZERO'),
+        #'BZERO': (0.0, 'Real=fits-value*BSCALE+BZERO'),
         'CROP_OR1': (0, 'Origin in X of the cropped window (pixel)'),
         'CROP_OR2': (0, 'Origin in Y of the cropped window (pixel)'),
         'CROP_EN1': (1, 'End in X of the cropped window (pixel)'),
