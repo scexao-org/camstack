@@ -6,7 +6,7 @@ import scxconf
 
 if __name__ == "__main__":
 
-    mode = 0
+    mode = 3
 
     # Prepare dependent processes
     tcp_recv = RemoteDependentProcess(
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     utr_red = DependentProcess(
         tmux_name='kcam_utr',
         cli_cmd=
-        'milk-exec "mload milkimageformat; readshmim kcam_raw; imgformat.cred_ql_utr ..procinfo 1; imgformat.cred_ql_utr ..triggermode 3; imgformat.cred_ql_utr ..loopcntMax -1; imgformat.cred_ql_utr kcam_raw kcam 55000"',
+        'milk-exec "mload milkimageformat; readshmim kcam_raw; imgformat.cred_cds_utr ..procinfo 1; imgformat.cred_cds_utr ..triggermode 3; imgformat.cred_cds_utr ..loopcntMax -1; imgformat.cred_cds_utr kcam_raw kcam 55000"',
         cli_args=(),
         kill_upon_create=True,
         cset='kcam_utr',
@@ -101,7 +101,7 @@ if __name__ == "__main__":
                 'kcam_raw',
                 unit=1,
                 channel=0,
-                mode_id='full',
+                mode_id=mode,
                 taker_cset_prio=('kcam_edt', 49),
                 dependent_processes=[tcp_recv, tcp_send,
                                      utr_red, zmq_recv, zmq_send])  #, tcp_send_raw, tcp_recv_raw])
