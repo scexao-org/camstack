@@ -93,14 +93,17 @@ class NUVU(EDTCamera):
 
         success = self._update_nuvu_config()
         if not success:
+            print("Error updating nuvu config")
             return None
 
         success = self._update_romodes_list()
         if not success:
+            print("Error updating readout modes list")
             return None
 
         success = self.SetReadoutModeStr('EM_20MHz_10MHz')
         if not success:
+            print("Error updating readout mode")
             return None
 
         self.SetEMRawGain(0)
