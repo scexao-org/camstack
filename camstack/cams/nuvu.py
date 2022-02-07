@@ -70,7 +70,7 @@ class NUVU(EDTCamera):
     def __init__(self,
                  name: str,
                  stream_name: str,
-                 mode_id: int = 0,
+                 mode_id: int = 1,
                  unit: int = 0,
                  channel: int = 0,
                  taker_cset_prio: Union[str, int] = ('system', None),
