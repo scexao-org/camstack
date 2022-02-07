@@ -170,6 +170,8 @@ class NUVU(EDTCamera):
         if success:
             self.camera_shm.update_keyword('DETMODE', romode)
             self.cfgdict.update(resdict)
+        else:
+            print("Error setting Readoutmode")
         return success
 
     def SetReadoutModeInt(self, romode: int):
@@ -179,6 +181,8 @@ class NUVU(EDTCamera):
         if success:
             self.camera_shm.update_keyword('DETMODE', self.RO_MODES['romode'])
             self.cfgdict.update(resdict)
+        else:
+            print("Error setting Readoutmode")
         return success
 
     def _update_romodes_list(self):
