@@ -65,7 +65,7 @@ class NUVU(EDTCamera):
     cfgdict = {}
     edt_iface = None
     RO_MODES=[]
-    logging.basicConfig(filename='kalao_nuvu.log', format='kalao_nuvu %(asctime)s %(message)s',level=logging.INFO)
+    logging.basicConfig(filename='kalao_nuvu.log', format='kalao_nuvu %(asctime)s %(message)s',level=logging.DBUG)
 
     def __init__(self,
                  name: str,
