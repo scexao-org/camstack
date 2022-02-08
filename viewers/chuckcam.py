@@ -700,7 +700,7 @@ rct_sc2.bottomleft = (5 * z1 - 4, ysc - ktot)
 
 #REACH Photometry parameters
 dreachphoto = 64. * z1
-xreachphoto = -0.5 * z1
+xreachphoto = -1.5 * z1
 yreachphoto = -11.5 * z1
 preachphoto = dreachphoto / 7.
 reachphotoc = preachphoto / 2.
