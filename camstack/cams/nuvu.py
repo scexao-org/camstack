@@ -547,7 +547,7 @@ if __name__ == "__main__":
     cam = Kalao(name='ḱalao_wfs', stream_name='nuvu0', unit=0, channel=0)
     from camstack.core.utilities import shellify_methods
     shellify_methods(cam, globals())
-    #kalao.mytemptests()
+    kalao.mytemptests()
     #kalao.mydivtests()
     #kalao.mytrigtests()
     #kalao.mygaintests()
