@@ -91,6 +91,7 @@ class NUVU(EDTCamera):
         # AD HOC
         # ======
 
+        time.sleep(120)
         success = self._update_nuvu_config()
         if not success:
             logging.error("Error updating nuvu config")
