@@ -76,7 +76,7 @@ class NUVU(EDTCamera):
                  taker_cset_prio: Union[str, int] = ('system', None),
                  dependent_processes=[]):
 
-        debug=0
+        debug=1
         #basefile = os.environ['HOME'] + '/src/camstack/config/nuvu_kalao_16bit.cfg'
         basefile = camstack_home + '/config/nuvu_kalao_16bit.cfg'
 
@@ -93,17 +93,17 @@ class NUVU(EDTCamera):
 
         success = self._update_nuvu_config()
         if not success:
-            print("Error updating nuvu config")
+            logging.error("Error updating nuvu config")
             return None
 
         success = self._update_romodes_list()
         if not success:
-            print("Error updating readout modes list")
+            logging.error("Error updating readout modes list")
             return None
 
         success = self.SetReadoutModeStr('EM_20MHz_10MHz')
         if not success:
-            print("Error updating readout mode")
+            logging.error("Error updating readout mode")
             return None
 
         self.SetEMRawGain(0)
@@ -131,7 +131,8 @@ class NUVU(EDTCamera):
     def _get_nuvu_response(self, response, verbose=0):
         """ convert nuvu response into a key/values dictionary """
         rlines = response.splitlines()
-        if not 'OK' in rlines[-2]: return(False,{})
+        if not 'OK' in rlines[-2]:
+            return(False,{})
         try:
             return(True,int(rlines[0]))
         except ValueError:
@@ -171,7 +172,7 @@ class NUVU(EDTCamera):
             self.camera_shm.update_keyword('DETMODE', romode)
             self.cfgdict.update(resdict)
         else:
-            print("Error setting Readoutmode")
+            logging.error("Error setting Readoutmode")
         return success
 
     def SetReadoutModeInt(self, romode: int):
@@ -182,7 +183,7 @@ class NUVU(EDTCamera):
             self.camera_shm.update_keyword('DETMODE', self.RO_MODES['romode'])
             self.cfgdict.update(resdict)
         else:
-            print("Error setting Readoutmode")
+            logging.error("Error setting Readoutmode")
         return success
 
     def _update_romodes_list(self):
