@@ -155,6 +155,7 @@ class NUVU(EDTCamera):
         # Just a little bit of parsing to handle the NUVU answer
         logging.info(cmd)
         resp = EDTCamera.send_command(self, "{command}\n".format(command=cmd), base_timeout=timeout)
+        logging.debug(resp)
         (success,resdict) = self._get_nuvu_response(resp)
         return(success,resdict)
 
