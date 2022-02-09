@@ -3,7 +3,7 @@
 tnew="tmux new-session -d -s"
 tsend="tmux send-keys -t"
 
-tname="nuvu0ctrl"
+tname="nuvu_ctrl"
 
 # Create tmuxes and issue kills
 $tsend $tname C-c
