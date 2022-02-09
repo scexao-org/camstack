@@ -165,9 +165,9 @@ class NUVU(EDTCamera):
         r = 0
         while r < retries:
             resp = EDTCamera.send_command(self, "ld 0\n", base_timeout=timeout)
-            logging.debug(resp)
             if len(resp) > 0:
                 break
+            logging.debug("ld 0 command failed")
             r += 1
             time.sleep(30)
         (success,resdict) = self._get_nuvu_response(resp)
