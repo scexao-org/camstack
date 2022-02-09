@@ -92,7 +92,7 @@ class NUVU(EDTCamera):
         # ======
 
         time.sleep(120)
-        success = self._update_nuvu_config()
+        success = self._update_nuvu_config(retries=5,timeout=400.)
         if not success:
             logging.error("Error updating nuvu config")
             return None
@@ -161,8 +161,15 @@ class NUVU(EDTCamera):
         (success,resdict) = self._get_nuvu_response(resp)
         return(success,resdict)
 
-    def _update_nuvu_config(self):
-        (success,resdict) = self.send_command("ld 0")
+    def _update_nuvu_config(self, retries: int = 3, timeout: float = 200.):
+        r = 0
+        while r < retries:
+           resp = EDTCamera.send_command(self, "ld 0\n".format(command=cmd), base_timeout=timeout)
+           if len(resp) > 0:
+               break
+           r += 1
+        (success,resdict) = self._get_nuvu_response(resp)
+        #(success,resdict) = self.send_command("ld 0", timeout=400.)
         if success:
             self.cfgdict.update(resdict)
         return success
