@@ -169,7 +169,7 @@ class NUVU(EDTCamera):
                 break
             logging.debug("ld 0 command failed")
             r += 1
-            time.sleep(60)
+            time.sleep(30)
         (success,resdict) = self._get_nuvu_response(resp)
         #(success,resdict) = self.send_command("ld 0", timeout=400.)
         if success:
