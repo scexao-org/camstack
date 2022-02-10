@@ -80,6 +80,10 @@ class NUVU(EDTCamera):
         #basefile = os.environ['HOME'] + '/src/camstack/config/nuvu_kalao_16bit.cfg'
         basefile = camstack_home + '/config/nuvu_kalao_16bit.cfg'
 
+        success = self._update_nuvu_config(retries=5,timeout=100.)
+        if not success:
+            logging.error("Error updating nuvu config")
+            return None
 
         # Call EDT camera init
         # This should pre-kill dependent sessions
