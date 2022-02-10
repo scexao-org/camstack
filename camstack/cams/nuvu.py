@@ -80,7 +80,6 @@ class NUVU(EDTCamera):
         #basefile = os.environ['HOME'] + '/src/camstack/config/nuvu_kalao_16bit.cfg'
         basefile = camstack_home + '/config/nuvu_kalao_16bit.cfg'
 
-
         # Call EDT camera init
         # This should pre-kill dependent sessions
         # But we should be able to "prepare" the camera before actually starting
@@ -170,6 +169,9 @@ class NUVU(EDTCamera):
             logging.debug("ld 0 command failed")
             r += 1
             time.sleep(30)
+        else:
+            logging.error("Unable to communicate with camera.")
+            return None
         (success,resdict) = self._get_nuvu_response(resp)
         #(success,resdict) = self.send_command("ld 0", timeout=400.)
         if success:
