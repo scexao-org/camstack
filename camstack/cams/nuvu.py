@@ -188,7 +188,7 @@ class NUVU(EDTCamera):
             return False
         (success,resdict) = self.send_command("ld %d"%(self.RO_MODES.index(romode)), timeout=400.)
         if success:
-            self.camera_shm.update_keyword('DETMODE', romode)
+            #self.camera_shm.update_keyword('DETMODE', romode)
             self.cfgdict.update(resdict)
         else:
             logging.error("Error setting Readoutmode")
