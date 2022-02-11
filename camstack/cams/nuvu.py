@@ -169,7 +169,7 @@ class NUVU(EDTCamera):
         (success,resdict) = self._get_nuvu_response(resp)
         return(success,resdict)
 
-    def _update_nuvu_config(self, retries: int = 3, timeout: float = 100.):
+    def _update_nuvu_config(self, retries: int = 10, timeout: float = 100.):
         r = 0
         while r < retries:
             resp = EDTCamera.send_command(self, "ld 0", base_timeout=timeout)
@@ -177,7 +177,7 @@ class NUVU(EDTCamera):
                 break
             logging.debug("ld 0 command failed")
             r += 1
-            time.sleep(30)
+            time.sleep(5)
         else:
             logging.error("Unable to communicate with camera.")
             return None
