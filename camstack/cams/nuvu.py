@@ -123,14 +123,18 @@ class NUVU(EDTCamera):
         self.SetBinning(2)
         self.SetExposureTime(0) # milliseconds
         self.SetWaitingTime(0)
-        self.SetEMCalibratedGain(1.0)
-        self.SetShutterMode(2)
-        self.SetTriggerMode(0,1)
-        self.SetContinuousAcquisition()
+
 
         #self.camera_shm.update_keyword('DETECTOR', "NUVU - %s"%(self.cfgdict['CCDPartNumber']))
 
         logging.debug(self.cfgdict)
+
+    def prepare_camera_finalize(self, mode_id: int = None):
+
+        self.SetEMCalibratedGain(1.0)
+        self.SetShutterMode(2)
+        self.SetTriggerMode(0,1)
+        self.SetContinuousAcquisition()
 
 
     def _get_nuvu_response(self, response, verbose=0):
