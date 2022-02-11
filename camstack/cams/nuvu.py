@@ -89,7 +89,10 @@ class NUVU(EDTCamera):
         # ======
         # AD HOC
         # ======
-
+        self.SetEMCalibratedGain(1.0)
+        self.SetShutterMode(2)
+        self.SetTriggerMode(0,1)
+        self.SetContinuousAcquisition()
 
     # =====================
     # AD HOC PREPARE CAMERA
@@ -123,10 +126,7 @@ class NUVU(EDTCamera):
         self.SetBinning(2)
         self.SetExposureTime(0) # milliseconds
         self.SetWaitingTime(0)
-        self.SetEMCalibratedGain(1.0)
-        self.SetShutterMode(2)
-        self.SetTriggerMode(0,1)
-        self.SetContinuousAcquisition()
+
 
         #self.camera_shm.update_keyword('DETECTOR', "NUVU - %s"%(self.cfgdict['CCDPartNumber']))
 
