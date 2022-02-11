@@ -18,6 +18,8 @@ class EdtInterfaceSerial:
         self.unit, self.channel = unit, channel
         self.pdvObj = EdtDLL.pdv_open_channel(b'pdv', unit, channel)
 
+        self.baud_rate = EdtDLL.pdv_set_baud(self.pdvObj, 115200)
+
         self.camName = f'pdv_{unit}_{channel}'
         
         self.initialize()
