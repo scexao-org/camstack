@@ -90,6 +90,10 @@ class NUVU(EDTCamera):
         # AD HOC
         # ======
 
+
+    # =====================
+    # AD HOC PREPARE CAMERA
+    # =====================
     def prepare_camera_for_size(self, mode_id=None):
         #time.sleep(120)
         success = self._update_nuvu_config(retries=5,timeout=100.)
@@ -558,7 +562,7 @@ class Kalao(NUVU):
 # Quick shorthand for testing
 
 if __name__ == "__main__":
-    cam = Kalao(name='nuvu', stream_name='nuvu0', unit=0, channel=0)
+    cam = Kalao(name='nuvu', stream_name='nuvu_raw', unit=0, channel=0)
     from camstack.core.utilities import shellify_methods
     shellify_methods(cam, globals())
     #kalao.mytemptests()
