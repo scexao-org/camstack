@@ -201,7 +201,7 @@ class NUVU(EDTCamera):
         return success
 
     def SetReadoutModeInt(self, romode: int):
-        if 0 > i and i > len(self.RO_MODES):
+        if 0 > romode and romode > len(self.RO_MODES):
             return False
         (success,resdict) = self.send_command("ld %d"%(romode), timeout=400.)
         if success:
@@ -488,7 +488,7 @@ class NUVU(EDTCamera):
         return 'failed'
 
 
-    def ResetEMCalibratedGain(self:
+    def ResetEMCalibratedGain(self):
         (success,answer) = self.send_command("seg 1")
         if success:
             return float(answer['emgain'].split(',')[0])
