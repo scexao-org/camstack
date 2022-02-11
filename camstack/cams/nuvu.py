@@ -115,7 +115,7 @@ class NUVU(EDTCamera):
         self.SetSeqRegisters(11,4,[128,0,0,0,0,8,1,0,0,128,6])
         self.SetSeqRegisters(10,0,[131,0,0,3,128,0,0,0,0,5])
         self.SetAnalogicGain(1)
-        self.SetEMCalibratedGain(1.0)
+        self.ResetEMCalibratedGain()
         self.SetWaitingTime(0)
         self.SetAnalogicOffset(-1000)
         self.SetCCDTemperature(-60.0)
@@ -478,11 +478,20 @@ class NUVU(EDTCamera):
             return(int(answer['4'].split()[0]),answer['4'].split(' ',2)[2])
         return 'failed'
 
+
     def GetEMCalibratedGain(self):
         (success,answer) = self.send_command("seg")
         if success:
             return float(answer['emgain'].split(',')[0])
         return 'failed'
+
+
+    def ResetEMCalibratedGain(self:
+        (success,answer) = self.send_command("seg 1")
+        if success:
+            return float(answer['emgain'].split(',')[0])
+        return 'failed'
+
 
     def SetEMCalibratedGain(self, emcgain: float):
         minv = 1.0
