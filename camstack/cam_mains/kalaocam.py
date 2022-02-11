@@ -59,7 +59,7 @@ if __name__ == "__main__":
     #utr_nuvu.kill_order = 2
 
 
-    cam = Kalao('kalao_wfs',
+    cam = Kalao('nuvu',
                 'nuvu_raw',
                 unit=0,
                 channel=0,
