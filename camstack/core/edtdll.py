@@ -85,6 +85,10 @@ def initEdtDLL():
     EdtDLL.pdv_wait_last_image.argtypes = [c_void_p, c_void_p]
     EdtDLL.pdv_wait_last_image.restype = POINTER(c_short)
 
+    # pdv_set_baud
+    EdtDLL.pdv_set_baud.argtype = [c_void_p, c_int]
+    EdtDLL.pdv_set_baud.restype = c_int
+
     '''
     # Autogen (plus some manual replacing) using
     from pyclibrary.c_parser import CParser
