@@ -90,6 +90,7 @@ class NUVU(EDTCamera):
         # AD HOC
         # ======
 
+    def prepare_camera_for_size(self, mode_id=None):
         #time.sleep(120)
         success = self._update_nuvu_config(retries=5,timeout=100.)
         if not success:
