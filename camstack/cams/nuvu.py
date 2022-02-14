@@ -34,7 +34,7 @@ class NUVU(EDTCamera):
         # FULL 128 x 128
         FULL: CameraMode(x0=0, x1=127, y0=0, y1=127),
         0: CameraMode(x0=0, x1=127, y0=0, y1=127, fps=1500., tint=0.0006),
-        1: CameraMode(x0=0, x1=520, y0=0, y1=74, fps=1500., tint=0.0006, fgsize=(520,74)),
+        1: CameraMode(x0=0, x1=520, y0=0, y1=72, fps=1500., tint=0.0006, fgsize=(520,72)),
     }
 
     KEYWORDS = {}
