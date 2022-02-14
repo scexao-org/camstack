@@ -34,7 +34,7 @@ class NUVU(EDTCamera):
         # FULL 128 x 128
         FULL: CameraMode(x0=0, x1=127, y0=0, y1=127),
         0: CameraMode(x0=0, x1=127, y0=0, y1=127, fps=1500., tint=0.0006),
-        1: CameraMode(x0=0, x1=519, y0=0, y1=70, fps=1500., tint=0.0006), #, fgsize=(70,64)),
+        1: CameraMode(x0=0, x1=520, y0=0, y1=70, fps=1500., tint=0.0006, fgsize=(520,64)),
     }
 
     KEYWORDS = {}
@@ -121,9 +121,6 @@ class NUVU(EDTCamera):
         self.SetCCDTemperature(-60.0)
         self.SetSeqRegisters(13,1,[1,0,1,0,67,0,0,0,1,1,5,0,64])
         self.SetBinning(2)
-        self.SetExposureTime(0) # milliseconds
-        self.SetWaitingTime(0)
-
 
         #self.camera_shm.update_keyword('DETECTOR', "NUVU - %s"%(self.cfgdict['CCDPartNumber']))
 
@@ -131,6 +128,8 @@ class NUVU(EDTCamera):
 
     def prepare_camera_finalize(self, mode_id: int = None):
 
+        self.SetExposureTime(0) # milliseconds
+        self.SetWaitingTime(0)
         self.SetEMCalibratedGain(1.0)
         self.SetShutterMode(2)
         self.SetTriggerMode(0,1)
