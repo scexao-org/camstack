@@ -2,10 +2,8 @@
     KALAO NuVu Camera driver
 '''
 import os,sys
-import datetime, time
-import json
+import time
 import logging
-###from struct import pack,unpack
 from enum import Enum
 from typing import Union
 
@@ -30,6 +28,7 @@ class NUVU(EDTCamera):
 
     FULL = 'full'
 
+    # fps and tint not handled
     MODES = {
         # FULL 128 x 128
         FULL: CameraMode(x0=0, x1=127, y0=0, y1=127),
@@ -40,7 +39,7 @@ class NUVU(EDTCamera):
     KEYWORDS = {}
     KEYWORDS.update(EDTCamera.KEYWORDS)
 
-    EDTTAKE_UNSIGNED = False
+    EDTTAKE_UNSIGNED = True
 
     class _ShutterExternal(Enum):
         NO = 0
@@ -126,13 +125,21 @@ class NUVU(EDTCamera):
 
         logging.debug(self.cfgdict)
 
+
     def prepare_camera_finalize(self, mode_id: int = None):
 
         self.SetExposureTime(0) # milliseconds
         self.SetWaitingTime(0)
+
+        # Set EM gain to 1
         self.SetEMCalibratedGain(1.0)
+
+        # Open shutter
         self.SetShutterMode(2)
+
+        # Internal trigger
         self.SetTriggerMode(0,1)
+
         self.SetContinuousAcquisition()
 
 
@@ -394,6 +401,29 @@ class NUVU(EDTCamera):
         if success:
             return answer
         return 'failed'
+
+
+    def GetTemperature(self):
+        '''
+        Reads the temperatures tuple from the camera:
+        - CCD temperature
+        - Controller Temperature
+        - Power Supply Temperature
+        - FPGA Temperature
+        - Heatsink Temperature
+        '''
+        (success,answer) = self.send_command("ss")
+        if success:
+            temperatures = {
+                'ccd': float(answer['T'].split(',')[0]),
+                'controller': float(answer['T'].split(',')[1]),
+                'power_supply': float(answer['T'].split(',')[2]),
+                'fpga': float(answer['T'].split(',')[3]),
+                'heatsink': float(answer['T'].split(',')[4])
+            }
+            return temperatures
+        return 'failed'
+
 
     def  GetCtrlTemperature(self):
         (success,answer) = self.send_command("{cmd}".format(cmd=self.cfgdict['GetTempCtrlCmd']))
