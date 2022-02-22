@@ -451,11 +451,11 @@ class NUVU(EDTCamera):
                 'fpga': float(answer['T'].split(',')[3]),
                 'heatsink': float(answer['T'].split(',')[4])
             }
-            self.camera_shm.update_keyword('TEMP_CCD', answer['T'].split(',')[0])
-            self.camera_shm.update_keyword('TEMP_CONTROLLER', answer['T'].split(',')[1])
-            self.camera_shm.update_keyword('TEMP_POWER-SUPPLY', answer['T'].split(',')[2])
-            self.camera_shm.update_keyword('TEMP_FPGA', answer['T'].split(',')[3])
-            self.camera_shm.update_keyword('TEMP_HEATSINK', answer['T'].split(',')[4])
+            self.camera_shm.update_keyword('T_CCD', answer['T'].split(',')[0])
+            self.camera_shm.update_keyword('T_CNTRLR', answer['T'].split(',')[1])
+            self.camera_shm.update_keyword('T_PSU', answer['T'].split(',')[2])
+            self.camera_shm.update_keyword('T_FPGA', answer['T'].split(',')[3])
+            self.camera_shm.update_keyword('T_HSINK', answer['T'].split(',')[4])
             return temperatures
         return 'failed'
 
