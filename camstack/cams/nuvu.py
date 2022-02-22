@@ -37,6 +37,7 @@ class NUVU(EDTCamera):
     }
 
     KEYWORDS = {
+        'EMGAIN': (1, 'EM Gain'),
         'T_CCD': (0.0, 'Detector temperature (C)'),
         'T_CNTRLR': (0.0, 'Controller temperature (C)'),
         'T_PSU': (0.0, 'Power supply unit temperature (C)'),
