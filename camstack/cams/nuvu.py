@@ -36,7 +36,13 @@ class NUVU(EDTCamera):
         1: CameraMode(x0=0, x1=520, y0=0, y1=70, fps=1500., tint=0.0006, fgsize=(520,70)),
     }
 
-    KEYWORDS = {}
+    KEYWORDS = {
+        'TEMP_CCD': (0.0, 'Detector temperature (C)'),
+        'TEMP_CONTROLLER': (0.0, 'Controller temperature (C)'),
+        'TEMP_POWER-SUPPLY': (0.0, 'Power supply temperature (C)'),
+        'TEMP_FPGA': (0.0, 'FPGA supply temperature (C)'),
+        'TEMP_HEATSINK': (0.0, 'Heatsink temperature (C)'),
+    }
     KEYWORDS.update(EDTCamera.KEYWORDS)
 
     EDTTAKE_UNSIGNED = True
