@@ -36,7 +36,13 @@ class NUVU(EDTCamera):
         1: CameraMode(x0=0, x1=520, y0=0, y1=70, fps=1500., tint=0.0006, fgsize=(520,70)),
     }
 
-    KEYWORDS = {}
+    KEYWORDS = {
+        'T_CCD': (0.0, 'Detector temperature (C)'),
+        'T_CNTRLR': (0.0, 'Controller temperature (C)'),
+        'T_PSU': (0.0, 'Power supply unit temperature (C)'),
+        'T_FPGA': (0.0, 'FPGA supply temperature (C)'),
+        'T_HSINK': (0.0, 'Heatsink temperature (C)'),
+    }
     KEYWORDS.update(EDTCamera.KEYWORDS)
 
     EDTTAKE_UNSIGNED = True
@@ -167,6 +173,7 @@ class NUVU(EDTCamera):
         logging.debug(rdict)
         return(True, rdict)
 
+
     def send_command(self, cmd, timeout: float = 100.):
         # Just a little bit of parsing to handle the NUVU answer
         logging.info(cmd)
@@ -195,6 +202,7 @@ class NUVU(EDTCamera):
             self.cfgdict.update(resdict)
         return success
 
+
     def SetReadoutModeStr(self, romode):
         if not romode in self.RO_MODES:
             return False
@@ -205,6 +213,7 @@ class NUVU(EDTCamera):
         else:
             logging.error("Error setting Readoutmode")
         return success
+
 
     def SetReadoutModeInt(self, romode: int):
         if 0 > romode and romode > len(self.RO_MODES):
@@ -217,11 +226,13 @@ class NUVU(EDTCamera):
             logging.error("Error setting Readoutmode")
         return success
 
+
     def _update_romodes_list(self):
         (success,resdict) = self.send_command("ls")
         if success:
             for i in range(len(resdict)):  self.RO_MODES.append(resdict[str(i)].split()[0])
         return success
+
 
     def SetSeqRegisters(self, nbreg: int = 0, start: int = 0, values = []):
         #           0    1    2    3    4    5    6    7    8    9   10   11   12   13   14
@@ -266,11 +277,13 @@ class NUVU(EDTCamera):
             return(int(answer),self.RO_MODES[int(answer)])
         return 'failed'
 
+
     def GetReadoutTime(self):
         (success,answer) = self.send_command("rsrt")
         if success:
             return float(answer)
         return 'failed'
+
 
     def GetExposureTime(self):
         (success,answer) = self.send_command("se")
@@ -281,6 +294,7 @@ class NUVU(EDTCamera):
             return float(answer)
         return 'failed'
 
+
     def SetExposureTime(self, texp: float): # milliseconds
         if texp > 1172812000.0:
             return self.GetExposureTime()
@@ -289,11 +303,13 @@ class NUVU(EDTCamera):
             return float(answer)
         return 'failed'
 
+
     def GetWaitingTime(self):
         (success,answer) = self.send_command("sw")
         if success:
             return float(answer)
         return 'failed'
+
 
     def SetWaitingTime(self, twait: float):
         if twait > 1172812000.0:
@@ -303,11 +319,13 @@ class NUVU(EDTCamera):
             return float(answer)
         return 'failed'
 
+
     def GetExternalShutterMode(self):
         (success,answer) = self.send_command("sesm")
         if success:
             return answer
         return 'failed'
+
 
     def SetExternalShutterMode(self, smode: _ShutterMode):
         if not smode in [item.value for item in self._ShutterMode]:
@@ -317,11 +335,13 @@ class NUVU(EDTCamera):
             return answer
         return 'failed'
 
+
     def GetExternalShutterDelay(self):
         (success,answer) = self.send_command("ssd")
         if success:
             return float(answer)
         return 'failed'
+
 
     def SetExternalShutterDelay(self, sdelay: float):
         if sdelay > 1172812000.0:
@@ -331,11 +351,13 @@ class NUVU(EDTCamera):
             return float(answer)
         return 'failed'
 
+
     def GetShutterMode(self):
         (success,answer) = self.send_command("ssm")
         if success:
             return answer
         return 'failed'
+
 
     def SetShutterMode(self, smode: _ShutterMode):
         if not smode in [item.value for item in self._ShutterMode]:
@@ -345,11 +367,13 @@ class NUVU(EDTCamera):
             return answer
         return 'failed'
 
+
     def GetShutterExternal(self):
         (success,answer) = self.send_command("sesp")
         if success:
             return answer
         return 'failed'
+
 
     def SetShutterExternal(self, sext: _ShutterExternal):
         if not sext in [item.value for item in self._ShutterExternal]:
@@ -359,11 +383,13 @@ class NUVU(EDTCamera):
             return answer
         return 'failed'
 
+
     def GetShutterPolarity(self):
         (success,answer) = self.send_command("ssp")
         if success:
             return answer
         return 'failed'
+
 
     def SetShutterPolarity(self, spol: _Polarity):
         if not spol in [item.value for item in self._Polarity]:
@@ -373,11 +399,13 @@ class NUVU(EDTCamera):
             return answer
         return 'failed'
 
+
     def GetFirePolarity(self):
         (success,answer) = self.send_command("sfp")
         if success:
             return answer
         return 'failed'
+
 
     def SetFirePolarity(self, fpol: _Polarity):
         if not fpol in [item.value for item in self._Polarity]:
@@ -387,12 +415,14 @@ class NUVU(EDTCamera):
             return answer
         return 'failed'
 
+
     def GetTriggerMode(self):
         (success,answer) = self.send_command("stm")
         if success:
             self.camera_shm.update_keyword('EXTTRIG', str(answer))
             return answer
         return 'failed'
+
 
     def SetTriggerMode(self, tmode: _TriggerMode, nimages: int):
         if not tmode in [item.value for item in self._TriggerMode]:
@@ -421,6 +451,11 @@ class NUVU(EDTCamera):
                 'fpga': float(answer['T'].split(',')[3]),
                 'heatsink': float(answer['T'].split(',')[4])
             }
+            self.camera_shm.update_keyword('TEMP_CCD', answer['T'].split(',')[0])
+            self.camera_shm.update_keyword('TEMP_CONTROLLER', answer['T'].split(',')[1])
+            self.camera_shm.update_keyword('TEMP_POWER-SUPPLY', answer['T'].split(',')[2])
+            self.camera_shm.update_keyword('TEMP_FPGA', answer['T'].split(',')[3])
+            self.camera_shm.update_keyword('TEMP_HEATSINK', answer['T'].split(',')[4])
             return temperatures
         return 'failed'
 
