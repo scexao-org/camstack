@@ -37,11 +37,11 @@ class NUVU(EDTCamera):
     }
 
     KEYWORDS = {
-        'TEMP_CCD': (0.0, 'Detector temperature (C)'),
-        'TEMP_CONTROLLER': (0.0, 'Controller temperature (C)'),
-        'TEMP_POWER-SUPPLY': (0.0, 'Power supply temperature (C)'),
-        'TEMP_FPGA': (0.0, 'FPGA supply temperature (C)'),
-        'TEMP_HEATSINK': (0.0, 'Heatsink temperature (C)'),
+        'T_CCD': (0.0, 'Detector temperature (C)'),
+        'T_CNTRLR': (0.0, 'Controller temperature (C)'),
+        'T_PSU': (0.0, 'Power supply unit temperature (C)'),
+        'T_FPGA': (0.0, 'FPGA supply temperature (C)'),
+        'T_HSINK': (0.0, 'Heatsink temperature (C)'),
     }
     KEYWORDS.update(EDTCamera.KEYWORDS)
 
