@@ -21,16 +21,8 @@ int main(int argc, char **argv)
 {
     int lcount;
     int unit = 0;
-    int overrun, overruns = 0;
-    int timeout;
-    int timeouts, last_timeouts = 0;
-    int images_skipped = 0;
-    int recovering_timeout = FALSE;
     char *progname;
-    char *cameratype;
     int numbufs = 4;
-    u_char *image_p;
-    char errstr[64];
 
     int loops = 1;
     int width, isiowidth, bytewidth, height, depth;
@@ -199,6 +191,10 @@ int main(int argc, char **argv)
     printf("Subarray mode: %ld\n", (long)dcam_retval);
     CHECK_DCAM_ERR_EXIT(dcamprop_getvalue(cam, DCAM_IDPROP_EXPOSURETIME, &dcam_retval), cam, 1);
     printf("Exposure: %f\n", (float)dcam_retval);
+    CHECK_DCAM_ERR_EXIT(dcamprop_getvalue(cam, DCAM_IDPROP_INTERNAL_FRAMEINTERVAL, &dcam_retval), cam, 1);
+    printf("Internal frame interval: %f\n", (float)dcam_retval);
+    CHECK_DCAM_ERR_EXIT(dcamprop_getvalue(cam, DCAM_IDPROP_INTERNALFRAMERATE, &dcam_retval), cam, 1);
+    printf("Internal framerate: %f\n", (float)dcam_retval);
 
     if (pxtype == DCAM_PIXELTYPE_MONO16)
     {
@@ -319,14 +315,14 @@ int main(int argc, char **argv)
 
     // Prepare an output buffer wrapper structure
     DCAMBUF_FRAME bufframe;
-	memset(&bufframe, 0, sizeof(bufframe));
-	bufframe.size = sizeof(bufframe);
+    memset(&bufframe, 0, sizeof(bufframe));
+    bufframe.size = sizeof(bufframe);
     bufframe.buf = image.array.raw; // MAGIC !!
     bufframe.rowbytes = bytewidth;
-	bufframe.left = 0;
-	bufframe.top = 0;
-	bufframe.width = width;
-	bufframe.height = height;
+    bufframe.left = 0;
+    bufframe.top = 0;
+    bufframe.width = width;
+    bufframe.height = height;
 
     // Prep time measurement
     clock_gettime(CLOCK_REALTIME, &time1);
@@ -337,13 +333,32 @@ int main(int argc, char **argv)
 
     while (loopOK == 1)
     {
+        /*
+        if (lcount % 1000 == 999)
+        {
+            if (lcount / 1000 % 2) {
+            CHECK_DCAM_ERR_PRINT(
+                dcamprop_setvalue(cam, DCAM_IDPROP_EXPOSURETIME, 0.001), cam);
+            } else {
+            CHECK_DCAM_ERR_PRINT(
+                dcamprop_setvalue(cam, DCAM_IDPROP_EXPOSURETIME, 0.002), cam);
+            }
+        }
+        */
         // ACQUIRE FRAME
-        dcamwait_start(dcam_waitopen.hwait, &dcam_waitstart); // Check timeout and joyous stuff !
-        CHECK_DCAM_ERR_EXIT(dcamcap_transferinfo(cam, &dcam_captransferinfo), cam, 1);
+        // TODO Check this for timeouts and joyous stuff !
+        CHECK_DCAM_ERR_PRINT(
+            dcamwait_start(dcam_waitopen.hwait, &dcam_waitstart), cam);
+        CHECK_DCAM_ERR_PRINT(
+            dcamcap_transferinfo(cam, &dcam_captransferinfo), cam);
 
-        printf("nNewestFrameIndex: %d\n", dcam_captransferinfo.nNewestFrameIndex);
-        printf("frame: %d\n", lcount);
-        printf("captransferinfo.nFrameCount: %d\n", dcam_captransferinfo.nFrameCount);
+        // TODO Check those for overruns/underruns
+        if (lcount % 5000 == 0)
+        {
+            printf("nNewestFrameIndex: %d -- ", dcam_captransferinfo.nNewestFrameIndex);
+            printf("frame: %d -- ", lcount);
+            printf("captransferinfo.nFrameCount: %d\n", dcam_captransferinfo.nFrameCount);
+        }
 
         // printf("line = %d\n", __LINE__);
         fflush(stdout);
@@ -387,20 +402,7 @@ int main(int argc, char **argv)
     printf("\n------\nDEVMODE: ERRORING ON PURPOSE\n");
     CHECK_DCAM_ERR_EXIT(0, cam, 1);
 
-    printf("%d images %d timeouts %d overruns\n", loops, last_timeouts, overruns);
-
-    /*
-     * if we got timeouts it indicates there is a problem
-     */
-    if (last_timeouts)
-    {
-        printf("check camera and connections\n");
-    }
-
-    if (overruns || timeouts)
-    {
-        exit(2);
-    }
+    //printf("%d images %d timeouts %d overruns\n", loops, last_timeouts, overruns);
 
     exit(0);
 }

@@ -46,3 +46,12 @@ void output_data(const char *filename, char *buf, int32 bufsize);
             exit(1);                               \
         }                                          \
     }
+
+#define CHECK_DCAM_ERR_PRINT(CALL, camera)         \
+    {                                              \
+        DCAMERR err = CALL;                        \
+        if (err != 1)                              \
+        {                                          \
+            dcamcon_show_dcamerr(camera, err, ""); \
+        }                                          \
+    }
