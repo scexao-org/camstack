@@ -168,7 +168,9 @@ HDCAM dcamcon_init_open(int cam_num)
 		}
 
 		dcamcon_show_dcamerr((HDCAM) cam_num, err, "dcamdev_open()");
-	}
+	} else {
+        printf("Invalid camera number: %d ?\n", cam_num);
+    }
 
 	// FAILURE - uninitialize DCAM-API
 	dcamapi_uninit();

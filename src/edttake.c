@@ -50,7 +50,6 @@ int main(int argc, char **argv)
     int channel = 0; // same as cam
     char streamname[200];
 
-    float exposure = 0.05;         // exposure time [ms]
     double meas_frate = 0.0;       // Measured framerate, updated each frame
     double meas_frate_gain = 0.01; // smoothing for meas_frate
     struct timespec time1;
@@ -341,7 +340,6 @@ int main(int argc, char **argv)
 
     printf("reading %d image%s from '%s'\nwidth %d height %d depth %d\n",
            loops, loops == 1 ? "" : "s", cameratype, width, height, depth);
-    printf("exposure = %f\n", exposure);
 
     /*
      * prestart the first image or images outside the loop to get the

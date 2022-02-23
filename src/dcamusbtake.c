@@ -19,7 +19,7 @@ static void set_rt_priority();
 
 int main(int argc, char **argv)
 {
-    int i;
+    int lcount;
     int unit = 0;
     int overrun, overruns = 0;
     int timeout;
@@ -31,16 +31,17 @@ int main(int argc, char **argv)
     int numbufs = 4;
     u_char *image_p;
     char errstr[64];
+
     int loops = 1;
     int width, isiowidth, bytewidth, height, depth;
     // width: EDT image width (px.)
     // isiowidth: final image width (px.)
     // bytewidth: image width (bytes)
-    char edt_devname[128];
-    int channel = 0; // same as cam
+
+    double dcam_retval;
+
     char streamname[200];
 
-    float exposure = 0.05;         // exposure time [ms]
     double meas_frate = 0.0;       // Measured framerate, updated each frame
     double meas_frate_gain = 0.01; // smoothing for meas_frate
     struct timespec time1;
@@ -56,8 +57,6 @@ int main(int argc, char **argv)
 
     progname = argv[0];
 
-    edt_devname[0] = '\0';
-
     /*
      * process command line arguments
      */
@@ -69,6 +68,23 @@ int main(int argc, char **argv)
         {
         case 'R':
             REUSE_SHM = 1;
+            break;
+
+        case 'N':
+            ++argv;
+            --argc;
+            if (argc < 1)
+            {
+                usage(progname, "Error: option 'N' requires a numeric argument\n");
+            }
+            if ((argv[0][0] >= '0') && (argv[0][0] <= '9'))
+            {
+                numbufs = atoi(argv[0]);
+            }
+            else
+            {
+                usage(progname, "Error: option 'N' requires a numeric argument\n");
+            }
             break;
 
         case 's':
@@ -158,19 +174,56 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    dcamcon_show_dcamdev_info(cam);
+    // Manual sets - we'll probably want do this from a tmp file at worst
+    // Flashing update: full frame would timeout but ROI-ed doesn't????
+    CHECK_DCAM_ERR_EXIT(
+        dcamprop_setvalue(cam, DCAM_IDPROP_EXPOSURETIME, 0.001), cam, 1);
+    CHECK_DCAM_ERR_EXIT(
+        dcamprop_setvalue(cam, DCAM_IDPROP_SUBARRAYHSIZE, 600), cam, 1);
+    CHECK_DCAM_ERR_EXIT(
+        dcamprop_setvalue(cam, DCAM_IDPROP_SUBARRAYVSIZE, 300), cam, 1);
+    CHECK_DCAM_ERR_EXIT(
+        dcamprop_setvalue(cam, DCAM_IDPROP_SUBARRAYHPOS, 1560), cam, 1);
+    CHECK_DCAM_ERR_EXIT(
+        dcamprop_setvalue(cam, DCAM_IDPROP_SUBARRAYVPOS, 980), cam, 1);
+    CHECK_DCAM_ERR_EXIT(
+        dcamprop_setvalue(cam, DCAM_IDPROP_SUBARRAYMODE, DCAMPROP_MODE__ON), cam, 1);
 
-    // Dev mode: uninit and exit
-    CHECK_DCAM_ERR_EXIT(0, cam, 1);
+    CHECK_DCAM_ERR_EXIT(dcamprop_getvalue(cam, DCAM_IDPROP_SUBARRAYHSIZE, &dcam_retval), cam, 1);
+    width = (int)dcam_retval;
+    CHECK_DCAM_ERR_EXIT(dcamprop_getvalue(cam, DCAM_IDPROP_SUBARRAYVSIZE, &dcam_retval), cam, 1);
+    height = (int)dcam_retval;
+    CHECK_DCAM_ERR_EXIT(dcamprop_getvalue(cam, DCAM_IDPROP_IMAGE_PIXELTYPE, &dcam_retval), cam, 1);
+    DCAM_PIXELTYPE pxtype = (DCAM_PIXELTYPE)dcam_retval;
+    CHECK_DCAM_ERR_EXIT(dcamprop_getvalue(cam, DCAM_IDPROP_SUBARRAYMODE, &dcam_retval), cam, 1);
+    printf("Subarray mode: %ld\n", (long)dcam_retval);
+    CHECK_DCAM_ERR_EXIT(dcamprop_getvalue(cam, DCAM_IDPROP_EXPOSURETIME, &dcam_retval), cam, 1);
+    printf("Exposure: %f\n", (float)dcam_retval);
 
-    CHECK_DCAM_ERR_EXIT(dcamprop_getvalue(cam, DCAM_IDPROP_EXPOSURETIME, (double *)&width), cam, 1);
-    CHECK_DCAM_ERR_EXIT(dcamprop_getvalue(cam, DCAM_IDPROP_EXPOSURETIME, (double *)&height), cam, 1);
+    if (pxtype == DCAM_PIXELTYPE_MONO16)
+    {
+        atype = _DATATYPE_UINT16;
+        depth = 16;
+    }
+    else if (pxtype == DCAM_PIXELTYPE_MONO8)
+    {
+        atype = _DATATYPE_UINT8;
+        depth = 8;
+    }
+    else
+    {
+        printf("Unusable pixel type.\n");
+        CHECK_DCAM_ERR_EXIT(0, cam, 1);
+    }
+
     isiowidth = width;
     bytewidth = (atype == _DATATYPE_UINT8) ? isiowidth : isiowidth * 2;
 
     printf("Size (edt)  : %d x %d\n", width, height);
     printf("Size (isio) : %d x %d\n", isiowidth, height);
-    printf("Camera type : %s\n", cameratype);
+    printf("Camera type :");
+    dcamcon_show_dcamdev_info(cam);
+    printf("\n");
     fflush(stdout);
 
     if (STREAMNAMEINIT == 0)
@@ -203,12 +256,12 @@ int main(int argc, char **argv)
     int N_KEYWORDS = 4;
 
     // Warning: the order of *kws* may change, because we're gonna allocate the other ones from python.
-    const char *KW_NAMES[] = {"MFRATE", "MACQTMUS", "FG_SIZE1", "FG_SIZE2"}; // "tint", "fps", "DET-NSMP", "x0", "x1", "y0", "y1", "temp"}; // DET-NSMP is ex-NDR
-    const char KW_TYPES[] = {'D', 'L', 'L', 'L'};                            // {'D', 'D', 'L', 'L', 'L', 'L', 'L', 'D'};
+    const char *KW_NAMES[] = {"MFRATE", "MACQTMUS", "FG_SIZE1", "FG_SIZE2"};
+    const char KW_TYPES[] = {'D', 'L', 'L', 'L'};
     const char *KW_COM[] = {"Measured frame rate (Hz)",
                             "Frame acq time (us, CLOCK_REALTIME)",
                             "Size of frame grabber for the X axis (pixel)",
-                            "Size of frame grabber for the Y axis (pixel)"}; // {"exposure time", "frame rate", "NDR", "x0", "x1", "y0", "y1", "detector temperature"};
+                            "Size of frame grabber for the Y axis (pixel)"};
 
     int KW_POS[] = {0, 1, 2, 3};
 
@@ -240,62 +293,99 @@ int main(int argc, char **argv)
     image.kw[KW_POS[2]].value.numl = height;
     image.kw[KW_POS[3]].value.numl = isiowidth;
 
-    printf("reading %d image%s from '%s'\nwidth %d height %d depth %d\n",
-           loops, loops == 1 ? "" : "s", cameratype, width, height, depth);
-    printf("exposure = %f\n", exposure);
+    printf("reading %d image(s) from 'DCAM camera %d'\nwidth %d height %d depth %d\n",
+           loops, unit, width, height, depth);
 
-    // TODO INITIALIZE ACQUISITION
+    // Open the waitopen (?)
+    DCAMWAIT_OPEN dcam_waitopen;
+    memset(&dcam_waitopen, 0, sizeof(dcam_waitopen));
+    dcam_waitopen.size = sizeof(dcam_waitopen);
+    dcam_waitopen.hdcam = cam;
+    CHECK_DCAM_ERR_EXIT(dcamwait_open(&dcam_waitopen), cam, 1);
+    // Allocate buffers
+    CHECK_DCAM_ERR_EXIT(dcambuf_alloc(cam, numbufs), cam, 1); // TODO we should do a buffer release somehow?
+    // Start acquisiton
+    CHECK_DCAM_ERR_EXIT(dcamcap_start(cam, DCAMCAP_START_SEQUENCE), cam, 1);
+
+    // Whatever DCAMWAIT_START and DCAMCAP_TRANSFERINFO are...
+    DCAMWAIT_START dcam_waitstart;
+    memset(&dcam_waitstart, 0, sizeof(dcam_waitstart));
+    dcam_waitstart.size = sizeof(dcam_waitstart);
+    dcam_waitstart.eventmask = DCAMWAIT_CAPEVENT_FRAMEREADY;
+    dcam_waitstart.timeout = 100;
+    DCAMCAP_TRANSFERINFO dcam_captransferinfo;
+    memset(&dcam_captransferinfo, 0, sizeof(dcam_captransferinfo));
+    dcam_captransferinfo.size = sizeof(dcam_captransferinfo);
+
+    // Prepare an output buffer wrapper structure
+    DCAMBUF_FRAME bufframe;
+	memset(&bufframe, 0, sizeof(bufframe));
+	bufframe.size = sizeof(bufframe);
+    bufframe.buf = image.array.raw; // MAGIC !!
+    bufframe.rowbytes = bytewidth;
+	bufframe.left = 0;
+	bufframe.top = 0;
+	bufframe.width = width;
+	bufframe.height = height;
 
     // Prep time measurement
     clock_gettime(CLOCK_REALTIME, &time1);
 
     printf("\n");
-    i = 0;
+    lcount = 0;
     int loopOK = 1;
 
     while (loopOK == 1)
     {
+        // ACQUIRE FRAME
+        dcamwait_start(dcam_waitopen.hwait, &dcam_waitstart); // Check timeout and joyous stuff !
+        CHECK_DCAM_ERR_EXIT(dcamcap_transferinfo(cam, &dcam_captransferinfo), cam, 1);
 
-        // TODO ACQUIRE FRAME
+        printf("nNewestFrameIndex: %d\n", dcam_captransferinfo.nNewestFrameIndex);
+        printf("frame: %d\n", lcount);
+        printf("captransferinfo.nFrameCount: %d\n", dcam_captransferinfo.nFrameCount);
 
         // printf("line = %d\n", __LINE__);
         fflush(stdout);
 
         image.md[0].write = 1; // set this flag to 1 when writing data
 
+        bufframe.iFrame = dcam_captransferinfo.nNewestFrameIndex;
+
         // printf("Copying %d x %d bytes", bytewidth, height);
-        memcpy(image.array.UI8, image_p, bytewidth * height);
+        dcambuf_copyframe(cam, &bufframe);
 
-        ImageStreamIO_UpdateIm(&image);
-        /*
-        image.md[0].write = 0;
-        ImageStreamIO_sempost(&image, -1);
-        image.md[0].write = 0; // Done writing data
-        image.md[0].cnt0++;
-        */
-        image.md[0].cnt1++;
-
-        // Write the timing !
+        // Compute and write the timing
         clock_gettime(CLOCK_REALTIME, &time2);
         time_elapsed = difftime(time2.tv_sec, time1.tv_sec);
         time_elapsed += (time2.tv_nsec - time1.tv_nsec) / 1e9;
 
         meas_frate *= (1.0 - meas_frate_gain);
-        // This is only CPU time - that sucks.
         meas_frate += 1.0 / time_elapsed * meas_frate_gain;
         image.kw[KW_POS[0]].value.numf = (float)meas_frate;                                       // MFRATE
         image.kw[KW_POS[1]].value.numl = ((long)time2.tv_sec * 1000000) + (time2.tv_nsec / 1000); // MACQTMUS
 
+        // Post !
+        ImageStreamIO_UpdateIm(&image);
+        image.md[0].cnt1++;
+
         time1.tv_sec = time2.tv_sec;
         time1.tv_nsec = time2.tv_nsec;
 
-        i++;
-        if (i == loops)
+        lcount++;
+        if (lcount == loops)
         {
             loopOK = 0;
         }
     }
     puts("");
+
+    // Dev mode: uninit and exit
+    dcamcap_stop(cam);
+    dcambuf_release(cam, 0);
+    dcamwait_close(dcam_waitopen.hwait);
+    printf("\n------\nDEVMODE: ERRORING ON PURPOSE\n");
+    CHECK_DCAM_ERR_EXIT(0, cam, 1);
 
     printf("%d images %d timeouts %d overruns\n", loops, last_timeouts, overruns);
 
