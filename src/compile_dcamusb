@@ -1,0 +1,16 @@
+#!/bin/sh
+
+if [ -z "$MILK_ROOT" ]; then
+    MILK_ROOT=${CACAO_ROOT};
+fi
+ISIO_ROOT=${MILK_ROOT}/src/ImageStreamIO
+
+CC=gcc
+CFLAGS="-g -Wall -Wno-format-truncation  -Wno-format-overflow -DLINUX -Iinc/ -I${ISIO_ROOT} ${ISIO_ROOT}/ImageStreamIO.c"
+LDFLAGS="-lm -ldcamapi -lpthread"
+EXECUTABLE=dcamusbtake
+SOURCES=${EXECUTABLE}.c
+
+$CC $CFLAGS $LDFLAGS -c $SOURCES
+$CC $CFLAGS -c dcam_utils.c
+$CC $CFLAGS $EXECUTABLE.o dcam_utils.o -o $EXECUTABLE $LDFLAGS

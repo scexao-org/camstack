@@ -1,0 +1,371 @@
+
+#define _GNU_SOURCE
+
+#include <sched.h>
+#include <unistd.h>
+#include <time.h>
+#include <string.h>
+
+#include "ImageStruct.h"
+#include "ImageStreamIO.h"
+
+#include "dcamapi4.h"
+#include "dcamprop.h"
+#include "dcam_utils.h"
+
+static void usage(char *progname, char *errmsg);
+
+static void set_rt_priority();
+
+int main(int argc, char **argv)
+{
+    int i;
+    int unit = 0;
+    int overrun, overruns = 0;
+    int timeout;
+    int timeouts, last_timeouts = 0;
+    int images_skipped = 0;
+    int recovering_timeout = FALSE;
+    char *progname;
+    char *cameratype;
+    int numbufs = 4;
+    u_char *image_p;
+    char errstr[64];
+    int loops = 1;
+    int width, isiowidth, bytewidth, height, depth;
+    // width: EDT image width (px.)
+    // isiowidth: final image width (px.)
+    // bytewidth: image width (bytes)
+    char edt_devname[128];
+    int channel = 0; // same as cam
+    char streamname[200];
+
+    float exposure = 0.05;         // exposure time [ms]
+    double meas_frate = 0.0;       // Measured framerate, updated each frame
+    double meas_frate_gain = 0.01; // smoothing for meas_frate
+    struct timespec time1;
+    struct timespec time2;
+    double time_elapsed;
+
+    // Set RTprio and UID stuff - may need to migrate this after
+    // arg parsing if we make prio and cset settable from args.
+    set_rt_priority();
+
+    int REUSE_SHM = 0;
+    int STREAMNAMEINIT = 0;
+
+    progname = argv[0];
+
+    edt_devname[0] = '\0';
+
+    /*
+     * process command line arguments
+     */
+    --argc;
+    ++argv;
+    while (argc && ((argv[0][0] == '-') || (argv[0][0] == '/')))
+    {
+        switch (argv[0][1])
+        {
+        case 'R':
+            REUSE_SHM = 1;
+            break;
+
+        case 's':
+            ++argv;
+            --argc;
+            if (argc < 1)
+            {
+                printf("Error: option 's' requires string argument\n");
+            }
+            strcpy(streamname, argv[0]);
+            STREAMNAMEINIT = 1;
+            break;
+
+        case 'u':
+            ++argv;
+            --argc;
+            if (argc < 1)
+            {
+                printf("Error: option 'u' requires a numeric argument (0-9)\n");
+            }
+            if ((argv[0][0] >= '0') && (argv[0][0] <= '9'))
+            {
+                unit = atoi(argv[0]);
+            }
+            else
+            {
+                printf("Error: option 'u' requires a numeric argument (0-9)\n");
+            }
+            break;
+
+        case 'l':
+            ++argv;
+            --argc;
+            if (argc < 1)
+            {
+                usage(progname, "Error: option 'l' requires a numeric argument\n");
+            }
+            if ((argv[0][0] >= '0') && (argv[0][0] <= '9'))
+            {
+                loops = atoi(argv[0]);
+            }
+            else
+            {
+                usage(progname, "Error: option 'l' requires a numeric argument\n");
+            }
+            break;
+
+        case '-':
+            if (strcmp(argv[0], "--help") == 0)
+            {
+                usage(progname, "");
+                exit(0);
+            }
+            else
+            {
+                fprintf(stderr, "unknown option: %s\n", argv[0]);
+                usage(progname, "");
+                exit(1);
+            }
+            break;
+
+        default:
+            fprintf(stderr, "unknown flag -'%c'\n", argv[0][1]);
+        case '?':
+        case 'h':
+            usage(progname, "");
+            exit(0);
+        }
+        argc--;
+        argv++;
+    }
+
+    IMAGE image;                      // pointer to array of images
+    uint8_t atype = _DATATYPE_UINT16; // data type
+    long naxis;                       // number of axis
+    uint32_t *imsize;                 // image size
+    int shared;                       // 1 if image in shared memory
+    int NBkw;                         // number of keywords supported
+
+    /*
+    Open DCAM !
+    */
+
+    HDCAM cam = dcamcon_init_open(unit);
+    if (cam == NULL) // failed open DCAM handle
+    {
+        exit(1);
+    }
+
+    dcamcon_show_dcamdev_info(cam);
+
+    // Dev mode: uninit and exit
+    CHECK_DCAM_ERR_EXIT(0, cam, 1);
+
+    CHECK_DCAM_ERR_EXIT(dcamprop_getvalue(cam, DCAM_IDPROP_EXPOSURETIME, (double *)&width), cam, 1);
+    CHECK_DCAM_ERR_EXIT(dcamprop_getvalue(cam, DCAM_IDPROP_EXPOSURETIME, (double *)&height), cam, 1);
+    isiowidth = width;
+    bytewidth = (atype == _DATATYPE_UINT8) ? isiowidth : isiowidth * 2;
+
+    printf("Size (edt)  : %d x %d\n", width, height);
+    printf("Size (isio) : %d x %d\n", isiowidth, height);
+    printf("Camera type : %s\n", cameratype);
+    fflush(stdout);
+
+    if (STREAMNAMEINIT == 0)
+    {
+        sprintf(streamname, "hdcam%d", unit);
+    }
+
+    if (REUSE_SHM)
+    {
+        ImageStreamIO_openIm(&image, streamname);
+    }
+    else
+    {
+        // allocate memory for array of images
+        // image = malloc(sizeof(IMAGE));
+        naxis = 2;
+        imsize = (uint32_t *)malloc(sizeof(uint32_t) * naxis);
+        imsize[0] = isiowidth;
+        imsize[1] = height;
+        // image will be in shared memory
+        shared = 1;
+        // allocate space for keywords
+        NBkw = 50;
+        ImageStreamIO_createIm(&image, streamname, naxis, imsize, atype, shared,
+                               NBkw, 10);
+        free(imsize);
+    }
+
+    // Add keywords
+    int N_KEYWORDS = 4;
+
+    // Warning: the order of *kws* may change, because we're gonna allocate the other ones from python.
+    const char *KW_NAMES[] = {"MFRATE", "MACQTMUS", "FG_SIZE1", "FG_SIZE2"}; // "tint", "fps", "DET-NSMP", "x0", "x1", "y0", "y1", "temp"}; // DET-NSMP is ex-NDR
+    const char KW_TYPES[] = {'D', 'L', 'L', 'L'};                            // {'D', 'D', 'L', 'L', 'L', 'L', 'L', 'D'};
+    const char *KW_COM[] = {"Measured frame rate (Hz)",
+                            "Frame acq time (us, CLOCK_REALTIME)",
+                            "Size of frame grabber for the X axis (pixel)",
+                            "Size of frame grabber for the Y axis (pixel)"}; // {"exposure time", "frame rate", "NDR", "x0", "x1", "y0", "y1", "detector temperature"};
+
+    int KW_POS[] = {0, 1, 2, 3};
+
+    if (!REUSE_SHM)
+    {
+        for (int kw = 0; kw < N_KEYWORDS; ++kw)
+        {
+            strcpy(image.kw[kw].name, KW_NAMES[kw]);
+            image.kw[kw].type = KW_TYPES[kw];
+            strcpy(image.kw[kw].comment, KW_COM[kw]);
+        }
+    }
+    else
+    {
+        for (int kw = 0; kw < image.md->NBkw; ++kw)
+        {
+            for (int i = 0; i < N_KEYWORDS; ++i)
+            {
+                if (strcmp(KW_NAMES[i], image.kw[kw].name) == 0)
+                {
+                    KW_POS[i] = kw;
+                }
+            }
+        }
+    }
+    // Initial values
+    image.kw[KW_POS[0]].value.numf = 0.0;
+    image.kw[KW_POS[1]].value.numf = 0;
+    image.kw[KW_POS[2]].value.numl = height;
+    image.kw[KW_POS[3]].value.numl = isiowidth;
+
+    printf("reading %d image%s from '%s'\nwidth %d height %d depth %d\n",
+           loops, loops == 1 ? "" : "s", cameratype, width, height, depth);
+    printf("exposure = %f\n", exposure);
+
+    // TODO INITIALIZE ACQUISITION
+
+    // Prep time measurement
+    clock_gettime(CLOCK_REALTIME, &time1);
+
+    printf("\n");
+    i = 0;
+    int loopOK = 1;
+
+    while (loopOK == 1)
+    {
+
+        // TODO ACQUIRE FRAME
+
+        // printf("line = %d\n", __LINE__);
+        fflush(stdout);
+
+        image.md[0].write = 1; // set this flag to 1 when writing data
+
+        // printf("Copying %d x %d bytes", bytewidth, height);
+        memcpy(image.array.UI8, image_p, bytewidth * height);
+
+        ImageStreamIO_UpdateIm(&image);
+        /*
+        image.md[0].write = 0;
+        ImageStreamIO_sempost(&image, -1);
+        image.md[0].write = 0; // Done writing data
+        image.md[0].cnt0++;
+        */
+        image.md[0].cnt1++;
+
+        // Write the timing !
+        clock_gettime(CLOCK_REALTIME, &time2);
+        time_elapsed = difftime(time2.tv_sec, time1.tv_sec);
+        time_elapsed += (time2.tv_nsec - time1.tv_nsec) / 1e9;
+
+        meas_frate *= (1.0 - meas_frate_gain);
+        // This is only CPU time - that sucks.
+        meas_frate += 1.0 / time_elapsed * meas_frate_gain;
+        image.kw[KW_POS[0]].value.numf = (float)meas_frate;                                       // MFRATE
+        image.kw[KW_POS[1]].value.numl = ((long)time2.tv_sec * 1000000) + (time2.tv_nsec / 1000); // MACQTMUS
+
+        time1.tv_sec = time2.tv_sec;
+        time1.tv_nsec = time2.tv_nsec;
+
+        i++;
+        if (i == loops)
+        {
+            loopOK = 0;
+        }
+    }
+    puts("");
+
+    printf("%d images %d timeouts %d overruns\n", loops, last_timeouts, overruns);
+
+    /*
+     * if we got timeouts it indicates there is a problem
+     */
+    if (last_timeouts)
+    {
+        printf("check camera and connections\n");
+    }
+
+    if (overruns || timeouts)
+    {
+        exit(2);
+    }
+
+    exit(0);
+}
+
+static void
+usage(char *progname, char *errmsg)
+{
+    puts(errmsg);
+    printf("%s: simple example program that acquires images from an\n", progname);
+    printf("EDT digital imaging interface board (PCI DV, PCI DVK, etc.)\n");
+    puts("");
+    printf("usage: %s [-n streamname] [-l loops] [-N numbufs] [-u unit] [-c channel]\n",
+           progname);
+    printf("  -s streamname   output stream name (default: edtcam<unit><chan>\n");
+    printf("  -8              enable 8->16 bit casting mode, width divided by 2 - implies -U \n");
+    printf("  -U              unsigned 16 bit output (default: signed)\n");
+    printf("  -u unit         set unit\n");
+    printf("  -c chan         set channel (1 tap, 1 cable)\n");
+    printf("  -l loops        number of loops (images to take)\n");
+    printf("  -N numbufs      number of ring buffers (see users guide) (default 4)\n");
+    printf("  -h              this help message\n");
+    exit(1);
+}
+
+static void set_rt_priority()
+{
+
+    uid_t ruid; // Real UID (= user launching process at startup)
+    uid_t euid; // Effective UID (= owner of executable at startup)
+    uid_t suid; // Saved UID (= owner of executable at startup)
+
+    int RT_priority = 70; // any number from 0-99
+    struct sched_param schedpar;
+    int ret;
+
+    getresuid(&ruid, &euid, &suid);
+    // This sets it to the privileges of the normal user
+    ret = seteuid(ruid);
+    if (ret != 0)
+    {
+        printf("setuid error\n");
+    }
+
+    schedpar.sched_priority = RT_priority;
+
+    if (ret != 0)
+    {
+        printf("setuid error\n");
+    }
+    ret = seteuid(euid); // This goes up to maximum privileges
+    sched_setscheduler(0, SCHED_FIFO,
+                       &schedpar); // other option is SCHED_RR, might be faster
+    ret = seteuid(ruid);           // Go back to normal privileges
+    if (ret != 0)
+    {
+        printf("setuid error\n");
+    }
+}
