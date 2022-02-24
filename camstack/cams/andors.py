@@ -3,7 +3,7 @@
     It's really only about managing the initialization file and the acquisition tmux
 '''
 import os
-from camstack.cams.edt_base import EDTCamera
+from camstack.cams.edtcam import EDTCamera
 from camstack.core.utilities import CameraMode
 
 

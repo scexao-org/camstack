@@ -6,7 +6,7 @@ import os
 import time
 from typing import Union
 
-from camstack.cams.edt_base import EDTCamera
+from camstack.cams.edtcam import EDTCamera
 
 from camstack.core.utilities import CameraMode
 

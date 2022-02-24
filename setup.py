@@ -17,7 +17,8 @@ import os
 class PreInstallCommand(develop):
     def run(self):
         # Add custom make commands here !
-        os.system('cd src; ./compile; cd ..')
+        os.system('cd src; ./compile_edt; cd ..')
+        os.system('cd src; ./compile_dcamusb; cd ..')
         develop.run(self)
 
 with open("README.md", 'r') as f:
