@@ -241,7 +241,7 @@ class BaseCamera:
         # We have to prepare self.taker_tmux_command
         # we could do that in init_framegrab_backend, but hey we don't
 
-        self._start_taker_backend(reuse_shm=reuse_shm)
+        self._prepare_backend_cmdline(reuse_shm=reuse_shm)
         if not hasattr(self, 'taker_tmux_command'):
             raise AssertionError('self.taker_tmux_command is not defined?!')
         
@@ -270,7 +270,7 @@ class BaseCamera:
         '''
         self._start_taker_no_dependents()
 
-    def _start_taker_backend(self, reuse_shm: bool = False):
+    def _prepare_backend_cmdline(self, reuse_shm: bool = False):
         raise NotImplementedError("Must be subclassed from the base class")
 
     def _kill_taker_no_dependents(self):
@@ -326,19 +326,6 @@ class BaseCamera:
         width, height = self.MODES[mode_id].fgsize
         return width, height
 
-    def send_command(self, cmd, base_timeout: float = 100.):
-        '''
-            Wrap to the serial
-            That supposes we HAVE serial... maybe we'll move this to a subclass
-        '''
-        return self.edt_iface.send_command(cmd, base_timeout=base_timeout)
-
-    def raw(self, cmd):
-        '''
-            Just an alias
-        '''
-        return self.send_command(cmd)
-
     def poll_camera_for_keywords(self):
         print('Calling poll_camera_for_keywords on generic BaseCamera class. '
               'Nothing happens here.')
@@ -369,4 +356,3 @@ class BaseCamera:
                 self.poll_camera_for_keywords()
             except Exception as e:
                 print("Polling thread: error ", e)
-                

@@ -17,6 +17,8 @@ static void usage(char *progname, char *errmsg);
 
 static void set_rt_priority();
 
+static void params_parse_and_set(HDCAM cam, IMAGE params_img, BOOL flag);
+
 int main(int argc, char **argv)
 {
     int lcount;
@@ -33,6 +35,7 @@ int main(int argc, char **argv)
     double dcam_retval;
 
     char streamname[200];
+    char streamname_feedback[200];
 
     double meas_frate = 0.0;       // Measured framerate, updated each frame
     double meas_frate_gain = 0.01; // smoothing for meas_frate
@@ -150,6 +153,7 @@ int main(int argc, char **argv)
     }
 
     IMAGE image;                      // pointer to array of images
+    IMAGE image_prm;                  // pointer to array of images
     uint8_t atype = _DATATYPE_UINT16; // data type
     long naxis;                       // number of axis
     uint32_t *imsize;                 // image size
@@ -166,20 +170,18 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    // Manual sets - we'll probably want do this from a tmp file at worst
-    // Flashing update: full frame would timeout but ROI-ed doesn't????
-    CHECK_DCAM_ERR_EXIT(
-        dcamprop_setvalue(cam, DCAM_IDPROP_EXPOSURETIME, 0.001), cam, 1);
-    CHECK_DCAM_ERR_EXIT(
-        dcamprop_setvalue(cam, DCAM_IDPROP_SUBARRAYHSIZE, 600), cam, 1);
-    CHECK_DCAM_ERR_EXIT(
-        dcamprop_setvalue(cam, DCAM_IDPROP_SUBARRAYVSIZE, 300), cam, 1);
-    CHECK_DCAM_ERR_EXIT(
-        dcamprop_setvalue(cam, DCAM_IDPROP_SUBARRAYHPOS, 1560), cam, 1);
-    CHECK_DCAM_ERR_EXIT(
-        dcamprop_setvalue(cam, DCAM_IDPROP_SUBARRAYVPOS, 980), cam, 1);
-    CHECK_DCAM_ERR_EXIT(
-        dcamprop_setvalue(cam, DCAM_IDPROP_SUBARRAYMODE, DCAMPROP_MODE__ON), cam, 1);
+    // Initialize name
+    if (STREAMNAMEINIT == 0)
+    {
+        sprintf(streamname, "hdcam%d", unit);
+    }
+
+    // Open the parameter-feedback SHM
+    strcpy(streamname_feedback, streamname);
+    strcat(streamname_feedback, "_params_fb");
+    ImageStreamIO_openIm(&image_prm, streamname_feedback);
+
+    params_parse_and_set(cam, image_prm, TRUE); // TRUE: return mode, FALSE: print mode
 
     CHECK_DCAM_ERR_EXIT(dcamprop_getvalue(cam, DCAM_IDPROP_SUBARRAYHSIZE, &dcam_retval), cam, 1);
     width = (int)dcam_retval;
@@ -221,11 +223,6 @@ int main(int argc, char **argv)
     dcamcon_show_dcamdev_info(cam);
     printf("\n");
     fflush(stdout);
-
-    if (STREAMNAMEINIT == 0)
-    {
-        sprintf(streamname, "hdcam%d", unit);
-    }
 
     if (REUSE_SHM)
     {
@@ -402,9 +399,39 @@ int main(int argc, char **argv)
     printf("\n------\nDEVMODE: ERRORING ON PURPOSE\n");
     CHECK_DCAM_ERR_EXIT(0, cam, 1);
 
-    //printf("%d images %d timeouts %d overruns\n", loops, last_timeouts, overruns);
+    // printf("%d images %d timeouts %d overruns\n", loops, last_timeouts, overruns);
 
     exit(0);
+}
+
+static void params_parse_and_set(HDCAM cam, IMAGE params_img, BOOL flag)
+{
+    // Figure out in the data how many keywords are fresh for writing
+    int N_KEYWORDS = params_img.array.UI16[0];
+    long param_id;
+    double dcam_retval;
+
+    // Read keywords, send to camera
+    for (int kw = 0; kw < N_KEYWORDS; ++kw)
+    {
+        param_id = strtol(params_img.kw[kw].name, NULL, 16);
+        if (flag)
+        { // Die upon error
+            CHECK_DCAM_ERR_PRINT(
+                dcamprop_setvalue(cam, param_id, params_img.kw[kw].value.numf),
+                cam);
+        }
+        else
+        { // Print error and keep going
+            CHECK_DCAM_ERR_EXIT(
+                dcamprop_setvalue(cam, param_id, params_img.kw[kw].value.numf),
+                cam, 1);
+        }
+
+        // Now get the data back and write it in the SHM keyword !
+        CHECK_DCAM_ERR_PRINT(dcamprop_getvalue(cam, param_id, dcam_retval), cam);
+        params_img.kw[kw].value.numf = dcam_retval;
+    }
 }
 
 static void
@@ -452,10 +479,9 @@ static void set_rt_priority()
     {
         printf("setuid error\n");
     }
-    ret = seteuid(euid); // This goes up to maximum privileges
-    sched_setscheduler(0, SCHED_FIFO,
-                       &schedpar); // other option is SCHED_RR, might be faster
-    ret = seteuid(ruid);           // Go back to normal privileges
+    ret = seteuid(euid);                          // This goes up to maximum privileges
+    sched_setscheduler(0, SCHED_FIFO, &schedpar); // other option is SCHED_RR, might be faster
+    ret = seteuid(ruid);                          // Go back to normal privileges
     if (ret != 0)
     {
         printf("setuid error\n");

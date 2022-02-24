@@ -48,9 +48,6 @@ class CRED1(EDTCamera):
         8: CameraMode(x0=64, x1=255, y0=88, y1=167, fps=16020.),
     }
 
-    # Add mode 0 alias of mode FULL
-    MODES[0] = MODES[FULL]
-
     KEYWORDS = {
         'DET-PRES': (0.0, 'Detector pressure (mbar)'),
     }

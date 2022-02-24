@@ -1,4 +1,4 @@
-from typing import Union, Tuple
+from typing import Union, Tuple, List, Any
 
 from camstack.core import tmux as tmux_util
 
@@ -38,6 +38,14 @@ class EDTCamera(BaseCamera):
 
         self.edt_iface = None  # See self.init_framegrab_backend
 
+        BaseCamera.__init__(self,
+                           name,
+                           stream_name,
+                           mode_id,
+                           no_start=no_start,
+                           taker_cset_prio=taker_cset_prio,
+                           dependent_processes=dependent_processes)
+
     def init_framegrab_backend(self):
         if self.is_taker_running():
             raise AssertionError('Cannot change FG config while FG is running')
@@ -64,6 +72,9 @@ class EDTCamera(BaseCamera):
 
         # Open a serial handle
         self.edt_iface = EdtInterfaceSerial(self.pdv_unit, self.pdv_channel)
+
+
+    def _prepare_backend_cmdline(self, reuse_shm: bool = False):
 
         # Prepare the cmdline for starting up!
         exec_path = os.environ['HOME'] + '/src/camstack/src/edttake'
