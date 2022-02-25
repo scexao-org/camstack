@@ -46,7 +46,7 @@ class NUVU(EDTCamera):
     }
     KEYWORDS.update(EDTCamera.KEYWORDS)
 
-    EDTTAKE_UNSIGNED = False
+    EDTTAKE_UNSIGNED = True
 
     class _ShutterExternal(Enum):
         NO = 0
