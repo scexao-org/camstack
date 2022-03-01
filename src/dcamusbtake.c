@@ -152,8 +152,9 @@ int main(int argc, char **argv)
         argv++;
     }
 
-    IMAGE image;                      // pointer to array of images
-    IMAGE image_prm;                  // pointer to array of images
+    IMAGE image;     // pointer to array of images
+    IMAGE image_prm; // pointer to array of images
+    int semid_prm;
     uint8_t atype = _DATATYPE_UINT16; // data type
     long naxis;                       // number of axis
     uint32_t *imsize;                 // image size
@@ -180,8 +181,10 @@ int main(int argc, char **argv)
     strcpy(streamname_feedback, streamname);
     strcat(streamname_feedback, "_params_fb");
     ImageStreamIO_openIm(&image_prm, streamname_feedback);
+    semid_prm = ImageStreamIO_getsemwaitindex(&image_prm, -1);
 
     params_parse_and_set(cam, image_prm, TRUE); // TRUE: return mode, FALSE: print mode
+    ImageStreamIO_semflush(&image_prm, semid_prm);
 
     CHECK_DCAM_ERR_EXIT(dcamprop_getvalue(cam, DCAM_IDPROP_SUBARRAYHSIZE, &dcam_retval), cam, 1);
     width = (int)dcam_retval;
@@ -197,6 +200,9 @@ int main(int argc, char **argv)
     printf("Internal frame interval: %f\n", (float)dcam_retval);
     CHECK_DCAM_ERR_EXIT(dcamprop_getvalue(cam, DCAM_IDPROP_INTERNALFRAMERATE, &dcam_retval), cam, 1);
     printf("Internal framerate: %f\n", (float)dcam_retval);
+
+    CHECK_DCAM_ERR_EXIT(dcamprop_getvalue(cam, DCAM_IDPROP_SENSORTEMPERATURE, &dcam_retval), cam, 1);
+    printf("TEMPERATURE: %f\n", (float)dcam_retval);
 
     if (pxtype == DCAM_PIXELTYPE_MONO16)
     {
@@ -330,18 +336,14 @@ int main(int argc, char **argv)
 
     while (loopOK == 1)
     {
-        /*
-        if (lcount % 1000 == 999)
+        // Check parameters to update ?
+        if (0 == ImageStreamIO_semtrywait(&image_prm, semid_prm))
         {
-            if (lcount / 1000 % 2) {
-            CHECK_DCAM_ERR_PRINT(
-                dcamprop_setvalue(cam, DCAM_IDPROP_EXPOSURETIME, 0.001), cam);
-            } else {
-            CHECK_DCAM_ERR_PRINT(
-                dcamprop_setvalue(cam, DCAM_IDPROP_EXPOSURETIME, 0.002), cam);
-            }
+            printf("Touching the params !\n");
+            params_parse_and_set(cam, image_prm, FALSE);
+            ImageStreamIO_semflush(&image_prm, semid_prm);
         }
-        */
+
         // ACQUIRE FRAME
         // TODO Check this for timeouts and joyous stuff !
         CHECK_DCAM_ERR_PRINT(
@@ -415,21 +417,34 @@ static void params_parse_and_set(HDCAM cam, IMAGE params_img, BOOL flag)
     for (int kw = 0; kw < N_KEYWORDS; ++kw)
     {
         param_id = strtol(params_img.kw[kw].name, NULL, 16);
-        if (flag)
-        { // Die upon error
-            CHECK_DCAM_ERR_PRINT(
-                dcamprop_setvalue(cam, param_id, params_img.kw[kw].value.numf),
-                cam);
-        }
-        else
-        { // Print error and keep going
-            CHECK_DCAM_ERR_EXIT(
-                dcamprop_setvalue(cam, param_id, params_img.kw[kw].value.numf),
-                cam, 1);
+        // Do we have the "get only" bit 32? & 0x80000000 to check it, &7fffffff to filter it.
+        if (!(param_id & 0x80000000))
+        {
+            printf("setting\n");
+            if (flag)
+            { // Die upon error
+                printf("param_id %ld --- %s ; %ld ; %lf\n", param_id,
+                       params_img.kw[kw].value.valstr,
+                       params_img.kw[kw].value.numl,
+                       (float)params_img.kw[kw].value.numf);
+                CHECK_DCAM_ERR_EXIT(
+                    dcamprop_setvalue(cam, param_id, params_img.kw[kw].value.numf),
+                    cam, 1);
+            }
+            else
+            { // Print error and keep going
+                printf("param_id %ld --- %s ; %ld ; %lf\n", param_id,
+                       params_img.kw[kw].value.valstr,
+                       params_img.kw[kw].value.numl,
+                       (float)params_img.kw[kw].value.numf);
+                CHECK_DCAM_ERR_PRINT(
+                    dcamprop_setvalue(cam, param_id, params_img.kw[kw].value.numf),
+                    cam);
+            }
         }
 
         // Now get the data back and write it in the SHM keyword !
-        CHECK_DCAM_ERR_PRINT(dcamprop_getvalue(cam, param_id, dcam_retval), cam);
+        CHECK_DCAM_ERR_PRINT(dcamprop_getvalue(cam, param_id & 0x7ffffff, &dcam_retval), cam);
         params_img.kw[kw].value.numf = dcam_retval;
     }
 }

@@ -4,10 +4,11 @@ import subprocess
 import threading
 
 from camstack.core.utilities import CameraMode
+from camstack.core import tmux as tmux_util
 
 from pyMilk.interfacing.isio_shmlib import SHM
 
-from typing import List, Any, Union
+from typing import List, Any, Union, Tuple
 
 
 class BaseCamera:
@@ -18,7 +19,7 @@ class BaseCamera:
     '''
 
     INTERACTIVE_SHELL_METHODS = [
-        'send_command', 'close', 'release',
+        'close', 'release',
         '_start', '_stop',
         'set_camera_mode'
     ]
@@ -167,7 +168,6 @@ class BaseCamera:
         self.current_mode_id = mode_id
         self.current_mode = self.MODES[mode_id]
         self.width, self.height = self._fg_size_from_mode(mode_id)
-        self.width_fg = self.width * (1, 2)[self.EDTTAKE_CAST]
 
         self.init_framegrab_backend()
 
@@ -288,13 +288,30 @@ class BaseCamera:
         self._kill_taker_no_dependents()
 
     def grab_shm_fill_keywords(self):
-        # Only the init, or the regular updates ?
+        # Problem: we need to be sure the taker has restarted
+        # before filling keywords !
         self.camera_shm = self._get_SHM()
+        time.sleep(0.3) # Avoid initial race condition on keywords
         self._fill_keywords()
 
     def _get_SHM(self):
         # Separated to be overloaded if need be (thinking of you, OCAM !)
-        return SHM(self.STREAMNAME, symcode=0)
+        
+        while True:
+            # In case the SHM doesn't exist yet
+            try:
+                shm = SHM(self.STREAMNAME, symcode=0)
+                break
+            except:
+                time.sleep(0.1)
+                
+        shm.IMAGE.semflush(shm.semID)
+        while shm.IMAGE.semtrywait(shm.semID):
+            # We don't want to break a semaphore
+            # So wait til the first frame is published
+            time.sleep(0.1)
+        
+        return shm
 
     def _fill_keywords(self):
         # These are pretty much defaults - we don't know anything about this

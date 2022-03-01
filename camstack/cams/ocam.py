@@ -133,12 +133,6 @@ class OCAM2K(EDTCamera):
         else:
             return res
 
-    '''
-    def _get_SHM(self):
-        # Overload to get a pointer to ocam2d instead of ocam2krc
-        return SHM(self.STREAMNAME_ocam2d, symcode=0)
-    '''
-
     def _fill_keywords(self):
         # Do a little more filling than the subclass after changing a mode
         # And call the thread-polling function

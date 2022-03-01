@@ -142,7 +142,7 @@ HDCAM dcamcon_init_open(int cam_num)
 	for (int iDevice = 0; iDevice < nDevice; iDevice++)
 	{
         printf("Cam %d:   ", iDevice);
-		dcamcon_show_dcamdev_info((HDCAM) iDevice);
+		dcamcon_show_dcamdev_info((HDCAM) (long) iDevice);
 	}
     printf("----\n");
 
@@ -159,7 +159,7 @@ HDCAM dcamcon_init_open(int cam_num)
 		{
 			HDCAM hdcam = devopen.hdcam;
             printf("Succesful open on camera %d:\n", cam_num);
-            dcamcon_show_dcamdev_info((HDCAM) cam_num);
+            dcamcon_show_dcamdev_info((HDCAM) (long) cam_num);
 			dcamcon_show_dcamdev_info_detail(hdcam);
             printf("----\n");
 
@@ -167,7 +167,7 @@ HDCAM dcamcon_init_open(int cam_num)
 			return hdcam;
 		}
 
-		dcamcon_show_dcamerr((HDCAM) cam_num, err, "dcamdev_open()");
+		dcamcon_show_dcamerr((HDCAM) (long) cam_num, err, "dcamdev_open()");
 	} else {
         printf("Invalid camera number: %d ?\n", cam_num);
     }

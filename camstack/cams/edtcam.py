@@ -1,14 +1,12 @@
 from typing import Union, Tuple, List, Any
 
-from camstack.core import tmux as tmux_util
-
-from camstack.core.base import BaseCamera
+from camstack.cams.base import BaseCamera
 from camstack.core.edtinterface import EdtInterfaceSerial
 
 
 class EDTCamera(BaseCamera):
 
-    INTERACTIVE_SHELL_METHODS = [] + \
+    INTERACTIVE_SHELL_METHODS = ['send_command'] + \
         BaseCamera.INTERACTIVE_SHELL_METHODS
 
     MODES = {}
@@ -50,6 +48,8 @@ class EDTCamera(BaseCamera):
         if self.is_taker_running():
             raise AssertionError('Cannot change FG config while FG is running')
 
+        self.width_fg = self.width * (1, 2)[self.EDTTAKE_CAST]
+        
         # Prepare a cfg file like the base one + width and height amended
 
         tmp_config = '/tmp/' + os.environ['USER'] + '_' + self.NAME + '.cfg'
