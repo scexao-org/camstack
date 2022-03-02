@@ -1,0 +1,774 @@
+dvinfo output
+------------------------------------------------------
+./setdebug -v -u 0
+------------------------------------------------------
+------------------------------------------------------
+./pciload
+------------------------------------------------------
+------------------------------------------------------
+./pciload -u 0 -c
+------------------------------------------------------
+------------------------------------------------------
+------------------------------------------------------
+==> (CHECK: board firmware is not up-to-date, or non-standard)
+------------------------------------------------------
+./pciediag -u 0 -c 0
+------------------------------------------------------
+==> (no ./camsetup0_0.sh, will try getting .cfg from pdv_p)
+------------------------------------------------------
+./initcam -V -O dvinfo.tmp -f /opt/NuvuCameras/Plugins/nc_grab_edt/nc_16cl.cfg -u 0 -c 0
+------------------------------------------------------
+------------------------------------------------------
+cat /opt/NuvuCameras/Plugins/nc_grab_edt/nc_16cl.cfg
+------------------------------------------------------
+#
+# CAMERA_MODEL 	"Nuvu 16 bit monochrome Camera Link"
+#
+# Unmodified, this file should work for a single-tap Camera-Link
+# camera that outputs data continuously (no trigger required) in
+# 1024x1024, 16-bits per pixel with the LSB on VD0 or MSB0.  The image
+# capture library will produce a buffer with 16-bit monochrome data,
+# pixels left-justified in a 2-byte word.
+#
+
+# camera description, for camera selection GUI and apps
+# camera_class should be the manufacturer's name
+#
+camera_class:                  "Nuvu"
+camera_model:                  "Camera Link 16-bit"
+camera_info:                   "512x512 (single ch., Frame on Request)"
+
+# actual width/height (total pixels) and depth of data from camera
+# to only grab high 8-bits, set depth to 8 but leave extdepth set
+# to actual depth, and adjust shift and mask accordingly
+#
+width:                         512
+height:                        512
+depth:                         16
+extdepth:                      16
+
+# rbtfile is ignored for std camera link board but needed
+# for DV FOX (fiberoptic) (v3.3.4.9 or later)
+#
+rbtfile: aiagcl.bit
+
+# camera link data path register bits (argument is a 2-digit hex value):
+# sets the expected input data size and #taps
+# bits 0-3: number of bits per pixel minus 1
+# bits 4-7: number of taps minus 1
+#
+CL_DATA_PATH_NORM:             0f	# single tap
+#CL_DATA_PATH_NORM:             1f	# dual tap
+
+# camera link config register bits
+# (arg is a 2-digit hex value, hexval shown in parens):
+# 0 (01): RGB (set for RGB (except bayer). Applies to older/PCI, ignored on newer/PCIe)
+# 1 (02): ignore data valid (on for most cameras though not all)
+# 2 (04): generate an FVAL on every LVAL or vactv lines if bit 4 is set, for line scan cameras
+# 3 (08): disable ROI (rarely set)
+# 4 (10): generate an FVAL after every vactv lines if bit 2 is also set, for line scan cameras
+# 5 (20): data valid invert (rare)
+# 6 (40): RGB swap -- swap red/blue
+# 7 (80): enable roi pad: if ROI > img output, will pad missing bytes
+#
+CL_CFG_NORM:                   00
+
+# htaps/vtaps: if multiple taps, set either htaps or vtaps to match the number
+# of taps and whether they represent horizontal or vertical. Most common it's
+# htaps (that is, pixels in parallel taps are from pixels next to each other on
+# the same line) For example with a 2-tap 8-bit camera (CL_DATA_PATH_NORM: 17)
+# where the two taps are from adjacent pixels on the same line, you would uncomment
+# htaps and leave it at 2.
+#
+#htaps:	2
+#vtaps: 	2
+
+
+# the following directives can be used to send us any serial commands
+# necessary to put the camera to put it into the expected state.
+# serial_init takes a colon-separated list of ASCII commands, and should
+# be used for cameras that use an ASCII serial command set. serial_binit
+# takes space-separated groups of hex bytes, for cameras that use binary
+# serial instead of ASCII; each group gets send as a separate command with
+# a serial_read of the response (thrown away) between each.  Examples of
+# commands that should be sent include those that put the camera into the
+# desired trigger mode (e.g. continuous, triggered, controlled), #bits and
+# taps, etc. The idea is to set the camera mode to match how the rest
+# of the config directives are setting up the FG board.
+#
+#serial_init: "CMD 1:CMD 2:CMD 3"
+#serial_binit: "00 11 aa bb" or "001122 aabbccddeeff"
+
+# Serial termination Character
+# defines the termination character(s) that will be sent after each
+# serial command sent by the library subroutine pdv_serial_command, including
+# those sent by serial_init (above).  If no serial_term is specified, the
+# default, carriage return character (0d hex) will be sent. If some other
+# sequence is needed, uncomment serial_term and insert the appropriate hex
+# byte(s) separated by spaces.  serial_term only applies to EDT's
+# ASCII-specific serial directives (e.g. serial_init) and library subroutines
+# (pdv_serial_command),
+# NOT binary ones (serial_binit, pdv_serial_binary_command).  To specify no
+# serial terminator, call serial_term with an empty list <>
+#
+serial_term: <0d>
+#serial_term: "\n"
+
+# Serial wait character
+# The pdv_serial_wait() subroutine in EDT API normally waits for a fixed period
+# of time before returning, to make sure it has received all of the characters
+# in a given respnse. If the camera has a unique character that terminates every
+# response, serial_waitc can be used to tell pdv_serial_wait to return immediately
+# when that character is seen, speeding up serial initialization and the serial
+# command/response sequence in general. The argument to this directive is hexidecimal
+# value; therefore if the last character of every response is a newline, specify 0a ;
+# if it is a carriage return, specify 0d and so on.
+#
+#serial_waitc:  0a
+
+# Shutter timing method:
+#   set to AIA_SERIAL (or leave out) for freerun cameras
+#   set to AIA_TRIG for triggered 
+#   set to AIA_MCL for pulse-width triggered -- that is, the duration of the
+#     TRUE pulse determines the exposure time, range 1-25500 milliseconds
+#   set to AIA_MCL_100US for pulse-width with a range of 1-25500 microseconds
+#
+# Related directives are shutter_speed_min/max and serial_exposure directives
+# -- see the camera configuration guide.
+#
+#method_camera_shutter_timing: AIA_SERIAL
+#method_camera_shutter_timing: AIA_TRIG
+#method_camera_shutter_timing: AIA_MCL
+#method_camera_shutter_timing: AIA_MCL_100US
+
+# Mode Control register (hex)
+# Hex value -- the left-most nibble determines which CC line is toggled for
+# the EXPOSE pulse (if method_camera_shutter_timing is other than AIA_SERIAL).
+# The right-most nibble determines which of the CC lines are held permanently
+# high or low.  Typically this is set automatically by merthod_camera_timing
+# (to 10 hex for triggered and MCL modes, 00 otherwise).  However if your
+# camera needs it set otherwise, use this directive to do so.
+#
+# MODE_CNTL_NORM: 10
+
+# DVFOX fiber-optic boards with RCX C-Link defaults to 24-bit packing across the
+# fiber. For most cameras that's optimal, however for 10-16 bit cameras with pixel
+# clock rates above 40 and up to 60Mhz, OR serial rates > 19.2kbaud, we need to
+# use 16 bit mode. Un-commenting this directive will do that if you're using a
+# FOX board. If you're using a non-fiber board such as the PCI DV C-Link or
+# PCIe8 DV C-link, this flag is ignored.
+#
+#mode16: 1
+
+# Region of Interest start and area (decimal)
+# vskip/hskip is how many pixels to skip before ROI, vert and horiz
+# vactv/hactv is how many pixels to DMA to memory after skip, vert and horiz
+# if full frame is desired, you can leave these commented out or make them the
+# same as the camera width/height. hskip/hactv can also be used to trim columns
+# for cameras that output non-4-byte-aligned data to multiple of 4 bytes (in
+# width) to ensure proper operation of windows applications that depend on
+# 4-byte alignment, e.g. pdvshow
+#
+#hskip: 0
+#hactv: 1024
+#vskip: 0
+#vactv: 1024
+
+==> (Pixel clock OK)
+------------------------------------------------------
+./take -v -u 0 -c 0
+------------------------------------------------------
+------------------------------------------------------
+./setdebug -u 0 -g
+------------------------------------------------------
+------------------------------------------------------
+./take -v -u 0 -c 0 -N 2 -l 2
+------------------------------------------------------
+------------------------------------------------------
+./take -v -u 0 -c 0 -N 4 -l 5
+------------------------------------------------------
+------------------------------------------------------
+./take -N 1 -u 0 -c 0 -f taketest.raw
+------------------------------------------------------
+------------------------------------------------------
+./countbits -w -o taketest.raw
+------------------------------------------------------
+------------------------------------------------------
+./take -N 1 -e 10 -u 0 -c 0 -f taketest.raw
+------------------------------------------------------
+------------------------------------------------------
+./countbits -w -o taketest.raw
+------------------------------------------------------
+------------------------------------------------------
+./take -N 1 -e 500 -u 0 -c 0 -f taketest.raw
+------------------------------------------------------
+------------------------------------------------------
+./countbits -w -o taketest.raw
+------------------------------------------------------
+------------------------------------------------------
+./setdebug -d 0 -u 0 -c 0
+------------------------------------------------------
+------------------------------------------------------
+./cl_speed -s -u 0
+------------------------------------------------------
+------------------------------------------------------
+./initcam -V -O dvinfo.tmp -f /opt/NuvuCameras/Plugins/nc_grab_edt/nc_16cl.cfg -u 0 -c 0
+------------------------------------------------------
+------------------------------------------------------
+uname -a
+------------------------------------------------------
+Linux kalaortc01 5.6.17-rt10-kalaortc-7 #4 SMP PREEMPT_RT Wed Dec 16 14:00:40 UTC 2020 x86_64 x86_64 x86_64 GNU/Linux
+------------------------------------------------------
+lsb_release -a
+------------------------------------------------------
+Distributor ID:	Ubuntu
+Description:	Ubuntu 20.04.3 LTS
+Release:	20.04
+Codename:	focal
+------------------------------------------------------
+dmesg
+------------------------------------------------------
+[    5.436294] Edt: EDT boards = 1
+[    5.436307] pci 0000:05:00.0: enabling device (0000 -> 0002)
+[    5.436461] Edt: pMem 0000000014075c77 pMemPhys 0000000011d3cc45
+[    5.436462] Edt: First mem range start  = 0000000011d3cc45
+[    5.436463] Edt: First mem range length = 16384
+[    5.436479] Edt: Second mem range pMem2 00000000391d592b
+[    5.436480] Edt: Second mem range pMem2Phys 00000000c9c2bff9
+[    5.436480] Edt: Second mem range pMem2Size 16777216
+[    5.436481] Edt: Second mem range pMem2Size 16777216
+[    5.436482] Edt: IRQ setup dev 000000007675cbda irq 16 msi_enabled 0
+[    5.436994] Edt: pci_enable_msi returns 1
+[    5.437384] Edt: IRQ setup dev 000000007675cbda irq 16 msi_enabled 0
+[    5.437415] Edt: request_irq(16, ... , 128l, "edt", 00000000ba3f1b5f) returns: 0
+[    6.217935] igb 0000:08:00.0 enp8s0: igb: enp8s0 NIC Link is Up 1000 Mbps Full Duplex, Flow Control: RX/TX
+[    6.321651] IPv6: ADDRCONF(NETDEV_CHANGE): enp8s0: link becomes ready
+[ 1378.729640] shmimview[3345]: segfault at 55a1b8096ab2 ip 00007ff8e180bd90 sp 00007ffc906f1bc0 error 4 in libgdk-3.so.0.2404.16[7ff8e1804000+81000]
+[ 1378.729643] Code: 89 ef 5b 5d 41 5c 41 5d 41 5e 41 5f e9 d9 c4 ff ff 66 0f 1f 84 00 00 00 00 00 48 89 c1 48 89 da 49 39 d8 76 c0 0f 1f 44 00 00 <0f> b6 72 02 48 83 c2 03 48 83 c1 04 40 88 71 fc 0f b6 72 fe 40 88
+[85450.230245] Edt: [0.0]: : map_buffer:  DMA ID already set to something different - UhOh!!
+[85562.495686] Edt: [0.0]: : map_buffer:  DMA ID already set to something different - UhOh!!
+[85584.298976] Edt: [0.0]: : map_buffer:  DMA ID already set to something different - UhOh!!
+[85594.546144] Edt: [0.0]: : map_buffer:  DMA ID already set to something different - UhOh!!
+[85713.288312] Edt: [0.0]: : edt_mem_map_setup: (null ptr) kernel buffers not allocated
+[85713.288314] Edt: [0.0]: : Failed memory map setup: edt_BuildSgList
+[87959.843801] edttake[106268]: segfault at 122 ip 000055f359857990 sp 00007ffcaad3a470 error 4 in edttake[55f359856000+27000]
+[87959.843803] Code: 89 94 85 34 fd ff ff 83 85 94 fc ff ff 01 8b 85 94 fc ff ff 3b 85 c0 fc ff ff 7c 9d 83 85 90 fc ff ff 01 48 8b 85 f8 fd ff ff <0f> b7 80 22 01 00 00 0f b7 c0 39 85 90 fc ff ff 0f 8c 6d ff ff ff
+[610294.723398] python[501756]: segfault at 108 ip 00000000005a93f7 sp 00007ffd1bd84860 error 4 in python3.8[423000+295000]
+[610294.723401] Code: 48 89 fd 53 48 83 ec 48 48 8b 5f 08 f6 83 a9 00 00 00 40 0f 84 3e ac f2 ff 48 8b 57 f0 48 85 d2 0f 84 7d 04 00 00 48 8b 4f f8 <48> 8b 42 08 48 83 e1 fc 83 e0 03 48 09 c8 48 89 11 48 89 42 08 48
+[610544.810276] python[502474]: segfault at 108 ip 00000000005a93f7 sp 00007fffd1163b50 error 4 in python3.8[423000+295000]
+[610544.810283] Code: 48 89 fd 53 48 83 ec 48 48 8b 5f 08 f6 83 a9 00 00 00 40 0f 84 3e ac f2 ff 48 8b 57 f0 48 85 d2 0f 84 7d 04 00 00 48 8b 4f f8 <48> 8b 42 08 48 83 e1 fc 83 e0 03 48 09 c8 48 89 11 48 89 42 08 48
+[626642.626398] perf: interrupt took too long (2558 > 2500), lowering kernel.perf_event_max_sample_rate to 78000
+------------------------------------------------------
+lspci -v
+------------------------------------------------------
+00:00.0 Host bridge: Intel Corporation 8th Gen Core 8-core Desktop Processor Host Bridge/DRAM Registers [Coffee Lake S] (rev 0d)
+	DeviceName: Onboard - Other
+	Subsystem: ASUSTeK Computer Inc. 8th Gen Core 8-core Desktop Processor Host Bridge/DRAM Registers [Coffee Lake S]
+	Flags: bus master, fast devsel, latency 0
+	Capabilities: <access denied>
+	Kernel driver in use: skl_uncore
+
+00:01.0 PCI bridge: Intel Corporation Xeon E3-1200 v5/E3-1500 v5/6th Gen Core Processor PCIe Controller (x16) (rev 0d) (prog-if 00 [Normal decode])
+	Flags: bus master, fast devsel, latency 0, IRQ 122
+	Bus: primary=00, secondary=01, subordinate=05, sec-latency=0
+	I/O behind bridge: 00004000-00004fff [size=4K]
+	Memory behind bridge: a4000000-a71fffff [size=50M]
+	Prefetchable memory behind bridge: 0000000090000000-00000000a20fffff [size=289M]
+	Capabilities: <access denied>
+	Kernel driver in use: pcieport
+
+00:02.0 VGA compatible controller: Intel Corporation UHD Graphics 630 (Desktop 9 Series) (rev 02) (prog-if 00 [VGA controller])
+	DeviceName: Onboard - Video
+	Subsystem: ASUSTeK Computer Inc. UHD Graphics 630 (Desktop 9 Series)
+	Flags: bus master, fast devsel, latency 0, IRQ 169
+	Memory at a3000000 (64-bit, non-prefetchable) [size=16M]
+	Memory at 80000000 (64-bit, prefetchable) [size=256M]
+	I/O ports at 5000 [size=64]
+	Expansion ROM at 000c0000 [virtual] [disabled] [size=128K]
+	Capabilities: <access denied>
+	Kernel driver in use: i915
+	Kernel modules: i915
+
+00:14.0 USB controller: Intel Corporation Cannon Lake PCH USB 3.1 xHCI Host Controller (rev 10) (prog-if 30 [XHCI])
+	DeviceName: Onboard - Other
+	Subsystem: ASUSTeK Computer Inc. Cannon Lake PCH USB 3.1 xHCI Host Controller
+	Flags: bus master, medium devsel, latency 0, IRQ 158
+	Memory at a7620000 (64-bit, non-prefetchable) [size=64K]
+	Capabilities: <access denied>
+	Kernel driver in use: xhci_hcd
+
+00:14.2 RAM memory: Intel Corporation Cannon Lake PCH Shared SRAM (rev 10)
+	DeviceName: Onboard - Other
+	Subsystem: ASUSTeK Computer Inc. Cannon Lake PCH Shared SRAM
+	Flags: fast devsel
+	Memory at a7632000 (64-bit, non-prefetchable) [disabled] [size=8K]
+	Memory at a7638000 (64-bit, non-prefetchable) [disabled] [size=4K]
+	Capabilities: <access denied>
+
+00:16.0 Communication controller: Intel Corporation Cannon Lake PCH HECI Controller (rev 10)
+	DeviceName: Onboard - Other
+	Subsystem: ASUSTeK Computer Inc. Cannon Lake PCH HECI Controller
+	Flags: bus master, fast devsel, latency 0, IRQ 132
+	Memory at a7637000 (64-bit, non-prefetchable) [size=4K]
+	Capabilities: <access denied>
+	Kernel driver in use: mei_me
+
+00:17.0 SATA controller: Intel Corporation Cannon Lake PCH SATA AHCI Controller (rev 10) (prog-if 01 [AHCI 1.0])
+	DeviceName: Onboard - SATA
+	Subsystem: ASUSTeK Computer Inc. Cannon Lake PCH SATA AHCI Controller
+	Flags: bus master, 66MHz, medium devsel, latency 0, IRQ 134
+	Memory at a7630000 (32-bit, non-prefetchable) [size=8K]
+	Memory at a7636000 (32-bit, non-prefetchable) [size=256]
+	I/O ports at 5090 [size=8]
+	I/O ports at 5080 [size=4]
+	I/O ports at 5060 [size=32]
+	Memory at a7635000 (32-bit, non-prefetchable) [size=2K]
+	Capabilities: <access denied>
+	Kernel driver in use: ahci
+
+00:1b.0 PCI bridge: Intel Corporation Cannon Lake PCH PCI Express Root Port #17 (rev f0) (prog-if 00 [Normal decode])
+	Flags: bus master, fast devsel, latency 0, IRQ 123
+	Bus: primary=00, secondary=06, subordinate=06, sec-latency=0
+	I/O behind bridge: [disabled]
+	Memory behind bridge: a7500000-a75fffff [size=1M]
+	Prefetchable memory behind bridge: [disabled]
+	Capabilities: <access denied>
+	Kernel driver in use: pcieport
+
+00:1c.0 PCI bridge: Intel Corporation Cannon Lake PCH PCI Express Root Port #1 (rev f0) (prog-if 00 [Normal decode])
+	Flags: bus master, fast devsel, latency 0, IRQ 124
+	Bus: primary=00, secondary=07, subordinate=07, sec-latency=0
+	I/O behind bridge: 00006000-00006fff [size=4K]
+	Memory behind bridge: a2100000-a22fffff [size=2M]
+	Prefetchable memory behind bridge: 00000000a2300000-00000000a24fffff [size=2M]
+	Capabilities: <access denied>
+	Kernel driver in use: pcieport
+
+00:1c.5 PCI bridge: Intel Corporation Cannon Lake PCH PCI Express Root Port #6 (rev f0) (prog-if 00 [Normal decode])
+	Flags: bus master, fast devsel, latency 0, IRQ 125
+	Bus: primary=00, secondary=08, subordinate=08, sec-latency=0
+	I/O behind bridge: 00003000-00003fff [size=4K]
+	Memory behind bridge: a7400000-a74fffff [size=1M]
+	Prefetchable memory behind bridge: [disabled]
+	Capabilities: <access denied>
+	Kernel driver in use: pcieport
+
+00:1c.7 PCI bridge: Intel Corporation Cannon Lake PCH PCI Express Root Port #8 (rev f0) (prog-if 00 [Normal decode])
+	Flags: bus master, fast devsel, latency 0, IRQ 126
+	Bus: primary=00, secondary=09, subordinate=09, sec-latency=0
+	I/O behind bridge: [disabled]
+	Memory behind bridge: a7300000-a73fffff [size=1M]
+	Prefetchable memory behind bridge: [disabled]
+	Capabilities: <access denied>
+	Kernel driver in use: pcieport
+
+00:1d.0 PCI bridge: Intel Corporation Cannon Lake PCH PCI Express Root Port #9 (rev f0) (prog-if 00 [Normal decode])
+	Flags: bus master, fast devsel, latency 0, IRQ 127
+	Bus: primary=00, secondary=0a, subordinate=0a, sec-latency=0
+	I/O behind bridge: [disabled]
+	Memory behind bridge: a7200000-a72fffff [size=1M]
+	Prefetchable memory behind bridge: [disabled]
+	Capabilities: <access denied>
+	Kernel driver in use: pcieport
+
+00:1f.0 ISA bridge: Intel Corporation Z390 Chipset LPC/eSPI Controller (rev 10)
+	DeviceName: Onboard - Other
+	Subsystem: ASUSTeK Computer Inc. Z390 Chipset LPC/eSPI Controller
+	Flags: bus master, medium devsel, latency 0
+
+00:1f.4 SMBus: Intel Corporation Cannon Lake PCH SMBus Controller (rev 10)
+	DeviceName: Onboard - Other
+	Subsystem: ASUSTeK Computer Inc. Cannon Lake PCH SMBus Controller
+	Flags: medium devsel, IRQ 16
+	Memory at a7634000 (64-bit, non-prefetchable) [size=256]
+	I/O ports at efa0 [size=32]
+	Kernel driver in use: i801_smbus
+
+00:1f.5 Serial bus controller: Intel Corporation Cannon Lake PCH SPI Controller (rev 10)
+	DeviceName: Onboard - Other
+	Subsystem: ASUSTeK Computer Inc. Cannon Lake PCH SPI Controller
+	Flags: fast devsel
+	Memory at fe010000 (32-bit, non-prefetchable) [size=4K]
+
+00:1f.6 Ethernet controller: Intel Corporation Ethernet Connection (7) I219-LM (rev 10)
+	DeviceName: Onboard - Ethernet
+	Subsystem: ASUSTeK Computer Inc. Ethernet Connection (7) I219-LM
+	Flags: bus master, fast devsel, latency 0, IRQ 136
+	Memory at a7600000 (32-bit, non-prefetchable) [size=128K]
+	Capabilities: <access denied>
+	Kernel driver in use: e1000e
+
+01:00.0 PCI bridge: PLX Technology, Inc. PEX 8747 48-Lane, 5-Port PCI Express Gen 3 (8.0 GT/s) Switch (rev ca) (prog-if 00 [Normal decode])
+	Flags: bus master, fast devsel, latency 0, IRQ 128
+	Memory at a7100000 (32-bit, non-prefetchable) [size=256K]
+	Bus: primary=01, secondary=02, subordinate=05, sec-latency=0
+	I/O behind bridge: 00004000-00004fff [size=4K]
+	Memory behind bridge: a4000000-a70fffff [size=49M]
+	Prefetchable memory behind bridge: 0000000090000000-00000000a20fffff [size=289M]
+	Capabilities: <access denied>
+	Kernel driver in use: pcieport
+
+02:08.0 PCI bridge: PLX Technology, Inc. PEX 8747 48-Lane, 5-Port PCI Express Gen 3 (8.0 GT/s) Switch (rev ca) (prog-if 00 [Normal decode])
+	Flags: bus master, fast devsel, latency 0, IRQ 129
+	Bus: primary=02, secondary=05, subordinate=05, sec-latency=0
+	I/O behind bridge: [disabled]
+	Memory behind bridge: a4000000-a50fffff [size=17M]
+	Prefetchable memory behind bridge: [disabled]
+	Capabilities: <access denied>
+	Kernel driver in use: pcieport
+
+02:09.0 PCI bridge: PLX Technology, Inc. PEX 8747 48-Lane, 5-Port PCI Express Gen 3 (8.0 GT/s) Switch (rev ca) (prog-if 00 [Normal decode])
+	Flags: bus master, fast devsel, latency 0, IRQ 130
+	Bus: primary=02, secondary=04, subordinate=04, sec-latency=0
+	I/O behind bridge: [disabled]
+	Memory behind bridge: [disabled]
+	Prefetchable memory behind bridge: [disabled]
+	Capabilities: <access denied>
+	Kernel driver in use: pcieport
+
+02:10.0 PCI bridge: PLX Technology, Inc. PEX 8747 48-Lane, 5-Port PCI Express Gen 3 (8.0 GT/s) Switch (rev ca) (prog-if 00 [Normal decode])
+	Flags: bus master, fast devsel, latency 0, IRQ 131
+	Bus: primary=02, secondary=03, subordinate=03, sec-latency=0
+	I/O behind bridge: 00004000-00004fff [size=4K]
+	Memory behind bridge: a6000000-a70fffff [size=17M]
+	Prefetchable memory behind bridge: 0000000090000000-00000000a20fffff [size=289M]
+	Capabilities: <access denied>
+	Kernel driver in use: pcieport
+
+03:00.0 VGA compatible controller: NVIDIA Corporation TU102 [GeForce RTX 2080 Ti Rev. A] (rev a1) (prog-if 00 [VGA controller])
+	Subsystem: ZOTAC International (MCO) Ltd. TU102 [GeForce RTX 2080 Ti Rev. A]
+	Flags: bus master, fast devsel, latency 0, IRQ 170
+	Memory at a6000000 (32-bit, non-prefetchable) [size=16M]
+	Memory at 90000000 (64-bit, prefetchable) [size=256M]
+	Memory at a0000000 (64-bit, prefetchable) [size=32M]
+	I/O ports at 4000 [size=128]
+	Expansion ROM at a7000000 [virtual] [disabled] [size=512K]
+	Capabilities: <access denied>
+	Kernel driver in use: nvidia
+	Kernel modules: nvidiafb, nvidia_drm, nvidia
+
+03:00.1 Audio device: NVIDIA Corporation TU102 High Definition Audio Controller (rev a1)
+	Subsystem: ZOTAC International (MCO) Ltd. TU102 High Definition Audio Controller
+	Flags: bus master, fast devsel, latency 0, IRQ 17
+	Memory at a7080000 (32-bit, non-prefetchable) [size=16K]
+	Capabilities: <access denied>
+	Kernel driver in use: snd_hda_intel
+	Kernel modules: snd_hda_intel
+
+03:00.2 USB controller: NVIDIA Corporation TU102 USB 3.1 Host Controller (rev a1) (prog-if 30 [XHCI])
+	Subsystem: ZOTAC International (MCO) Ltd. TU102 USB 3.1 Host Controller
+	Flags: fast devsel, IRQ 159
+	Memory at a2000000 (64-bit, prefetchable) [size=256K]
+	Memory at a2040000 (64-bit, prefetchable) [size=64K]
+	Capabilities: <access denied>
+	Kernel driver in use: xhci_hcd
+
+03:00.3 Serial bus controller: NVIDIA Corporation TU102 USB Type-C UCSI Controller (rev a1)
+	Subsystem: ZOTAC International (MCO) Ltd. TU102 USB Type-C UCSI Controller
+	Flags: bus master, fast devsel, latency 0, IRQ 168
+	Memory at a7084000 (32-bit, non-prefetchable) [size=4K]
+	Capabilities: <access denied>
+	Kernel driver in use: nvidia-gpu
+
+05:00.0 System peripheral: Engineering Design Team, Inc. Device 009d (rev 01)
+	Subsystem: Engineering Design Team, Inc. Device 009d
+	Flags: bus master, fast devsel, latency 0, IRQ 16
+	Memory at a5000000 (32-bit, non-prefetchable) [size=16K]
+	Memory at a4000000 (32-bit, non-prefetchable) [size=16M]
+	Capabilities: <access denied>
+
+06:00.0 Non-Volatile memory controller: Samsung Electronics Co Ltd NVMe SSD Controller SM981/PM981/PM983 (prog-if 02 [NVM Express])
+	Subsystem: Samsung Electronics Co Ltd NVMe SSD Controller SM981/PM981/PM983
+	Flags: bus master, fast devsel, latency 0, IRQ 16, NUMA node 0
+	Memory at a7500000 (64-bit, non-prefetchable) [size=16K]
+	Capabilities: <access denied>
+	Kernel driver in use: nvme
+
+08:00.0 Ethernet controller: Intel Corporation I210 Gigabit Network Connection (rev 03)
+	Subsystem: ASUSTeK Computer Inc. I210 Gigabit Network Connection
+	Flags: bus master, fast devsel, latency 0, IRQ 17
+	Memory at a7400000 (32-bit, non-prefetchable) [size=512K]
+	I/O ports at 3000 [disabled] [size=32]
+	Memory at a7480000 (32-bit, non-prefetchable) [size=16K]
+	Capabilities: <access denied>
+	Kernel driver in use: igb
+
+09:00.0 USB controller: ASMedia Technology Inc. ASM1042A USB 3.0 Host Controller (prog-if 30 [XHCI])
+	Subsystem: ASUSTeK Computer Inc. ASM1042A USB 3.0 Host Controller
+	Flags: bus master, fast devsel, latency 0, IRQ 19
+	Memory at a7300000 (64-bit, non-prefetchable) [size=32K]
+	Capabilities: <access denied>
+	Kernel driver in use: xhci_hcd
+
+0a:00.0 Non-Volatile memory controller: Samsung Electronics Co Ltd NVMe SSD Controller SM981/PM981/PM983 (prog-if 02 [NVM Express])
+	Subsystem: Samsung Electronics Co Ltd NVMe SSD Controller SM981/PM981/PM983
+	Flags: bus master, fast devsel, latency 0, IRQ 16, NUMA node 0
+	Memory at a7200000 (64-bit, non-prefetchable) [size=16K]
+	Capabilities: <access denied>
+	Kernel driver in use: nvme
+
+------------------------------------------------------
+cat /proc/cpuinfo
+------------------------------------------------------
+processor	: 0
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 158
+model name	: Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz
+stepping	: 13
+microcode	: 0xd6
+cpu MHz		: 3600.374
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 8
+core id		: 0
+cpu cores	: 8
+apicid		: 0
+initial apicid	: 0
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 22
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb invpcid_single ssbd ibrs ibpb stibp ibrs_enhanced fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid mpx rdseed adx smap clflushopt intel_pt xsaveopt xsavec xgetbv1 xsaves dtherm arat pln pts md_clear flush_l1d arch_capabilities
+bugs		: spectre_v1 spectre_v2 spec_store_bypass swapgs taa itlb_multihit
+bogomips	: 7200.00
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 39 bits physical, 48 bits virtual
+power management:
+
+processor	: 1
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 158
+model name	: Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz
+stepping	: 13
+microcode	: 0xd6
+cpu MHz		: 3600.303
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 8
+core id		: 1
+cpu cores	: 8
+apicid		: 2
+initial apicid	: 2
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 22
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb invpcid_single ssbd ibrs ibpb stibp ibrs_enhanced fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid mpx rdseed adx smap clflushopt intel_pt xsaveopt xsavec xgetbv1 xsaves dtherm arat pln pts md_clear flush_l1d arch_capabilities
+bugs		: spectre_v1 spectre_v2 spec_store_bypass swapgs taa itlb_multihit
+bogomips	: 7200.00
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 39 bits physical, 48 bits virtual
+power management:
+
+processor	: 2
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 158
+model name	: Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz
+stepping	: 13
+microcode	: 0xd6
+cpu MHz		: 3601.752
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 8
+core id		: 2
+cpu cores	: 8
+apicid		: 4
+initial apicid	: 4
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 22
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb invpcid_single ssbd ibrs ibpb stibp ibrs_enhanced fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid mpx rdseed adx smap clflushopt intel_pt xsaveopt xsavec xgetbv1 xsaves dtherm arat pln pts md_clear flush_l1d arch_capabilities
+bugs		: spectre_v1 spectre_v2 spec_store_bypass swapgs taa itlb_multihit
+bogomips	: 7200.00
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 39 bits physical, 48 bits virtual
+power management:
+
+processor	: 3
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 158
+model name	: Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz
+stepping	: 13
+microcode	: 0xd6
+cpu MHz		: 3600.503
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 8
+core id		: 3
+cpu cores	: 8
+apicid		: 6
+initial apicid	: 6
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 22
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb invpcid_single ssbd ibrs ibpb stibp ibrs_enhanced fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid mpx rdseed adx smap clflushopt intel_pt xsaveopt xsavec xgetbv1 xsaves dtherm arat pln pts md_clear flush_l1d arch_capabilities
+bugs		: spectre_v1 spectre_v2 spec_store_bypass swapgs taa itlb_multihit
+bogomips	: 7200.00
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 39 bits physical, 48 bits virtual
+power management:
+
+processor	: 4
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 158
+model name	: Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz
+stepping	: 13
+microcode	: 0xd6
+cpu MHz		: 3601.024
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 8
+core id		: 4
+cpu cores	: 8
+apicid		: 8
+initial apicid	: 8
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 22
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb invpcid_single ssbd ibrs ibpb stibp ibrs_enhanced fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid mpx rdseed adx smap clflushopt intel_pt xsaveopt xsavec xgetbv1 xsaves dtherm arat pln pts md_clear flush_l1d arch_capabilities
+bugs		: spectre_v1 spectre_v2 spec_store_bypass swapgs taa itlb_multihit
+bogomips	: 7200.00
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 39 bits physical, 48 bits virtual
+power management:
+
+processor	: 5
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 158
+model name	: Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz
+stepping	: 13
+microcode	: 0xd6
+cpu MHz		: 3600.427
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 8
+core id		: 5
+cpu cores	: 8
+apicid		: 10
+initial apicid	: 10
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 22
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb invpcid_single ssbd ibrs ibpb stibp ibrs_enhanced fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid mpx rdseed adx smap clflushopt intel_pt xsaveopt xsavec xgetbv1 xsaves dtherm arat pln pts md_clear flush_l1d arch_capabilities
+bugs		: spectre_v1 spectre_v2 spec_store_bypass swapgs taa itlb_multihit
+bogomips	: 7200.00
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 39 bits physical, 48 bits virtual
+power management:
+
+processor	: 6
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 158
+model name	: Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz
+stepping	: 13
+microcode	: 0xd6
+cpu MHz		: 3600.442
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 8
+core id		: 6
+cpu cores	: 8
+apicid		: 12
+initial apicid	: 12
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 22
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb invpcid_single ssbd ibrs ibpb stibp ibrs_enhanced fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid mpx rdseed adx smap clflushopt intel_pt xsaveopt xsavec xgetbv1 xsaves dtherm arat pln pts md_clear flush_l1d arch_capabilities
+bugs		: spectre_v1 spectre_v2 spec_store_bypass swapgs taa itlb_multihit
+bogomips	: 7200.00
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 39 bits physical, 48 bits virtual
+power management:
+
+processor	: 7
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 158
+model name	: Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz
+stepping	: 13
+microcode	: 0xd6
+cpu MHz		: 3600.110
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 8
+core id		: 7
+cpu cores	: 8
+apicid		: 14
+initial apicid	: 14
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 22
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb invpcid_single ssbd ibrs ibpb stibp ibrs_enhanced fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid mpx rdseed adx smap clflushopt intel_pt xsaveopt xsavec xgetbv1 xsaves dtherm arat pln pts md_clear flush_l1d arch_capabilities
+bugs		: spectre_v1 spectre_v2 spec_store_bypass swapgs taa itlb_multihit
+bogomips	: 7200.00
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 39 bits physical, 48 bits virtual
+power management:
+
+------------------------------------------------------
+cat /proc/meminfo
+------------------------------------------------------
+MemTotal:       65722328 kB
+MemFree:         1672788 kB
+MemAvailable:   63478744 kB
+Buffers:            4332 kB
+Cached:         60761740 kB
+SwapCached:           96 kB
+Active:         32566080 kB
+Inactive:       29015544 kB
+Active(anon):     467344 kB
+Inactive(anon):   438304 kB
+Active(file):   32098736 kB
+Inactive(file): 28577240 kB
+Unevictable:       27368 kB
+Mlocked:           18524 kB
+SwapTotal:      20971516 kB
+SwapFree:       20969212 kB
+Dirty:               340 kB
+Writeback:             0 kB
+AnonPages:        842652 kB
+Mapped:           320984 kB
+Shmem:             82176 kB
+KReclaimable:    1755188 kB
+Slab:            2295200 kB
+SReclaimable:    1755188 kB
+SUnreclaim:       540012 kB
+KernelStack:        6960 kB
+PageTables:         9216 kB
+NFS_Unstable:          0 kB
+Bounce:                0 kB
+WritebackTmp:          0 kB
+CommitLimit:    53832680 kB
+Committed_AS:    3483216 kB
+VmallocTotal:   34359738367 kB
+VmallocUsed:       59960 kB
+VmallocChunk:          0 kB
+Percpu:             4480 kB
+HardwareCorrupted:     0 kB
+DirectMap4k:      465968 kB
+DirectMap2M:    15110144 kB
+DirectMap1G:    51380224 kB
+------------------------------------------------------
+cat ./install_pdv.log
+------------------------------------------------------
