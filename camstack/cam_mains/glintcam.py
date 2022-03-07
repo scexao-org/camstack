@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     cam = GLINT('glint',
                 'glint',
-                unit=4,
+                unit=5,
                 channel=0,
                 mode_id=mode,
                 taker_cset_prio=('glint_edt', 41),
