@@ -22,4 +22,8 @@ if __name__ == "__main__":
 
     run_line = ['vcamstart-bash'] + sys.argv[1:]
     print(run_line)
-    subprocess.run(run_line)
+    try:
+        subprocess.run(run_line)
+    except KeyboardInterrupt:
+        print('-Aborted-')
+
