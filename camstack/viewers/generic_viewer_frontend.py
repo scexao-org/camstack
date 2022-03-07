@@ -103,7 +103,7 @@ class GenericViewerFrontend:
 
             if (event.type == pgm_ct.QUIT
                     or (event.type == pgm_ct.KEYDOWN
-                        and event.key == pgm_ct.K_ESCAPE)):
+                        and event.key in [pgm_ct.K_ESCAPE, pgm_ct.K_x])):
                 pygame.quit()
                 return True
 
@@ -120,8 +120,7 @@ class GenericViewerFrontend:
 
         self.backend_obj.data_iter()
 
-        data_output = (self.backend_obj.data_rgbimg[:, :, :3] * 255).astype(
-            np.uint8)
+        data_output = self.backend_obj.data_rgbimg
         img = Image.fromarray(data_output)
 
         # Rescale and pad if necessary - using PIL is much faster than scipy.ndimage
@@ -133,28 +132,27 @@ class GenericViewerFrontend:
 
             if abs(row_fac / col_fac - 1) < 0.05:
                 # Rescale both to size, no pad, even if that means a little distortion
-                self.data_blit_staging = np.asarray(img.resize(self.data_disp_size, Image.NEAREST).transpose(Image.TRANSPOSE))
+                self.data_blit_staging = np.asarray(img.resize(self.data_disp_size[::-1], Image.NEAREST))
 
             elif row_fac > col_fac:
                 # Rescale based on rows, pad columns
                 csize = self.system_zoom * int(round(data_output.shape[1] / row_fac))
                 cskip = (self.data_disp_size[1] - csize) // 2
-                self.data_blit_staging[:, cskip:-cskip, :] = np.asarray(img.resize((self.data_disp_size[0], csize), Image.NEAREST).transpose(Image.TRANSPOSE))
+                self.data_blit_staging[:, cskip:-cskip, :] = np.asarray(img.resize((self.data_disp_size[0], csize), Image.NEAREST))
                 self.data_blit_staging[:, :cskip, :] = 0
                 self.data_blit_staging[:, -cskip:, :] = 0 # This is gonna be trouble with odd sizes, but we should be OK.
-            elif col_fac > row_fac:
+            elif col_fac >= row_fac:
                 # Rescale based on columns, pad rows
                 rsize = self.system_zoom * int(round(data_output.shape[0] / col_fac))
                 rskip = (self.data_disp_size[0] - rsize) // 2
-                self.data_blit_staging[rskip:-rskip, :, :] = np.asarray(img.resize((rsize, self.data_disp_size[1]), Image.NEAREST).transpose(Image.TRANSPOSE))
+                self.data_blit_staging[rskip:-rskip, :, :] = np.asarray(img.resize((rsize, self.data_disp_size[1]), Image.NEAREST))
                 self.data_blit_staging[:rskip, :, :] = 0
                 self.data_blit_staging[-rskip:, :, :] = 0
             else:
                 raise ValueError
 
         else:
-            self.data_blit_staging = np.asarray(img.resize((self.data_disp_size), Image.NEAREST).transpose(Image.TRANSPOSE))
-            #self.data_blit_base_staging = data_output
+            self.data_blit_staging = np.asarray(img.resize((self.data_disp_size[::-1]), Image.NEAREST))
 
         pygame.surfarray.blit_array(self.pg_datasurface, self.data_blit_staging)
         self.pg_screen.blit(self.pg_datasurface, self.pg_data_rect)
@@ -170,6 +168,6 @@ if __name__ == "__main__":
     backend = GenericViewerBackend('prout')
     #backend.assign_shortcuts should have been called?
 
-    frontend = GenericViewerFrontend(int(sys.argv[1]), 20, (450,300))#backend.shm_shape)
+    frontend = GenericViewerFrontend(int(sys.argv[1]), 20, backend.shm_shape)
     frontend.register_backend(backend)
     frontend.run()

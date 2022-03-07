@@ -20,19 +20,22 @@ class GenericViewerBackend:
 
     COLORMAPS = COLORMAPS_A
 
+    CROP_CENTER_SPOT = None
+    MAX_ZOOM_LEVEL = 4  # Power of 2, 4 is 16x, 3 is 8x
+
     SHORTCUTS = {}  # Do not subclass this, see constructor
 
-    def __init__(self, name_shm, size_display=None):
+    def __init__(self, name_shm):
 
         self.has_frontend = False
 
         ### SHM
-        self.input_shm = SHM(name_shm, verbose=False)
+        self.input_shm = SHM(name_shm, symcode=0)
 
         ### DATA Pipeline
-        self.data_raw = None  # Fresh out of SHM
-        self.data_raw_crop = None  # Cropped to zoom
-        self.data_debias = None  # After bias / ref / hotpix processing
+        self.data_raw_uncrop = None  # Fresh out of SHM
+        self.data_debias_uncrop = None  # Debiased (ref, bias, badpix)
+        self.data_debias = None  # Cropped
         self.data_zmapped = None  # Apply Z scaling
         self.data_rgbimg = None  # Apply colormap / convert to RGB
         self.data_output = None  # Interpolate to frontend display size
@@ -44,14 +47,14 @@ class GenericViewerBackend:
 
         ### COLORING
         self.cmap_id = 1
-        self.toggle_cmap(1)  # Select startup CM
+        self.toggle_cmap(self.cmap_id)  # Select startup CM
 
         ### SIZING
         self.shm_shape = self.input_shm.shape
-        if size_display is None:
-            self.size_display = self.shm_shape
-        else:
-            self.size_display = size_display  # TODO
+        self.crop_lvl_id = 0
+        if self.CROP_CENTER_SPOT is None:
+            self.CROP_CENTER_SPOT = self.shm_shape[0] / 2, self.shm_shape[1] / 2
+        self.toggle_crop(self.crop_lvl_id)
 
         ### Colors
 
@@ -61,6 +64,7 @@ class GenericViewerBackend:
             'z': self.toggle_crop,
             'v': self.toggle_averaging,
         }
+        # Note escape and X are reserved for quitting
 
         self.SHORTCUTS.update({
             buts.encode_shortcuts(scut): prep_shortcuts[scut]
@@ -81,18 +85,33 @@ class GenericViewerBackend:
         self.cmap = self.COLORMAPS[self.cmap_id]
 
     def toggle_scaling(self):
-        self.flag_non_linear = not self.flag_non_linear
+        self.flag_non_linear = (self.flag_non_linear + 1) % 3
 
-    def toggle_crop(self):
-        pass
+    def toggle_crop(self, which=None):
+        if which is None:
+            self.crop_lvl_id = (self.crop_lvl_id + 1) % (self.MAX_ZOOM_LEVEL +
+                                                         1)
+        else:
+            self.crop_lvl_id = which
+
+        halfside = (self.shm_shape[0] / 2**(self.crop_lvl_id+1),
+                self.shm_shape[1] / 2**(self.crop_lvl_id+1))
+        # Could define explicit slices using a self.CROPSLICE. Could be great for buffy PDI.
+        cr, cc = self.CROP_CENTER_SPOT
+        self.crop_slice = np.s_[int(round(cr -
+                                          halfside[0])):int(round(cr + halfside[0])),
+                                int(round(cc -
+                                          halfside[1])):int(round(cc + halfside[1]))]
+
+        print(self.shm_shape, self.crop_lvl_id, self.crop_slice)
 
     def toggle_averaging(self):
         self.flag_averaging = not self.flag_averaging
 
     def data_iter(self):
         self._data_grab()
-        #TODO crop
         self._data_referencing()
+        self._data_crop()
         self._data_zscaling()
         self._data_coloring()
 
@@ -100,44 +119,64 @@ class GenericViewerBackend:
 
     def _data_grab(self):
         '''
-        SHM -> self.data_raw
+        SHM -> self.data_raw_uncrop
         '''
         if self.flag_averaging and self.flag_data_init:
             # 5 sec running average - cast to float32 is implicit
-            self.data_raw = 0.99 * self.data_raw + 0.01 * self.input_shm.get_data(
+            self.data_raw_uncrop = 0.99 * self.data_raw + 0.01 * self.input_shm.get_data(
             )
         else:
-            self.data_raw = self.input_shm.get_data().astype(np.float32)
+            self.data_raw_uncrop = self.input_shm.get_data().astype(np.float32)
 
     def _data_referencing(self):
         '''
-        self.data_raw -> self.data_debias
+        self.data_raw_uncropped -> self.data_debias_uncrop
+
+        Subtract dark, ref, etc
         '''
-        self.data_debias = self.data_raw
+        self.data_debias_uncrop = self.data_raw_uncrop
+
+    def _data_crop(self):
+        '''
+        SHM -> self.data_debias_uncrop -> self.data_debias
+
+        Crop, but also compute some uncropped stats
+        that will be useful further down the pipeline
+        '''
+        self.data_min = self.data_raw_uncrop[1:].min()
+        self.data_max = self.data_raw_uncrop[1:].max()
+        self.data_mean = np.mean(self.data_raw_uncrop[1:])
+
+        self.data_debias = self.data_debias_uncrop[self.crop_slice]
 
     def _data_zscaling(self):
         '''
         self.data_debias -> self.data_zmapped
         '''
-        self.data_min = self.data_debias[1:].min()
-        self.data_max = self.data_debias[1:].max()
+        self.data_plot_min = self.data_debias[1:].min()
+        self.data_plot_max = self.data_debias[1:].max()
 
-        if self.flag_non_linear:  # linear
+        if self.flag_non_linear == 0: # linear
+            data = self.data_debias.copy()
+        elif self.flag_non_linear == 1:  # pow .33
             # Clip to the 80-th percentile
             data = self.data_debias - np.percentile(self.data_debias, 80)
             data = np.clip(self.data_debias, 0.0, None)
-            data = data ** 0.3
-        else:
-            data = self.data_debias.copy()
+            data = data**0.3
+        elif self.flag_non_linear == 2:  # log
+            data = self.data_debias - np.percentile(self.data_debias, 80)
+            data = np.clip(self.data_debias, 0.0, None)
+            data = np.log10(data + 1)
 
         m, M = data.min(), data.max()
-        self.data_zmapped = (data - m) / (M-m)
+        self.data_zmapped = (data - m) / (M - m)
 
     def _data_coloring(self):
         '''
         self.data_zmapped -> self.data_rgbimg
         '''
-        self.data_rgbimg = self.cmap(self.data_zmapped)
+        # Coloring with cmap, 0-255 uint8, discard alpha channel
+        self.data_rgbimg = self.cmap(self.data_zmapped, bytes=True)[:, :, :-1]
 
     def process_shortcut(self, mods, key):
         '''
