@@ -9,7 +9,7 @@
 #                        |___/                       #
 # -------------------------------------------------- #
 
-import os
+import os, sys
 
 _CORES = os.sched_getaffinity(0)  # Go around pygame import
 
@@ -1292,6 +1292,7 @@ while True:  # the main game loop
             rects = [rect2b, rect2, rct, rct2]
         else:
             rects = []
+            
         rects += [
             rect1, rct_info0, rct_info1, rct_info2, rct_info3, rct_zm,
             rct_dinfo, rct_dinfo2, rct_sc1, rct_sc2, rct_wh, rct_top
@@ -1327,7 +1328,7 @@ while True:  # the main game loop
                 logndr = False
         if cnti % 20 == 0:
             (pup, reachphoto, gpin, rpin, bpin, slot, block, pap,
-             pad) = cvc.RDB_pull(rdb, rdb_alive, True)
+             pad, target) = cvc.RDB_pull(rdb, rdb_alive, True)
             msgwhl = whatfilter(reachphoto, slot, block)
             wh = font1.render(msgwhl, True, CYAN)
             msgtop = whatmsg(pup, reachphoto, gpin, rpin)

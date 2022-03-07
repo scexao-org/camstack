@@ -18,7 +18,7 @@ def print_linenum(signum, frame):
 signal.signal(signal.SIGTTIN, print_linenum)
 
 
-import os
+import os, sys
 _CORES = os.sched_getaffinity(0) # Go around pygame import
 
 import pygame
@@ -135,7 +135,9 @@ def arr2im(arr,
         arr2 -= lmin
         mask = arr2 > 0
         arr2 *= mask
+
     arr3 = arr2**pwr
+
     mmin, mmax = arr3[1:].min(), arr3[1:].max(
     )  # IGNORE THE FIRST ROW, clock pixels etc.
     if subt_ref and lin_scale:
@@ -147,6 +149,7 @@ def arr2im(arr,
             arr3[0, 0] = -mmin
             arr3[0, 1] = -mmax
             mmax = -mmin
+            
     arr3 -= mmin
     if mmin < mmax:
         arr3 /= (mmax - mmin)
@@ -822,6 +825,7 @@ with open(conf_dir + 'hotspots.txt') as file:
 pos2 = pos[0, :]
 
 # ================================================================================
+# MAIN LOOP
 # ================================================================================
 while True:  # the main game loop
     cnti += 1
