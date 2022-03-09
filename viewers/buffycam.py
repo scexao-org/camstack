@@ -1736,11 +1736,11 @@ while True:  # the main game loop
 
                             os.system("log Buffycam: start logging images")
                             os.system(
-                                "scexaostatus set logbuffy 'LOGGING         ' 3"
+                                "scexaostatus set logbuffy 'LOGGING (LOCAL) ' 3"
                             )
 
                     else:
-                        tmux_buffylog.send_keys("milk-logshimkill kcam")
+                        tmux_buffylog.send_keys("milk-logshimoff kcam; sleep 0.5; milk-logshimkill kcam")
                         #tmux_buffylog.cmd('kill-session')
                         tmux_kcam.send_keys(
                             "log Buffycam: stop logging images")
@@ -1750,26 +1750,22 @@ while True:  # the main game loop
             # Start archiving images (after prompt to select datatype)
             #--------------------------
             if event.key == K_RETURN and wait_for_archive_datatype:
-                cam_rawdata.update_keyword("DATA-TYP", datatyp[idt])
+                ##cam_rawdata.update_keyword("DATA-TYP", datatyp[idt]) # TODO
                 timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
-                savepath = '/media/data/ARCHIVED_DATA/' + timestamp + \
-                           '/kcamlog/'
+                savepath = '/mmt/tier1/ARCHIVED_DATA/' + timestamp + \
+                           '/kcam/'
                 wait_for_archive_datatype = False
                 ospath = os.path.dirname(savepath)
                 if not os.path.exists(ospath):
                     os.makedirs(ospath)
-                nimsave = int(min(20000, (50000000 / etimet)))
+                nimsave = int(min(10000, (10000000 / etimet)))
                 # creating a tmux session for logging
-                #TODO TODO TODO
-                os.system(
-                    "ln -s /tmp/fits/buffy.fits /milk/shm/kcam.auxFITSheader.shm"
-                )
                 tmux_buffylog = tmuxlib.find_or_create_remote(
-                    "kcamlog", "scexao-op@localhost")
+                    "kcamlog", "scexao-op@scexaoRTC")
                 tmux_buffylog.send_keys("milk-logshim kcam %i %s &" %
                                         (nimsave, savepath))
                 os.system("log Buffycam: start archiving images")
-                os.system("scexaostatus set logbuffy 'ARCHIVING       ' 3")
+                os.system("scexaostatus set logbuffy 'ARCHIVING (RTC) ' 3")
 
             # Save an HDR image/Subtract dark
             #--------------------------------
