@@ -81,7 +81,6 @@ def open_shm_fullpath(shm_name, dims=(1, 1), check=False):
         tmp = shm_data.shape_c
         if tmp != dims:
             #if shm_data.mtdata['size'][:2] != dims:
-
             # TODO THIS WON'T PASS IF OTHER USER OWNS THE SHM
             # os.system("rm %s/%s.im.shm" % (MILK_SHM_DIR, shm_name, ))
             shm_data = SHM(shm_name, data=data,
@@ -97,22 +96,30 @@ CRED2_str = 'cred2'
 # ------------------------------------------------------------------
 #  Read database for some stage status
 # ------------------------------------------------------------------
-def RDB_pull(rdb, rdb_alive: bool, cam_buffy: bool):
+def RDB_pull(rdb, rdb_alive: bool, cam_is_buffy: bool):
     '''
         cam_buffy: False for Chuck, True for Buffy
     '''
 
-    PUP_KEY = ('X_CHKPUP', 'X_BUFPUP')[cam_buffy]
+    PUP_KEY = ('X_CHKPUP', 'X_BUFPUP')[cam_is_buffy]
     if rdb_alive:  # Fetch from RDB
         fits_keys_to_pull = {
             'X_IRCFLT', 'X_IRCBLK', PUP_KEY, 'X_CHKPUS', 'X_NULPKO',
             'X_RCHPKO', 'X_BUFPKO', 'D_IMRPAD', 'D_IMRPAP', 'OBJECT'
         }
         # Now Getting the keys
-        with rdb.pipeline() as pipe:
-            for key in fits_keys_to_pull:
-                pipe.hget(key, 'value')
-            values = pipe.execute()
+        made_count = 0
+        while made_count < 10:
+            try:
+                with rdb.pipeline() as pipe:
+                    for key in fits_keys_to_pull:
+                        pipe.hget(key, 'value')
+                    values = pipe.execute()
+                break
+            except:
+                print('Redis error.')
+                made_count += 1
+
         status = {k: v for k, v in zip(fits_keys_to_pull, values)}
 
         pup = status[PUP_KEY].strip() == 'IN'
@@ -156,13 +163,13 @@ def get_img_data(cam,
     data structure.
     ---------------------------------------- '''
     if cam_type == CRED1_str:
-        temp = cam.get_data(check, reform=True, timeout=1.0).astype('float')
+        temp = cam.get_data(check, reform=True, timeout=1.0).astype(np.float32)
         temp[temp == 65535] = 1.
     elif cam_type == CRED2_str:
         temp = cam.get_data(check, reform=True, timeout=1.0)
         temp = temp.astype(np.float32)  # CONVERSION
     else:
-        temp = cam.get_data(check, reform=True, timeout=1.0).astype('float')
+        temp = cam.get_data(check, reform=True, timeout=1.0).astype(np.float32)
 
     if clean:
         if badpixmap is not None:

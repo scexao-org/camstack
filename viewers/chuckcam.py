@@ -126,9 +126,9 @@ def arr2im(arr,
             xmin = xsizeim - round(xsizeim / float(z2))
         ymin, ymax = int(ymin), int(ymax)
         xmin, xmax = int(xmin), int(xmax)
-        arr2 = arr[ymin:ymax, xmin:xmax].astype('float')
+        arr2 = arr[ymin:ymax, xmin:xmax].astype(np.float32)
     else:
-        arr2 = arr.astype('float')
+        arr2 = arr.astype(np.float32)
 
     if not lin_scale:
         lmin = np.percentile(arr2, 0.8)
@@ -149,7 +149,7 @@ def arr2im(arr,
             arr3[0, 0] = -mmin
             arr3[0, 1] = -mmax
             mmax = -mmin
-            
+
     arr3 -= mmin
     if mmin < mmax:
         arr3 /= (mmax - mmin)
@@ -490,7 +490,7 @@ screen = pygame.display.set_mode((XW, YW), 0, 32)
 pygame.display.set_caption('SCIENCE camera display!')
 
 tmux_ircam_ctrl = tmuxlib.find_or_create_remote(
-    'ircam%dctrl' % camid, 'scexao-op@localhost')  # Control shell
+    'chuck_ctrl', 'scexao@10.20.30.5')  # Control shell
 tmux_ircam = tmuxlib.find_or_create(
     'ircam%d' % camid)  # start a tmux session for messsages
 tmux_ircam_synchro = tmuxlib.find_or_create(
@@ -501,7 +501,7 @@ if bytes(home, 'utf8') + b'/bin/devices/ircam_synchro' not in res:
     tmux_ircam_synchro.send_keys("ircam_synchro")
 
 # ------------------------------------------------------------------
-#              !!! now we are in business !!!!
+# -            !!! now we are in business !!!!                     -
 # ------------------------------------------------------------------
 
 WHITE = (255, 255, 255)
@@ -616,7 +616,7 @@ rct_info1 = info1.get_rect()
 rct_info1.center = (110 * z1, 305 * z1)
 
 imin, imax = 10000, 10000
-msg2 = ("t = %f" % (etimet))[:8] + (" min,max = %5d,%5d   " % (imin, imax))
+msg2 = ("t = %f" % (etimet))[:8] + (" min,max = %5d,%7d   " % (imin, imax))
 info2 = font3.render(msg2, True, FGCOL, BGCOL)
 rct_info2 = info2.get_rect()
 rct_info2.center = (110 * z1, 315 * z1)

@@ -109,9 +109,9 @@ def arr2im(arr,
             xmin = xsizeim - round(xsizeim / float(z2))
         ymin, ymax = int(ymin), int(ymax)
         xmin, xmax = int(xmin), int(xmax)
-        arr2 = arr[ymin:ymax, xmin:xmax].astype('float')
+        arr2 = arr[ymin:ymax, xmin:xmax].astype(np.float32)
     else:
-        arr2 = arr.astype('float')
+        arr2 = arr.astype(np.float32)
 
     if not lin_scale:
         lmin = np.percentile(arr2, 0.99)
@@ -590,7 +590,7 @@ rct_info1 = info1.get_rect()
 rct_info1.center = (110 * z1, 305 * z1)
 
 imin, imax = 10000, 10000
-msg2 = ("t = %f" % (etimet))[:8] + (" min,max = %5d,%5d   " % (imin, imax))
+msg2 = ("t = %f" % (etimet))[:8] + (" min,max = %5d,%7d   " % (imin, imax))
 info2 = font3.render(msg2, True, FGCOL, BGCOL)
 rct_info2 = info2.get_rect()
 rct_info2.center = (110 * z1, 315 * z1)
@@ -1270,8 +1270,9 @@ while True:  # the main game loop
         # saving images ?
         # Using this construct to find the logger and only itself
         # Will ret 1 if no processes are found, 0 if the logger is found. Hence the "not"
+        '''
         saving_on = not subprocess.run(
-            'ps ax | grep "milk-logshim kcam" | grep -v grep',
+            'ssh scexaoRTC "ps ax | grep \"milk-logshim kcam\" | grep -v grep"',
             shell=True,
             input='',
             stdout=subprocess.DEVNULL).returncode
@@ -1285,14 +1286,16 @@ while True:  # the main game loop
                 # Create a handle to the logging tmux
                 # This allows to get back on track if it already exists when we start chuckcam
                 tmux_kcamlog = tmuxlib.find_or_create_remote(
-                    'kcamlog', 'scexao-op@localhost')
+                    'kcam_log', 'scexao@scexaoRTC')
         else:
             saveim = False
+        '''
+
         if cnti % 20:
             rects = [rect2b, rect2, rct, rct2]
         else:
             rects = []
-            
+
         rects += [
             rect1, rct_info0, rct_info1, rct_info2, rct_info3, rct_zm,
             rct_dinfo, rct_dinfo2, rct_sc1, rct_sc2, rct_wh, rct_top
@@ -1729,7 +1732,7 @@ while True:  # the main game loop
                                 "ln -s /tmp/fits/buffy.fits /milk/shm/kcam.auxFITSheader.shm"
                             )
                             tmux_buffylog = tmuxlib.find_or_create_remote(
-                                "kcamlog", "scexao-op@localhost")
+                                "kcam_log", "scexao-op@localhost")
                             tmux_buffylog.send_keys(
                                 "milk-logshim kcam %i %s &" %
                                 (nimsave, savepath))
@@ -1740,7 +1743,7 @@ while True:  # the main game loop
                             )
 
                     else:
-                        tmux_buffylog.send_keys("milk-logshimoff kcam; sleep 0.5; milk-logshimkill kcam")
+                        tmux_buffylog.send_keys("milk-logshimoff kcam; sleep 4; milk-logshimkill kcam")
                         #tmux_buffylog.cmd('kill-session')
                         tmux_kcam.send_keys(
                             "log Buffycam: stop logging images")
@@ -1750,18 +1753,18 @@ while True:  # the main game loop
             # Start archiving images (after prompt to select datatype)
             #--------------------------
             if event.key == K_RETURN and wait_for_archive_datatype:
-                ##cam_rawdata.update_keyword("DATA-TYP", datatyp[idt]) # TODO
+                os.system(f"ssh scexao@scexao5 updatekw kcam_raw DATA-TYP {datatyp[idt]}")
                 timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
-                savepath = '/mmt/tier1/ARCHIVED_DATA/' + timestamp + \
+                savepath = '/mnt/tier1/ARCHIVED_DATA/' + timestamp + \
                            '/kcam/'
                 wait_for_archive_datatype = False
-                ospath = os.path.dirname(savepath)
-                if not os.path.exists(ospath):
-                    os.makedirs(ospath)
                 nimsave = int(min(10000, (10000000 / etimet)))
                 # creating a tmux session for logging
                 tmux_buffylog = tmuxlib.find_or_create_remote(
-                    "kcamlog", "scexao-op@scexaoRTC")
+                    "kcam_log", "scexao@scexaoRTC")
+                ospath = os.path.dirname(savepath)
+
+                tmux_buffylog.send_keys(f"mkdir -p {ospath}")
                 tmux_buffylog.send_keys("milk-logshim kcam %i %s &" %
                                         (nimsave, savepath))
                 os.system("log Buffycam: start archiving images")
@@ -2055,7 +2058,7 @@ while True:  # the main game loop
                     gain = cam.get_keywords()['DETGAIN']
                     print(f"\n=== Buffy camera gain: {gain} ===\n")
 
-                if not (mmods & KMOD_LSHIFT) and (mmods & KMOD_LCTRL):
+                if not (mmods & KMOD_LSHIFT) and (mmods & KMOD_LCTRL) and event.key == K_e:
                     # Shortcut to 121
                     print("set_gain(121)")
                     tmux_kcam_ctrl.send_keys("set_gain(121)")
