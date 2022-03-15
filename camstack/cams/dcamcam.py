@@ -139,14 +139,17 @@ class DCAMUSBCamera(BaseCamera):
 
 class OrcaQuestUSB(DCAMUSBCamera):
 
-    INTERACTIVE_SHELL_METHODS = ['K', 'K2', 'K3', 'set_tint', 'get_tint'] + \
+    INTERACTIVE_SHELL_METHODS = ['K', 'K2', 'K3', 'K4', 'set_tint', 'get_tint', 'get_temperature'] + \
         BaseCamera.INTERACTIVE_SHELL_METHODS
 
-    K, K2, K3 = 'K', 'K2', 'K3'
+    FULL = 'FULL'
+    
     MODES = {
-        K: CameraMode(x0=1748, x1=2347, y0=1000, y1=1303, tint=0.001),
-        K2: CameraMode(x0=1448, x1=2647, y0=848, y1=1555, tint=0.001),
-        K3: CameraMode(x0=1148, x1=2947, y0=696, y1=1807, tint=0.001),
+        FULL: CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
+        1: CameraMode(x0=1748, x1=2347, y0=1000, y1=1303, tint=0.001),
+        2: CameraMode(x0=1448, x1=2647, y0=848, y1=1555, tint=0.001),
+        3: CameraMode(x0=1148, x1=2947, y0=696, y1=1807, tint=0.001),
+        4: CameraMode(x0=1848, x1=3147, y0=848, y1=1555, tint=0.001),
     }
 
     KEYWORDS = {}
