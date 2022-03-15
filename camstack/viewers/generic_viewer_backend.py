@@ -143,8 +143,8 @@ class GenericViewerBackend:
         Crop, but also compute some uncropped stats
         that will be useful further down the pipeline
         '''
-        self.data_min = self.data_raw_uncrop[1:].min()
-        self.data_max = self.data_raw_uncrop[1:].max()
+        self.data_min = self.data_raw_uncrop[1:,1:].min()
+        self.data_max = self.data_raw_uncrop[1:,1:].max()
         self.data_mean = np.mean(self.data_raw_uncrop[1:])
 
         self.data_debias = self.data_debias_uncrop[self.crop_slice]
@@ -153,22 +153,22 @@ class GenericViewerBackend:
         '''
         self.data_debias -> self.data_zmapped
         '''
-        self.data_plot_min = self.data_debias[1:].min()
-        self.data_plot_max = self.data_debias[1:].max()
+        self.data_plot_min = self.data_debias[1:,1:].min()
+        self.data_plot_max = self.data_debias[1:,1:].max()
 
         if self.flag_non_linear == 0: # linear
             data = self.data_debias.copy()
         elif self.flag_non_linear == 1:  # pow .33
             # Clip to the 80-th percentile
-            data = self.data_debias - np.percentile(self.data_debias, 80)
-            data = np.clip(self.data_debias, 0.0, None)
+            data = self.data_debias - np.percentile(self.data_debias[1:,1:], 0.8)
+            data = np.clip(data, 0.0, None)
             data = data**0.3
         elif self.flag_non_linear == 2:  # log
-            data = self.data_debias - np.percentile(self.data_debias, 80)
-            data = np.clip(self.data_debias, 0.0, None)
+            data = self.data_debias - np.percentile(self.data_debias[1:,1:], 0.8)
+            data = np.clip(data, 0.0, None)
             data = np.log10(data + 1)
 
-        m, M = data.min(), data.max()
+        m, M = data[1:,1:].min(), data[1:,1:].max()
         self.data_zmapped = (data - m) / (M - m)
 
     def _data_coloring(self):
