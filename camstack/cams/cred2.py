@@ -64,9 +64,9 @@ class CRED2(EDTCamera):
         # ======
 
         # Issue a few standards for CRED2
-        self.send_command('set cropping on')
         self.send_command('set led off')
         self.set_gain('high')
+        self.send_command('set rawimages on') # TODO TODO WE DO NOT WANT THAT for all CRED2s, e.g. GLINT
 
         # Abstract method - subclassed by Rajni/Chuck/GLINT
         self._thermal_init_commands()
@@ -76,6 +76,8 @@ class CRED2(EDTCamera):
     # =====================
 
     def prepare_camera_for_size(self, mode_id = None):
+
+        self.send_command('set cropping on')
 
         if mode_id is None:
             mode_id = self.current_mode_id
