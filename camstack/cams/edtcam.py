@@ -1,7 +1,12 @@
+import os
+import subprocess
+
 from typing import Union, Tuple, List, Any
 
 from camstack.cams.base import BaseCamera
 from camstack.core.edtinterface import EdtInterfaceSerial
+
+from camstack.core.utilities import CameraMode
 
 
 class EDTCamera(BaseCamera):
