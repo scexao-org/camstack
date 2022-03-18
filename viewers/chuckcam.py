@@ -46,7 +46,7 @@ from scxkw.redisutil.typed_db import Redis
 
 from pyMilk.interfacing.isio_shmlib import SHM
 
-import camstack.viewer_common as cvc
+import camstack.viewers.viewer_common as cvc
 
 home = os.getenv('HOME')  # Expected /home/scexao
 conf_dir = home + "/conf/chuckcam_aux/"

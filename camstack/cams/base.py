@@ -261,9 +261,9 @@ class BaseCamera:
                 str(self.taker_cset_prio[1])  # PRIORITY
             ])
 
+        # Should these 3 be there ???
         self.grab_shm_fill_keywords()
         self.prepare_camera_finalize()
-
         self.start_auxiliary_thread()
 
     def _start(self):
