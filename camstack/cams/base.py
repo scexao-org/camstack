@@ -36,7 +36,7 @@ class BaseCamera:
         'PRD-MIN1': (0, 'Origin in X of the cropped window (pixel)'),
         'PRD-MIN2': (0, 'Origin in Y of the cropped window (pixel)'),
         'PRD-RNG1': (1, 'Range in X of the cropped window (pixel)'),
-        'PRG-RNG2': (1, 'Range in Y of the cropped window (pixel)'),
+        'PRD-RNG2': (1, 'Range in Y of the cropped window (pixel)'),
         'CROPPED': ('False', 'Image windowed or full frame'),
         'DET-TMP': (0.0, 'Detector temperature (K)'),
         'DETECTOR': ('DET', 'Name of the detector'),
