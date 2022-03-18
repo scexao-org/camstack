@@ -255,7 +255,7 @@ int main(int argc, char **argv)
     int N_KEYWORDS = 4;
 
     // Warning: the order of *kws* may change, because we're gonna allocate the other ones from python.
-    const char *KW_NAMES[] = {"MFRATE", "MACQTMUS", "FG_SIZE1", "FG_SIZE2"};
+    const char *KW_NAMES[] = {"MFRATE", "!MAQTIME", "!FGSIZE1", "!FGSIZE2"};
     const char KW_TYPES[] = {'D', 'L', 'L', 'L'};
     const char *KW_COM[] = {"Measured frame rate (Hz)",
                             "Frame acq time (us, CLOCK_REALTIME)",
