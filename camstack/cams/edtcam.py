@@ -75,8 +75,9 @@ class EDTCamera(BaseCamera):
                         f' -c {self.pdv_channel} -f {tmp_config}').split(' '),
                        stdout=subprocess.PIPE)
 
-        # Open a serial handle - warning, this is duplicated if called from set_camera_mode!
-        self.edt_iface = EdtInterfaceSerial(self.pdv_unit, self.pdv_channel)
+        # Open a serial handle - but only the first time
+        if self.edt_iface is None:
+            self.edt_iface = EdtInterfaceSerial(self.pdv_unit, self.pdv_channel)
 
 
     def _prepare_backend_cmdline(self, reuse_shm: bool = False):
