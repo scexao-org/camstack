@@ -166,7 +166,7 @@ class CRED1(EDTCamera):
 
         # Additional fill-up of the camera state
         self.get_gain()  # Sets 'DETGAIN'
-        self.get_readout_mode()  # Set DETMODE
+        self.get_readout_mode()  # Set DET-SMPL
 
         # Call the stuff that we can't know otherwise
         self.poll_camera_for_keywords()  # Sets 'DET-TMP'
@@ -226,7 +226,7 @@ class CRED1(EDTCamera):
         res = self.send_command('mode raw')
         res = res[:6] + res[
             11:]  # Removing "reset" after "global", otherwise too long for shm keywords
-        self.camera_shm.update_keyword('DETMODE', res)
+        self.camera_shm.update_keyword('DET-SMPL', res)
         return res
 
     def set_gain(self, gain: int):
@@ -279,8 +279,8 @@ class CRED1(EDTCamera):
     def get_NDR(self):
         self.NDR = int(self.send_command('nbreadworeset raw'))
         self.camera_shm.update_keyword('DET-NSMP', self.NDR)
-        self.camera_shm.update_keyword('DETMODE', ('globalsingle',
-                                                   'globalcds')[self.NDR > 1])
+        self.camera_shm.update_keyword('DET-SMPL', ('globalsingle',
+                                                    'globalcds')[self.NDR > 1])
         return self.NDR
 
     def set_fps(self, fps: float):

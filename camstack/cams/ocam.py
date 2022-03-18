@@ -141,7 +141,7 @@ class OCAM2K(EDTCamera):
         EDTCamera._fill_keywords(self)
 
         self.camera_shm.update_keyword('DETECTOR', 'OCAM2K (RENO)')
-        self.camera_shm.update_keyword('DETMODE', 'GlobRstSingle')
+        self.camera_shm.update_keyword('DET-SMPL', 'GlobRstSingle')
 
         self.camera_shm.update_keyword('BIN-FCT1', self.current_mode.binx)
         self.camera_shm.update_keyword('BIN-FCT2', self.current_mode.biny)

@@ -21,7 +21,8 @@ class BaseCamera:
     INTERACTIVE_SHELL_METHODS = [
         'close', 'release',
         '_start', '_stop',
-        'set_camera_mode'
+        'set_camera_mode',
+        'set_camera_size',
     ]
 
     MODES = {}  # Define the format ?
@@ -29,18 +30,18 @@ class BaseCamera:
     KEYWORDS = {  # Format is name: (value, description) - this list CAN be figured out from a redis query.
         'BIN-FCT1': (1, 'Binning factor of the X axis (pixel)'),
         'BIN-FCT2': (1, 'Binning factor of the Y axis (pixel)'),
-        #'BSCALE': (1.0, 'Real=fits-value*BSCALE+BZERO'),
+        #'BSCALE': (1.0, 'Real=fits-value*BSCALE+BZERO'), # Removed to let logshim handle it.
         'BUNIT': ('ADU', 'Unit of original values'),
         #'BZERO': (0.0, 'Real=fits-value*BSCALE+BZERO'),
-        'CROP_OR1': (0, 'Origin in X of the cropped window (pixel)'),
-        'CROP_OR2': (0, 'Origin in Y of the cropped window (pixel)'),
-        'CROP_EN1': (1, 'End in X of the cropped window (pixel)'),
-        'CROP_EN2': (1, 'End in Y of the cropped window (pixel)'),
+        'PRD-MIN1': (0, 'Origin in X of the cropped window (pixel)'),
+        'PRD-MIN2': (0, 'Origin in Y of the cropped window (pixel)'),
+        'PRD-RNG1': (1, 'Range in X of the cropped window (pixel)'),
+        'PRG-RNG2': (1, 'Range in Y of the cropped window (pixel)'),
         'CROPPED': ('False', 'Image windowed or full frame'),
         'DET-TMP': (0.0, 'Detector temperature (K)'),
         'DETECTOR': ('DET', 'Name of the detector'),
         'DETGAIN': (1., 'Detector gain'),
-        'DETMODE': ('base', 'Detector mode'),
+        'DET-SMPL': ('base', 'Sampling method'),
         'EXPTIME': (0.001, 'Total integration time of the frame (sec)'),
         'FRATE': (100., 'Frame rate of the acquisition (Hz)'),
         'GAIN': (1., 'AD conversion factor (electron/ADU)'),
@@ -74,6 +75,7 @@ class BaseCamera:
             self.current_mode_id = mode_id
 
         self.current_mode = self.MODES[mode_id]
+        self.width, self.height = self._fg_size_from_mode(mode_id)
 
 
 
@@ -326,10 +328,10 @@ class BaseCamera:
         self.camera_shm.update_keyword('DETECTOR', 'Base Camera')
         self.camera_shm.update_keyword('BIN-FCT1', cm.binx)
         self.camera_shm.update_keyword('BIN-FCT2', cm.biny)
-        self.camera_shm.update_keyword('CROP_OR1', cm.x0)
-        self.camera_shm.update_keyword('CROP_OR2', cm.y0)
-        self.camera_shm.update_keyword('CROP_EN1', cm.x1)
-        self.camera_shm.update_keyword('CROP_EN2', cm.y1)
+        self.camera_shm.update_keyword('PRD-MIN1', cm.x0)
+        self.camera_shm.update_keyword('PRD-MIN2', cm.y0)
+        self.camera_shm.update_keyword('PRD-RNG1', cm.x1-cm.x0+1)
+        self.camera_shm.update_keyword('PRD-RNG2', cm.y1-cm.y0+1)
         self.camera_shm.update_keyword('CROPPED', 'N/A')
 
     def get_fg_parameters(self):
