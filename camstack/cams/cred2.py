@@ -10,6 +10,7 @@ from camstack.cams.edtcam import EDTCamera
 
 from camstack.core.utilities import CameraMode
 
+
 class CRED2(EDTCamera):
 
     INTERACTIVE_SHELL_METHODS = [
@@ -56,8 +57,15 @@ class CRED2(EDTCamera):
         # Call EDT camera init
         # This should pre-kill dependent sessions
         # But we should be able to "prepare" the camera before actually starting
-        EDTCamera.__init__(self, name, stream_name, mode_id, unit, channel,
-                           basefile, taker_cset_prio=taker_cset_prio, dependent_processes=dependent_processes)
+        EDTCamera.__init__(self,
+                           name,
+                           stream_name,
+                           mode_id,
+                           unit,
+                           channel,
+                           basefile,
+                           taker_cset_prio=taker_cset_prio,
+                           dependent_processes=dependent_processes)
 
         # ======
         # AD HOC
@@ -66,7 +74,9 @@ class CRED2(EDTCamera):
         # Issue a few standards for CRED2
         self.send_command('set led off')
         self.set_gain('high')
-        self.send_command('set rawimages on') # TODO TODO WE DO NOT WANT THAT for all CRED2s, e.g. GLINT
+        self.send_command(
+            'set rawimages on'
+        )  # TODO TODO WE DO NOT WANT THAT for all CRED2s, e.g. GLINT
 
         # Abstract method - subclassed by Rajni/Chuck/GLINT
         self._thermal_init_commands()
@@ -75,7 +85,7 @@ class CRED2(EDTCamera):
     # AD HOC PREPARE CAMERA
     # =====================
 
-    def prepare_camera_for_size(self, mode_id = None):
+    def prepare_camera_for_size(self, mode_id=None):
 
         self.send_command('set cropping on')
 
@@ -95,7 +105,6 @@ class CRED2(EDTCamera):
         self._set_check_cropping(mode.x0, mode.x1, mode.y0, mode.y1)
 
         EDTCamera.prepare_camera_for_size(self, mode_id=mode_id)
-
 
     def prepare_camera_finalize(self, mode_id: int = None):
 
@@ -123,7 +132,7 @@ class CRED2(EDTCamera):
             # We might have gotten a double answer
             # Seems to happen when requesting pressure (CRED1) and pretty often with CRED2
             cut = res.index('>')
-            res = res[cut+1:]
+            res = res[cut + 1:]
 
         if format and ':' in res:
             return res.split(':')
@@ -140,7 +149,7 @@ class CRED2(EDTCamera):
         self.get_NDR()  # Sets 'NDR'
         self.get_tint()  # Sets 'EXPTIME'
         self.get_fps()  # Sets 'FRATE'
-        
+
         self.camera_shm.update_keyword('DETECTOR', 'CRED2')
         self.camera_shm.update_keyword('CROPPED',
                                        self.current_mode_id != 'full')
@@ -247,7 +256,9 @@ class CRED2(EDTCamera):
         return float(self.send_command('temp snake setpoint raw'))
 
     def _shutdown(self):
-        input(f'Detector temperature {self.get_temperature()} K; proceed anyway ? Ctrl+C aborts.')
+        input(
+            f'Detector temperature {self.get_temperature()} K; proceed anyway ? Ctrl+C aborts.'
+        )
         res = self.send_command('shutdown')
         if 'OK' in res:
             while True:
@@ -262,7 +273,7 @@ class Rajni(CRED2):
 
     MODES = {}
     MODES.update(CRED2.MODES)
-    
+
     def _fill_keywords(self):
         CRED2._fill_keywords(self)
 
@@ -270,22 +281,13 @@ class Rajni(CRED2):
         self.camera_shm.update_keyword('DETECTOR', 'CRED2 - RAJNI')
 
     def _thermal_init_commands(self):
-        # Rajni + chuck: water cooling, 
+        # Rajni + chuck: water cooling,
         self.send_command('set fan speed 0')
         self.send_command('set fan mode manual')
         self.set_temperature_setpoint(-40.0)
 
 
-#class GLINT(CRED2):
-'''
-    FIXME
-    GLINT is not a CRED2 for now, because we decided not to send commands to the camera
-    Better, we need to define a passive CRED2, which could send serial commands
-    But wouldn't try to alter the camera state
-'''
-class GLINT(EDTCamera):
-
-    EDTTAKE_UNSIGNED=False
+class GLINT(CRED2):
 
     MODES = {
         # GLINT
@@ -296,37 +298,32 @@ class GLINT(EDTCamera):
                    y1=423,
                    fps=1394.833104000,
                    tint=0.000711851),
+        # PL multicore
+        13:
+        CameraMode(x0=96,
+                   x1=319,
+                   y0=44,
+                   y1=243,
+                   fps=1000,
+                   tint=0.001),
     }
-    MODES.update(EDTCamera.MODES)
-
-    def __init__(self,
-                 name: str,
-                 stream_name: str,
-                 unit: int = 2,
-                 channel: int = 0,
-                 mode_id=12,
-                 taker_cset_prio=('system', None),
-                 dependent_processes=[]):
-
-        basefile = os.environ['HOME'] + '/src/camstack/config/cred2_glint.cfg'
-
-        # Call EDT camera init
-        EDTCamera.__init__(self,
-                           name,
-                           stream_name,
-                           mode_id,
-                           unit,
-                           channel,
-                           basefile,
-                           taker_cset_prio=taker_cset_prio,
-                           dependent_processes=dependent_processes)
-
+    MODES.update(CRED2.MODES)
 
     def _fill_keywords(self):
-        EDTCamera._fill_keywords(self)
+        CRED2._fill_keywords(self)
 
         # Override detector name
         self.camera_shm.update_keyword('DETECTOR', 'CRED2 - GLINT')
+
+    def _thermal_init_commands(self):
+        # Glint" automatic fast cooling
+        self.send_command('set fan mode automatic')
+        self.set_temperature_setpoint(-20.0)
+
+    def poll_camera_for_keywords(self):
+        CRED2.poll_camera_for_keywords(self)
+        self.get_fps()
+        self.get_tint()
 
 
 class Chuck(CRED2):
@@ -398,6 +395,7 @@ class Chuck(CRED2):
         self.send_command('set fan speed 0')
         self.send_command('set fan mode manual')
         self.set_temperature_setpoint(-40.0)
+
 
 # Quick shorthand for testing
 if __name__ == "__main__":
