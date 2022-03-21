@@ -9,6 +9,14 @@ from camstack.cams.edtcam import EDTCamera
 
 from camstack.core.utilities import CameraMode
 
+try:
+    from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT, GEN2HOST
+    from scxkw.redisutil.typed_db import Redis
+    RDB = Redis(host=REDIS_DB_HOST, port=REDIS_DB_PORT)
+    HAS_REDIS = True
+except:
+    HAS_REDIS = False
+
 
 class ROMODES:
     single = 'globalresetsingle'
@@ -50,6 +58,7 @@ class CRED1(EDTCamera):
 
     KEYWORDS = {
         'DET-PRES': (0.0, 'Detector pressure (mbar)'),
+        'FILTER01': ('UNKNOWN', 'IRCAMs filter state')
     }
     KEYWORDS.update(EDTCamera.KEYWORDS)
 
@@ -157,7 +166,7 @@ class CRED1(EDTCamera):
 
         EDTCamera._fill_keywords(self)
 
-        self.camera_shm.update_keyword('DETECTOR', 'CRED2')
+        self.camera_shm.update_keyword('DETECTOR', 'CRED1')
         self.camera_shm.update_keyword('CROPPED',
                                        self.current_mode_id != 'full')
         self.get_NDR()  # Sets 'NDR'
@@ -172,6 +181,11 @@ class CRED1(EDTCamera):
         self.poll_camera_for_keywords()  # Sets 'DET-TMP'
 
     def poll_camera_for_keywords(self):
+        if HAS_REDIS:
+            try:
+                self.camera_shm.update_keyword('FILTER01', RDB.hget('X_IRCFLT', 'value'))
+            except:
+                pass
         self.get_temperature()  # Sets DET-TMP
         time.sleep(.1)
         self.get_cryo_pressure()  # Sets DET-PRES

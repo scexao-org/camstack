@@ -10,6 +10,14 @@ from camstack.cams.edtcam import EDTCamera
 
 from camstack.core.utilities import CameraMode
 
+try:
+    from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT, GEN2HOST
+    from scxkw.redisutil.typed_db import Redis
+    RDB = Redis(host=REDIS_DB_HOST, port=REDIS_DB_PORT)
+    HAS_REDIS = True
+except:
+    HAS_REDIS = False
+
 
 class CRED2(EDTCamera):
 
@@ -300,12 +308,7 @@ class GLINT(CRED2):
                    tint=0.000711851),
         # PL multicore
         13:
-        CameraMode(x0=96,
-                   x1=319,
-                   y0=44,
-                   y1=243,
-                   fps=1000,
-                   tint=0.001),
+        CameraMode(x0=96, x1=319, y0=44, y1=243, fps=1000, tint=0.001),
     }
     MODES.update(CRED2.MODES)
 
@@ -374,6 +377,10 @@ class Chuck(CRED2):
     }
     MODES.update(CRED2.MODES)
 
+    KEYWORDS = {'FILTER01': ('UNKNOWN', 'IRCAMs filter state')}
+    KEYWORDS.update(EDTCamera.KEYWORDS)
+
+
     # Add modes 6-11 (0-5 offseted 32 pix)
     for i in range(6):
         cm = MODES[i]
@@ -389,6 +396,15 @@ class Chuck(CRED2):
 
         # Override detector name
         self.camera_shm.update_keyword('DETECTOR', 'CRED2 - CHUCK')
+
+    def poll_camera_for_keywords(self):
+        CRED2.poll_camera_for_keywords(self)
+
+        if HAS_REDIS:
+            try:
+                self.camera_shm.update_keyword('FILTER01', RDB.hget('X_IRCFLT', 'value'))
+            except:
+                pass
 
     def _thermal_init_commands(self):
         # Rajni / Chuck: water cooling
