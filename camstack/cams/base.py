@@ -187,7 +187,11 @@ class BaseCamera:
         '''
         self.set_camera_mode(mode_id)
 
-    def set_camera_size(self, height: int, width: int):
+    def set_camera_size(self,
+                        height: int,
+                        width: int,
+                        h_offset: int = 0,
+                        w_offset: int = 0):
         '''
             That's a pretty agressive change - and thus,
             we're pretty much restarting everything
@@ -195,10 +199,10 @@ class BaseCamera:
 
             This is a back-compatible mode (width, height) over the camera modes
         '''
-        self.MODES['CUSTOM'] = CameraMode(x0=0,
-                                          x1=width - 1,
-                                          y0=0,
-                                          y1=height - 1)
+        self.MODES['CUSTOM'] = CameraMode(x0=w_offset,
+                                          x1=w_offset + width - 1,
+                                          y0=h_offset,
+                                          y1=h_offset + height - 1)
 
         self.set_camera_mode('CUSTOM')
 
