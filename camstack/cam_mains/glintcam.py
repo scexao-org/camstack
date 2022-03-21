@@ -7,7 +7,7 @@ import scxconf
 
 if __name__ == "__main__":
 
-    mode = 12
+    mode = 13 #12
 
     # Prepare dependent processes
     tcp_recv = RemoteDependentProcess(
@@ -36,7 +36,7 @@ if __name__ == "__main__":
     )
     tcp_send.start_order = 1
     tcp_send.kill_order = 0
-
+    
     try:
         os.makedirs(os.environ['MILK_SHM_DIR'] + '/smb')  # Samba server root
     except FileExistsError:
@@ -51,13 +51,35 @@ if __name__ == "__main__":
     fits_dump.start_order = 2
     fits_dump.kill_order = 2
 
+    # PIPE over ZMQ into the LAN until we find a better solution (receiver)
+    zmq_recv = RemoteDependentProcess(
+        tmux_name='glint_zmq',
+        cli_cmd='zmq_recv.py %s:%u %s',
+        cli_args=(scxconf.IPLAN_SC5, scxconf.ZMQPORT_GLINT, 'glint'),
+        remote_host=f'scexao-op@{scxconf.IP_SC2}',
+        kill_upon_create=False,
+    )
+    zmq_recv.start_order = 3
+    zmq_recv.kill_order = 4
+
+    # PIPE over ZMQ into the LAN until we find a better solution (sender)
+    zmq_send = DependentProcess(
+        tmux_name='glint_zmq',
+        cli_cmd='zmq_send.py %s:%u %s',
+        cli_args=(scxconf.IPLAN_SC5, scxconf.ZMQPORT_GLINT, 'glint'),
+        kill_upon_create=True,
+    )
+    zmq_send.start_order = 4
+    zmq_send.kill_order = 3
+
+
     cam = GLINT('glint',
                 'glint',
                 unit=5,
                 channel=0,
                 mode_id=mode,
                 taker_cset_prio=('glint_edt', 41),
-                dependent_processes=[tcp_recv, tcp_send, fits_dump])
+                dependent_processes=[tcp_recv, tcp_send, fits_dump, zmq_recv, zmq_send])
 
     from camstack.core.utilities import shellify_methods
     shellify_methods(cam, globals())
