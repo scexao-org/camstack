@@ -39,6 +39,7 @@ scripts = [
     './scripts/cam-ocamstart',
     './scripts/cam-orcamstart',
     './scripts/cam-rajnistart',
+    './scripts/cam-fircamstart',
     './scripts/vcamstart', # FIXME change names - "start" is too vague for something available system-wide
     './scripts/vcamstart-bash',
 ]
