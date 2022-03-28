@@ -8,7 +8,7 @@
     which also includes ZMQ streaming, UTR, and ocam_decode
 
     Usage:
-        cam-restartdeps (ocam|buffy|rajni|glint)...
+        cam-restartdeps (ocam|chuck|buffy|rajni|glint)...
 '''
 
 
@@ -39,6 +39,7 @@ if __name__ == "__main__":
         'glint': 'glint_ctrl',
         'buffy': 'kcam_ctrl',
         'ocam': 'ocam_ctrl',
+        'chuck': 'chuck_ctrl',
     }
 
     tmuxes = [NAME_MAPPING[cam] for cam in args if args[cam]]

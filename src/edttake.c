@@ -294,7 +294,7 @@ int main(int argc, char **argv)
     }
 
     // Add keywords
-    int N_KEYWORDS = 3;
+    int N_KEYWORDS = 4;
 
     // Warning: the order of *kws* may change, because we're gonna allocate the other ones from python.
     const char *KW_NAMES[] = {"MFRATE", "_MAQTIME", "_FGSIZE1", "_FGSIZE2"}; // "tint", "fps", "DET-NSMP", "x0", "x1", "y0", "y1", "temp"}; // DET-NSMP is ex-NDR
