@@ -24,15 +24,17 @@ echo ""
 echo "Resetting KAYA boxes config - should not require sudo anymore... ?"
 DEV="/dev/serial/by-id/usb-Silicon_Labs_CP2101_USB_to_UART_Bridge_Controller_0001-if00-port0"
 
-sudo stty -F ${DEV} 115200 raw -echo -echoe -echok -echoctl -echoke
+# Try de-sudo-ind it
+stty -F ${DEV} 115200 raw -echo -echoe -echok -echoctl -echoke
+#sudo stty -F ${DEV} 115200 raw -echo -echoe -echok -echoctl -echoke
 sleep .5
-echo -e -n 'FORMAT 3 1\r' | sudo tee ${DEV}
+echo -e -n 'FORMAT 3 1\r' | tee ${DEV}
 sleep .5
-echo -e -n 'UARTBAUD 0 4\r' | sudo tee ${DEV}
+echo -e -n 'UARTBAUD 0 4\r' | tee ${DEV}
 sleep .5
-echo -e -n 'FORMAT 3 1\r' | sudo tee ${DEV}
+echo -e -n 'FORMAT 3 1\r' | tee ${DEV}
 sleep .5
-echo -e -n 'UARTBAUD 0 4\r' | sudo tee ${DEV}
+echo -e -n 'UARTBAUD 0 4\r' | tee ${DEV}
 
 $tsend $tname "python -im camstack.cam_mains.glintcam" Enter
 
