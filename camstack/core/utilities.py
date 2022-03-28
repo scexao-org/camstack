@@ -1,8 +1,10 @@
 from typing import Tuple, List
-from camstack.core import tmux
+
+import os
 import time
 import subprocess
 
+from camstack.core import tmux
 
 class CameraMode:
     def __init__(self,
@@ -168,3 +170,12 @@ def shellify_methods(instance_of_camera, top_level_globals):
     for method_name in instance_of_camera.INTERACTIVE_SHELL_METHODS:
         top_level_globals[method_name] = getattr(instance_of_camera,
                                                  method_name)
+
+def enforce_whichcomp(comp: str):
+    '''
+        For scripts: enforce we're running on the right computer using the WHICHCOMP variable
+    '''
+    this_comp = os.environ.get('WHICHCOMP', '')
+    if this_comp != comp:
+        raise SystemError(f"WHICHCOMP variable {this_comp} doesn't match {comp}.\nYou need to be on the right computer to run this script.")
+
