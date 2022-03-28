@@ -1394,6 +1394,14 @@ while True:  # the main game loop
                         logexpt = True
                 (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
 
+            # Print stream KW in terminal
+            #---------------------------
+            if event.key == K_k:
+                mmods = pygame.key.get_mods()
+                if mmods == 0: # no modifier
+                    kws = cam.get_keywords()
+                    print('\n', '\n'.join([f'{k:8.8s}:\t{kws[k]}' for k in kws]))
+
             # Decrease exposure time/NDR
             #---------------------------
             if event.key == K_a:
