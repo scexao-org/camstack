@@ -63,7 +63,7 @@ if __name__ == "__main__":
     # PIPE over ZMQ into the LAN until we find a better solution (sender)
     zmq_send = DependentProcess(
         tmux_name='chuck_zmq',
-        cli_cmd='zmq_send.py %s:%u %s',
+        cli_cmd='zmq_send.py %s:%u %s -f 100',
         cli_args=(scxconf.IPLAN_SC5, scxconf.ZMQPORT_CHUCK, 'ircam0'),
         kill_upon_create=True,
     )
