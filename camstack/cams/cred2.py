@@ -22,7 +22,7 @@ except:
 class CRED2(EDTCamera):
 
     INTERACTIVE_SHELL_METHODS = [
-        'set_synchro', 'set_gain','get_gain', 'set_NDR', 'get_NDR', 'set_fps',
+        'set_synchro', 'set_gain','get_gain', 'set_sensibility', 'set_NDR', 'get_NDR', 'set_fps',
         'get_fps', 'set_tint', 'get_tint', 'get_temperature',
         'set_temperature_setpoint', 'FULL'] + \
         EDTCamera.INTERACTIVE_SHELL_METHODS
@@ -211,6 +211,9 @@ class CRED2(EDTCamera):
             gain = ('low', 'medium', 'high')[gain]
         self.send_command(f'set sensibility {gain}')
         return self.get_gain()
+    
+    def set_sensibility(self, sensibility: Union[int, str]):
+        return self.set_gain(sensisbility)
 
     def get_gain(self):
         res = self.send_command('sensibility raw')
