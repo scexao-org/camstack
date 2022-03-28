@@ -11,6 +11,7 @@ from pygame.constants import (KMOD_LALT, KMOD_LCTRL, KMOD_LSHIFT, KMOD_LMETA,
 
 import os
 import sys
+import time
 
 MILK_SHM_DIR = os.getenv(
     'MILK_SHM_DIR')  # Expected /tmp <- MULTIVERSE FIXING NEEDED
@@ -213,8 +214,17 @@ def ave_img_data_from_callable(get_img_data,
                                badpixmap=None,
                                clean=True,
                                disp=False,
-                               tint=0):
+                               tint=0,
+                               timeout=None):
 
+    if nave is None:
+        nave = 1000000
+        if timeout is None:
+            timeout = 10.0
+
+    count = 0
+
+    t_start = time.time()
     for i in range(nave):
         if disp:
             sys.stdout.write('\r tint = %8.6f s: acq. #%5d' %
@@ -222,9 +232,15 @@ def ave_img_data_from_callable(get_img_data,
             sys.stdout.flush()
         if i == 0:
             ave_im = get_img_data(bias=bias, badpixmap=badpixmap,
-                                  clean=clean)[0] / float(nave)
+                                  clean=clean)[0].astype(np.float32)
         else:
             ave_im += get_img_data(bias=bias, badpixmap=badpixmap,
-                                   clean=clean)[0] / float(nave)
+                                   clean=clean)[0]
+        count += 1
+        if time.time() - t_start > timeout:
+            break
+
+    ave_im /= float(count)
+
 
     return (ave_im)

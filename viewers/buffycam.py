@@ -66,12 +66,10 @@ def get_img_data(*args, **kwargs):
 # ------------------------------------------------------------------
 #             short hands for image averaging
 # ------------------------------------------------------------------
-from camstack.viewer_common import ave_img_data_from_callable
-
 
 def ave_img_data(nave, *args, **kwargs):
     # Arguments: bias, badpixmap, clean, disp, tint
-    return ave_img_data_from_callable(get_img_data, nave, *args, **kwargs)
+    return cvc.ave_img_data_from_callable(get_img_data, nave, *args, **kwargs)
 
 
 # ------------------------------------------------------------------
@@ -831,7 +829,7 @@ while True:  # the main game loop
         time.sleep(1.0)  # safety
 
         ndark = int(10 * fps / float(ndr))  # 10s of dark
-        ave_dark = ave_img_data(ndark, clean=False, disp=True, tint=etime)
+        ave_dark = ave_img_data(ndark, clean=False, disp=True, tint=etime, timeout=11.0)
         bname = conf_dir + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
                 % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
         pf.writeto(bname, ave_dark, overwrite=True)
@@ -1579,11 +1577,10 @@ while True:  # the main game loop
                         pygame.display.update([rct_dinfo2, rct_wh])
                         time.sleep(1.0)  # safety
 
-                        ndark = int(10 * fps / float(ndr))  # 10s of dark
-                        ave_dark = ave_img_data(ndark,
+                        ave_dark = ave_img_data(None,
                                                 clean=False,
                                                 disp=True,
-                                                tint=etime)
+                                                tint=etime, timeout=11.0)
                         bname = conf_dir + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
                                 % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
                         pf.writeto(bname, ave_dark, overwrite=True)
@@ -1648,7 +1645,7 @@ while True:  # the main game loop
                             ave_dark = ave_img_data(ndark,
                                                     clean=False,
                                                     disp=True,
-                                                    tint=tint)
+                                                    tint=tint, timeout=11.0)
                             bname = conf_dir + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
                                     % (fps, tint, ndr, crop[0], crop[2], xsizeim, ysizeim)
                             pf.writeto(bname, ave_dark, overwrite=True)
@@ -1696,7 +1693,7 @@ while True:  # the main game loop
                                            bias=bias,
                                            badpixmap=badpixmap,
                                            disp=True,
-                                           tint=etime)
+                                           tint=etime, timeout=11.0)
                     rname = conf_dir + "ref.fits"
                     pf.writeto(rname, ave_ref, overwrite=True)
 
