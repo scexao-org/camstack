@@ -10,6 +10,8 @@ from camstack.cams.edtcam import EDTCamera
 
 from camstack.core.utilities import CameraMode
 
+from scxkw.config import MAGIC_BOOL_STR
+
 try:
     from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT, GEN2HOST
     from scxkw.redisutil.typed_db import Redis
@@ -17,6 +19,29 @@ try:
     HAS_REDIS = True
 except:
     HAS_REDIS = False
+
+
+class CRED2_GAINENUM:
+    STRING_HIGH = 'high'
+    STRING_MED = 'medium'
+    STRING_LOW = 'low'
+
+    # Measured on chuck
+    INT_HIGH = 97
+    INT_MED = 26
+    INT_LOW = 2
+
+    STR2INT_MAP = {
+        INT_LOW: STRING_LOW,
+        INT_MED: STRING_MED,
+        INT_HIGH: STRING_HIGH,
+    }
+
+    INT2STR_MAP = {
+        STRING_LOW: INT_LOW,
+        STRING_MED: INT_MED,
+        STRING_HIGH: INT_HIGH,
+    }
 
 
 class CRED2(EDTCamera):
@@ -81,7 +106,7 @@ class CRED2(EDTCamera):
 
         # Issue a few standards for CRED2
         self.send_command('set led off')
-        self.set_gain('high')
+        self.set_gain(CRED2_GAINENUM.STRING_HIGH)
         self.send_command(
             'set rawimages on'
         )  # TODO TODO WE DO NOT WANT THAT for all CRED2s, e.g. GLINT
@@ -154,13 +179,13 @@ class CRED2(EDTCamera):
 
         EDTCamera._fill_keywords(self)
 
-        self.get_NDR()  # Sets 'NDR'
+        self.get_NDR()  # Sets 'DET-NSMP'
         self.get_tint()  # Sets 'EXPTIME'
         self.get_fps()  # Sets 'FRATE'
 
-        self.camera_shm.update_keyword('DETECTOR', 'CRED2')
-        self.camera_shm.update_keyword('CROPPED',
-                                       self.current_mode_id != 'full')
+        self._set_formatted_keyword('DETECTOR', 'CRED2')
+        self._set_formatted_keyword('CROPPED',
+                                    self.current_mode_id != self.FULL)
 
         # Additional fill-up of the camera state
         self.get_gain()  # Sets 'DETGAIN'
@@ -202,23 +227,22 @@ class CRED2(EDTCamera):
         _ = self.send_command(f'set extsynchro {val}')
         res = self.send_command('extsynchro raw')
         self.synchro = {'off': False, 'on': True}[res]
-        self.camera_shm.update_keyword('EXTTRIG',
-                                       ('False', 'True')[self.synchro])
+        self._set_formatted_keyword('EXTTRIG', self.synchro)
         return self.synchro
 
     def set_gain(self, gain: Union[int, str]):
         if type(gain) is int:
-            gain = ('low', 'medium', 'high')[gain]
+            gain = CRED2_GAINENUM.STR2INT_MAP[gain]
         self.send_command(f'set sensibility {gain}')
         return self.get_gain()
-    
+
     def set_sensibility(self, sensibility: Union[int, str]):
         return self.set_gain(sensisbility)
 
     def get_gain(self):
-        res = self.send_command('sensibility raw')
+        res = CRED2_GAINENUM.INT2STR_MAP[self.send_command('sensibility raw')]
         # res is high, medium or low
-        self.camera_shm.update_keyword('DETGAIN', res)
+        self._set_formatted_keyword('DETGAIN', res)
         return res
 
     def set_NDR(self, NDR: int):
@@ -227,9 +251,9 @@ class CRED2(EDTCamera):
 
     def get_NDR(self):
         self.NDR = int(self.send_command(f'nbreadworeset raw'))
-        self.camera_shm.update_keyword('DET-NSMP', self.NDR)
-        self.camera_shm.update_keyword('DET-SMPL',
-                                       ('Single', 'IMRO')[self.NDR > 1])
+        self._set_formatted_keyword('DET-NSMP', self.NDR)
+        self._set_formatted_keyword('DET-SMPL',
+                                    ('Single', 'IMRO')[self.NDR > 1])
         return self.NDR
 
     def set_fps(self, fps: float):
@@ -238,7 +262,7 @@ class CRED2(EDTCamera):
 
     def get_fps(self):
         fps = float(self.send_command('fps raw'))
-        self.camera_shm.update_keyword('FRATE', fps)
+        self._set_formatted_keyword('FRATE', fps)
         return fps
 
     def max_fps(self):
@@ -250,7 +274,7 @@ class CRED2(EDTCamera):
 
     def get_tint(self):
         tint = float(self.send_command('tint raw'))
-        self.camera_shm.update_keyword('EXPTIME', tint)
+        self._set_formatted_keyword('EXPTIME', tint)
         return tint
 
     def max_tint(self):
@@ -259,7 +283,7 @@ class CRED2(EDTCamera):
     def get_temperature(self):
         temp = float(self.send_command('temp raw')[3])
 
-        self.camera_shm.update_keyword('DET-TMP', temp + 273.15)
+        self._set_formatted_keyword('DET-TMP', temp + 273.15)
         return temp
 
     def set_temperature_setpoint(self, temp: float):
@@ -284,12 +308,13 @@ class Rajni(CRED2):
 
     MODES = {}
     MODES.update(CRED2.MODES)
+    EDTTAKE_EMBEDMICROSECOND = True
 
     def _fill_keywords(self):
         CRED2._fill_keywords(self)
 
         # Override detector name
-        self.camera_shm.update_keyword('DETECTOR', 'CRED2 - RAJNI')
+        self._set_formatted_keyword('DETECTOR', 'CRED2 - RAJNI')
 
     def _thermal_init_commands(self):
         # Rajni + chuck: water cooling,
@@ -314,12 +339,13 @@ class GLINT(CRED2):
         CameraMode(x0=96, x1=319, y0=44, y1=243, fps=1000, tint=0.001),
     }
     MODES.update(CRED2.MODES)
+    EDTTAKE_EMBEDMICROSECOND = False
 
     def _fill_keywords(self):
         CRED2._fill_keywords(self)
 
         # Override detector name
-        self.camera_shm.update_keyword('DETECTOR', 'CRED2 - GLINT')
+        self._set_formatted_keyword('DETECTOR', 'CRED2 - GLINT')
 
     def _thermal_init_commands(self):
         # Glint" automatic fast cooling
@@ -380,9 +406,9 @@ class Chuck(CRED2):
     }
     MODES.update(CRED2.MODES)
 
-    KEYWORDS = {'FILTER01': ('UNKNOWN', 'IRCAMs filter state')}
+    KEYWORDS = {'FILTER01': ('UNKNOWN', 'IRCAMs filter state', '%-16s')}
     KEYWORDS.update(EDTCamera.KEYWORDS)
-
+    EDTTAKE_EMBEDMICROSECOND = True
 
     # Add modes 6-11 (0-5 offseted 32 pix)
     for i in range(6):
@@ -398,14 +424,15 @@ class Chuck(CRED2):
         CRED2._fill_keywords(self)
 
         # Override detector name
-        self.camera_shm.update_keyword('DETECTOR', 'CRED2 - CHUCK')
+        self._set_formatted_keyword('DETECTOR', 'CRED2 - CHUCK')
 
     def poll_camera_for_keywords(self):
         CRED2.poll_camera_for_keywords(self)
 
         if HAS_REDIS:
             try:
-                self.camera_shm.update_keyword('FILTER01', RDB.hget('X_IRCFLT', 'value'))
+                self._set_formatted_keyword('FILTER01',
+                                            RDB.hget('X_IRCFLT', 'value'))
             except:
                 pass
 

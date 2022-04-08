@@ -132,7 +132,7 @@ class DCAMUSBCamera(BaseCamera):
         ]  # Get back the cam value
 
         for fk, fbv in zip(fits_keys, fb_values):
-            self.camera_shm.update_keyword(fk, fbv)
+            self._set_formatted_keyword(fk, fbv)
 
         return fb_values
 
@@ -185,8 +185,8 @@ class OrcaQuestUSB(DCAMUSBCamera):
     # And now we fill up... FAN, LIQUID
 
     def get_tint(self):
-        # getter is stupidly passive
-        return self.camera_shm.get_keywords()['EXPTIME']
+        return self._dcam_prm_getvalue(tint, 'EXPTIME',
+                                       dcamprop.EProp.EXPOSURETIME)
 
     def set_tint(self, tint: float):
         return self._dcam_prm_setvalue(tint, 'EXPTIME',

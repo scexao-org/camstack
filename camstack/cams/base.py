@@ -6,6 +6,8 @@ import threading
 from camstack.core.utilities import CameraMode
 from camstack.core import tmux as tmux_util
 
+from scxkw.config import MAGIC_BOOL_STR
+
 from pyMilk.interfacing.isio_shmlib import SHM
 
 from typing import List, Any, Union, Tuple
@@ -25,29 +27,32 @@ class BaseCamera:
         'set_camera_size',
     ]
 
-    MODES = {}  # Define the format ?
+    MODES = {}
 
-    KEYWORDS = {  # Format is name: (value, description) - this list CAN be figured out from a redis query.
-        'BIN-FCT1': (1, 'Binning factor of the X axis (pixel)'),
-        'BIN-FCT2': (1, 'Binning factor of the Y axis (pixel)'),
-        #'BSCALE': (1.0, 'Real=fits-value*BSCALE+BZERO'), # Removed to let logshim handle it.
-        'BUNIT': ('ADU', 'Unit of original values'),
-        #'BZERO': (0.0, 'Real=fits-value*BSCALE+BZERO'),
-        'PRD-MIN1': (0, 'Origin in X of the cropped window (pixel)'),
-        'PRD-MIN2': (0, 'Origin in Y of the cropped window (pixel)'),
-        'PRD-RNG1': (1, 'Range in X of the cropped window (pixel)'),
-        'PRD-RNG2': (1, 'Range in Y of the cropped window (pixel)'),
-        'CROPPED': ('False', 'Image windowed or full frame'),
-        'DET-TMP': (0.0, 'Detector temperature (K)'),
-        'DETECTOR': ('DET', 'Name of the detector'),
-        'DETGAIN': (1., 'Detector gain'),
-        'DET-SMPL': ('base', 'Sampling method'),
-        'EXPTIME': (0.001, 'Total integration time of the frame (sec)'),
-        'FRATE': (100., 'Frame rate of the acquisition (Hz)'),
-        'GAIN': (1., 'AD conversion factor (electron/ADU)'),
-        'DET-NSMP': (1, 'Number of non-destructive reads'),
-        'EXTTRIG': ('False', 'Extrernal trigger'),
-        'DATA-TYP': ('TEST', 'Subaru-style exp. type')
+    KEYWORDS = {
+        # Format is name: (value, description, formatter) - this list CAN be figured out from a redis query.
+        # but I don't want to add the dependency at this point
+        # ALSO SHM caps at 16 chars for strings. The %s formats here are (some) shorter than official ones.
+        'BIN-FCT1': (1, 'Binning factor of the X axis (pixel)', '%20d'),
+        'BIN-FCT2': (1, 'Binning factor of the Y axis (pixel)', '%20d'),
+        'BSCALE': (1.0, 'Real=fits-value*BSCALE+BZERO', '%20.8f'), # Removed to let logshim handle it.
+        'BUNIT': ('ADU', 'Unit of original values', '%-10s'),
+        'BZERO': (0.0, 'Real=fits-value*BSCALE+BZERO', '%20.8f'),
+        'PRD-MIN1': (0, 'Origin in X of the cropped window (pixel)', '%16d'),
+        'PRD-MIN2': (0, 'Origin in Y of the cropped window (pixel)', '%16d'),
+        'PRD-RNG1': (1, 'Range in X of the cropped window (pixel)', '%16d'),
+        'PRD-RNG2': (1, 'Range in Y of the cropped window (pixel)', '%16d'),
+        'CROPPED': (False, 'Partial Readout or cropped', 'BOOLEAN'),
+        'DET-NSMP': (1, 'Number of non-destructive reads', '%20d'),
+        'DET-SMPL': ('base', 'Sampling method', '%-16.16s'),
+        'DET-TMP': (0.0, 'Detector temperature (K)', '%20.2f'),
+        'DETECTOR': ('DET', 'Name of the detector', '%-16s'),
+        'DETGAIN': (1, 'Detector multiplication factor', '%16d'),
+        'EXPTIME': (0.001, 'Total integration time of the frame (sec)', '%20.8f'),
+        'FRATE': (100., 'Frame rate of the acquisition (Hz)', '%16.3f'),
+        'GAIN': (1., 'AD conversion factor (electron/ADU)', '%20.3f'),
+        'EXTTRIG': (False, 'Exposure of detector by an external trigger', 'BOOLEAN'),
+        'DATA-TYP': ('TEST', 'Subaru-style exp. type', '%-16s'),
     }
 
     def __init__(self,
@@ -319,24 +324,48 @@ class BaseCamera:
         
         return shm
 
+    def _set_formatted_keyword(self, key, value):
+        
+        fmt = self.KEYWORDS[key][2]
+        val = value
+        if value is not None:
+            try:
+                if fmt == 'BOOLEAN':
+                    val = MAGIC_BOOL_STR.TUPLE[value]
+                elif fmt[-1] == 'd':
+                    val = int(fmt % value)
+                elif fmt[-1] == 'f':
+                    val = float(fmt % value)
+                elif fmt[-1] == 's':  # string
+                    val = fmt % value
+            except:  # Sometime garbage values cannot be formatted properly...
+                print(f"fits_headers: formatting error on {key}, {value}, {fmt}")
+
+        self.camera_shm.update_keyword(key, val)
+
     def _fill_keywords(self):
         # These are pretty much defaults - we don't know anything about this
         # basic abstract camera
         preex_keywords = self.camera_shm.get_keywords(True)
         preex_keywords.update(self.KEYWORDS)
 
-        self.camera_shm.set_keywords(preex_keywords)
+        self.camera_shm.set_keywords(preex_keywords) # Initialize comments
+        # Second pass to enforce formatting...
+        # Don't do it on the preex from the framegrabber (MFRATE, _MACQTIME) cause they don't
+        # have a formatter
+        for kw in self.KEYWORDS:
+            self._set_formatted_keyword(kw, preex_keywords[kw][0])
 
         cm = self.current_mode
 
-        self.camera_shm.update_keyword('DETECTOR', 'Base Camera')
-        self.camera_shm.update_keyword('BIN-FCT1', cm.binx)
-        self.camera_shm.update_keyword('BIN-FCT2', cm.biny)
-        self.camera_shm.update_keyword('PRD-MIN1', cm.x0)
-        self.camera_shm.update_keyword('PRD-MIN2', cm.y0)
-        self.camera_shm.update_keyword('PRD-RNG1', cm.x1-cm.x0+1)
-        self.camera_shm.update_keyword('PRD-RNG2', cm.y1-cm.y0+1)
-        self.camera_shm.update_keyword('CROPPED', 'N/A')
+        self._set_formatted_keyword('DETECTOR', 'Base Camera')
+        self._set_formatted_keyword('BIN-FCT1', cm.binx)
+        self._set_formatted_keyword('BIN-FCT2', cm.biny)
+        self._set_formatted_keyword('PRD-MIN1', cm.x0)
+        self._set_formatted_keyword('PRD-MIN2', cm.y0)
+        self._set_formatted_keyword('PRD-RNG1', cm.x1-cm.x0+1)
+        self._set_formatted_keyword('PRD-RNG2', cm.y1-cm.y0+1)
+        self._set_formatted_keyword('CROPPED',  False)
 
     def get_fg_parameters(self):
         # We don't need to get them, because we set them in init_pdv_configuration

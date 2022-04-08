@@ -140,15 +140,15 @@ class OCAM2K(EDTCamera):
 
         EDTCamera._fill_keywords(self)
 
-        self.camera_shm.update_keyword('DETECTOR', 'OCAM2K (RENO)')
-        self.camera_shm.update_keyword('DET-SMPL', 'GlobRstSingle')
+        self._set_formatted_keyword('DETECTOR', 'OCAM2K (RENO)')
+        self._set_formatted_keyword('DET-SMPL', 'GlobRstSingle')
 
-        self.camera_shm.update_keyword('BIN-FCT1', self.current_mode.binx)
-        self.camera_shm.update_keyword('BIN-FCT2', self.current_mode.biny)
+        self._set_formatted_keyword('BIN-FCT1', self.current_mode.binx)
+        self._set_formatted_keyword('BIN-FCT2', self.current_mode.biny)
         
 
-        self.camera_shm.update_keyword('CROPPED', 'False') # Ocam bins but never crops.
-        self.camera_shm.update_keyword('DET-NSMP', 1)
+        self._set_formatted_keyword('CROPPED', False) # Ocam bins but never crops.
+        self._set_formatted_keyword('DET-NSMP', 1)
 
         # Additional fill-up of the camera state
         self.get_gain() # Sets 'DETGAIN'
@@ -174,19 +174,20 @@ class OCAM2K(EDTCamera):
     def set_gain(self, gain: int):
         res = self.send_command(f'gain {gain}')
         val = int(res[0])
-        self.camera_shm.update_keyword('DETGAIN', val)
+        self._set_formatted_keyword('DETGAIN', val)
         return val
 
     def get_gain(self):
         res = self.send_command('gain')
         val = int(res[0])
-        self.camera_shm.update_keyword('DETGAIN', val)
+        self._set_formatted_keyword('DETGAIN', val)
         return val
 
     def set_synchro(self, val: bool):
+        val = bool(val)
         self.send_command(f'synchro {("off","on")[val]}')
         self.synchro = val
-        self.camera_shm.update_keyword('EXTTRIG', ('False', 'True')[val])
+        self._set_formatted_keyword('EXTTRIG', val)
 
     def set_fps(self, fps: float):
         # 0 sets maxfps
@@ -194,7 +195,7 @@ class OCAM2K(EDTCamera):
             raise AssertionError('No fps set in synchro mode')
         res = self.send_command(f'fps {int(fps)}')
         val = float(res[0])
-        self.camera_shm.update_keyword('FRATE', val)
+        self._set_formatted_keyword('FRATE', val)
         return val
 
     def get_temperature(self):
@@ -206,7 +207,7 @@ class OCAM2K(EDTCamera):
         # Expected return: <1>[-45.2][23][13][24][0.1][9][12][-450][1][10594]
         temps = [float(x) for x in ret]
         self.is_cooling = bool(temps[8])
-        self.camera_shm.update_keyword('DET-TMP', temps[0] + 273.15)
+        self._set_formatted_keyword('DET-TMP', temps[0] + 273.15)
         return temps[0], temps[7] / 10.  # temp, setpoint
 
     def toggle_cooling(self, cooling: bool = None):
