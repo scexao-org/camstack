@@ -22,6 +22,7 @@ class EDTCamera(BaseCamera):
     # Signed / unsigned EDT output - 8/16 bit mixup at grabbing
     EDTTAKE_CAST = False  # Only OCAM overrides that
     EDTTAKE_UNSIGNED = True
+    EDTTAKE_EMBEDMICROSECOND = False # We want this for CRED1 / 2 but not elsewhere
 
     def __init__(self,
                  name: str,
@@ -89,8 +90,11 @@ class EDTCamera(BaseCamera):
             self.taker_tmux_command += ' -8'  # (byte pair) -> (ushort) casting.
         if self.EDTTAKE_UNSIGNED:
             self.taker_tmux_command += ' -U'  # Maintain unsigned output (CRED1, OCAM)
+        if self.EDTTAKE_EMBEDMICROSECOND:
+            self.taker_tmux_command += ' -t'  # Embed microsecond grab time at pixel 8
         if reuse_shm:
             self.taker_tmux_command += ' -R'  # Do not overwrite the SHM.
+
 
     def send_command(self, cmd, base_timeout: float = 100.):
         '''

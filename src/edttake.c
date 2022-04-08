@@ -52,6 +52,8 @@ int main(int argc, char **argv)
 
     double meas_frate = 0.0;       // Measured framerate, updated each frame
     double meas_frate_gain = 0.01; // smoothing for meas_frate
+    long time_acq_micros;
+    long* p_embed_acqtime;
     struct timespec time1;
     struct timespec time2;
     double time_elapsed;
@@ -64,6 +66,7 @@ int main(int argc, char **argv)
     int UNSIGNED_OUT = 0;
     int BYTESHORTCAST = 0;
     int STREAMNAMEINIT = 0;
+    int EMBED_MICROSECOND = 0;
 
     progname = argv[0];
 
@@ -97,6 +100,10 @@ int main(int argc, char **argv)
 
         case 'U':
             UNSIGNED_OUT = 1;
+            break;
+
+        case 't':
+            EMBED_MICROSECOND = 1;
             break;
 
         case 'R':
@@ -293,6 +300,10 @@ int main(int argc, char **argv)
         free(imsize);
     }
 
+    // Make a pointer at 8th pixel to embed the acquisition time
+    // This will really only work well on 16 bit output but hey.
+    p_embed_acqtime = atype == _DATATYPE_UINT8 ? (long*)&image.array.UI8[8] : (long*)&image.array.UI16[8];
+
     // Add keywords
     int N_KEYWORDS = 4;
 
@@ -428,18 +439,8 @@ int main(int argc, char **argv)
         fflush(stdout);
 
         image.md[0].write = 1; // set this flag to 1 when writing data
-
         // printf("Copying %d x %d bytes", bytewidth, height);
         memcpy(image.array.UI8, image_p, bytewidth * height);
-
-        ImageStreamIO_UpdateIm(&image);
-        /*
-        image.md[0].write = 0;
-        ImageStreamIO_sempost(&image, -1);
-        image.md[0].write = 0; // Done writing data
-        image.md[0].cnt0++;
-        */
-        image.md[0].cnt1++;
 
         // Write the timing !
         clock_gettime(CLOCK_REALTIME, &time2);
@@ -449,9 +450,25 @@ int main(int argc, char **argv)
         meas_frate *= (1.0 - meas_frate_gain);
         // This is only CPU time - that sucks.
         meas_frate += 1.0 / time_elapsed * meas_frate_gain;
-        image.kw[KW_POS[0]].value.numf = (float)meas_frate; // MFRATE
-        image.kw[KW_POS[1]].value.numl = ((long) time2.tv_sec * 1000000) + (time2.tv_nsec / 1000); // MACQTMUS
         
+        time_acq_micros = ((long) time2.tv_sec * 1000000) + (time2.tv_nsec / 1000);
+        if (EMBED_MICROSECOND) {
+            *p_embed_acqtime = time_acq_micros; // Will go for 4 or 8 pixel dep if type is int8 or int16
+        }
+
+        image.kw[KW_POS[0]].value.numf = (float)meas_frate; // MFRATE
+        image.kw[KW_POS[1]].value.numl = time_acq_micros; // _MAQTIME
+        
+        // Embed _MAQTIME in the image starting at pixel 12
+        // This will take 8 bytes, which can be either 4 or 8 pixels
+        
+
+
+        
+        // Post the sem and fix cnt1
+        image.md[0].cnt1++;
+        ImageStreamIO_UpdateIm(&image);
+
         time1.tv_sec = time2.tv_sec;
         time1.tv_nsec = time2.tv_nsec;
 
@@ -494,6 +511,7 @@ usage(char *progname, char *errmsg)
     printf("  -s streamname   output stream name (default: edtcam<unit><chan>\n");
     printf("  -8              enable 8->16 bit casting mode, width divided by 2 - implies -U \n");
     printf("  -U              unsigned 16 bit output (default: signed)\n");
+    printf("  -t              embed microsecond grab tag\n");
     printf("  -u unit         set unit\n");
     printf("  -c chan         set channel (1 tap, 1 cable)\n");
     printf("  -l loops        number of loops (images to take)\n");
