@@ -7,7 +7,7 @@ import scxconf
 
 if __name__ == "__main__":
 
-    mode = 13 #12
+    mode = 12 #12
 
     # Prepare dependent processes
     tcp_recv = RemoteDependentProcess(
