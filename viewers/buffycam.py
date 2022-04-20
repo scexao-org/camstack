@@ -588,7 +588,7 @@ rct_info1 = info1.get_rect()
 rct_info1.center = (110 * z1, 305 * z1)
 
 imin, imax = 10000, 10000
-msg2 = ("t = %f" % (etimet))[:8] + (" min,max = %5d,%7d   " % (imin, imax))
+msg2 = ("t = %f" % (etimet))[:8] + (" min,max = %05d,%07d" % (imin, imax))
 info2 = font3.render(msg2, True, FGCOL, BGCOL)
 rct_info2 = info2.get_rect()
 rct_info2.center = (110 * z1, 315 * z1)
@@ -1002,15 +1002,15 @@ while True:  # the main game loop
         screen.blit(info1, rct_info1)
 
         if etimet < 1e3:
-            msg2 = ("t = %f" % (etimet))[:8] + (" us min,max = %5d,%5d" %
+            msg2 = ("t = %f" % (etimet))[:8] + (" us min,max = %05d,%07d   " %
                                                 (imin, imax))
         elif etimet >= 1e3 and etimet < 1e6:
             msg2 = ("t = %f" %
-                    (etimet / 1.e3))[:8] + (" ms min,max = %5d,%5d" %
+                    (etimet / 1.e3))[:8] + (" ms min,max = %05d,%07d   " %
                                             (imin, imax))
         else:
             msg2 = ("t = %f" %
-                    (etimet / 1.e6))[:8] + (" s  min,max = %5d,%5d" %
+                    (etimet / 1.e6))[:8] + (" s  min,max = %05d,%07d   " %
                                             (imin, imax))
 
         info2 = font3.render(msg2, True, FGCOL, BGCOL)
@@ -2001,9 +2001,9 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_kcam.send_keys("dm_stage x push -100")
+                        tmux_kcam.send_keys("dm_stage theta push -1000")
                     else:
-                        tmux_kcam.send_keys("dm_stage x push -20")
+                        tmux_kcam.send_keys("dm_stage theta push -100")
                 else:
                     if wait_for_archive_datatype:
                         idt -= 1
@@ -2013,9 +2013,9 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_kcam.send_keys("dm_stage x push +100")
+                        tmux_kcam.send_keys("dm_stage theta push +1000")
                     else:
-                        tmux_kcam.send_keys("dm_stage x push +20")
+                        tmux_kcam.send_keys("dm_stage theta push +100")
                 else:
                     if wait_for_archive_datatype:
                         idt += 1
@@ -2025,17 +2025,17 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_kcam.send_keys("dm_stage y push +100")
+                        tmux_kcam.send_keys("dm_stage phi push -1000")
                     else:
-                        tmux_kcam.send_keys("dm_stage y push +20")
+                        tmux_kcam.send_keys("dm_stage phi push -100")
 
             if event.key == K_RIGHT:
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_kcam.send_keys("dm_stage y push -100")
+                        tmux_kcam.send_keys("dm_stage phi push +1000")
                     else:
-                        tmux_kcam.send_keys("dm_stage y push -20")
+                        tmux_kcam.send_keys("dm_stage phi push +100")
 
             # Print / incr/decr gain
             if event.key in [K_w, K_s, K_e]:
@@ -2043,7 +2043,7 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 #tmux_kcam_ctrl.send_keys("get_gain()")
                 #sleep(.5)
-                gain = cam.get_keywords()['DETGAIN']
+                gain = float(cam.get_keywords()['DETGAIN'])
                 if not (mmods & KMOD_LSHIFT) and not (mmods & KMOD_LCTRL):
                     if event.key == K_w:
                         tar_gain = min(2 * gain, 121)
@@ -2060,7 +2060,7 @@ while True:  # the main game loop
                         time.sleep(.5)
 
                     # All cases, K_w, K_s, K_e
-                    gain = cam.get_keywords()['DETGAIN']
+                    gain = float(cam.get_keywords()['DETGAIN'])
                     print(f"\n=== Buffy camera gain: {gain} ===\n")
 
                 if not (mmods & KMOD_LSHIFT) and (mmods & KMOD_LCTRL) and event.key == K_e:

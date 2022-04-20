@@ -2234,9 +2234,9 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_ircam.send_keys("dm_stage phi push 100")
+                        tmux_ircam.send_keys("dm_stage phi push 1000")
                     else:
-                        tmux_ircam.send_keys("dm_stage phi push 20")
+                        tmux_ircam.send_keys("dm_stage phi push 100")
                 else:
                     if waitfordt:
                         idt -= 1
@@ -2246,9 +2246,9 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_ircam.send_keys("dm_stage phi push -100")
+                        tmux_ircam.send_keys("dm_stage phi push -1000")
                     else:
-                        tmux_ircam.send_keys("dm_stage phi push -20")
+                        tmux_ircam.send_keys("dm_stage phi push -100")
                 else:
                     if waitfordt:
                         idt += 1
@@ -2258,17 +2258,17 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_ircam.send_keys("dm_stage theta push -100")
+                        tmux_ircam.send_keys("dm_stage theta push -1000")
                     else:
-                        tmux_ircam.send_keys("dm_stage theta push -20")
+                        tmux_ircam.send_keys("dm_stage theta push -100")
 
             if event.key == K_RIGHT:
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_ircam.send_keys("dm_stage theta push +100")
+                        tmux_ircam.send_keys("dm_stage theta push +1000")
                     else:
-                        tmux_ircam.send_keys("dm_stage theta push +20")
+                        tmux_ircam.send_keys("dm_stage theta push +100")
 
     pygame.display.update(rects)
 
