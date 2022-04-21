@@ -10,6 +10,7 @@ from pyMilk.interfacing.shm import SHM
 import numpy as np
 
 
+
 class DCAMUSBCamera(BaseCamera):
 
     INTERACTIVE_SHELL_METHODS = [] + \
@@ -149,7 +150,10 @@ class OrcaQuestUSB(DCAMUSBCamera):
         2: CameraMode(x0=1448, x1=2647, y0=848, y1=1555, tint=0.001),
         3: CameraMode(x0=1148, x1=2947, y0=696, y1=1807, tint=0.001),
         4: CameraMode(x0=1848, x1=3147, y0=848, y1=1555, tint=0.001),
-        FIRST: CameraMode(x0=256, x1=3835, y0=256, y1=1047, tint=0.001),
+        # FIRST: CameraMode(x0=256, x1=3835, y0=256, y1=1047, tint=0.001),
+        # FIRST: CameraMode(x0=1056, x1=2455, y0=456, y1=847, tint=0.001),
+        FIRST: CameraMode(x0=952, x1=2915, y0=492, y1=727, tint=0.001),
+        #y0=602, y1=805, tint=0.001),
     }
 
     KEYWORDS = {}
@@ -172,7 +176,7 @@ class OrcaQuestUSB(DCAMUSBCamera):
                                no_start=no_start,
                                taker_cset_prio=taker_cset_prio,
                                dependent_processes=dependent_processes)
-
+    
     def poll_camera_for_keywords(self):
         self.get_temperature()
 

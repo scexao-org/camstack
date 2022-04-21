@@ -311,7 +311,7 @@ int main(int argc, char **argv)
     memset(&dcam_waitstart, 0, sizeof(dcam_waitstart));
     dcam_waitstart.size = sizeof(dcam_waitstart);
     dcam_waitstart.eventmask = DCAMWAIT_CAPEVENT_FRAMEREADY;
-    dcam_waitstart.timeout = 100;
+    dcam_waitstart.timeout = 10000;
     DCAMCAP_TRANSFERINFO dcam_captransferinfo;
     memset(&dcam_captransferinfo, 0, sizeof(dcam_captransferinfo));
     dcam_captransferinfo.size = sizeof(dcam_captransferinfo);

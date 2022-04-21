@@ -6,7 +6,7 @@ import os
 
 if __name__ == "__main__":
 
-    mode = 1
+    mode = OrcaQuestUSB.FIRST
 
     cam = OrcaQuestUSB('orcam',
                        'orcam',
