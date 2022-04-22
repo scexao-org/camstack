@@ -1,14 +1,14 @@
 # Quick shorthand for testing
 from camstack.core.utilities import DependentProcess, RemoteDependentProcess
-from camstack.cams.dcamcam import OrcaQuestUSB
+from camstack.cams.dcamcam import AlalaOrcam
 
 import os
 
 if __name__ == "__main__":
 
-    mode = OrcaQuestUSB.FIRST
+    mode = AlalaOrcam.FULL
 
-    cam = OrcaQuestUSB('orcam',
+    cam = AlalaOrcam('orcam',
                        'orcam',
                        dcam_number=0,
                        mode_id=mode,

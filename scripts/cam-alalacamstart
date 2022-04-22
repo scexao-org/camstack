@@ -3,7 +3,7 @@
 tnew="tmux new-session -d -s"
 tsend="tmux send-keys -t"
 
-tname="fircam_ctrl"
+tname="orcam_ctrl"
 
 # Create tmuxes and issue kills
 $tnew $tname
@@ -19,10 +19,12 @@ sleep 0.3
 $tsend $tname "kill %" Enter
 
 echo ""
-#read -p "Everything killed, proceed to startup ? Press enter to continue, Ctrl+C to abort."
+echo "Remember check if 'cset set' is enabled"
+echo "If not sets, run:"
+echo "    sudo cset shield -c 12-15,28-31"
 
-$tsend $tname "py3" Enter
-$tsend $tname "python -im camstack.cam_mains.first_orcam" Enter
 
-echo "fircamstart completed (but actually not yet, just wait a bit)."
+$tsend $tname "python -im camstack.cam_mains.alala_orcam" Enter
+
+echo "alalacamstart completed (but actually not yet, just wait a bit)."
 

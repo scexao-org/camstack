@@ -9,9 +9,9 @@ from camstack.core.utilities import CameraMode
 from pyMilk.interfacing.shm import SHM
 import numpy as np
 
+import time
 
-
-class DCAMUSBCamera(BaseCamera):
+class DCAMCamera(BaseCamera):
 
     INTERACTIVE_SHELL_METHODS = [] + \
         BaseCamera.INTERACTIVE_SHELL_METHODS
@@ -44,7 +44,10 @@ class DCAMUSBCamera(BaseCamera):
     def init_framegrab_backend(self):
 
         if self.is_taker_running():
-            raise AssertionError('Cannot change FG config while FG is running')
+            # Let's give ourselves two tries
+            time.sleep(3.0)
+            if self.is_taker_running():
+                raise AssertionError('Cannot change FG config while FG is running')
 
         # Try create a feedback SHM for parameters
         self.control_shm = SHM(self.STREAMNAME + "_params_fb",
@@ -138,14 +141,15 @@ class DCAMUSBCamera(BaseCamera):
         return fb_values
 
 
-class OrcaQuestUSB(DCAMUSBCamera):
+class OrcaQuest(DCAMCamera):
 
     INTERACTIVE_SHELL_METHODS = ['FIRST', 'FULL', 'set_tint', 'get_tint', 'get_temperature'] + \
-        BaseCamera.INTERACTIVE_SHELL_METHODS
+        DCAMCamera.INTERACTIVE_SHELL_METHODS
 
     FIRST, FULL = 'FIRST', 'FULL'
     MODES = {
         FULL: CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
+        0: CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001), # Also full
         1: CameraMode(x0=1748, x1=2347, y0=1000, y1=1303, tint=0.001),
         2: CameraMode(x0=1448, x1=2647, y0=848, y1=1555, tint=0.001),
         3: CameraMode(x0=1148, x1=2947, y0=696, y1=1807, tint=0.001),
@@ -153,11 +157,10 @@ class OrcaQuestUSB(DCAMUSBCamera):
         # FIRST: CameraMode(x0=256, x1=3835, y0=256, y1=1047, tint=0.001),
         # FIRST: CameraMode(x0=1056, x1=2455, y0=456, y1=847, tint=0.001),
         FIRST: CameraMode(x0=952, x1=2915, y0=492, y1=727, tint=0.001),
-        #y0=602, y1=805, tint=0.001),
     }
 
     KEYWORDS = {}
-    KEYWORDS.update(DCAMUSBCamera.KEYWORDS)
+    KEYWORDS.update(DCAMCamera.KEYWORDS)
 
     def __init__(self,
                  name: str,
@@ -168,15 +171,21 @@ class OrcaQuestUSB(DCAMUSBCamera):
                  taker_cset_prio: Union[str, int] = ('system', None),
                  dependent_processes: List[Any] = []):
 
-        DCAMUSBCamera.__init__(self,
-                               name,
-                               stream_name,
-                               mode_id,
-                               dcam_number,
-                               no_start=no_start,
-                               taker_cset_prio=taker_cset_prio,
-                               dependent_processes=dependent_processes)
-    
+        DCAMCamera.__init__(self,
+                            name,
+                            stream_name,
+                            mode_id,
+                            dcam_number,
+                            no_start=no_start,
+                            taker_cset_prio=taker_cset_prio,
+                            dependent_processes=dependent_processes)
+
+    def _fill_keywords(self):
+        DCAMCamera._fill_keywords(self)
+
+        # Override detector name
+        self._set_formatted_keyword('DETECTOR', 'Orca Quest')
+
     def poll_camera_for_keywords(self):
         self.get_temperature()
 
@@ -189,9 +198,25 @@ class OrcaQuestUSB(DCAMUSBCamera):
     # And now we fill up... FAN, LIQUID
 
     def get_tint(self):
-        return self._dcam_prm_getvalue(tint, 'EXPTIME',
+        return self._dcam_prm_getvalue('EXPTIME',
                                        dcamprop.EProp.EXPOSURETIME)
 
     def set_tint(self, tint: float):
         return self._dcam_prm_setvalue(tint, 'EXPTIME',
                                        dcamprop.EProp.EXPOSURETIME)
+        
+class FIRSTOrcam(OrcaQuest):
+    
+    def _fill_keywords(self):
+        OrcaQuest._fill_keywords(self)
+
+        # Override detector name
+        self._set_formatted_keyword('DETECTOR', 'FIRST OrcaQ')
+
+class AlalaOrcam(OrcaQuest):
+    
+    def _fill_keywords(self):
+        OrcaQuest._fill_keywords(self)
+
+        # Override detector name
+        self._set_formatted_keyword('DETECTOR', 'ALALA OrcaQ')
