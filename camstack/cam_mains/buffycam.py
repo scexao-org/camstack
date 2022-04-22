@@ -67,7 +67,7 @@ if __name__ == "__main__":
     utr_red = DependentProcess(
         tmux_name='kcam_utr',
         cli_cmd=
-        'milk-exec "mload milkimageformat; readshmim kcam_raw; imgformat.cred_cds_utr ..procinfo 1; imgformat.cred_cds_utr ..triggermode 3; imgformat.cred_cds_utr ..loopcntMax -1; imgformat.cred_cds_utr kcam_raw kcam 55000"',
+        'milk-exec "mload milkimageformat; readshmim kcam_raw; imgformat.cred_cds_utr ..procinfo 1; imgformat.cred_cds_utr ..triggermode 3; imgformat.cred_cds_utr ..loopcntMax -1; imgformat.cred_cds_utr kcam_raw kcam 37000"',
         cli_args=(),
         kill_upon_create=True,
         cset='kcam_utr',

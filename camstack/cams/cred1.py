@@ -110,7 +110,7 @@ class CRED1(EDTCamera):
         self.send_command('set rawimages on')
         self.send_command('set imagetags on')
 
-        self.set_gain(50)
+        self.set_gain(121)
 
     # =====================
     # AD HOC PREPARE CAMERA
