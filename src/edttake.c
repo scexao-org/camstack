@@ -506,7 +506,7 @@ usage(char *progname, char *errmsg)
     printf("%s: simple example program that acquires images from an\n", progname);
     printf("EDT digital imaging interface board (PCI DV, PCI DVK, etc.)\n");
     puts("");
-    printf("usage: %s [-n streamname] [-l loops] [-N numbufs] [-u unit] [-c channel]\n",
+    printf("usage: %s [-s streamname] [-l loops] [-N numbufs] [-u unit] [-c channel]\n",
            progname);
     printf("  -s streamname   output stream name (default: edtcam<unit><chan>\n");
     printf("  -8              enable 8->16 bit casting mode, width divided by 2 - implies -U \n");

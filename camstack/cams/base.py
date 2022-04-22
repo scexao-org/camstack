@@ -143,6 +143,8 @@ class BaseCamera:
         self.prepare_camera_finalize()
 
     def init_framegrab_backend(self):
+        # TODO: split into a init_framegrab once (open handles to devices)
+        # TODO: and what must be done for every mode change (EDT size change)
         raise NotImplementedError("Must be subclassed from the base class")
 
 
@@ -236,17 +238,18 @@ class BaseCamera:
         if not skip_taker:
             self._kill_taker_no_dependents()
 
-    def close(self):
-        '''
-            Just an alias
-        '''
-        self.kill_taker_and_dependents()
-
     def release(self):
         '''
             Just an alias
         '''
         self.kill_taker_and_dependents()
+
+    def close(self):
+        '''
+            Just an alias
+        '''
+        self.release()
+
 
     def _start_taker_no_dependents(self, reuse_shm: bool=False):
         # We have to prepare self.taker_tmux_command

@@ -62,6 +62,10 @@ def initEdtDLL():
     EdtDLL.pdv_serial_command.argtypes = [c_void_p, c_char_p]
     EdtDLL.pdv_serial_command.restype = c_int
 
+    # pdv_get_waitchar
+    EdtDLL.pdv_get_waitchar.restype = c_int
+    EdtDLL.pdv_get_waitchar.argtype = [c_void_p, c_char_p]
+
     EdtDLL.pdv_serial_read.argtypes = [c_void_p, c_char_p, c_int]
     EdtDLL.pdv_serial_read.restype = c_int
 
@@ -815,10 +819,6 @@ def initEdtDLL():
     # pdv_set_waitchar
     EdtDLL.pdv_set_waitchar.restype = c_int
     EdtDLL.pdv_set_waitchar.argtype = [c_void_p, c_int, c_char_p]
-
-    # pdv_get_waitchar
-    EdtDLL.pdv_get_waitchar.restype = c_int
-    EdtDLL.pdv_get_waitchar.argtype = [c_void_p, c_char_p]
     '''
 
 

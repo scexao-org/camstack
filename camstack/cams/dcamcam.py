@@ -32,6 +32,7 @@ class DCAMCamera(BaseCamera):
 
         # Do basic stuff
         self.dcam_number = dcam_number
+        self.control_shm = None
 
         BaseCamera.__init__(self,
                             name,
@@ -47,11 +48,17 @@ class DCAMCamera(BaseCamera):
             # Let's give ourselves two tries
             time.sleep(3.0)
             if self.is_taker_running():
-                raise AssertionError('Cannot change FG config while FG is running')
+                raise AssertionError('Cannot change camera config while camera is running')
 
         # Try create a feedback SHM for parameters
-        self.control_shm = SHM(self.STREAMNAME + "_params_fb",
-                               np.zeros((1, ), dtype=np.int16))
+        if self.control_shm is None:
+            self.control_shm = SHM(self.STREAMNAME + "_params_fb",
+                                   np.zeros((1, ), dtype=np.int16))
+
+
+    def prepare_camera_for_size(self, mode_id=None):
+
+        BaseCamera.prepare_camera_for_size(self, mode_id=None)
 
         x0, x1 = self.current_mode.x0, self.current_mode.x1
         y0, y1 = self.current_mode.y0, self.current_mode.y1
