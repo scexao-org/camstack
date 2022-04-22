@@ -112,16 +112,30 @@ CRED2_str = 'cred2'
 # ------------------------------------------------------------------
 #  Read database for some stage status
 # ------------------------------------------------------------------
-def RDB_pull(rdb, rdb_alive: bool, cam_buffy: bool):
+def RDB_pull(rdb, rdb_alive: bool, cam_buffy: bool, do_defaults=True):
     '''
         cam_buffy: False for Chuck, True for Buffy
+        do_defaults: if rdb_alive is False, fallback to defaults
+                     ortherwise raise a ConnectionError
+                    This Error can be caught in order for a call to just "do nothing" and keep prev. values
+                    rather than all of a sudden overwrite with all the defaults.
     '''
 
     PUP_KEY = ('X_CHKPUP', 'X_BUFPUP')[cam_buffy]
+
+    if rdb_alive:
+        try:
+            rdb.ping()
+        except TimeoutError:
+            rdb_alive = False
+
+    if not rdb_alive and not do_defaults:
+        raise ConnectionError("Redis unavailable and not skipping defaults")
+
     if rdb_alive:  # Fetch from RDB
         fits_keys_to_pull = {
             'X_IRCFLT', 'X_IRCBLK', PUP_KEY, 'X_CHKPUS', 'X_NULPKO',
-            'X_RCHPKO', 'X_BUFPKO', 'D_IMRPAD', 'D_IMRPAP', 'OBJECT'
+            'X_RCHPKO', 'X_BUFPKO', 'D_IMRPAD', 'D_IMRPAP', 'OBJECT', 'X_IRCWOL',
         }
         # Now Getting the keys
         with rdb.pipeline() as pipe:
@@ -140,6 +154,7 @@ def RDB_pull(rdb, rdb_alive: bool, cam_buffy: bool):
         pap = float(status['D_IMRPAP'])
         pad = float(status['D_IMRPAD'])
         target = status['OBJECT']
+        pdi = status['X_IRCWOL'] == 'IN'
     else:  # Sensible defaults?
         pup = False
         reachphoto = False
@@ -151,6 +166,7 @@ def RDB_pull(rdb, rdb_alive: bool, cam_buffy: bool):
         pap = 0
         pad = 0
         target = 'UNKNOWN'
+        pdi = False
 
     return (pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad, target)
 

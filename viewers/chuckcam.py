@@ -446,7 +446,7 @@ ircam_retroinj = cvc.open_shm("ircam%d_retroinj" % (camid, ), dims=(20, 1))
 rdb, rdb_alive = cvc.locate_redis_db()
 
 (pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad,
- target) = cvc.RDB_pull(rdb, rdb_alive, False)
+ target) = cvc.RDB_pull(rdb, rdb_alive, False, do_defaults=True)
 
 pscale = 16.2  #mas per pixel in Chuckcam
 
@@ -786,7 +786,7 @@ strehl = False
 strehl_plot = False
 binary = False
 binary_plot = False
-plot_pa = False
+plot_pa = False # flag to plot compass roses
 clr_scale = 0  # flag for the display color scale
 shmreload = 0
 keeprpin = False
@@ -1486,8 +1486,11 @@ while True:  # the main game loop
                 timendr = []
                 logndr = False
         if cnti % 20 == 0:
-            (pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad,
-             target) = cvc.RDB_pull(rdb, rdb_alive, False)
+            try:
+                (pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad,
+                target) = cvc.RDB_pull(rdb, rdb_alive, False, do_defaults=rdb_alive)
+            except ConnectionError:
+                pass
             msgwhl = whatfilter(reachphoto, slot, block)
             wh = font1.render(msgwhl, True, CYAN)
             msgtop = whatmsg(pup, reachphoto, gpin, rpin, bpin)

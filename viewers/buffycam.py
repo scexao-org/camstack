@@ -67,6 +67,7 @@ def get_img_data(*args, **kwargs):
 #             short hands for image averaging
 # ------------------------------------------------------------------
 
+
 def ave_img_data(nave, *args, **kwargs):
     # Arguments: bias, badpixmap, clean, disp, tint
     return cvc.ave_img_data_from_callable(get_img_data, nave, *args, **kwargs)
@@ -424,7 +425,7 @@ ircam_retroinj = cvc.open_shm("ircam0_retroinj", dims=(20, 1))
 rdb, rdb_alive = cvc.locate_redis_db()
 
 (pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad,
- target) = cvc.RDB_pull(rdb, rdb_alive, True)
+ target) = cvc.RDB_pull(rdb, rdb_alive, True, do_defaults=True)
 
 pscale = 16.9  #mas per pixel in Buffycam
 
@@ -829,7 +830,11 @@ while True:  # the main game loop
         time.sleep(1.0)  # safety
 
         ndark = int(10 * fps / float(ndr))  # 10s of dark
-        ave_dark = ave_img_data(ndark, clean=False, disp=True, tint=etime, timeout=11.0)
+        ave_dark = ave_img_data(ndark,
+                                clean=False,
+                                disp=True,
+                                tint=etime,
+                                timeout=11.0)
         bname = conf_dir + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
                 % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
         pf.writeto(bname, ave_dark, overwrite=True)
@@ -1328,8 +1333,11 @@ while True:  # the main game loop
                 timendr = []
                 logndr = False
         if cnti % 20 == 0:
-            (pup, reachphoto, gpin, rpin, bpin, slot, block, pap,
-             pad, target) = cvc.RDB_pull(rdb, rdb_alive, True)
+            try:
+                (pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad,
+                    target) = cvc.RDB_pull(rdb, rdb_alive, True, do_defaults=rdb_alive)
+            except ConnectionError:
+                pass
             msgwhl = whatfilter(reachphoto, slot, block)
             wh = font1.render(msgwhl, True, CYAN)
             msgtop = whatmsg(pup, reachphoto, gpin, rpin)
@@ -1398,9 +1406,10 @@ while True:  # the main game loop
             #---------------------------
             if event.key == K_k:
                 mmods = pygame.key.get_mods()
-                if mmods == 0: # no modifier
+                if mmods == 0:  # no modifier
                     kws = cam.get_keywords()
-                    print('\n', '\n'.join([f'{k:8.8s}:\t{kws[k]}' for k in kws]))
+                    print('\n',
+                          '\n'.join([f'{k:8.8s}:\t{kws[k]}' for k in kws]))
 
             # Decrease exposure time/NDR
             #---------------------------
@@ -1588,7 +1597,8 @@ while True:  # the main game loop
                         ave_dark = ave_img_data(None,
                                                 clean=False,
                                                 disp=True,
-                                                tint=etime, timeout=11.0)
+                                                tint=etime,
+                                                timeout=11.0)
                         bname = conf_dir + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
                                 % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
                         pf.writeto(bname, ave_dark, overwrite=True)
@@ -1653,7 +1663,8 @@ while True:  # the main game loop
                             ave_dark = ave_img_data(ndark,
                                                     clean=False,
                                                     disp=True,
-                                                    tint=tint, timeout=11.0)
+                                                    tint=tint,
+                                                    timeout=11.0)
                             bname = conf_dir + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
                                     % (fps, tint, ndr, crop[0], crop[2], xsizeim, ysizeim)
                             pf.writeto(bname, ave_dark, overwrite=True)
@@ -1701,7 +1712,8 @@ while True:  # the main game loop
                                            bias=bias,
                                            badpixmap=badpixmap,
                                            disp=True,
-                                           tint=etime, timeout=11.0)
+                                           tint=etime,
+                                           timeout=11.0)
                     rname = conf_dir + "ref.fits"
                     pf.writeto(rname, ave_ref, overwrite=True)
 
@@ -1748,7 +1760,9 @@ while True:  # the main game loop
                             )
 
                     else:
-                        tmux_buffylog.send_keys("milk-logshimoff kcam; sleep 4; milk-logshimkill kcam")
+                        tmux_buffylog.send_keys(
+                            "milk-logshimoff kcam; sleep 4; milk-logshimkill kcam"
+                        )
                         #tmux_buffylog.cmd('kill-session')
                         tmux_kcam.send_keys(
                             "log Buffycam: stop logging images")
@@ -1758,7 +1772,9 @@ while True:  # the main game loop
             # Start archiving images (after prompt to select datatype)
             #--------------------------
             if event.key == K_RETURN and wait_for_archive_datatype:
-                os.system(f"ssh scexao@scexao5 updatekw kcam_raw DATA-TYP {datatyp[idt]}")
+                os.system(
+                    f"ssh scexao@scexao5 updatekw kcam_raw DATA-TYP {datatyp[idt]}"
+                )
                 timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
                 savepath = '/mnt/tier1/ARCHIVED_DATA/' + timestamp + \
                            '/kcam/'
@@ -2063,7 +2079,8 @@ while True:  # the main game loop
                     gain = float(cam.get_keywords()['DETGAIN'])
                     print(f"\n=== Buffy camera gain: {gain} ===\n")
 
-                if not (mmods & KMOD_LSHIFT) and (mmods & KMOD_LCTRL) and event.key == K_e:
+                if not (mmods & KMOD_LSHIFT) and (
+                        mmods & KMOD_LCTRL) and event.key == K_e:
                     # Shortcut to 121
                     print("set_gain(121)")
                     tmux_kcam_ctrl.send_keys("set_gain(121)")

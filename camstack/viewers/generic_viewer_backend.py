@@ -123,7 +123,7 @@ class GenericViewerBackend:
         '''
         if self.flag_averaging and self.flag_data_init:
             # 5 sec running average - cast to float32 is implicit
-            self.data_raw_uncrop = 0.99 * self.data_raw + 0.01 * self.input_shm.get_data(
+            self.data_raw_uncrop = 0.99 * self.data_raw_uncrop + 0.01 * self.input_shm.get_data(
             )
         else:
             self.data_raw_uncrop = self.input_shm.get_data().astype(np.float32)
