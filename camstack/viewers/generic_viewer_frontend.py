@@ -50,7 +50,7 @@ class GenericViewerFrontend:
         # Prefix pygame objects with "pg_"
         self.pg_fonts = futs.gen_zoomed_fonts(self.system_zoom)
 
-        self.pg_screen = pygame.display.set_mode(self.data_disp_size, 0, 32)
+        self.pg_screen = pygame.display.set_mode(self.data_disp_size, flags=0x0, depth=8)
         pygame.display.set_caption('GenericViewer')
 
         # Is this useful?

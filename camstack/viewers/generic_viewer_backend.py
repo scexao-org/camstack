@@ -103,7 +103,6 @@ class GenericViewerBackend:
                                 int(round(cc -
                                           halfside[1])):int(round(cc + halfside[1]))]
 
-        print(self.shm_shape, self.crop_lvl_id, self.crop_slice)
 
     def toggle_averaging(self):
         self.flag_averaging = not self.flag_averaging
