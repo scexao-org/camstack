@@ -91,3 +91,5 @@ For dumb cameras (acquisition channel but no control channel), the FG acquisitio
     - OrcaQuest
       - FIRSTOrcam
       - AlalaOrcam
+  - SpinnakerUSBCamera
+    - BlackFly
