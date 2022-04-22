@@ -19,7 +19,9 @@ sleep 0.3
 $tsend $tname "kill %" Enter
 
 echo ""
-#read -p "Everything killed, proceed to startup ? Press enter to continue, Ctrl+C to abort."
+echo "Remember check if 'cset set' is enabled"
+echo "If not sets, run:"
+echo "    sudo cset shield -c 7"
 
 $tsend $tname "py3" Enter
 $tsend $tname "python -im camstack.cam_mains.first_orcam" Enter
