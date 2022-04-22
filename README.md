@@ -57,3 +57,37 @@ Changing "mode" really means changing crop size. The framegrabber has to be reco
 This is done without quitting at the `<cam>_ctrl` command prompt, by calling `set_camera_mode(some_predefined_mode_id)`.
 
 For dumb cameras (acquisition channel but no control channel), the FG acquisition can be set to an arbitrary size dynamically by calling `set_camera_size(height, width)`.
+
+
+### Recap
+
+
+| Camera | What      | Class | Medium               | Bash entry          | Python entry     | Computer | Stream   | Raw stream   |
+| ------ | --------- | ----- | -------------------- | ------------------- | ---------------- | -------- | -------- | ------------ |
+| Buffy  | CRED1     | Buffy | Camlink              | `cam-buffystart`    | `buffycam.py`    | scexao5  | `kcam`   | `kcam_raw`   |
+| Chuck  | CRED2     | Buffy | Camlink              | `cam-chuckstart`    | `chuckcam.py`    | scexao5  | `ircam0` | `ircam0_raw` |
+| GLINT  | CRED2     | Buffy | Camlink              | `cam-glintstart`    | `glintcam.py`    | scexao5  | `glint`  |              |
+| Rajni  | CRED2     | Buffy | Camlink              | `cam-rajnistart`    | `rajnicam.py`    | scexao5  | `rajni`  |              |
+| Reno   | Ocam2K    | Buffy | Camlink              | `cam-ocamstart`     | `renocam.py`     | scexao5  | `ocam2d` | `ocam2krc`   |
+| Alala  | OrcaQuest | Buffy | CoaxPress (x)or USB3 | `cam-alalacamstart` | `first_orcam.py` | alala    | `orcam`  |              |
+| FIRST  | OrcaQuest | Buffy | CoaxPress (x)or USB3 | `cam-fircamstart`   | `alala_orcam.py` | first    | `orcam`  |              |
+
+
+### Class tree:
+
+- BaseCamera
+  - EDTCamera
+    - CRED1
+      - Buffy
+    - CRED2
+      - Chuck
+      - GLINT
+      - Rajni
+    - OCAM2K
+    - Andor897 (unused / draft)
+      - First
+      - Vampires
+  - DCAMCamera
+    - OrcaQuest
+      - FIRSTOrcam
+      - AlalaOrcam
