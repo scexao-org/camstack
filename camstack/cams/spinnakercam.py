@@ -132,6 +132,9 @@ class SpinnakerUSBCamera(BaseCamera):
         if reuse_shm:
             self.taker_tmux_command += ' -R'  # Do not overwrite the SHM.
 
+    def _ensure_backend_restarted(self):
+        # Plenty simple enough for spinnaker
+        time.sleep(1.0)
 
     def _fill_keywords(self):
         

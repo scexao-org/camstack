@@ -95,6 +95,9 @@ class EDTCamera(BaseCamera):
         if reuse_shm:
             self.taker_tmux_command += ' -R'  # Do not overwrite the SHM.
 
+    def _ensure_backend_restarted(self):
+        # Plenty simple enough for EDT, never failed me
+        time.sleep(1.0)
 
     def send_command(self, cmd, base_timeout: float = 100.):
         '''

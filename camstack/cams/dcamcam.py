@@ -89,6 +89,14 @@ class DCAMCamera(BaseCamera):
         if reuse_shm:
             self.taker_tmux_command += ' -R'  # Do not overwrite the SHM.
 
+    def _ensure_backend_restarted(self):
+        # In case we recreated the SHM...
+        # The sleep(1.0) used elsewhere, TOO FAST FOR DCAM!
+        # so dcamusbtake.c implements a forced feedback
+        self.control_shm.get_data(check=True,
+                                  checkSemAndFlush=True,
+                                  timeout=None)
+
     def _dcam_prm_setvalue(self, value: Any, fits_key: str, dcam_key: int):
         return self._dcam_prm_setmultivalue([value], [fits_key], [dcam_key])[0]
 

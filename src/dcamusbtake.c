@@ -2,6 +2,7 @@
 #define _GNU_SOURCE
 
 #include <sched.h>
+#include <signal.h>
 #include <unistd.h>
 #include <time.h>
 #include <string.h>
@@ -13,6 +14,15 @@
 #include "dcamprop.h"
 #include "dcam_utils.h"
 
+static int end_signaled = 0; // termination flag for funcs
+
+// Termination function for SIGINT callback
+static void endme(int dummy)
+{
+  end_signaled = 1;
+}
+
+
 static void usage(char *progname, char *errmsg);
 
 static void set_rt_priority();
@@ -20,7 +30,10 @@ static void set_rt_priority();
 static void params_parse_and_set(HDCAM cam, IMAGE params_img, BOOL flag);
 
 int main(int argc, char **argv)
-{
+{   
+    // register interrupt signal to terminate the main loop
+    signal(SIGINT, endme);
+
     int lcount;
     int unit = 0;
     char *progname;
@@ -246,8 +259,7 @@ int main(int argc, char **argv)
         shared = 1;
         // allocate space for keywords
         NBkw = 50;
-        ImageStreamIO_createIm(&image, streamname, naxis, imsize, atype, shared,
-                               NBkw, 10);
+        ImageStreamIO_createIm(&image, streamname, naxis, imsize, atype, shared, NBkw, 0);
         free(imsize);
     }
 
@@ -255,7 +267,7 @@ int main(int argc, char **argv)
     int N_KEYWORDS = 4;
 
     // Warning: the order of *kws* may change, because we're gonna allocate the other ones from python.
-    const char *KW_NAMES[] = {"MFRATE", "!MAQTIME", "!FGSIZE1", "!FGSIZE2"};
+    const char *KW_NAMES[] = {"MFRATE", "_MAQTIME", "_FGSIZE1", "_FGSIZE2"};
     const char KW_TYPES[] = {'D', 'L', 'L', 'L'};
     const char *KW_COM[] = {"Measured frame rate (Hz)",
                             "Frame acq time (us, CLOCK_REALTIME)",
@@ -334,7 +346,18 @@ int main(int argc, char **argv)
     lcount = 0;
     int loopOK = 1;
 
-    while (loopOK == 1)
+    // We post control_shm to let the camstack manager know that the new SHM is ready
+    // This mechanism is used only in this backend for camstack
+    // because re-starting dcam API is pretty slow so we want a feedback that it's over
+    ImageStreamIO_UpdateIm(&image_prm);
+    // Problem: when we do this, this will trigger the parameter update in the loop...
+    // Let's click that semaphore
+    ImageStreamIO_semtrywait(&image_prm, semid_prm);
+
+
+    // Main loop. What happens if we have a end_signaled but we're caught in a timeout?
+    // kill_taker from python will only wait 0.1 sec between Ctrl-C and a kill -9
+    while (end_signaled == 0 && loopOK == 1)
     {
         // Check parameters to update ?
         if (0 == ImageStreamIO_semtrywait(&image_prm, semid_prm))
@@ -394,14 +417,20 @@ int main(int argc, char **argv)
     }
     puts("");
 
-    // Dev mode: uninit and exit
+    // Deinit, cleanup, exit.
     dcamcap_stop(cam);
+    printf("A\n");
     dcambuf_release(cam, 0);
+    printf("B\n");
     dcamwait_close(dcam_waitopen.hwait);
-    printf("\n------\nDEVMODE: ERRORING ON PURPOSE\n");
-    CHECK_DCAM_ERR_EXIT(0, cam, 1);
-
-    // printf("%d images %d timeouts %d overruns\n", loops, last_timeouts, overruns);
+    printf("C\n");
+    dcamdev_close(cam);
+    printf("D\n");
+    dcamapi_uninit();
+    printf("E\n");
+    
+    printf("\n------\ndcamusbtake.c: successful exit.\n");
+    //CHECK_DCAM_ERR_EXIT(0, cam, 1);
 
     exit(0);
 }

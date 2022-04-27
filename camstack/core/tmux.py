@@ -28,7 +28,7 @@ def send_keys(pane, keys, enter=True):
 def kill_running(pane):
     pane.send_keys('C-c', enter=False, suppress_history=False)
     pane.send_keys('C-c', enter=False, suppress_history=False)
-    time.sleep(.1)
+    time.sleep(2.0) # We need longer time for dcamusbtake to clear
     pane.send_keys('C-z', enter=False, suppress_history=False)
     pane.send_keys('kill %')
 

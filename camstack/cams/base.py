@@ -261,8 +261,7 @@ class BaseCamera:
         
         # Let's do it.
         tmux_util.send_keys(self.take_tmux_pane, self.taker_tmux_command)
-        # In case we recreated the SHM...
-        time.sleep(1.)
+        
 
         if self.taker_cset_prio[1] is not None:  # Set rtprio !
             subprocess.run([
@@ -273,6 +272,8 @@ class BaseCamera:
                 str(self.taker_cset_prio[1])  # PRIORITY
             ])
 
+        self._ensure_backend_restarted()
+        
         # Should these 3 be there ???
         self.grab_shm_fill_keywords()
         self.prepare_camera_finalize()
@@ -285,6 +286,9 @@ class BaseCamera:
         self._start_taker_no_dependents()
 
     def _prepare_backend_cmdline(self, reuse_shm: bool = False):
+        raise NotImplementedError("Must be subclassed from the base class")
+
+    def _ensure_backend_restarted(self):
         raise NotImplementedError("Must be subclassed from the base class")
 
     def _kill_taker_no_dependents(self):
@@ -304,7 +308,10 @@ class BaseCamera:
     def grab_shm_fill_keywords(self):
         # Problem: we need to be sure the taker has restarted
         # before filling keywords !
+        # Second problem: if the taker is **slow**, we may regrab a
+        # pointer to the SHM before the re-creation
         self.camera_shm = self._get_SHM()
+
         time.sleep(0.3) # Avoid initial race condition on keywords
         self._fill_keywords()
 
