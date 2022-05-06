@@ -18,7 +18,7 @@ from typing import List
 from camstack.core import tmux
 
 def main(tmux_list: List[str]) -> None:
-    
+
     for tmux_name in tmux_list:
         tmux_sess = tmux.find_or_create(tmux_name)
         tmux_sess.send_keys("cam.kill_taker_and_dependents(skip_taker=True)", suppress_history=False)

@@ -23,12 +23,10 @@ class SpinnakerUSBCamera(BaseCamera):
     KEYWORDS = {}
     KEYWORDS.update(BaseCamera.KEYWORDS)
 
-    def __init__(self,
-                 name: str,
-                 stream_name: str,
-                 mode_id: Union[CameraMode, Tuple[int, int]],
-                 spinnaker_number: int,
-                 no_start: bool = False,
+    def __init__(self, name: str, stream_name: str, mode_id: Union[CameraMode,
+                                                                   Tuple[int,
+                                                                         int]],
+                 spinnaker_number: int, no_start: bool = False,
                  taker_cset_prio: Union[str, int] = ('system', None),
                  dependent_processes: List[Any] = []):
 
@@ -38,12 +36,8 @@ class SpinnakerUSBCamera(BaseCamera):
         self.spinn_system = None
         self.spinn_cam = None
 
-        BaseCamera.__init__(self,
-                            name,
-                            stream_name,
-                            mode_id,
-                            no_start=no_start,
-                            taker_cset_prio=taker_cset_prio,
+        BaseCamera.__init__(self, name, stream_name, mode_id,
+                            no_start=no_start, taker_cset_prio=taker_cset_prio,
                             dependent_processes=dependent_processes)
 
         # The int values of the enumerations took a little digging...
@@ -61,16 +55,16 @@ class SpinnakerUSBCamera(BaseCamera):
         self.spinn_cam.GainAuto.SetValue(0)
         # Disable gamma
         self.spinn_cam.GammaEnable.SetValue(False)
-        
 
     def init_framegrab_backend(self):
 
         if self.is_taker_running():
-            raise AssertionError('Cannot change camera config while camera is running')
+            raise AssertionError(
+                    'Cannot change camera config while camera is running')
 
         if self.spinn_system is None:
             self.spinn_system = PySpin.System.GetInstance()
-        
+
         if self.spinn_cam is None:
             cam_list = self.spinn_system.GetCameras()
             self.spinn_cam = cam_list[self.spinn_number]
@@ -97,8 +91,8 @@ class SpinnakerUSBCamera(BaseCamera):
         self.spinn_cam.BinningVertical.SetValue(self.current_mode.binx)
 
         # h, w
-        self.spinn_cam.Width.SetValue(x1-x0+1)
-        self.spinn_cam.Height.SetValue(y1-y0+1)
+        self.spinn_cam.Width.SetValue(x1 - x0 + 1)
+        self.spinn_cam.Height.SetValue(y1 - y0 + 1)
 
         # offsets
         self.spinn_cam.OffsetX.SetValue(x0)
@@ -115,14 +109,12 @@ class SpinnakerUSBCamera(BaseCamera):
         # And is camera specific
         pass
 
-
     def release(self):
         BaseCamera.release(self)
 
         cam.DeInit()
         del self.spinn_cam
         self.spinn_system.ReleaseInstance()
-
 
     def _prepare_backend_cmdline(self, reuse_shm: bool = False):
 
@@ -138,7 +130,7 @@ class SpinnakerUSBCamera(BaseCamera):
         time.sleep(1.0)
 
     def _fill_keywords(self):
-        
+
         BaseCamera._fill_keywords(self)
 
         self.get_fps()
@@ -160,7 +152,7 @@ class SpinnakerUSBCamera(BaseCamera):
     def set_fps(self, fps: float):
         self.spinn_cam.AcquisitionResultingFrameRate.SetValue(fps)
         return self.get_fps()
-    
+
     def get_tint(self):
         tint = self.spinn_cam.ExposureTime()
         self.camera_shm.update_keyword('EXPTIME', tint)
@@ -185,45 +177,35 @@ class SpinnakerUSBCamera(BaseCamera):
         return temp
 
 
-
-
-
 class BlackFly(SpinnakerUSBCamera):
 
     INTERACTIVE_SHELL_METHODS = SpinnakerUSBCamera.INTERACTIVE_SHELL_METHODS
 
     FULL = 'FULL'
-    
+
     MODES = {
-        FULL: CameraMode(x0=0, x1=2047, y0=0, y1=1535, tint=0.001),
-        # Centercrop half-size
-        1: CameraMode(x0=512, x1=1535, y0=384, y1=1151, tint=0.001),
-        # Full bin 2
-        #2: CameraMode(x0=)
+            FULL: CameraMode(x0=0, x1=2047, y0=0, y1=1535, tint=0.001),
+            # Centercrop half-size
+            1: CameraMode(x0=512, x1=1535, y0=384, y1=1151, tint=0.001),
+            # Full bin 2
+            #2: CameraMode(x0=)
     }
 
     KEYWORDS = {}
     KEYWORDS.update(SpinnakerUSBCamera.KEYWORDS)
 
-    def __init__(self,
-                 name: str,
-                 stream_name: str,
-                 mode_id: Union[CameraMode, Tuple[int, int]],
-                 spinnaker_number: int,
-                 no_start: bool = False,
+    def __init__(self, name: str, stream_name: str, mode_id: Union[CameraMode,
+                                                                   Tuple[int,
+                                                                         int]],
+                 spinnaker_number: int, no_start: bool = False,
                  taker_cset_prio: Union[str, int] = ('system', None),
                  dependent_processes: List[Any] = []):
 
-        SpinnakerUSBCamera.__init__(self,
-                               name,
-                               stream_name,
-                               mode_id,
-                               spinnaker_number,
-                               no_start=no_start,
-                               taker_cset_prio=taker_cset_prio,
-                               dependent_processes=dependent_processes)
+        SpinnakerUSBCamera.__init__(self, name, stream_name, mode_id,
+                                    spinnaker_number, no_start=no_start,
+                                    taker_cset_prio=taker_cset_prio,
+                                    dependent_processes=dependent_processes)
 
-    
     def _fill_keywords(self):
 
         SpinnakerUSBCamera._fill_keywords(self)
@@ -234,7 +216,6 @@ class BlackFly(SpinnakerUSBCamera):
     def prepare_camera_for_size(self, mode_id=None):
         # Something that we feel is BlackFly specific but not Spinnaker generic
         SpinnakerUSBCamera.prepare_camera_for_size(self, mode_id)
-
 
     def prepare_camera_finalize(self, mode_id=None):
         # Something that we feel is BlackFly specific but not Spinnaker generic

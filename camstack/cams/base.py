@@ -24,60 +24,57 @@ class BaseCamera:
     REDIS_PREFIX = None
 
     INTERACTIVE_SHELL_METHODS = [
-        'close',
-        'release',
-        '_start',
-        '_stop',
-        'set_camera_mode',
-        'set_camera_size',
+            'close',
+            'release',
+            '_start',
+            '_stop',
+            'set_camera_mode',
+            'set_camera_size',
     ]
 
     MODES = {}
 
     KEYWORDS = {
-        # Format is name: (value, description, formatter, redis partial push key [5 chars])
-        # this list CAN be figured out from a redis query.
-        # but I don't want to add the dependency at this point
-        # ALSO SHM caps at 16 chars for strings. The %s formats here are (some) shorter than official ones.
-        'BIN-FCT1':
-            (1, 'Binning factor of the X axis (pixel)', '%20d', 'BIN1'),
-        'BIN-FCT2':
-            (1, 'Binning factor of the Y axis (pixel)', '%20d', 'BIN2'),
-        'BSCALE':
-            (1.0, 'Real=fits-value*BSCALE+BZERO', '%20.8f', 'BSCAL'),
-        'BUNIT':
-            ('ADU', 'Unit of original values', '%-10s', 'BUNIT'),
-        'BZERO':
-            (0.0, 'Real=fits-value*BSCALE+BZERO', '%20.8f', 'BZERO'),
-        'PRD-MIN1':
-            (0, 'Origin in X of the cropped window (pixel)', '%16d', 'MIN1'),
-        'PRD-MIN2':
-            (0, 'Origin in Y of the cropped window (pixel)', '%16d', 'MIN2'),
-        'PRD-RNG1':
-            (1, 'Range in X of the cropped window (pixel)', '%16d', 'RNG1'),
-        'PRD-RNG2': (1, 'Range in Y of the cropped window (pixel)', '%16d',
-                     'RNG2'),
-        'CROPPED': (False, 'Partial Readout or cropped', 'BOOLEAN', 'CROPD'),
-        'DET-NSMP': (1, 'Number of non-destructive reads', '%20d', 'NDR'),
-        'DET-SMPL': ('base', 'Sampling method', '%-16.16s', 'SAMPL'),
-        'DET-TMP': (0.0, 'Detector temperature (K)', '%20.2f', 'TEMP'),
-        'DETECTOR': ('DET', 'Name of the detector', '%-16s', 'NAME'),
-        'DETGAIN': (1, 'Detector multiplication factor', '%16d', 'GAIN'),
-        'EXPTIME': (0.001, 'Total integration time of the frame (sec)',
-                    '%20.8f', 'EXPO'),
-        'FRATE': (100., 'Frame rate of the acquisition (Hz)', '%16.3f',
-                  'FRATE'),
-        'GAIN': (1., 'AD conversion factor (electron/ADU)', '%20.3f', 'GAIN'),
-        'EXTTRIG': (False, 'Exposure of detector by an external trigger',
-                    'BOOLEAN', 'TRIG'),
-        'DATA-TYP': ('TEST', 'Subaru-style exp. type', '%-16s', 'DATA'),
+            # Format is name: (value, description, formatter, redis partial push key [5 chars])
+            # this list CAN be figured out from a redis query.
+            # but I don't want to add the dependency at this point
+            # ALSO SHM caps at 16 chars for strings. The %s formats here are (some) shorter than official ones.
+            'BIN-FCT1': (1, 'Binning factor of the X axis (pixel)', '%20d',
+                         'BIN1'),
+            'BIN-FCT2': (1, 'Binning factor of the Y axis (pixel)', '%20d',
+                         'BIN2'),
+            'BSCALE': (1.0, 'Real=fits-value*BSCALE+BZERO', '%20.8f', 'BSCAL'),
+            'BUNIT': ('ADU', 'Unit of original values', '%-10s', 'BUNIT'),
+            'BZERO': (0.0, 'Real=fits-value*BSCALE+BZERO', '%20.8f', 'BZERO'),
+            'PRD-MIN1': (0, 'Origin in X of the cropped window (pixel)',
+                         '%16d', 'MIN1'),
+            'PRD-MIN2': (0, 'Origin in Y of the cropped window (pixel)',
+                         '%16d', 'MIN2'),
+            'PRD-RNG1': (1, 'Range in X of the cropped window (pixel)', '%16d',
+                         'RNG1'),
+            'PRD-RNG2': (1, 'Range in Y of the cropped window (pixel)', '%16d',
+                         'RNG2'),
+            'CROPPED':
+                    (False, 'Partial Readout or cropped', 'BOOLEAN', 'CROPD'),
+            'DET-NSMP': (1, 'Number of non-destructive reads', '%20d', 'NDR'),
+            'DET-SMPL': ('base', 'Sampling method', '%-16.16s', 'SAMPL'),
+            'DET-TMP': (0.0, 'Detector temperature (K)', '%20.2f', 'TEMP'),
+            'DETECTOR': ('DET', 'Name of the detector', '%-16s', 'NAME'),
+            'DETGAIN': (1, 'Detector multiplication factor', '%16d', 'GAIN'),
+            'EXPTIME': (0.001, 'Total integration time of the frame (sec)',
+                        '%20.8f', 'EXPO'),
+            'FRATE': (100., 'Frame rate of the acquisition (Hz)', '%16.3f',
+                      'FRATE'),
+            'GAIN': (1., 'AD conversion factor (electron/ADU)', '%20.3f',
+                     'GAIN'),
+            'EXTTRIG': (False, 'Exposure of detector by an external trigger',
+                        'BOOLEAN', 'TRIG'),
+            'DATA-TYP': ('TEST', 'Subaru-style exp. type', '%-16s', 'DATA'),
     }
 
-    def __init__(self,
-                 name: str,
-                 stream_name: str,
-                 mode_id: Union[CameraMode, Tuple[int, int]],
-                 no_start: bool = False,
+    def __init__(self, name: str, stream_name: str,
+                 mode_id: Union[CameraMode,
+                                Tuple[int, int]], no_start: bool = False,
                  taker_cset_prio: Union[str, int] = ('system', None),
                  dependent_processes: List[Any] = []):
 
@@ -95,9 +92,7 @@ class BaseCamera:
 
         if isinstance(mode_id, tuple):  # Allow (width, height) fallback
             self.current_mode_id = 'CUSTOM'
-            self.MODES['CUSTOM'] = CameraMode(x0=0,
-                                              x1=width - 1,
-                                              y0=0,
+            self.MODES['CUSTOM'] = CameraMode(x0=0, x1=width - 1, y0=0,
                                               y1=height - 1)
         else:
             self.current_mode_id = mode_id
@@ -215,10 +210,7 @@ class BaseCamera:
         '''
         self.set_camera_mode(mode_id)
 
-    def set_camera_size(self,
-                        height: int,
-                        width: int,
-                        h_offset: int = 0,
+    def set_camera_size(self, height: int, width: int, h_offset: int = 0,
                         w_offset: int = 0):
         '''
             That's a pretty agressive change - and thus,
@@ -227,8 +219,7 @@ class BaseCamera:
 
             This is a back-compatible mode (width, height) over the camera modes
         '''
-        self.MODES['CUSTOM'] = CameraMode(x0=w_offset,
-                                          x1=w_offset + width - 1,
+        self.MODES['CUSTOM'] = CameraMode(x0=w_offset, x1=w_offset + width - 1,
                                           y0=h_offset,
                                           y1=h_offset + height - 1)
 
@@ -284,11 +275,11 @@ class BaseCamera:
 
         if self.taker_cset_prio[1] is not None:  # Set rtprio !
             subprocess.run([
-                'milk-makecsetandrt',
-                str(tmux_util.find_pane_running_pid(
-                    self.take_tmux_pane)),  # PID
-                self.taker_cset_prio[0],  # CPUSET
-                str(self.taker_cset_prio[1])  # PRIORITY
+                    'milk-makecsetandrt',
+                    str(tmux_util.find_pane_running_pid(
+                            self.take_tmux_pane)),  # PID
+                    self.taker_cset_prio[0],  # CPUSET
+                    str(self.taker_cset_prio[1])  # PRIORITY
             ])
 
         self._ensure_backend_restarted()
@@ -368,8 +359,8 @@ class BaseCamera:
                 elif fmt[-1] == 's':  # string
                     val = fmt % value
             except:  # Sometime garbage values cannot be formatted properly...
-                print(
-                    f"fits_headers: formatting error on {key}, {value}, {fmt}")
+                print(f"fits_headers: formatting error on {key}, {value}, {fmt}"
+                      )
 
         self.camera_shm.update_keyword(key, val)
 
@@ -434,7 +425,7 @@ class BaseCamera:
     def start_auxiliary_thread(self):
         self.event = threading.Event()
         self.thread = threading.Thread(
-            target=self.auxiliary_thread_run_function)
+                target=self.auxiliary_thread_run_function)
         self.thread.start()
 
     def stop_auxiliary_thread(self):

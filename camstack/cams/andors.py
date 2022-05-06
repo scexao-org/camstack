@@ -9,49 +9,38 @@ from camstack.core.utilities import CameraMode
 
 class Andor897(EDTCamera):
     MODES = {
-        # FULL 512 x 512
-        512: CameraMode(x0=0, x1=511, y0=0, y1=511),
+            # FULL 512 x 512
+            512: CameraMode(x0=0, x1=511, y0=0, y1=511),
     }
 
-    def __init__(self,
-                 name: str,
-                 stream_name: str,
-                 unit: int = 2,
-                 channel: int = 0,
-                 mode_id=512,
-                 taker_cset_prio=('system', None),
-                 dependent_processes=[]):
+    def __init__(self, name: str, stream_name: str, unit: int = 2,
+                 channel: int = 0, mode_id=512,
+                 taker_cset_prio=('system', None), dependent_processes=[]):
 
         basefile = os.environ['HOME'] + '/src/camstack/config/andor_897.cfg'
 
         # Call EDT camera init
-        EDTCamera.__init__(self,
-                           name,
-                           stream_name,
-                           mode_id,
-                           unit,
-                           channel,
-                           basefile,
-                           taker_cset_prio=taker_cset_prio,
+        EDTCamera.__init__(self, name, stream_name, mode_id, unit, channel,
+                           basefile, taker_cset_prio=taker_cset_prio,
                            dependent_processes=dependent_processes)
 
 
 class Vampires(Andor897):
     MODES = {
-        # 256x256 half frame, centered
-        256: CameraMode(x0=128, x1=383, y0=128, y1=383),
-        # Etc...
-        128: CameraMode(x0=192, x1=319, y0=192, y1=319),
-        64: CameraMode(x0=224, x1=287, y0=224, y1=287),
-        32: CameraMode(x0=240, x1=271, y0=240, y1=271),
+            # 256x256 half frame, centered
+            256: CameraMode(x0=128, x1=383, y0=128, y1=383),
+            # Etc...
+            128: CameraMode(x0=192, x1=319, y0=192, y1=319),
+            64: CameraMode(x0=224, x1=287, y0=224, y1=287),
+            32: CameraMode(x0=240, x1=271, y0=240, y1=271),
     }
     MODES.update(Andor897.MODES)
 
 
 class First(Andor897):
     MODES = {
-        # 512 x 204
-        1: CameraMode(x0=0, x1=511, y0=0,
-                      y1=203),  # TODO Get to know the actual y0-y1
+            # 512 x 204
+            1: CameraMode(x0=0, x1=511, y0=0,
+                          y1=203),  # TODO Get to know the actual y0-y1
     }
     MODES.update(Andor897.MODES)

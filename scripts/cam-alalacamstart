@@ -27,4 +27,3 @@ echo "    sudo cset shield -c 12-15,28-31"
 $tsend $tname "python -im camstack.cam_mains.alala_orcam" Enter
 
 echo "alalacamstart completed (but actually not yet, just wait a bit)."
-

@@ -14,7 +14,7 @@ def encode_shortcuts(shortcut_string: str):
     lowercase = shortcut_string.lower()
     if '-' in lowercase:
         letter = lowercase.split('-')[1]
-    else: # expect lenght 1, ord() wil raise the error, no modifiers
+    else:  # expect lenght 1, ord() wil raise the error, no modifiers
         letter = lowercase
 
     # Values are the KMOD_* from pygame

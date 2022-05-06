@@ -14,7 +14,7 @@ import sys
 import time
 
 MILK_SHM_DIR = os.getenv(
-    'MILK_SHM_DIR')  # Expected /tmp <- MULTIVERSE FIXING NEEDED
+        'MILK_SHM_DIR')  # Expected /tmp <- MULTIVERSE FIXING NEEDED
 
 # COLORS
 WHITE = (255, 255, 255)
@@ -48,13 +48,8 @@ def locate_redis_db():
     return rdb, rdb_alive
 
 
-def check_modifiers(mods,
-                    lc: bool = False,
-                    la: bool = False,
-                    ls: bool = False,
-                    rc: bool = False,
-                    ra: bool = False,
-                    rs: bool = False,
+def check_modifiers(mods, lc: bool = False, la: bool = False, ls: bool = False,
+                    rc: bool = False, ra: bool = False, rs: bool = False,
                     mw: bool = False):
     '''
         Check keyboard modifiers from a pygame event.
@@ -82,8 +77,7 @@ def check_modifiers(mods,
 
 def open_shm(shm_name, dims=(1, 1), check=False):
     return open_shm_fullpath(MILK_SHM_DIR + "/" + shm_name + ".im.shm",
-                             dims=dims,
-                             check=check)
+                             dims=dims, check=check)
 
 
 def open_shm_fullpath(shm_name, dims=(1, 1), check=False):
@@ -134,8 +128,17 @@ def RDB_pull(rdb, rdb_alive: bool, cam_buffy: bool, do_defaults=True):
 
     if rdb_alive:  # Fetch from RDB
         fits_keys_to_pull = {
-            'X_IRCFLT', 'X_IRCBLK', PUP_KEY, 'X_CHKPUS', 'X_NULPKO',
-            'X_RCHPKO', 'X_BUFPKO', 'D_IMRPAD', 'D_IMRPAP', 'OBJECT', 'X_IRCWOL',
+                'X_IRCFLT',
+                'X_IRCBLK',
+                PUP_KEY,
+                'X_CHKPUS',
+                'X_NULPKO',
+                'X_RCHPKO',
+                'X_BUFPKO',
+                'D_IMRPAD',
+                'D_IMRPAP',
+                'OBJECT',
+                'X_IRCWOL',
         }
         # Now Getting the keys
         with rdb.pipeline() as pipe:
@@ -171,15 +174,8 @@ def RDB_pull(rdb, rdb_alive: bool, cam_buffy: bool, do_defaults=True):
     return (pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad, target)
 
 
-def get_img_data(cam,
-                 cam_type,
-                 bias=None,
-                 badpixmap=None,
-                 subt_ref=False,
-                 ref=None,
-                 lin_scale=True,
-                 clean=True,
-                 check=True):
+def get_img_data(cam, cam_type, bias=None, badpixmap=None, subt_ref=False,
+                 ref=None, lin_scale=True, clean=True, check=True):
     ''' ----------------------------------------
     Return the current image data content,
     formatted as a 2D numpy array.
@@ -224,14 +220,8 @@ def get_img_data_cred2(cam, *args, **kwargs):
     return get_img_data(cam, CRED2_str, *args, **kwargs)
 
 
-def ave_img_data_from_callable(get_img_data,
-                               nave,
-                               bias=None,
-                               badpixmap=None,
-                               clean=True,
-                               disp=False,
-                               tint=0,
-                               timeout=None):
+def ave_img_data_from_callable(get_img_data, nave, bias=None, badpixmap=None,
+                               clean=True, disp=False, tint=0, timeout=None):
 
     if nave is None:
         nave = 1000000
@@ -257,6 +247,5 @@ def ave_img_data_from_callable(get_img_data,
             break
 
     ave_im /= float(count)
-
 
     return (ave_im)

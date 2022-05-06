@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 '''
     pygame SHM viewer - generic basic version
 
@@ -14,7 +13,6 @@ import docopt
 
 from camstack.viewers.generic_viewer_frontend import GenericViewerFrontend
 from camstack.viewers.generic_viewer_backend import GenericViewerBackend
-
 
 if __name__ == '__main__':
 

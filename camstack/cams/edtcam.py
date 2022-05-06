@@ -23,16 +23,11 @@ class EDTCamera(BaseCamera):
     # Signed / unsigned EDT output - 8/16 bit mixup at grabbing
     EDTTAKE_CAST = False  # Only OCAM overrides that
     EDTTAKE_UNSIGNED = True
-    EDTTAKE_EMBEDMICROSECOND = False # We want this for CRED1 / 2 but not elsewhere
+    EDTTAKE_EMBEDMICROSECOND = False  # We want this for CRED1 / 2 but not elsewhere
 
-    def __init__(self,
-                 name: str,
-                 stream_name: str,
-                 mode_id: Union[CameraMode, Tuple[int, int]],
-                 pdv_unit: int,
-                 pdv_channel: int,
-                 pdv_basefile: str,
-                 no_start: bool = False,
+    def __init__(self, name: str, stream_name: str,
+                 mode_id: Union[CameraMode, Tuple[int, int]], pdv_unit: int,
+                 pdv_channel: int, pdv_basefile: str, no_start: bool = False,
                  taker_cset_prio: Union[str, int] = ('system', None),
                  dependent_processes: List[Any] = []):
 
@@ -43,20 +38,16 @@ class EDTCamera(BaseCamera):
 
         self.edt_iface = None  # See self.init_framegrab_backend
 
-        BaseCamera.__init__(self,
-                           name,
-                           stream_name,
-                           mode_id,
-                           no_start=no_start,
-                           taker_cset_prio=taker_cset_prio,
-                           dependent_processes=dependent_processes)
+        BaseCamera.__init__(self, name, stream_name, mode_id,
+                            no_start=no_start, taker_cset_prio=taker_cset_prio,
+                            dependent_processes=dependent_processes)
 
     def init_framegrab_backend(self):
         if self.is_taker_running():
             raise AssertionError('Cannot change FG config while FG is running')
 
         self.width_fg = self.width * (1, 2)[self.EDTTAKE_CAST]
-        
+
         # Prepare a cfg file like the base one + width and height amended
 
         tmp_config = '/tmp/' + os.environ['USER'] + '_' + self.NAME + '.cfg'
@@ -65,7 +56,7 @@ class EDTCamera(BaseCamera):
                              stdout=subprocess.PIPE)
         if res.returncode != 0:
             raise FileNotFoundError(
-                f'EDT cfg file {self.base_config_file} not found.')
+                    f'EDT cfg file {self.base_config_file} not found.')
 
         with open(tmp_config, 'a') as file:
             file.write(f'\n\n'
@@ -80,7 +71,6 @@ class EDTCamera(BaseCamera):
         # Open a serial handle
         # It's possible initcam messed with it so we reopen it
         self.edt_iface = EdtInterfaceSerial(self.pdv_unit, self.pdv_channel)
-
 
     def _prepare_backend_cmdline(self, reuse_shm: bool = False):
 

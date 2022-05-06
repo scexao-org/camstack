@@ -27,4 +27,3 @@ $tsend $tname "py3" Enter
 $tsend $tname "python -im camstack.cam_mains.first_orcam" Enter
 
 echo "fircamstart completed (but actually not yet, just wait a bit)."
-

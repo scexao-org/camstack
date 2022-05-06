@@ -16,11 +16,11 @@ class EError(enum.IntEnum):
 
     COOLINGTROUBLE = 0x80000302  # something happens near cooler
     NOTRIGGER = (
-        0x80000303  # no trigger when necessary. Some camera supports this error.
+            0x80000303  # no trigger when necessary. Some camera supports this error.
     )
     TEMPERATURE_TROUBLE = 0x80000304  # camera warns its temperature
     TOOFREQUENTTRIGGER = (
-        0x80000305  # input too frequent trigger. Some camera supports this error.
+            0x80000305  # input too frequent trigger. Some camera supports this error.
     )
 
     # wait error
@@ -28,7 +28,7 @@ class EError(enum.IntEnum):
     TIMEOUT = 0x80000106  # timeout
     LOSTFRAME = 0x80000301  # frame data is lost
     MISSINGFRAME_TROUBLE = (
-        0x80000F06  # frame is lost but reason is low lever driver's bug
+            0x80000F06  # frame is lost but reason is low lever driver's bug
     )
     INVALIDIMAGE = 0x80000321  # hpk format data is invalid data
 
@@ -47,7 +47,7 @@ class EError(enum.IntEnum):
     FAILOPENBUS = 0x81001001  # the bus or driver are not available
     FAILOPENCAMERA = 0x82001001  # camera report error during opening
     FRAMEGRABBER_NEEDS_FIRMWAREUPDATE = (
-        0x80001002  # need to update frame grabber firmware to use the camera
+            0x80001002  # need to update frame grabber firmware to use the camera
     )
 
     # calling error
@@ -61,13 +61,13 @@ class EError(enum.IntEnum):
     INVALIDPROPERTYID = 0x80000825  # the property id is invalid
     NEWAPIREQUIRED = 0x80000826  # old API cannot present the value because only new API need to be used
     WRONGHANDSHAKE = (
-        0x80000827  # this error happens DCAM get error code from camera unexpectedly
+            0x80000827  # this error happens DCAM get error code from camera unexpectedly
     )
     NOPROPERTY = (
-        0x80000828  # there is no altenative or influence id, or no more property id
+            0x80000828  # there is no altenative or influence id, or no more property id
     )
     INVALIDCHANNEL = (
-        0x80000829  # the property id specifies channel but channel is invalid
+            0x80000829  # the property id specifies channel but channel is invalid
     )
     INVALIDVIEW = 0x8000082A  # the property id specifies channel but channel is invalid
     INVALIDSUBARRAY = 0x8000082B  # the combination of subarray values are invalid. e.g. SUBARRAYHPOS + SUBARRAYHSIZE is greater than the number of horizontal pixel of sensor.
@@ -76,7 +76,7 @@ class EError(enum.IntEnum):
     WRONGPROPERTYVALUE = 0x8000082E  # at least one property value is wrong
     DISHARMONY = 0x80000830  # the paired camera does not have same parameter
     FRAMEBUNDLESHOULDBEOFF = (
-        0x80000832  # framebundle mode should be OFF under current property settings
+            0x80000832  # framebundle mode should be OFF under current property settings
     )
     INVALIDFRAMEINDEX = 0x80000833  # the frame index is invalid
     INVALIDSESSIONINDEX = 0x80000834  # the session index is invalid
@@ -108,17 +108,17 @@ class EError(enum.IntEnum):
     WRITEFULL = 0x84001006  # DCAMREC writes full frame of the session
     ALREADYOCCUPIED = 0x84001007  # DCAMREC handle is already occupied by other HDCAM
     TOOLARGEUSERDATASIZE = (
-        0x84001008  # DCAMREC is set the large value to user data size
+            0x84001008  # DCAMREC is set the large value to user data size
     )
     NOIMAGE = 0x84001804  # not stored image in buffer on bufrecord
     INVALIDWAITHANDLE = 0x84002001  # DCAMWAIT is invalid handle
     NEWRUNTIMEREQUIRED = 0x84002002  # DCAM Module Version is older than the version that the camera requests
     VERSIONMISMATCH = (
-        0x84002003  # Camre returns the error on setting parameter to limit version
+            0x84002003  # Camre returns the error on setting parameter to limit version
     )
     RUNAS_FACTORYMODE = 0x84002004  # Camera is running as a factory mode
     IMAGE_UNKNOWNSIGNATURE = (
-        0x84003001  # sigunature of image header is unknown or corrupted
+            0x84003001  # sigunature of image header is unknown or corrupted
     )
     IMAGE_NEWRUNTIMEREQUIRED = 0x84003002  # version of image header is newer than version that used DCAM supports
     IMAGE_ERRORSTATUSEXIST = 0x84003003  # image header stands error status
@@ -626,22 +626,22 @@ class EProp(enum.IntEnum):
     TRIGGERENABLE_POLARITY = 0x00100420  # R/W, mode,    "TRIGGER ENABLE POLARITY"
 
     TRIGGERNUMBER_FORFIRSTIMAGE = (
-        0x00100810  # R/O, long,    "TRIGGER NUMBER FOR FIRST IMAGE"
+            0x00100810  # R/O, long,    "TRIGGER NUMBER FOR FIRST IMAGE"
     )
     TRIGGERNUMBER_FORNEXTIMAGE = (
-        0x00100820  # R/O, long,    "TRIGGER NUMBER FOR NEXT IMAGE"
+            0x00100820  # R/O, long,    "TRIGGER NUMBER FOR NEXT IMAGE"
     )
 
     BUS_SPEED = 0x00180110  # R/W, long,    "BUS SPEED"
 
     NUMBEROF_OUTPUTTRIGGERCONNECTOR = (
-        0x001C0010  # R/O, long,    "NUMBER OF OUTPUT TRIGGER CONNECTOR"
+            0x001C0010  # R/O, long,    "NUMBER OF OUTPUT TRIGGER CONNECTOR"
     )
     OUTPUTTRIGGER_CHANNELSYNC = (
-        0x001C0030  # R/W, mode,    "OUTPUT TRIGGER CHANNEL SYNC"
+            0x001C0030  # R/W, mode,    "OUTPUT TRIGGER CHANNEL SYNC"
     )
     OUTPUTTRIGGER_PROGRAMABLESTART = (
-        0x001C0050  # R/W, mode,    "OUTPUT TRIGGER PROGRAMABLE START"
+            0x001C0050  # R/W, mode,    "OUTPUT TRIGGER PROGRAMABLE START"
     )
     OUTPUTTRIGGER_SOURCE = 0x001C0110  # R/W, mode,    "OUTPUT TRIGGER SOURCE"
     OUTPUTTRIGGER_POLARITY = 0x001C0120  # R/W, mode,    "OUTPUT TRIGGER POLARITY"
@@ -651,14 +651,14 @@ class EProp(enum.IntEnum):
     OUTPUTTRIGGER_KIND = 0x001C0160  # R/W, mode,    "OUTPUT TRIGGER KIND"
     OUTPUTTRIGGER_BASESENSOR = 0x001C0170  # R/W, mode,    "OUTPUT TRIGGER BASE SENSOR"
     OUTPUTTRIGGER_PREHSYNCCOUNT = (
-        0x001C0190  # R/W, mode,    "OUTPUT TRIGGER PRE HSYNC COUNT"
+            0x001C0190  # R/W, mode,    "OUTPUT TRIGGER PRE HSYNC COUNT"
     )
     #                 - 0x001C10FF for 16 output trigger connector, reserved
     _OUTPUTTRIGGER = 0x00000100  # the offset of ID for Nth OUTPUT TRIGGER parameter
 
     MASTERPULSE_MODE = 0x001E0020  # R/W, mode,    "MASTER PULSE MODE"
     MASTERPULSE_TRIGGERSOURCE = (
-        0x001E0030  # R/W, mode,    "MASTER PULSE TRIGGER SOURCE"
+            0x001E0030  # R/W, mode,    "MASTER PULSE TRIGGER SOURCE"
     )
     MASTERPULSE_INTERVAL = 0x001E0040  # R/W, sec,    "MASTER PULSE INTERVAL"
     MASTERPULSE_BURSTTIMES = 0x001E0050  # R/W, long,    "MASTER PULSE BURST TIMES"
@@ -667,7 +667,7 @@ class EProp(enum.IntEnum):
     # exposure period
     EXPOSURETIME = 0x001F0110  # R/W, sec,    "EXPOSURE TIME"
     SYNC_MULTIVIEWEXPOSURE = (
-        0x001F0120  # R/W, mode,    "SYNCHRONOUS MULTI VIEW EXPOSURE"
+            0x001F0120  # R/W, mode,    "SYNCHRONOUS MULTI VIEW EXPOSURE"
     )
     EXPOSURETIME_CONTROL = 0x001F0130  # R/W, mode,    "EXPOSURE TIME CONTROL"
     TRIGGER_FIRSTEXPOSURE = 0x001F0200  # R/W, mode,    "TRIGGER FIRST EXPOSURE"
@@ -685,7 +685,7 @@ class EProp(enum.IntEnum):
     SENSITIVITYMODE = 0x00200210  # R/W, mode,    "SENSITIVITY MODE"
     SENSITIVITY = 0x00200220  # R/W, long,    "SENSITIVITY"
     SENSITIVITY2_MODE = (
-        0x00200230  # R/W, mode,    "SENSITIVITY2 MODE"            # reserved
+            0x00200230  # R/W, mode,    "SENSITIVITY2 MODE"            # reserved
     )
     SENSITIVITY2 = 0x00200240  # R/W, long,    "SENSITIVITY2"
 
@@ -695,7 +695,7 @@ class EProp(enum.IntEnum):
     EMGAINWARNING_ALARM = 0x00200280  # R/W, mode,    "EM GAIN WARNING ALARM"
     EMGAINPROTECT_MODE = 0x00200290  # R/W, mode,    "EM GAIN PROTECT MODE"
     EMGAINPROTECT_AFTERFRAMES = (
-        0x002002A0  # R/W, long,    "EM GAIN PROTECT AFTER FRAMES"
+            0x002002A0  # R/W, long,    "EM GAIN PROTECT AFTER FRAMES"
     )
 
     MEASURED_SENSITIVITY = 0x002002B0  # R/O, real,    "MEASURED SENSITIVITY"
@@ -727,16 +727,16 @@ class EProp(enum.IntEnum):
     DIRECTGAIN_MODE = 0x00300160  # R/W, mode,    "DIRECT GAIN MODE"
 
     REALTIMEGAINCORRECT_MODE = (
-        0x00300170  # R/W,    mode,    "REALTIME GAIN CORRECT MODE"
+            0x00300170  # R/W,    mode,    "REALTIME GAIN CORRECT MODE"
     )
     REALTIMEGAINCORRECT_LEVEL = (
-        0x00300180  # R/W,    mode,    "REALTIME GAIN CORRECT LEVEL"
+            0x00300180  # R/W,    mode,    "REALTIME GAIN CORRECT LEVEL"
     )
     REALTIMEGAINCORRECT_INTERVAL = (
-        0x00300190  # R/W,    mode,    "REALTIME GAIN CORRECT INTERVAL"
+            0x00300190  # R/W,    mode,    "REALTIME GAIN CORRECT INTERVAL"
     )
     NUMBEROF_REALTIMEGAINCORRECTREGION = (
-        0x003001A0  # R/W,    long,    "NUMBER OF REALTIME GAIN CORRECT REGION"
+            0x003001A0  # R/W,    long,    "NUMBER OF REALTIME GAIN CORRECT REGION"
     )
 
     # color features
@@ -747,14 +747,14 @@ class EProp(enum.IntEnum):
     #      0x00300310 is reserved
 
     REALTIMEGAINCORRECTREGION_HPOS = (
-        0x00301000  # R/W,    long,    "REALTIME GAIN CORRECT REGION HPOS"
+            0x00301000  # R/W,    long,    "REALTIME GAIN CORRECT REGION HPOS"
     )
     REALTIMEGAINCORRECTREGION_HSIZE = (
-        0x00302000  # R/W,    long,    "REALTIME GAIN CORRECT REGION HSIZE"
+            0x00302000  # R/W,    long,    "REALTIME GAIN CORRECT REGION HSIZE"
     )
 
     _REALTIMEGAINCORRECTIONREGION = (
-        0x00000010  # the offset of ID for Nth REALTIME GAIN CORRECT REGION parameter
+            0x00000010  # the offset of ID for Nth REALTIME GAIN CORRECT REGION parameter
     )
 
     # Group: ALU
@@ -766,30 +766,30 @@ class EProp(enum.IntEnum):
     SUBTRACT = 0x00380210  # R/W, mode,    "SUBTRACT"
     SUBTRACTIMAGEMEMORY = 0x00380220  # R/W, mode,    "SUBTRACT IMAGE MEMORY"
     STORESUBTRACTIMAGETOMEMORY = (
-        0x00380230  # W/O, mode,    "STORE SUBTRACT IMAGE TO MEMORY"
+            0x00380230  # W/O, mode,    "STORE SUBTRACT IMAGE TO MEMORY"
     )
     SUBTRACTOFFSET = 0x00380240  # R/W, long    "SUBTRACT OFFSET"
     DARKCALIB_STABLEMAXINTENSITY = (
-        0x00380250  # R/W, long,    "DARKCALIB STABLE MAX INTENSITY"
+            0x00380250  # R/W, long,    "DARKCALIB STABLE MAX INTENSITY"
     )
     SUBTRACT_DATASTATUS = 0x003802F0  # R/W    mode,    "SUBTRACT DATA STATUS"
     SHADINGCALIB_DATASTATUS = 0x00380300  # R/W    mode,    "SHADING CALIB DATA STATUS"
     SHADINGCORRECTION = 0x00380310  # R/W, mode,    "SHADING CORRECTION"
     SHADINGCALIBDATAMEMORY = 0x00380320  # R/W, mode,    "SHADING CALIB DATA MEMORY"
     STORESHADINGCALIBDATATOMEMORY = (
-        0x00380330  # W/O, mode,    "STORE SHADING DATA TO MEMORY"
+            0x00380330  # W/O, mode,    "STORE SHADING DATA TO MEMORY"
     )
     SHADINGCALIB_METHOD = 0x00380340  # R/W, mode,    "SHADING CALIB METHOD"
     SHADINGCALIB_TARGET = 0x00380350  # R/W, long,    "SHADING CALIB TARGET"
     SHADINGCALIB_STABLEMININTENSITY = (
-        0x00380360  # R/W, long,    "SHADING CALIB STABLE MIN INTENSITY"
+            0x00380360  # R/W, long,    "SHADING CALIB STABLE MIN INTENSITY"
     )
     SHADINGCALIB_SAMPLES = 0x00380370  # R/W, long,    "SHADING CALIB SAMPLES"
     SHADINGCALIB_STABLESAMPLES = (
-        0x00380380  # R/W, long,    "SHADING CALIB STABLE SAMPLES"
+            0x00380380  # R/W, long,    "SHADING CALIB STABLE SAMPLES"
     )
     SHADINGCALIB_STABLEMAXERRORPERCENT = (
-        0x00380390  # R/W, long,    "SHADING CALIB STABLE MAX ERROR PERCENT"
+            0x00380390  # R/W, long,    "SHADING CALIB STABLE MAX ERROR PERCENT"
     )
     FRAMEAVERAGINGMODE = 0x003803A0  # R/W, mode,    "FRAME AVERAGING MODE"
     FRAMEAVERAGINGFRAMES = 0x003803B0  # R/W, long,    "FRAME AVERAGING FRAMES"
@@ -805,17 +805,17 @@ class EProp(enum.IntEnum):
     INTENSITY_GAMMA = 0x00380560  # R/W, real,    "INTENSITY GAMMA"
     SENSORGAPCORRECT_MODE = 0x00380620  # R/W, long,    "SENSOR GAP CORRECT MODE"
     ADVANCEDEDGEENHANCEMENT_MODE = (
-        0x00380630  # R/W, mode,    "ADVANCED EDGE ENHANCEMENT MODE"
+            0x00380630  # R/W, mode,    "ADVANCED EDGE ENHANCEMENT MODE"
     )
     ADVANCEDEDGEENHANCEMENT_LEVEL = (
-        0x00380640  # R/W, long,    "ADVANCED EDGE ENHANCEMENT LEVEL"
+            0x00380640  # R/W, long,    "ADVANCED EDGE ENHANCEMENT LEVEL"
     )
 
     # TAP CALIBRATION
     TAPGAINCALIB_METHOD = 0x00380F10  # R/W, mode,    "TAP GAIN CALIB METHOD"
     TAPCALIB_BASEDATAMEMORY = 0x00380F20  # R/W, mode,    "TAP CALIB BASE DATA MEMORY"
     STORETAPCALIBDATATOMEMORY = (
-        0x00380F30  # W/O, mode,    "STORE TAP CALIB DATA TO MEMORY"
+            0x00380F30  # W/O, mode,    "STORE TAP CALIB DATA TO MEMORY"
     )
     TAPCALIBDATAMEMORY = 0x00380F40  # W/O, mode,    "TAP CALIB DATA MEMORY"
     NUMBEROF_TAPCALIB = 0x00380FF0  # R/W, long,    "NUMBER OF TAP CALIB"
@@ -835,16 +835,16 @@ class EProp(enum.IntEnum):
     # sensor mode
     SENSORMODE = 0x00400210  # R/W, mode,    "SENSOR MODE"
     SENSORMODE_SLITHEIGHT = (
-        0x00400220  # R/W, long,    "SENSOR MODE SLIT HEIGHT"            # reserved
+            0x00400220  # R/W, long,    "SENSOR MODE SLIT HEIGHT"            # reserved
     )
     SENSORMODE_LINEBUNDLEHEIGHT = (
-        0x00400250  # R/W, long,    "SENSOR MODE LINE BUNDLEHEIGHT"
+            0x00400250  # R/W, long,    "SENSOR MODE LINE BUNDLEHEIGHT"
     )
     SENSORMODE_FRAMINGHEIGHT = (
-        0x00400260  # R/W, long,    "SENSOR MODE FRAMING HEIGHT"        # reserved
+            0x00400260  # R/W, long,    "SENSOR MODE FRAMING HEIGHT"        # reserved
     )
     SENSORMODE_PANORAMICSTARTV = (
-        0x00400280  # R/W, long,    "SENSOR MODE PANORAMIC START V"
+            0x00400280  # R/W, long,    "SENSOR MODE PANORAMIC START V"
     )
 
     # other readout mode
@@ -855,10 +855,10 @@ class EProp(enum.IntEnum):
     # output mode
     OUTPUT_INTENSITY = 0x00400410  # R/W, mode,    "OUTPUT INTENSITY"
     OUTPUTDATA_ORIENTATION = (
-        0x00400420  # R/W, mode,    "OUTPUT DATA ORIENTATION"        # reserved
+            0x00400420  # R/W, mode,    "OUTPUT DATA ORIENTATION"        # reserved
     )
     OUTPUTDATA_ROTATION = (
-        0x00400430  # R/W, degree,    "OUTPUT DATA ROTATION"            # reserved
+            0x00400430  # R/W, degree,    "OUTPUT DATA ROTATION"            # reserved
     )
     OUTPUTDATA_OPERATION = 0x00400440  # R/W, mode,    "OUTPUT DATA OPERATION"
 
@@ -886,20 +886,20 @@ class EProp(enum.IntEnum):
     # synchronous timing
     TIMING_READOUTTIME = 0x00403010  # R/O, sec,    "TIMING READOUT TIME"
     TIMING_CYCLICTRIGGERPERIOD = (
-        0x00403020  # R/O, sec,    "TIMING CYCLIC TRIGGER PERIOD"
+            0x00403020  # R/O, sec,    "TIMING CYCLIC TRIGGER PERIOD"
     )
     TIMING_MINTRIGGERBLANKING = (
-        0x00403030  # R/O, sec,    "TIMING MINIMUM TRIGGER BLANKING"
+            0x00403030  # R/O, sec,    "TIMING MINIMUM TRIGGER BLANKING"
     )
     #      0x00403040 is reserved
     TIMING_MINTRIGGERINTERVAL = (
-        0x00403050  # R/O, sec,    "TIMING MINIMUM TRIGGER INTERVAL"
+            0x00403050  # R/O, sec,    "TIMING MINIMUM TRIGGER INTERVAL"
     )
     TIMING_EXPOSURE = 0x00403060  # R/O, mode,    "TIMING EXPOSURE"
     TIMING_INVALIDEXPOSUREPERIOD = 0x00403070  # R/O, sec,    "INVALID EXPOSURE PERIOD"
     TIMING_FRAMESKIPNUMBER = 0x00403080  # R/W, long,    "TIMING FRAME SKIP NUMBER"
     TIMING_GLOBALEXPOSUREDELAY = (
-        0x00403090  # R/O, sec,    "TIMING GLOBAL EXPOSURE DELAY"
+            0x00403090  # R/O, sec,    "TIMING GLOBAL EXPOSURE DELAY"
     )
 
     INTERNALFRAMERATE = 0x00403810  # R/W, 1/sec,    "INTERNAL FRAME RATE"
@@ -932,7 +932,7 @@ class EProp(enum.IntEnum):
     IMAGE_ROWBYTES = 0x00420230  # R/O, long,    "IMAGE ROWBYTES"
     IMAGE_FRAMEBYTES = 0x00420240  # R/O, long,    "IMAGE FRAMEBYTES"
     IMAGE_TOPOFFSETBYTES = (
-        0x00420250  # R/O, long,    "IMAGE TOP OFFSET BYTES"        # reserved
+            0x00420250  # R/O, long,    "IMAGE TOP OFFSET BYTES"        # reserved
     )
     IMAGE_PIXELTYPE = 0x00420270  # R/W, EPixelType,    "IMAGE PIXEL TYPE"
     IMAGE_CAMERASTAMP = 0x00420300  # R/W, long,    "IMAGE CAMERA STAMP"
@@ -943,20 +943,20 @@ class EProp(enum.IntEnum):
     BUFFER_PIXELTYPE = 0x00420360  # R/O, EPixelType,    "BUFFER PIXEL TYPE"
 
     RECORDFIXEDBYTES_PERFILE = (
-        0x00420410  # R/O,    long    "RECORD FIXED BYTES PER FILE"
+            0x00420410  # R/O,    long    "RECORD FIXED BYTES PER FILE"
     )
     RECORDFIXEDBYTES_PERSESSION = (
-        0x00420420  # R/O,    long    "RECORD FIXED BYTES PER SESSION"
+            0x00420420  # R/O,    long    "RECORD FIXED BYTES PER SESSION"
     )
     RECORDFIXEDBYTES_PERFRAME = (
-        0x00420430  # R/O,    long    "RECORD FIXED BYTES PER FRAME"
+            0x00420430  # R/O,    long    "RECORD FIXED BYTES PER FRAME"
     )
 
     IMAGEDETECTOR_PIXELWIDTH = (
-        0x00420810  # R/O, micro-meter, "IMAGE DETECTOR PIXEL WIDTH"        # reserved
+            0x00420810  # R/O, micro-meter, "IMAGE DETECTOR PIXEL WIDTH"        # reserved
     )
     IMAGEDETECTOR_PIXELHEIGHT = (
-        0x00420820  # R/O, micro-meter, "IMAGE DETECTOR PIXEL HEIGHT"        # reserved
+            0x00420820  # R/O, micro-meter, "IMAGE DETECTOR PIXEL HEIGHT"        # reserved
     )
 
     # frame bundle
@@ -964,7 +964,7 @@ class EProp(enum.IntEnum):
     FRAMEBUNDLE_NUMBER = 0x00421020  # R/W, long,    "FRAMEBUNDLE NUMBER"
     FRAMEBUNDLE_ROWBYTES = 0x00421030  # R/O,    long,    "FRAMEBUNDLE ROWBYTES"
     FRAMEBUNDLE_FRAMESTEPBYTES = (
-        0x00421040  # R/O, long,    "FRAMEBUNDLE FRAME STEP BYTES"
+            0x00421040  # R/O, long,    "FRAMEBUNDLE FRAME STEP BYTES"
     )
 
     # partial area
@@ -1016,10 +1016,10 @@ class EProp(enum.IntEnum):
     BACKFOCUSPOS_TARGET = 0x00804010  # R/W, micro-meter,"BACK FOCUS POSITION TARGET"
     BACKFOCUSPOS_CURRENT = 0x00804020  # R/O, micro-meter,"BACK FOCUS POSITION CURRENT"
     BACKFOCUSPOS_LOADFROMMEMORY = (
-        0x00804050  # R/W, long, "BACK FOCUS POSITION LOAD FROM MEMORY"
+            0x00804050  # R/W, long, "BACK FOCUS POSITION LOAD FROM MEMORY"
     )
     BACKFOCUSPOS_STORETOMEMORY = (
-        0x00804060  # W/O, long, "BACK FOCUS POSITION STORE TO MEMORY"
+            0x00804060  # W/O, long, "BACK FOCUS POSITION STORE TO MEMORY"
     )
 
     # Group: SYSTEM
@@ -1082,44 +1082,44 @@ class EProp(enum.IntEnum):
 
 
 PROP_ENUM_MAP = {
-    EProp.TRIGGERSOURCE: ETriggerSource,
-    EProp.SYSTEM_ALIVE: ESystemAlive,
-    EProp.SENSORMODE: ESensorMode,
-    EProp.COLORTYPE: EColorType,
-    EProp.SHUTTER_MODE: EShutterMode,
-    EProp.READOUTSPEED: EReadoutSpeed,
-    EProp.READOUT_DIRECTION: EReadoutDirection,
-    EProp.TRIGGERACTIVE: ETriggerActive,
-    EProp.READOUT_UNIT: EReadoutUnit,
-    EProp.CCDMODE: ECCDMode,
-    EProp.CMOSMODE: ECMOSMode,
-    EProp.OUTPUT_INTENSITY: EOutputIntensity,
-    EProp.OUTPUTDATA_ORIENTATION: EOutputDataOrientation,
-    EProp.OUTPUTDATA_OPERATION: EOutputDataOperation,
-    EProp.TESTPATTERN_KIND: ETestPatternKind,
-    EProp.DIGITALBINNING_METHOD: EDigitalBinningMethod,
-    EProp.TRIGGER_MODE: ETriggerMode,
-    EProp.TRIGGERPOLARITY: ETriggerPolarity,
-    EProp.TRIGGER_CONNECTOR: ETriggerConnector,
-    EProp.INTERNALTRIGGER_HANDLING: EInternalTriggerHandling,
-    EProp.SYNCREADOUT_SYSTEMBLANK: ESyncReadoutSystemBlank,
-    EProp.TRIGGERENABLE_ACTIVE: ETriggerEnableActive,
-    EProp.TRIGGERENABLE_POLARITY: ETriggerEnablePolarity,
-    EProp.OUTPUTTRIGGER_CHANNELSYNC: EOutputTriggerChannelSync,
-    EProp.OUTPUTTRIGGER_PROGRAMABLESTART: EOutputTriggerProgramableStart,
-    EProp.OUTPUTTRIGGER_SOURCE: EOutputTriggerSource,
-    EProp.OUTPUTTRIGGER_POLARITY: EOutputTriggerPolarity,
-    EProp.OUTPUTTRIGGER_ACTIVE: EOutputTriggerActive,
-    EProp.OUTPUTTRIGGER_KIND: EOutputTriggerKind,
-    EProp.BINNING: EBinning,
-    EProp.SUBARRAYMODE: ESubArrayMode,
-    EProp.TIMING_EXPOSURE: ETimmingExposure,
-    EProp.FRAME_BUNDLEMODE: EFrameBundleMode,
-    EProp.IMAGE_PIXELTYPE: EImagePixelType,
-    EProp.BUFFER_PIXELTYPE: EBufferPixelType,
-    EProp.EXPOSURETIME_CONTROL: EExposureTimeControl,
-    EProp.DIRECTGAIN_MODE: EDirectGainMode,
-    EProp.DEFECTCORRECT_MODE: EDefectCorrectMode,
-    EProp.TIMESTAMP_PRODUCER: ETimeStampProducer,
-    EProp.FRAMESTAMP_PRODUCER: EFrameStampProducer,
+        EProp.TRIGGERSOURCE: ETriggerSource,
+        EProp.SYSTEM_ALIVE: ESystemAlive,
+        EProp.SENSORMODE: ESensorMode,
+        EProp.COLORTYPE: EColorType,
+        EProp.SHUTTER_MODE: EShutterMode,
+        EProp.READOUTSPEED: EReadoutSpeed,
+        EProp.READOUT_DIRECTION: EReadoutDirection,
+        EProp.TRIGGERACTIVE: ETriggerActive,
+        EProp.READOUT_UNIT: EReadoutUnit,
+        EProp.CCDMODE: ECCDMode,
+        EProp.CMOSMODE: ECMOSMode,
+        EProp.OUTPUT_INTENSITY: EOutputIntensity,
+        EProp.OUTPUTDATA_ORIENTATION: EOutputDataOrientation,
+        EProp.OUTPUTDATA_OPERATION: EOutputDataOperation,
+        EProp.TESTPATTERN_KIND: ETestPatternKind,
+        EProp.DIGITALBINNING_METHOD: EDigitalBinningMethod,
+        EProp.TRIGGER_MODE: ETriggerMode,
+        EProp.TRIGGERPOLARITY: ETriggerPolarity,
+        EProp.TRIGGER_CONNECTOR: ETriggerConnector,
+        EProp.INTERNALTRIGGER_HANDLING: EInternalTriggerHandling,
+        EProp.SYNCREADOUT_SYSTEMBLANK: ESyncReadoutSystemBlank,
+        EProp.TRIGGERENABLE_ACTIVE: ETriggerEnableActive,
+        EProp.TRIGGERENABLE_POLARITY: ETriggerEnablePolarity,
+        EProp.OUTPUTTRIGGER_CHANNELSYNC: EOutputTriggerChannelSync,
+        EProp.OUTPUTTRIGGER_PROGRAMABLESTART: EOutputTriggerProgramableStart,
+        EProp.OUTPUTTRIGGER_SOURCE: EOutputTriggerSource,
+        EProp.OUTPUTTRIGGER_POLARITY: EOutputTriggerPolarity,
+        EProp.OUTPUTTRIGGER_ACTIVE: EOutputTriggerActive,
+        EProp.OUTPUTTRIGGER_KIND: EOutputTriggerKind,
+        EProp.BINNING: EBinning,
+        EProp.SUBARRAYMODE: ESubArrayMode,
+        EProp.TIMING_EXPOSURE: ETimmingExposure,
+        EProp.FRAME_BUNDLEMODE: EFrameBundleMode,
+        EProp.IMAGE_PIXELTYPE: EImagePixelType,
+        EProp.BUFFER_PIXELTYPE: EBufferPixelType,
+        EProp.EXPOSURETIME_CONTROL: EExposureTimeControl,
+        EProp.DIRECTGAIN_MODE: EDirectGainMode,
+        EProp.DEFECTCORRECT_MODE: EDefectCorrectMode,
+        EProp.TIMESTAMP_PRODUCER: ETimeStampProducer,
+        EProp.FRAMESTAMP_PRODUCER: EFrameStampProducer,
 }

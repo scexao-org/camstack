@@ -10,14 +10,14 @@
 # -------------------------------------------- #
 
 import os
-_CORES = os.sched_getaffinity(0) # Go around pygame import
+
+_CORES = os.sched_getaffinity(0)  # Go around pygame import
 
 import pygame, sys
 from pygame.locals import *
 
 # Pygame import (on AMD Epyc) make affinity drop to CPU 0 only !
-os.sched_setaffinity(0, _CORES) # Fix the CPU affinity
-
+os.sched_setaffinity(0, _CORES)  # Fix the CPU affinity
 
 import numpy as np
 import matplotlib.cm as cm
@@ -61,7 +61,7 @@ CTRL+SHIFT+ARROW  : steer mod. piezo offset (0.5V)
 mouse controls:
 --------------
 mouse      : display of the flux under the mouse pointer
- 
+
 ESC   : quit renocam
 
 """
@@ -308,9 +308,9 @@ while True:  # the main game loop
         diffr = m.sqrt(diffx**2 + diffy**2)
         #print diff14, diff23, diffx, diffy
         diff14b = m.copysign(
-            m.pow(abs(diff14), 0.5) * 30 * zoom * m.sqrt(2), diff14)
+                m.pow(abs(diff14), 0.5) * 30 * zoom * m.sqrt(2), diff14)
         diff23b = m.copysign(
-            m.pow(abs(diff23), 0.5) * 30 * zoom * m.sqrt(2), diff23)
+                m.pow(abs(diff23), 0.5) * 30 * zoom * m.sqrt(2), diff23)
         diffxb = m.pow(abs(diffr), 0.5) * 30 * zoom * m.sqrt(2) * diffx / diffr
         diffyb = m.pow(abs(diffy), 0.5) * 30 * zoom * m.sqrt(2) * diffy / diffr
 
@@ -396,8 +396,8 @@ while True:  # the main game loop
         screen.blit(savem2, rct_savem2)
         screen.blit(savem3, rct_savem3)
         rects = [
-            rect1, rct_info, rct_info2, rct_dinfo, rct_dinfo2, rct_savem1,
-            rct_savem2, rct_savem3
+                rect1, rct_info, rct_info2, rct_dinfo, rct_dinfo2, rct_savem1,
+                rct_savem2, rct_savem3
         ]
     else:
         rects = [rect1, rct_info, rct_info2, rct_dinfo, rct_dinfo2]
@@ -520,12 +520,13 @@ while True:  # the main game loop
                         # creating a tmux session for logging
                         os.system("tmux new-session -d -s ocamlog")
                         os.system(
-                            "tmux send-keys -t ocamlog \"logshim ocam2d %i %s\" C-m"
-                            % (nimsave, savepath))
+                                "tmux send-keys -t ocamlog \"logshim ocam2d %i %s\" C-m"
+                                % (nimsave, savepath))
                         #os.system("log Chuckcam: start logging images")
                     else:
                         os.system(
-                            "tmux send-keys -t ocamlog \"logshimkill ircam1\"")
+                                "tmux send-keys -t ocamlog \"logshimkill ircam1\""
+                        )
                         os.system("tmux kill-session -t ocamlog")
                         #os.system("log Chuckcam: stop logging images")
 
@@ -561,10 +562,10 @@ while True:  # the main game loop
 
                     if action == 'TT':
                         push_scale = {
-                            K_UP: (-.707, .707),
-                            K_DOWN: (.707, -.707),
-                            K_LEFT: (-.707, -.707),
-                            K_RIGHT: (.707, .707),
+                                K_UP: (-.707, .707),
+                                K_DOWN: (.707, -.707),
+                                K_LEFT: (-.707, -.707),
+                                K_RIGHT: (.707, .707),
                         }[event.key]
 
                         # Get the current value - redis or analog output
@@ -578,19 +579,19 @@ while True:  # the main game loop
                         new_c = val_cd[0] + push_scale[0] * push_amount
                         new_d = val_cd[1] + push_scale[1] * push_amount
                         os.system(
-                            f'ssh sc2 "source .profile; /home/scexao/bin/devices/analog_output.py voltage C {new_c}"'
+                                f'ssh sc2 "source .profile; /home/scexao/bin/devices/analog_output.py voltage C {new_c}"'
                         )
                         # No detach the first one - they'll collide and one will be ignored.
                         os.system(
-                            f'ssh sc2 "source .profile; /home/scexao/bin/devices/analog_output.py voltage D {new_d}" &'
+                                f'ssh sc2 "source .profile; /home/scexao/bin/devices/analog_output.py voltage D {new_d}" &'
                         )
 
                     elif action == 'PUP':
                         push_scale = {
-                            K_UP: (0., 1.0),
-                            K_DOWN: (0., -1.0),
-                            K_LEFT: (-1.0, 0.0),
-                            K_RIGHT: (1.0, 0.0),
+                                K_UP: (0., 1.0),
+                                K_DOWN: (0., -1.0),
+                                K_LEFT: (-1.0, 0.0),
+                                K_RIGHT: (1.0, 0.0),
                         }[event.key]
 
                         # Get the current value - redis or analog output
@@ -602,14 +603,14 @@ while True:  # the main game loop
                         # Now send commands over to analog output
                         # TODO Include autobounce in pywfs_pup ! - and check axes
                         new_x = int(
-                            round(val_xy[0] + push_scale[0] * push_amount))
+                                round(val_xy[0] + push_scale[0] * push_amount))
                         new_y = int(
-                            round(val_xy[1] + push_scale[1] * push_amount))
+                                round(val_xy[1] + push_scale[1] * push_amount))
                         os.system(
-                            f'ssh sc2 "source .profile; /home/scexao/bin/devices/pywfs_pup x goto {new_x}"'
+                                f'ssh sc2 "source .profile; /home/scexao/bin/devices/pywfs_pup x goto {new_x}"'
                         )
                         os.system(
-                            f'ssh sc2 "source .profile; /home/scexao/bin/devices/pywfs_pup y goto {new_y}"'
+                                f'ssh sc2 "source .profile; /home/scexao/bin/devices/pywfs_pup y goto {new_y}"'
                         )
 
                 else:  # not rdb_alive

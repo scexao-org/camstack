@@ -24,4 +24,3 @@ echo ""
 $tsend $tname "python -im camstack.cam_mains.orcam" Enter
 
 echo "startOrcam completed (but actually not yet, just wait a bit)."
-

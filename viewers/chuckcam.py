@@ -15,17 +15,19 @@ import signal
 def print_linenum(signum, frame):
     print("Currently at line", frame.f_lineno, 'in file',
           frame.f_code.co_filename)
+
+
 signal.signal(signal.SIGTTIN, print_linenum)
 
-
 import os, sys
-_CORES = os.sched_getaffinity(0) # Go around pygame import
+
+_CORES = os.sched_getaffinity(0)  # Go around pygame import
 
 import pygame
 from pygame.locals import *
 
 # Pygame import (on AMD Epyc) make affinity drop to CPU 0 only !
-os.sched_setaffinity(0, _CORES) # Fix the CPU affinity
+os.sched_setaffinity(0, _CORES)  # Fix the CPU affinity
 
 import numpy as np
 
@@ -53,7 +55,7 @@ conf_dir = home + "/conf/chuckcam_aux/"
 sys.path.append(home + '/src/lib/python/')
 
 MILK_SHM_DIR = os.getenv(
-    'MILK_SHM_DIR')  # Expected /tmp <- MULTIVERSE FIXING NEEDED
+        'MILK_SHM_DIR')  # Expected /tmp <- MULTIVERSE FIXING NEEDED
 
 import image_processing as impro
 
@@ -69,6 +71,7 @@ from camstack.core import tmux as tmuxlib
 #             short hands for shared memory data access
 # ------------------------------------------------------------------
 
+
 def get_img_data(*args, **kwargs):
     # Arguments: bias, badpixmap, subt_ref, ref, lin_scale, clean, check
     return cvc.get_img_data_cred2(cam, *args, **kwargs)
@@ -77,6 +80,7 @@ def get_img_data(*args, **kwargs):
 # ------------------------------------------------------------------
 #             short hands for image averaging
 # ------------------------------------------------------------------
+
 
 def ave_img_data(nave, *args, **kwargs):
     # Arguments: bias, badpixmap, clean, disp, tint
@@ -88,12 +92,7 @@ def ave_img_data(nave, *args, **kwargs):
 # ------------------------------------------------------------------
 
 
-def arr2im(arr,
-           vmin=0.,
-           vmax=10000.0,
-           pwr=1.0,
-           subt_ref=False,
-           lin_scale=True,
+def arr2im(arr, vmin=0., vmax=10000.0, pwr=1.0, subt_ref=False, lin_scale=True,
            pos=[0, 0]):
 
     (ysizeim, xsizeim) = arr.shape
@@ -153,7 +152,7 @@ def arr2im(arr,
         z3 = ysize / float(ysizeim)
         xsizeim2 = int(xsize / z3)
         temp = np.zeros(
-            (round(ysizeim / float(z2)), round(xsizeim2 / float(z2))))
+                (round(ysizeim / float(z2)), round(xsizeim2 / float(z2))))
         temp[:, :round(xsizeim / float(z2))] = arr3
         xshift = int(round((xsizeim2 - xsizeim) / z2 / 2))
         arr3 = np.roll(temp, xshift, axis=1)
@@ -162,7 +161,7 @@ def arr2im(arr,
         z3 = xsize / float(xsizeim)
         ysizeim2 = int(ysize / z3)
         temp = np.zeros(
-            (round(ysizeim2 / float(z2)), round(xsizeim / float(z2))))
+                (round(ysizeim2 / float(z2)), round(xsizeim / float(z2))))
         temp[:round(ysizeim / float(z2)), :] = arr3
         yshift = int(round((ysizeim2 - ysizeim) / z2 / 2))
         arr3 = np.roll(temp, yshift, axis=0)
@@ -183,7 +182,7 @@ def whatfps(fps, crop):
     #define if we are in a predifined crop mode and set max FPS
     cropmode = -1
     fpsmax = max(
-        fps, 600.
+            fps, 600.
     )  # if unknow configuration, set current fps as max or 600Hz (full frame) as a safeguard. Usually the current frame rate is the max one.
     for i in range(12):
         if np.all(crop == setcrops[:, i]):
@@ -217,7 +216,8 @@ def whatexpt(etime, fps, delay=0.):
         net2 = np.size(etimes2)
     if etime <= etimes2[-1]:
         tindex = np.where(
-            np.abs(etimes2 - etime) == np.min(np.abs(etimes2 - etime)))[0][0]
+                np.abs(etimes2 - etime) == np.min(np.abs(etimes2 -
+                                                         etime)))[0][0]
     else:
         tindex = net2 - 1
 
@@ -311,8 +311,8 @@ def whatfilter(reachphoto, slot, block):
 # ------------------------------------------------------------------
 def whatmsg(pup, reachphoto, gpin, rpin, bpin):
     msgtops = [
-        "                ", "     PUPIL      ", "     REACH      ",
-        "REACH PHOTOMETRY", "     GLINT      ", "     BUFFY      "
+            "                ", "     PUPIL      ", "     REACH      ",
+            "REACH PHOTOMETRY", "     GLINT      ", "     BUFFY      "
     ]
     if reachphoto:
         msgtop = msgtops[3]
@@ -359,7 +359,7 @@ CTRL+SHIFT+s: start/stop archiving images
 CTRL+d      : save a HDR image
 CTRL+n      : switch to external/internal trigger
 CTRL+1-6    : change filter wheel slot:
-              1. OPEN 
+              1. OPEN
               2. y-band
               3. 1550 nm, 25 nm BW
               4. 1550 nm, 50 nm BW
@@ -401,7 +401,7 @@ mouse controls:
 --------------
 mouse     : display of the flux under the mouse pointer
 left click: measure distances in mas
- 
+
 ESC       : quit chuckcam
 
 """
@@ -429,12 +429,10 @@ xsizeim, ysizeim = cam.shape_c
 
 (xsize, ysize) = (320, 256)  #Force size of old chuck for the display
 
-cam_dark = cvc.open_shm("ircam%d_dark" % (camid, ),
-                    dims=(xsizeim, ysizeim),
-                    check=True)
+cam_dark = cvc.open_shm("ircam%d_dark" % (camid, ), dims=(xsizeim, ysizeim),
+                        check=True)
 cam_badpixmap = cvc.open_shm("ircam%d_badpixmap" % (camid, ),
-                         dims=(xsizeim, ysizeim),
-                         check=True)
+                             dims=(xsizeim, ysizeim), check=True)
 cam_paused = cvc.open_shm("ircam%d_paused" % (camid, ))
 new_dark = cvc.open_shm("ircam%d_newdark" % (camid, ))
 ircam_synchro = cvc.open_shm("ircam_synchro", dims=(6, 1))
@@ -483,11 +481,11 @@ screen = pygame.display.set_mode((XW, YW), 0, 32)
 pygame.display.set_caption('SCIENCE camera display!')
 
 tmux_ircam_ctrl = tmuxlib.find_or_create_remote(
-    'chuck_ctrl', 'scexao@10.20.30.5')  # Control shell
+        'chuck_ctrl', 'scexao@10.20.30.5')  # Control shell
 tmux_ircam = tmuxlib.find_or_create(
-    'ircam%d' % camid)  # start a tmux session for messsages
+        'ircam%d' % camid)  # start a tmux session for messsages
 tmux_ircam_synchro = tmuxlib.find_or_create(
-    'ircam_synchro')  # start a tmux session for FLC synchro
+        'ircam_synchro')  # start a tmux session for FLC synchro
 
 res = subprocess.check_output("ps aux | grep ircam_synchro", shell=True)
 if bytes(home, 'utf8') + b'/bin/devices/ircam_synchro' not in res:
@@ -514,16 +512,16 @@ background = pygame.Surface(screen.get_size())
 background = background.convert()
 
 etimes = np.array([
-    10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000,
-    200000, 500000
+        10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000,
+        100000, 200000, 500000
 ])
 net = np.size(etimes)
 
 fpss = np.array([10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000])
 nfps = np.size(fpss)
 fpsmaxs = np.array([
-    1500.2, 2050.2, 4500.6, 9203.6, 2200.0, 8002.6, 1500.2, 2050.2, 4500.6,
-    9203.6, 2200.0, 8002.6
+        1500.2, 2050.2, 4500.6, 9203.6, 2200.0, 8002.6, 1500.2, 2050.2, 4500.6,
+        9203.6, 2200.0, 8002.6
 ])
 
 setcrops = np.zeros((4, 12))
@@ -753,7 +751,7 @@ screen.blit(cartoon1, rect2)
 
 idt = 0
 datatyp = [
-    "OBJECT", "DARK", "FLAT", "SKYFLAT", "DOMEFLAT", "COMPARISON", "TEST"
+        "OBJECT", "DARK", "FLAT", "SKYFLAT", "DOMEFLAT", "COMPARISON", "TEST"
 ]
 ndt = len(datatyp)
 for i in range(ndt):
@@ -786,7 +784,7 @@ strehl = False
 strehl_plot = False
 binary = False
 binary_plot = False
-plot_pa = False # flag to plot compass roses
+plot_pa = False  # flag to plot compass roses
 clr_scale = 0  # flag for the display color scale
 shmreload = 0
 keeprpin = False
@@ -869,7 +867,8 @@ while True:  # the main game loop
         time.sleep(1.0)  # safety
 
         ndark = int(10 * fps / float(ndr))  # 10s of dark
-        ave_dark = ave_img_data(ndark, clean=False, disp=True, tint=etime, timeout=11.0)
+        ave_dark = ave_img_data(ndark, clean=False, disp=True, tint=etime,
+                                timeout=11.0)
         bname = conf_dir + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
                 % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
         pf.writeto(bname, ave_dark, overwrite=True)
@@ -902,11 +901,9 @@ while True:  # the main game loop
         #os.system("rm %s/ircam%d_*" % (MILK_SHM_DIR, camid, ))
         time.sleep(1)
         cam_dark = cvc.open_shm("ircam%d_dark" % (camid, ),
-                            dims=(xsizeim, ysizeim),
-                            check=True)
+                                dims=(xsizeim, ysizeim), check=True)
         cam_badpixmap = cvc.open_shm("ircam%d_badpixmap" % (camid, ),
-                                 dims=(xsizeim, ysizeim),
-                                 check=True)
+                                     dims=(xsizeim, ysizeim), check=True)
         #cam_clean = open_shm("ircam%d_clean" % (camid,), dims=(xsizeim, ysizeim), check=True)
         time.sleep(1)
         tmux_ircam_ctrl.send_keys("get_tint()")
@@ -955,11 +952,7 @@ while True:  # the main game loop
             #nindex = np.where(ndrs >= ndr)[0][0] # Commented out for when control server goes to > 255
         # ------------------------------------------------------------------
         # read image
-        temp, isat = get_img_data(bias,
-                                  badpixmap,
-                                  subt_ref,
-                                  ref_im,
-                                  lin_scale,
+        temp, isat = get_img_data(bias, badpixmap, subt_ref, ref_im, lin_scale,
                                   check=False)
         # ------------------------------------------------------------------
         # averaging
@@ -980,21 +973,20 @@ while True:  # the main game loop
                 if not os.path.exists(ospath):
                     os.makedirs(ospath)
                 timestamp2 = dt.datetime.utcnow().strftime('%H%M%S')
-                corim = np.median(temp2[:int(ysizeim / 10), :],
-                                  axis=0) + np.median(
-                                      temp2[-int(ysizeim / 10):, :], axis=0)
+                corim = np.median(
+                        temp2[:int(ysizeim / 10), :], axis=0) + np.median(
+                                temp2[-int(ysizeim / 10):, :], axis=0)
                 corim /= 2.
                 corim2 = np.tile(corim, (ysizeim, 1))
                 temp2 -= corim2
                 if seeing:
                     pf.writeto("%s%s_seeing.fits" % (savepath, timestamp2),
-                               temp2,
-                               overwrite=True)
+                               temp2, overwrite=True)
                     se_xstd, se_ystd, se_xc, se_yc, se_theta = impro.calculate_seeing(
-                        temp2)
+                            temp2)
                     msgsee = "x = %.2f as, y = %.2f as, t = %d deg" % (
-                        se_ystd * pscale / 1000., se_xstd * pscale / 1000.,
-                        np.rad2deg(se_theta))
+                            se_ystd * pscale / 1000., se_xstd * pscale / 1000.,
+                            np.rad2deg(se_theta))
                     os.system(home + "/bin/log SEEING %s: %s" % (slot, msgsee))
                     seeing = False
                     seeing_plot = True
@@ -1011,12 +1003,9 @@ while True:  # the main game loop
                     if flt != "":
                         if strehl:
                             strehlv, dia_core, dia_ring, xoff, yoff, imgstr3 = impro.calculate_strehl(
-                                temp2,
-                                mas_pix=pscale,
-                                flt=flt,
-                                savepath=savepath,
-                                timestamp=timestamp2,
-                                target=target)
+                                    temp2, mas_pix=pscale, flt=flt,
+                                    savepath=savepath, timestamp=timestamp2,
+                                    target=target)
                             msgstr = "Strehl = %.2f" % (strehlv)
                             os.system(home + "/bin/log STREHL %s: %s" %
                                       (slot, msgstr))
@@ -1025,17 +1014,10 @@ while True:  # the main game loop
                         else:
                             print("start binary fit")
                             posst, xoff, yoff, strehlv, dia_ring, distco, angleco, contrastco = impro.binary_processing(
-                                temp2,
-                                target=target,
-                                mas_pix=pscale,
-                                pad=pad,
-                                nst=nst - int(rpin),
-                                a=a,
-                                rm=rm,
-                                flt=flt,
-                                savepath=savepath,
-                                timestamp=timestamp2,
-                                retroinj=rpin)
+                                    temp2, target=target, mas_pix=pscale,
+                                    pad=pad, nst=nst - int(rpin), a=a, rm=rm,
+                                    flt=flt, savepath=savepath,
+                                    timestamp=timestamp2, retroinj=rpin)
                             os.system(home +
                                       "/bin/log BINARY %s: %i-star fit" %
                                       (slot, nst))
@@ -1047,11 +1029,8 @@ while True:  # the main game loop
         imax = np.max(temp2)
         imin = np.min(temp2)
         (myim, z3, xmin, xmax, ymin, ymax, xshift,
-         yshift) = arr2im(temp2,
-                          pwr=pwr0,
-                          subt_ref=subt_ref,
-                          lin_scale=lin_scale,
-                          pos=pos2)
+         yshift) = arr2im(temp2, pwr=pwr0, subt_ref=subt_ref,
+                          lin_scale=lin_scale, pos=pos2)
         zg = z1 * z2 * z3
         zi = z2 * z3
         pygame.surfarray.blit_array(surf_live, myim)
@@ -1063,14 +1042,14 @@ while True:  # the main game loop
             cy = (se_yc + 0.5 - ymin + yshift) * zg
             stdx = se_xstd * zg / 2.
             stdy = se_ystd * zg / 2.
-            pygame.draw.line(
-                screen, RED1,
-                (cx - stdx * m.cos(se_theta), cy + stdx * m.sin(se_theta)),
-                (cx + stdx * m.cos(se_theta), cy - stdx * m.sin(se_theta)), 1)
-            pygame.draw.line(
-                screen, RED1,
-                (cx - stdy * m.sin(se_theta), cy - stdy * m.cos(se_theta)),
-                (cx + stdy * m.sin(se_theta), cy + stdy * m.cos(se_theta)), 1)
+            pygame.draw.line(screen, RED1, (cx - stdx * m.cos(se_theta),
+                                            cy + stdx * m.sin(se_theta)),
+                             (cx + stdx * m.cos(se_theta),
+                              cy - stdx * m.sin(se_theta)), 1)
+            pygame.draw.line(screen, RED1, (cx - stdy * m.sin(se_theta),
+                                            cy - stdy * m.cos(se_theta)),
+                             (cx + stdy * m.sin(se_theta),
+                              cy + stdy * m.cos(se_theta)), 1)
         elif average and strehl_plot:
             mstr = font5.render(msgstr, True, CYAN)
             screen.blit(mstr, rct_mstr)
@@ -1094,27 +1073,25 @@ while True:  # the main game loop
                           posst[i, 1]) * zg
                     if rpin and i == 1 and cy < yws:
                         if cy + bl * zg < yws:
-                            pygame.draw.polygon(
-                                screen, GREEN, [(cx, cy + bl2 * z2),
-                                                (cx + bl2 * z2 * m.sqrt(3) / 2,
-                                                 cy + bl2 * z2 / 2),
-                                                (cx + bl2 * z2 * m.sqrt(3) / 2,
-                                                 cy - bl2 * z2 / 2),
-                                                (cx, cy - bl2 * z2),
-                                                (cx - bl2 * z2 * m.sqrt(3) / 2,
-                                                 cy - bl2 * z2 / 2),
-                                                (cx - bl2 * z2 * m.sqrt(3) / 2,
-                                                 cy + bl2 * z2 / 2)], 1)
+                            pygame.draw.polygon(screen, GREEN, [
+                                    (cx, cy + bl2 * z2),
+                                    (cx + bl2 * z2 * m.sqrt(3) / 2,
+                                     cy + bl2 * z2 / 2),
+                                    (cx + bl2 * z2 * m.sqrt(3) / 2,
+                                     cy - bl2 * z2 / 2), (cx, cy - bl2 * z2),
+                                    (cx - bl2 * z2 * m.sqrt(3) / 2,
+                                     cy - bl2 * z2 / 2),
+                                    (cx - bl2 * z2 * m.sqrt(3) / 2,
+                                     cy + bl2 * z2 / 2)
+                            ], 1)
                             pygame.draw.line(screen, GREEN, (cx, cy),
                                              (cx, cy + bl2 * z2), 1)
-                        pygame.draw.line(
-                            screen, GREEN, (cx, cy),
-                            (cx + bl2 * z2 * m.sqrt(3) / 2, cy - bl2 * z2 / 2),
-                            1)
-                        pygame.draw.line(
-                            screen, GREEN, (cx, cy),
-                            (cx - bl2 * z2 * m.sqrt(3) / 2, cy - bl2 * z2 / 2),
-                            1)
+                        pygame.draw.line(screen, GREEN, (cx, cy),
+                                         (cx + bl2 * z2 * m.sqrt(3) / 2,
+                                          cy - bl2 * z2 / 2), 1)
+                        pygame.draw.line(screen, GREEN, (cx, cy),
+                                         (cx - bl2 * z2 * m.sqrt(3) / 2,
+                                          cy - bl2 * z2 / 2), 1)
                     else:
                         if i == 0 and dia_ring / 2 * z2 <= yws / 2:
                             pygame.draw.circle(screen, RED1,
@@ -1202,24 +1179,25 @@ while True:  # the main game loop
                 cy = (int(ysizeim / 2) + cy + 0.5 - ymin + yshift) * zg
                 pygame.draw.line(screen, GREEN, (cxr, cyr),
                                  (cxr, cyr + bl2 * z2), 1)
-                pygame.draw.line(
-                    screen, GREEN, (cxr, cyr),
-                    (cxr + bl2 * z2 * m.sqrt(3) / 2, cyr - bl2 * z2 / 2), 1)
-                pygame.draw.line(
-                    screen, GREEN, (cxr, cyr),
-                    (cxr - bl2 * z2 * m.sqrt(3) / 2, cyr - bl2 * z2 / 2), 1)
-                pygame.draw.polygon(
-                    screen, GREEN,
-                    [(cxr, cyr + bl2 * z2),
-                     (cxr + bl2 * z2 * m.sqrt(3) / 2, cyr + bl2 * z2 / 2),
-                     (cxr + bl2 * z2 * m.sqrt(3) / 2, cyr - bl2 * z2 / 2),
-                     (cxr, cyr - bl2 * z2),
-                     (cxr - bl2 * z2 * m.sqrt(3) / 2, cyr - bl2 * z2 / 2),
-                     (cxr - bl2 * z2 * m.sqrt(3) / 2, cyr + bl2 * z2 / 2)], 1)
+                pygame.draw.line(screen, GREEN, (cxr, cyr),
+                                 (cxr + bl2 * z2 * m.sqrt(3) / 2,
+                                  cyr - bl2 * z2 / 2), 1)
+                pygame.draw.line(screen, GREEN, (cxr, cyr),
+                                 (cxr - bl2 * z2 * m.sqrt(3) / 2,
+                                  cyr - bl2 * z2 / 2), 1)
+                pygame.draw.polygon(screen, GREEN, [
+                        (cxr, cyr + bl2 * z2),
+                        (cxr + bl2 * z2 * m.sqrt(3) / 2, cyr + bl2 * z2 / 2),
+                        (cxr + bl2 * z2 * m.sqrt(3) / 2, cyr - bl2 * z2 / 2),
+                        (cxr, cyr - bl2 * z2),
+                        (cxr - bl2 * z2 * m.sqrt(3) / 2, cyr - bl2 * z2 / 2),
+                        (cxr - bl2 * z2 * m.sqrt(3) / 2, cyr + bl2 * z2 / 2)
+                ], 1)
 
             else:
-                [cx, cy] = impro.centroid(temp2, method = "airy")
-                if (cx >= 0) and (cx < xsizeim) and (cy >= 0) and (cy < ysizeim):
+                [cx, cy] = impro.centroid(temp2, method="airy")
+                if (cx >= 0) and (cx < xsizeim) and (cy >= 0) and (cy <
+                                                                   ysizeim):
                     fh = temp2[int(cy), int(cx)]
                     msg3 = "center = %3d,%3d flux = %5d" % (cx, cy, fh)
                     info3 = font3.render(msg3, True, FGCOL, BGCOL)
@@ -1236,7 +1214,7 @@ while True:  # the main game loop
         # ------------------------------------------------------------------
         # display of position history
         if plot_history:
-            [cx, cy] = impro.centroid(temp2, method = "airy")
+            [cx, cy] = impro.centroid(temp2, method="airy")
             try:
                 fh = temp2[int(cy), int(cx)]
             except:
@@ -1262,11 +1240,11 @@ while True:  # the main game loop
             cy2 = -(np.mean(coor, axis=1)[1] - 256 + crop[2] - pos2[1] -
                     cor[1]) * pscale
             msgcoor = "rms = %.1f mas, %.1f mas, %.1f mas" % (
-                stds[0], stds[1], m.sqrt(np.sum(stds**2) / 2.))
+                    stds[0], stds[1], m.sqrt(np.sum(stds**2) / 2.))
             mcoor = font4.render(msgcoor, True, CYAN)
             screen.blit(mcoor, rct_mcoor)
             msgcoor2 = "dis = %.1f mas, %.1f mas, %.1f mas" % (
-                cx2, cy2, m.sqrt(cx2**2 + cy2**2))
+                    cx2, cy2, m.sqrt(cx2**2 + cy2**2))
             mcoor2 = font4.render(msgcoor2, True, CYAN)
             screen.blit(mcoor2, rct_mcoor2)
 
@@ -1417,9 +1395,8 @@ while True:  # the main game loop
         # ------------------------------------------------------------------
         # Menu for the DATA-TYP for archiving
         if waitfordt:
-            pygame.draw.rect(
-                screen, BGCOL,
-                (xws / 4, yws / 2 - dth * ndt, xws / 2, 2 * dth * ndt), 0)
+            pygame.draw.rect(screen, BGCOL, (xws / 4, yws / 2 - dth * ndt,
+                                             xws / 2, 2 * dth * ndt), 0)
             rctlines = []
             for i in range(ndt):
                 if i != idt:
@@ -1432,10 +1409,8 @@ while True:  # the main game loop
         # ------------------------------------------------------------------
         # saving images
         tmuxon = subprocess.check_output(
-            'ssh scexao-op@localhost "tmux ls" | grep ircam%dlog | awk \'{print $2}\''
-            % (camid, ),
-            shell=True,
-            input=b'')
+                'ssh scexao-op@localhost "tmux ls" | grep ircam%dlog | awk \'{print $2}\''
+                % (camid, ), shell=True, input=b'')
         if tmuxon:
             saveim = True
             try:  # Assign tmux_ircamlog only if it doesn't exist in the namespace.
@@ -1445,7 +1420,7 @@ while True:  # the main game loop
                 # Create a handle to the logging tmux
                 # This allows to get back on track if it already exists when we start chuckcam
                 tmux_ircamlog = tmuxlib.find_or_create_remote(
-                    f'ircam{camid}log', 'scexao-op@localhost')
+                        f'ircam{camid}log', 'scexao-op@localhost')
         else:
             saveim = False
         if cnti % 20:
@@ -1453,8 +1428,8 @@ while True:  # the main game loop
         else:
             rects = []
         rects += [
-            rect1, rct_info0, rct_info1, rct_info2, rct_info3, rct_zm,
-            rct_dinfo, rct_dinfo2, rct_sc1, rct_sc2, rct_wh, rct_top
+                rect1, rct_info0, rct_info1, rct_info2, rct_info3, rct_zm,
+                rct_dinfo, rct_dinfo2, rct_sc1, rct_sc2, rct_wh, rct_top
         ]
         if saveim:
             screen.blit(savem1, rct_savem1)
@@ -1488,7 +1463,8 @@ while True:  # the main game loop
         if cnti % 20 == 0:
             try:
                 (pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad,
-                target) = cvc.RDB_pull(rdb, rdb_alive, False, do_defaults=rdb_alive)
+                 target) = cvc.RDB_pull(rdb, rdb_alive, False,
+                                        do_defaults=rdb_alive)
             except ConnectionError:
                 pass
             msgwhl = whatfilter(reachphoto, slot, block)
@@ -1503,8 +1479,8 @@ while True:  # the main game loop
 
         # exit ChuckCam
         #------------------------------------------------------------------
-        if event.type == QUIT or (event.type == KEYDOWN
-                                  and event.key == K_ESCAPE):
+        if event.type == QUIT or (event.type == KEYDOWN and
+                                  event.key == K_ESCAPE):
             pygame.quit()
 
             cam.close()
@@ -1543,10 +1519,10 @@ while True:  # the main game loop
                             sync_param[2] = etimec
                             sync_param[0] = 1
                             ircam_synchro.set_data(
-                                sync_param.astype(np.float32))
+                                    sync_param.astype(np.float32))
                             time.sleep(1)
                             sync_param = ircam_synchro.get_data().astype(
-                                np.int)
+                                    np.int)
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
@@ -1565,9 +1541,10 @@ while True:  # the main game loop
             #---------------------------
             if event.key == K_k:
                 mmods = pygame.key.get_mods()
-                if mmods == 0: # no modifier
+                if mmods == 0:  # no modifier
                     kws = cam.get_keywords()
-                    print('\n', '\n'.join([f'{k:8.8s}:\t{kws[k]}' for k in kws]))
+                    print('\n',
+                          '\n'.join([f'{k:8.8s}:\t{kws[k]}' for k in kws]))
 
             # Decrease exposure time/NDR
             #---------------------------
@@ -1592,10 +1569,10 @@ while True:  # the main game loop
                             sync_param[2] = etimec
                             sync_param[0] = 1
                             ircam_synchro.set_data(
-                                sync_param.astype(np.float32))
+                                    sync_param.astype(np.float32))
                             time.sleep(1)
                             sync_param = ircam_synchro.get_data().astype(
-                                np.int)
+                                    np.int)
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
@@ -1638,10 +1615,10 @@ while True:  # the main game loop
                             sync_param[3] = fpsc
                             sync_param[0] = 1
                             ircam_synchro.set_data(
-                                sync_param.astype(np.float32))
+                                    sync_param.astype(np.float32))
                             time.sleep(1)
                             sync_param = ircam_synchro.get_data().astype(
-                                np.int)
+                                    np.int)
                             fps = sync_param[3]
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
@@ -1675,10 +1652,10 @@ while True:  # the main game loop
                             sync_param[3] = fpsc
                             sync_param[0] = 1
                             ircam_synchro.set_data(
-                                sync_param.astype(np.float32))
+                                    sync_param.astype(np.float32))
                             time.sleep(1)
                             sync_param = ircam_synchro.get_data().astype(
-                                np.int)
+                                    np.int)
                             fps = sync_param[3]
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
@@ -1740,11 +1717,12 @@ while True:  # the main game loop
                         dinfo2 = font3.render(msg, True, BGCOL, SACOL)
                         screen.blit(dinfo2, rct_dinfo2)
                         os.system(
-                            "scexaostatus set darkchuck 'NEW INT DARK    ' 0")
+                                "scexaostatus set darkchuck 'NEW INT DARK    ' 0"
+                        )
                         os.system("log Chuckcam: Saving current internal dark")
 
-                        print(
-                            "In the time it takes Chuck Norris to sidekick a")
+                        print("In the time it takes Chuck Norris to sidekick a"
+                              )
                         print("red-headed stepchild, we'll acquire this dark.")
                         if not reachphoto:
                             if not block:
@@ -1757,11 +1735,8 @@ while True:  # the main game loop
                         pygame.display.update([rct_dinfo2, rct_wh])
                         time.sleep(1.0)  # safety
 
-                        ave_dark = ave_img_data(None,
-                                                clean=False,
-                                                disp=True,
-                                                tint=etime,
-                                                timeout=11.0)
+                        ave_dark = ave_img_data(None, clean=False, disp=True,
+                                                tint=etime, timeout=11.0)
                         bname = conf_dir + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
                                 % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
                         pf.writeto(bname, ave_dark, overwrite=True)
@@ -1778,9 +1753,11 @@ while True:  # the main game loop
                         else:
                             os.system("PG1_pickoff")
                         os.system(
-                            "scexaostatus set darkchuck 'OFF             ' 1")
+                                "scexaostatus set darkchuck 'OFF             ' 1"
+                        )
                         os.system(
-                            "log Chuckcam: Done saving current internal dark")
+                                "log Chuckcam: Done saving current internal dark"
+                        )
                         cam_dark.set_data(bias.astype(np.float32))
                         cam_badpixmap.set_data(badpixmap.astype(np.float32))
 
@@ -1791,13 +1768,14 @@ while True:  # the main game loop
                         dinfo2 = font3.render(msg, True, BGCOL, SACOL)
                         screen.blit(dinfo2, rct_dinfo2)
                         os.system(
-                            "scexaostatus set darkchuck 'ALL INT DARKS   ' 0")
+                                "scexaostatus set darkchuck 'ALL INT DARKS   ' 0"
+                        )
                         os.system("log Chuckcam: Saving internal darks")
 
-                        print(
-                            "In the time it takes Chuck Norris to sidekick a")
-                        print(
-                            "red-headed stepchild, we'll acquire all biases.")
+                        print("In the time it takes Chuck Norris to sidekick a"
+                              )
+                        print("red-headed stepchild, we'll acquire all biases."
+                              )
                         if not reachphoto:
                             if not block:
                                 os.system("ircam_block")  # blocking the light
@@ -1816,10 +1794,10 @@ while True:  # the main game loop
                                 fps = sync_param[3]
                                 sync_param[0] = 1
                                 ircam_synchro.set_data(
-                                    sync_param.astype(np.float32))
+                                        sync_param.astype(np.float32))
                                 time.sleep(1)
                                 sync_param = ircam_synchro.get_data().astype(
-                                    np.int)
+                                        np.int)
                                 tint = sync_param[2]
                             else:
                                 tmux_ircam_ctrl.send_keys("set_tint(%f)" %
@@ -1828,10 +1806,9 @@ while True:  # the main game loop
                                 tint = cam.get_expt() * 1e6
                             ndark = int(1 * fps /
                                         float(ndr))  # 1s of dark per exposure
-                            ave_dark = ave_img_data(ndark,
-                                                    clean=False,
-                                                    disp=True,
-                                                    tint=tint, timeout=11.0)
+                            ave_dark = ave_img_data(ndark, clean=False,
+                                                    disp=True, tint=tint,
+                                                    timeout=11.0)
                             bname = conf_dir + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
                                     % (fps, tint, ndr, crop[0], crop[2], xsizeim, ysizeim)
                             pf.writeto(bname, ave_dark, overwrite=True)
@@ -1841,21 +1818,22 @@ while True:  # the main game loop
                             pf.writeto(bpname, badpixmapi, overwrite=True)
 
                             time.sleep(0.2)
-                        print(
-                            "\nChuck sidekicked the crap out of the poor kid.")
+                        print("\nChuck sidekicked the crap out of the poor kid."
+                              )
                         if not reachphoto:
                             os.system("ircam_block")  # opening the shutter
                         else:
                             os.system("PG1_pickoff")
                         os.system(
-                            "scexaostatus set darkchuck 'OFF             ' 1")
+                                "scexaostatus set darkchuck 'OFF             ' 1"
+                        )
                         os.system("log Chuckcam: Done saving internal darks")
 
                         if not sync_param[0] and sync_param[1]:
                             sync_param[2] = tint
                             sync_param[0] = 1
                             ircam_synchro.set_data(
-                                sync_param.astype(np.float32))
+                                    sync_param.astype(np.float32))
                         else:
                             tmux_ircam_ctrl.send_keys("set_tint(%f)" %
                                                       (tint * 1.e-6, ))
@@ -1875,10 +1853,8 @@ while True:  # the main game loop
                     subt_ref = False
 
                     nref = int(5 * fps / float(ndr))  # 5s of ref
-                    ave_ref = ave_img_data(nref,
-                                           bias=bias,
-                                           badpixmap=badpixmap,
-                                           disp=True,
+                    ave_ref = ave_img_data(nref, bias=bias,
+                                           badpixmap=badpixmap, disp=True,
                                            tint=etime, timeout=11.0)
                     rname = conf_dir + "ref.fits"
                     pf.writeto(rname, ave_ref, overwrite=True)
@@ -1912,18 +1888,18 @@ while True:  # the main game loop
                             nimsave = int(min(10000, (50000000 / etimet)))
                             # creating a tmux session for logging
                             os.system(
-                                "ln -s /tmp/fits/chuck.fits /milk/shm/ircam0.auxFITSheader.shm"
+                                    "ln -s /tmp/fits/chuck.fits /milk/shm/ircam0.auxFITSheader.shm"
                             )
                             tmux_ircamlog = tmuxlib.find_or_create_remote(
-                                "ircam%dlog" % (camid, ),
-                                "scexao-op@localhost")
+                                    "ircam%dlog" % (camid, ),
+                                    "scexao-op@localhost")
                             #tmux_ircamlog = tmuxlib.find_or_create("ircam%dlog" % (camid, ))
                             tmux_ircamlog.send_keys(
-                                "milk-logshim ircam%d %i %s &" %
-                                (camid, nimsave, savepath))
+                                    "milk-logshim ircam%d %i %s &" %
+                                    (camid, nimsave, savepath))
                             os.system("log Chuckcam: start logging images")
                             os.system(
-                                "scexaostatus set logchuck 'LOGGING         ' 3"
+                                    "scexaostatus set logchuck 'LOGGING         ' 3"
                             )
                     else:
                         tmux_ircamlog.send_keys("milk-logshimkill ircam%d" %
@@ -1931,7 +1907,8 @@ while True:  # the main game loop
                         tmux_ircamlog.cmd("kill-session")
                         os.system("log Chuckcam: stop logging images")
                         os.system(
-                            "scexaostatus set logchuck 'OFF             ' 1")
+                                "scexaostatus set logchuck 'OFF             ' 1"
+                        )
 
             # Start archiving images
             #--------------------------
@@ -1947,10 +1924,10 @@ while True:  # the main game loop
                 nimsave = int(min(20000, (50000000 / etimet)))
                 # creating a tmux session for logging
                 os.system(
-                    "ln -s /tmp/fits/chuck.fits /milk/shm/ircam0.auxFITSheader.shm"
+                        "ln -s /tmp/fits/chuck.fits /milk/shm/ircam0.auxFITSheader.shm"
                 )
                 tmux_ircamlog = tmuxlib.find_or_create_remote(
-                    "ircam%dlog" % (camid, ), "scexao-op@localhost")
+                        "ircam%dlog" % (camid, ), "scexao-op@localhost")
                 tmux_ircamlog.send_keys("milk-logshim ircam%d %i %s &" %
                                         (camid, nimsave, savepath))
                 os.system("log Chuckcam: start archiving images")
@@ -2018,7 +1995,7 @@ while True:  # the main game loop
                             mask2 = (v1 < temp) * (temp < v2)
                             mask = mask1 * mask2
                             coeff = etime / float(
-                                etime2)  #(temp/temp2)[mask].mean()
+                                    etime2)  #(temp/temp2)[mask].mean()
                             #print coeff, etime/float(etime2)
                             hdim *= coeff
                             hdim += temp
@@ -2028,11 +2005,11 @@ while True:  # the main game loop
                     timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
                     timestamp2 = dt.datetime.utcnow().strftime('%H:%M:%S.%f')
                     savepath = '/media/data/' + timestamp + '/ircam%dlog/' % (
-                        camid, )
-                    pf.writeto(savepath + 'ircam%d_hdr_' % (camid, ) +
-                               timestamp2 + '.fits',
-                               hdim / hdim.max(),
-                               overwrite=True)
+                            camid, )
+                    pf.writeto(
+                            savepath + 'ircam%d_hdr_' % (camid, ) +
+                            timestamp2 + '.fits', hdim / hdim.max(),
+                            overwrite=True)
                     cam_cmd("tint %d %d" % (camid, etimetmp), False)
 
                 else:
@@ -2056,9 +2033,9 @@ while True:  # the main game loop
                     plot_cross = not plot_cross
                     if plot_cross:
                         with open(conf_dir + 'hotspots.txt') as file:
-                            pos = np.array(
-                                [[float(digit) for digit in line.split()]
-                                 for line in file])
+                            pos = np.array([[
+                                    float(digit) for digit in line.split()
+                            ] for line in file])
                         pos2 = pos[0, :]
 
             # Color/grayscale map
@@ -2175,20 +2152,20 @@ while True:  # the main game loop
                             sync_param[0] = 1
                             sync_param[1] = 1
                             ircam_synchro.set_data(
-                                sync_param.astype(np.float32))
+                                    sync_param.astype(np.float32))
                             time.sleep(1)
                         else:
                             sync_param[0] = 1
                             sync_param[1] = 0
                             ircam_synchro.set_data(
-                                sync_param.astype(np.float32))
+                                    sync_param.astype(np.float32))
                             time.sleep(1)
 
             # Crop modes and full frame
             #---------------------
             CROP_KEYLIST = [
-                K_0, K_1, K_2, K_3, K_4, K_5, K_6, K_7, K_8, K_9, K_MINUS,
-                K_EQUALS, K_f
+                    K_0, K_1, K_2, K_3, K_4, K_5, K_6, K_7, K_8, K_9, K_MINUS,
+                    K_EQUALS, K_f
             ]
             if event.key in CROP_KEYLIST:
                 what_key = CROP_KEYLIST.index(event.key)
@@ -2198,9 +2175,8 @@ while True:  # the main game loop
                     mode_id = (str(what_key), "FULL")[event.key == K_f]
                     if event.key == K_f and xsizeim == 640 and ysizeim == 512:
                         # Skip full frame if full frame already
-                        print(
-                            'Camera already in full frame - skipping set_camera_mode()'
-                        )
+                        print('Camera already in full frame - skipping set_camera_mode()'
+                              )
                     else:
                         cam_paused.set_data(ONES_NODIM)
                         tmux_ircam_ctrl.send_keys("set_camera_mode(%s)" %
