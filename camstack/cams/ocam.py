@@ -39,11 +39,17 @@ class OCAM2K(EDTCamera):
                    fgsize=(1056 // 2, 62)),
     }
 
-    KEYWORDS = {}
+    KEYWORDS = {
+        'FILTER01': ('UNKNOWN', 'PyWFS filter state', '%-16s', 'FILTR'),
+        'PICKOFF1': ('UNKNOWN', 'PyWFS pickoff state', '%-16s', 'PICKO'),
+                }
     KEYWORDS.update(EDTCamera.KEYWORDS)
 
     EDTTAKE_CAST = True
     EDTTAKE_UNSIGNED = True
+
+    REDIS_PUSH_ENABLED = True
+    REDIS_PREFIX = 'x_P'
 
     def __init__(self,
                  name: str,
@@ -157,6 +163,16 @@ class OCAM2K(EDTCamera):
         self.poll_camera_for_keywords() # Sets 'DET-TMP'
 
     def poll_camera_for_keywords(self):
+        if self.HAS_REDIS:
+            try:
+                with self.RDB.pipeline() as pipe:
+                    pipe.hget('X_PYWFLT', 'value')
+                    pipe.hget('X_PYWPKO', 'value')
+                    vals = pipe.execute()
+                self._set_formatted_keyword('FILTER01', vals[0])
+                self._set_formatted_keyword('PICKOFF1', vals[1])
+            except:
+                pass # TODO some proper logging.log() some day.
         self.get_temperature()
 
 

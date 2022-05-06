@@ -12,15 +12,6 @@ from camstack.core.utilities import CameraMode
 
 from scxkw.config import MAGIC_BOOL_STR
 
-try:
-    from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT, GEN2HOST
-    from scxkw.redisutil.typed_db import Redis
-    RDB = Redis(host=REDIS_DB_HOST, port=REDIS_DB_PORT)
-    HAS_REDIS = True
-except:
-    HAS_REDIS = False
-
-
 class CRED2_GAINENUM:
     STRING_HIGH = 'high'
     STRING_MED = 'medium'
@@ -310,6 +301,9 @@ class Rajni(CRED2):
     MODES.update(CRED2.MODES)
     EDTTAKE_EMBEDMICROSECOND = True
 
+    REDIS_PUSH_ENABLED = True
+    REDIS_PREFIX = 'x_R' # LOWERCASE x to not get mixed with the SCExAO keys
+
     def _fill_keywords(self):
         CRED2._fill_keywords(self)
 
@@ -340,6 +334,9 @@ class GLINT(CRED2):
     }
     MODES.update(CRED2.MODES)
     EDTTAKE_EMBEDMICROSECOND = False
+
+    REDIS_PUSH_ENABLED = True
+    REDIS_PREFIX = 'x_G' # LOWERCASE x to not get mixed with the SCExAO keys
 
     def _fill_keywords(self):
         CRED2._fill_keywords(self)
@@ -406,9 +403,12 @@ class Chuck(CRED2):
     }
     MODES.update(CRED2.MODES)
 
-    KEYWORDS = {'FILTER01': ('UNKNOWN', 'IRCAMs filter state', '%-16s')}
+    KEYWORDS = {'FILTER01': ('UNKNOWN', 'IRCAMs filter state', '%-16s', 'FILTR')}
     KEYWORDS.update(EDTCamera.KEYWORDS)
     EDTTAKE_EMBEDMICROSECOND = True
+
+    REDIS_PUSH_ENABLED = True
+    REDIS_PREFIX = 'x_C' # LOWERCASE x to not get mixed with the SCExAO keys
 
     # Add modes 6-11 (0-5 offseted 32 pix)
     for i in range(6):
@@ -429,7 +429,7 @@ class Chuck(CRED2):
     def poll_camera_for_keywords(self):
         CRED2.poll_camera_for_keywords(self)
 
-        if HAS_REDIS:
+        if self.HAS_REDIS:
             try:
                 self._set_formatted_keyword('FILTER01',
                                             RDB.hget('X_IRCFLT', 'value'))

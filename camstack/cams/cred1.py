@@ -11,15 +11,6 @@ from camstack.core.utilities import CameraMode
 
 from scxkw.config import MAGIC_BOOL_STR
 
-try:
-    from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT, GEN2HOST
-    from scxkw.redisutil.typed_db import Redis
-    RDB = Redis(host=REDIS_DB_HOST, port=REDIS_DB_PORT)
-    HAS_REDIS = True
-except:
-    HAS_REDIS = False
-
-
 class ROMODES:
     single = 'globalresetsingle'
     cds = 'globalresetcds'
@@ -59,13 +50,13 @@ class CRED1(EDTCamera):
     }
 
     KEYWORDS = {
-        'DET-PRES': (0.0, 'Detector pressure (mbar)', '%20.8f'),
-        'FILTER01': ('UNKNOWN', 'IRCAMs filter state', '%-16s'),
+        'DET-PRES': (0.0, 'Detector pressure (mbar)', '%20.8f', 'PRESR'),
+        'FILTER01': ('UNKNOWN', 'IRCAMs filter state', '%-16s', 'FILTR'),
         # Warning: this means that the two following keywords
         # CANNOT be set anymore by gen2/auxfitsheader
         # Because the stream keywords WILL supersede.
         'RET-ANG1':
-        (0.0, 'Position angle of first retarder plate (deg)', '%20.2f'),
+        (0.0, 'Position angle of first retarder plate (deg)', '%20.2f', 'HWPAG'),
     }
     KEYWORDS.update(EDTCamera.KEYWORDS)
 
@@ -189,10 +180,10 @@ class CRED1(EDTCamera):
         self.poll_camera_for_keywords()  # Sets 'DET-TMP'
 
     def poll_camera_for_keywords(self):
-        if HAS_REDIS:
+        if self.HAS_REDIS:
             try:
                 self._set_formatted_keyword('FILTER01',
-                                            RDB.hget('X_IRCFLT', 'value'))
+                                            self.RDB.hget('X_IRCFLT', 'value'))
             except:
                 pass
         self.get_temperature()  # Sets DET-TMP
@@ -359,6 +350,9 @@ class Buffy(CRED1):
 
     KEYWORDS = {}
     KEYWORDS.update(CRED1.KEYWORDS)
+
+    REDIS_PUSH_ENABLED = True
+    REDIS_PREFIX = 'x_B' # LOWERCASE x to not get mixed with the SCExAO keys
 
     def _fill_keywords(self):
         CRED1._fill_keywords(self)
