@@ -189,7 +189,7 @@ class SpinnakerUSBCamera(BaseCamera):
 
 class BlackFly(SpinnakerUSBCamera):
 
-    INTERACTIVE_SHELL_METHODS = BaseCamera.INTERACTIVE_SHELL_METHODS
+    INTERACTIVE_SHELL_METHODS = SpinnakerUSBCamera.INTERACTIVE_SHELL_METHODS
 
     FULL = 'FULL'
     
