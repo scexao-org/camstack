@@ -15,6 +15,7 @@
 #define _GNU_SOURCE
 
 #include <sched.h>
+#include <signal.h>
 #include <unistd.h>
 #include <time.h>
 
@@ -22,12 +23,25 @@
 #include "ImageStruct.h"
 #include "ImageStreamIO.h"
 
+
+static int end_signaled = 0; // termination flag for funcs
+
+// Termination function for SIGINT callback
+static void end_me(int dummy)
+{
+  end_signaled = 1;
+}
+
+
 static void usage(char *progname, char *errmsg);
 
 static void set_rt_priority();
 
 int main(int argc, char **argv)
 {
+    // register interrupt signal to terminate the main loop
+    signal(SIGINT, end_me);
+
     int i;
     int unit = 0;
     int overrun, overruns = 0;
@@ -378,7 +392,7 @@ int main(int argc, char **argv)
     i = 0;
     int loopOK = 1;
 
-    while (loopOK == 1)
+    while (end_signaled == 0 && loopOK == 1)
     {
         /*
          * get the image and immediately start the next one (if not the last
@@ -419,7 +433,7 @@ int main(int argc, char **argv)
              * particularly if multiple buffers were prestarted
              */
             clock_gettime(CLOCK_REALTIME, &time1);
-            printf("timeout..... @ %s", ctime((time_t *)&time1));
+            printf("timeout..... @ %s\n", ctime((time_t *)&time1));
 
             pdv_timeout_restart(pdv_p, TRUE);
             last_timeouts = timeouts;
@@ -491,11 +505,11 @@ int main(int argc, char **argv)
     }
     pdv_close(pdv_p);
 
+    printf("\n------\nedttake.c: successful exit.\n");
     if (overruns || timeouts)
     {
         exit(2);
     }
-
     exit(0);
 }
 

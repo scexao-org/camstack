@@ -17,7 +17,7 @@
 static int end_signaled = 0; // termination flag for funcs
 
 // Termination function for SIGINT callback
-static void endme(int dummy)
+static void end_me(int dummy)
 {
   end_signaled = 1;
 }
@@ -32,7 +32,7 @@ static void params_parse_and_set(HDCAM cam, IMAGE params_img, BOOL flag);
 int main(int argc, char **argv)
 {   
     // register interrupt signal to terminate the main loop
-    signal(SIGINT, endme);
+    signal(SIGINT, end_me);
 
     int lcount;
     int unit = 0;
