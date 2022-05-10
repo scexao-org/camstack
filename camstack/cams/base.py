@@ -91,14 +91,15 @@ class BaseCamera:
         self.RDB, self.HAS_REDIS = redis_check_enabled()
 
         if isinstance(mode_id, tuple):  # Allow (width, height) fallback
+            width, height = mode_id
             self.current_mode_id = 'CUSTOM'
             self.MODES['CUSTOM'] = CameraMode(x0=0, x1=width - 1, y0=0,
                                               y1=height - 1)
         else:
             self.current_mode_id = mode_id
 
-        self.current_mode = self.MODES[mode_id]
-        self.width, self.height = self._fg_size_from_mode(mode_id)
+        self.current_mode = self.MODES[self.current_mode_id]
+        self.width, self.height = self._fg_size_from_mode(self.current_mode_id)
 
         self.dependent_processes = dependent_processes
         self.taker_cset_prio = taker_cset_prio

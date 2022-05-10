@@ -11,6 +11,17 @@ from pyMilk.interfacing.shm import SHM
 import numpy as np
 
 import PySpin
+'''
+#Test block for shell:
+import PySpin
+spinn_system = PySpin.System.GetInstance()
+cam_list = spinn_system.GetCameras()
+spinn_number = 0
+spinn_cam = cam_list[spinn_number]
+cam_list.Clear()
+spinn_cam.Init()
+spinn_cam.AcquisitionMode.SetValue(PySpin.AcquisitionMode_Continuous)
+'''
 
 
 class SpinnakerUSBCamera(BaseCamera):
@@ -45,16 +56,10 @@ class SpinnakerUSBCamera(BaseCamera):
         # 1/ Looking into SpinViewQt for what works for your camera
         # 2/ calling e.g. [l.GetName() for l in spinn_cam.PixelFormat.GetEntries()]
 
-        # Disable LED
-        self.spinn_cam.DeviceIndicatorMode.SetValue(0)
-        # Always max speed given exposure time
-        self.spinn_cam.AcquisitionFrameRateEnable.SetValue(False)
-        # Disable autoexp
-        self.spinn_cam.ExposureAuto.SetValue(0)
-        # Disable autogain
-        self.spinn_cam.GainAuto.SetValue(0)
-        # Disable gamma
-        self.spinn_cam.GammaEnable.SetValue(False)
+        # We're gonna have a divergence here between the first U3 generation cameras
+        # and the Blackfly S...
+
+        self._spinnaker_subtypes_constructor_finalizer()
 
     def init_framegrab_backend(self):
 
@@ -73,35 +78,20 @@ class SpinnakerUSBCamera(BaseCamera):
             self.spinn_cam.Init()
 
         # Continuous acquisition
-        self.spinn_cam.AcquisitionMode.SetValue(0)
+        self.spinn_cam.AcquisitionMode.SetValue(
+                PySpin.AcquisitionMode_Continuous)
 
     def prepare_camera_for_size(self, mode_id=None):
 
         BaseCamera.prepare_camera_for_size(self)
 
-        x0, x1 = self.current_mode.x0, self.current_mode.x1
-        y0, y1 = self.current_mode.y0, self.current_mode.y1
+        # Here too we gonna have a divergence here between the first U3 generation cameras
+        # and the Blackfly S...
+        # Blackfly is OK with cam.BinningHorizontal.SetValue
+        # U3s (Flea, Grasshopper) want "format7" stuff
 
-        # Reset offsets
-        self.spinn_cam.OffsetX.SetValue(0)
-        self.spinn_cam.OffsetY.SetValue(0)
-
-        # Bin
-        self.spinn_cam.BinningHorizontal.SetValue(self.current_mode.biny)
-        self.spinn_cam.BinningVertical.SetValue(self.current_mode.binx)
-
-        # h, w
-        self.spinn_cam.Width.SetValue(x1 - x0 + 1)
-        self.spinn_cam.Height.SetValue(y1 - y0 + 1)
-
-        # offsets
-        self.spinn_cam.OffsetX.SetValue(x0)
-        self.spinn_cam.OffsetY.SetValue(y0)
-
-        # Set ADC to 12 bit
-        self.spinn_cam.AdcBitDepth.SetValue(2)
-        # Set pixel format to Mono12p
-        self.spinn_cam.PixelFormat.SetValue(29)
+        # So we must subclass... again.
+        pass
 
     def prepare_camera_finalize(self, mode_id=None):
         # Only the stuff that is mode dependent
@@ -112,7 +102,7 @@ class SpinnakerUSBCamera(BaseCamera):
     def release(self):
         BaseCamera.release(self)
 
-        cam.DeInit()
+        self.spinn_cam.DeInit()
         del self.spinn_cam
         self.spinn_system.ReleaseInstance()
 
@@ -145,12 +135,18 @@ class SpinnakerUSBCamera(BaseCamera):
         self.get_temperature()
 
     def get_fps(self):
-        fps = self.spinn_cam.AcquisitionResultingFrameRate()
+        try:
+            fps = self.spinn_cam.AcquisitionResultingFrameRate()
+        except:
+            fps = self.spinn_cam.AcquisitionFrameRate()
         self.camera_shm.update_keyword('FRATE', fps)
         return fps
 
     def set_fps(self, fps: float):
-        self.spinn_cam.AcquisitionResultingFrameRate.SetValue(fps)
+        try:
+            self.spinn_cam.AcquisitionResultingFrameRate.SetValue(fps)
+        except:
+            self.spinn_cam.AcquisitionFrameRate.SetValue(fps)
         return self.get_fps()
 
     def get_tint(self):
@@ -177,7 +173,108 @@ class SpinnakerUSBCamera(BaseCamera):
         return temp
 
 
-class BlackFly(SpinnakerUSBCamera):
+class FLIR_U3_Camera(SpinnakerUSBCamera):
+    '''
+        Appropriate class for Grasshopper and Flea U3 cameras
+        e.g. Vampires pupil cam, FIRST pupil cam, Coro plane imager,
+
+        Coro spy cam: GS3-U3-23S6M 1920x1200
+        FIRST and Vampires pups: FL3-U3-13S2M 1328x1048
+
+        Why are they different? They're prev. generations and are
+        compatible with spinnaker but carried a lot of quirks of
+        how they worked with PyCapture.
+
+        # TODOTODOTODOTODO
+        12 bit mode, bin modes, crop modes proper
+    '''
+
+    INTERACTIVE_SHELL_METHODS = SpinnakerUSBCamera.INTERACTIVE_SHELL_METHODS
+    FULL_GS = 'FULL_GS'
+    FULL_FL = 'FULL_FL'
+
+    MODES = {
+            FULL_GS: CameraMode(x0=0, x1=1919, y0=0, y1=1199),
+            FULL_FL: CameraMode(x0=0, x1=1327, y0=0, y1=1047),
+    }
+
+    KEYWORDS = {}
+    KEYWORDS.update(SpinnakerUSBCamera.KEYWORDS)
+
+    def _spinnaker_subtypes_constructor_finalizer(self):
+        # Disable autoexp
+        self.spinn_cam.ExposureAuto.SetValue(PySpin.ExposureAuto_Off)
+        # Disable autogain
+        self.spinn_cam.GainAuto.SetValue(PySpin.GainAuto_Off)
+        # Set gamma to 1 - will only work if Gamma is enabled, so all good
+        try:
+            self.spinn_cam.Gamma.SetValue(1.0)
+        except PySpin.SpinnakerException:
+            pass
+        # BlackLevel 0. - May have to add some bias back
+        self.spinn_cam.BlackLevel.SetValue(0)
+
+        # Crank the gain to the max. Haven't figured out many things just yet.
+        self.spinn_cam.Gain.SetValue(self.spinn_cam.Gain.GetMax())
+
+    def _fill_keywords(self):
+
+        SpinnakerUSBCamera._fill_keywords(self)
+        self.camera_shm.update_keyword(
+                'CROPPED', self.current_mode_id
+                not in (self.FULL_GS, self.FULL_FL))
+        self.camera_shm.update_keyword('DETECTOR', 'FLIR GS3 or FL3')
+
+    def prepare_camera_for_size(self, mode_id=None):
+        SpinnakerUSBCamera.prepare_camera_for_size(self, mode_id)
+
+        if mode_id is None:
+            mode = self.current_mode
+        else:
+            mode = self.MODES[mode_id]
+
+        x0, x1 = mode.x0, mode.x1
+        y0, y1 = mode.y0, mode.y1
+
+        # Reset offsets
+        self.spinn_cam.OffsetX.SetValue(0)
+        self.spinn_cam.OffsetY.SetValue(0)
+
+        # TODO cropmodes??
+
+        # h, w
+        self.spinn_cam.Width.SetValue(x1 - x0 + 1)
+        self.spinn_cam.Height.SetValue(y1 - y0 + 1)
+
+        # offsets
+        self.spinn_cam.OffsetX.SetValue(x0)
+        self.spinn_cam.OffsetY.SetValue(y0)
+
+        # We're locked in 8 bit acquisition... no idea how to hit the format7 with the 12bit ADC
+
+        # Set fps max
+        self.spinn_cam.AcquisitionFrameRate.SetValue(
+                self.spinn_cam.AcquisitionFrameRate.GetMax())
+        # Expo max
+        self.spinn_cam.ExposureTime.SetValue(
+                self.spinn_cam.ExposureTime.GetMax())
+
+        # Lower fps, tint if necessary
+        if mode.tint is not None:
+            self.spinn_cam.ExposureTime.SetValue(mode.tint)
+
+        if mode.fps is not None:
+            self.spinn_cam.AcquisitionFrameRate.SetValue(mode.fps)
+
+    def prepare_camera_finalize(self, mode_id=None):
+        # Something that we feel is BlackFly specific but not Spinnaker generic
+        SpinnakerUSBCamera.prepare_camera_finalize(self, mode_id)
+
+
+class BlackFlyS(SpinnakerUSBCamera):
+    '''
+        Appropriate class for the Blackfly S camera (Hilo lab?)
+    '''
 
     INTERACTIVE_SHELL_METHODS = SpinnakerUSBCamera.INTERACTIVE_SHELL_METHODS
 
@@ -194,17 +291,18 @@ class BlackFly(SpinnakerUSBCamera):
     KEYWORDS = {}
     KEYWORDS.update(SpinnakerUSBCamera.KEYWORDS)
 
-    def __init__(self, name: str, stream_name: str, mode_id: Union[CameraMode,
-                                                                   Tuple[int,
-                                                                         int]],
-                 spinnaker_number: int, no_start: bool = False,
-                 taker_cset_prio: Union[str, int] = ('system', None),
-                 dependent_processes: List[Any] = []):
-
-        SpinnakerUSBCamera.__init__(self, name, stream_name, mode_id,
-                                    spinnaker_number, no_start=no_start,
-                                    taker_cset_prio=taker_cset_prio,
-                                    dependent_processes=dependent_processes)
+    def _spinnaker_subtypes_constructor_finalizer(self):
+        # Disable LED
+        self.spinn_cam.DeviceIndicatorMode.SetValue(
+                PySpin.DeviceIndicatorMode_Inactive)
+        # Always max speed given exposure time
+        self.spinn_cam.AcquisitionFrameRateEnable.SetValue(False)
+        # Disable autoexp
+        self.spinn_cam.ExposureAuto.SetValue(PySpin.ExposureAuto_Off)
+        # Disable autogain
+        self.spinn_cam.GainAuto.SetValue(PySpin.GainAuto_Off)
+        # Disable gamma
+        self.spinn_cam.GammaEnable.SetValue(False)
 
     def _fill_keywords(self):
 
@@ -216,6 +314,49 @@ class BlackFly(SpinnakerUSBCamera):
     def prepare_camera_for_size(self, mode_id=None):
         # Something that we feel is BlackFly specific but not Spinnaker generic
         SpinnakerUSBCamera.prepare_camera_for_size(self, mode_id)
+
+        if mode_id is None:
+            mode = self.current_mode
+        else:
+            mode = self.MODES[mode_id]
+
+        x0, x1 = mode.x0, mode.x1
+        y0, y1 = mode.y0, mode.y1
+
+        # Reset offsets
+        self.spinn_cam.OffsetX.SetValue(0)
+        self.spinn_cam.OffsetY.SetValue(0)
+
+        # Bin
+        self.spinn_cam.BinningHorizontal.SetValue(mode.biny)
+        self.spinn_cam.BinningVertical.SetValue(mode.binx)
+
+        # h, w
+        self.spinn_cam.Width.SetValue(x1 - x0 + 1)
+        self.spinn_cam.Height.SetValue(y1 - y0 + 1)
+
+        # offsets
+        self.spinn_cam.OffsetX.SetValue(x0)
+        self.spinn_cam.OffsetY.SetValue(y0)
+
+        # Set ADC to 12 bit
+        self.spinn_cam.AdcBitDepth.SetValue(PySpin.AdcBitDepth_Bit12)
+        # Set pixel format to Mono12p
+        self.spinn_cam.PixelFormat.SetValue(PySpin.PixelFormat_Mono12Packed)
+
+        # Set fps max
+        self.spinn_cam.AcquisitionFrameRate.SetValue(
+                self.spinn_cam.AcquisitionFrameRate.GetMax())
+        # Expo max
+        self.spinn_cam.ExposureTime.SetValue(
+                self.spinn_cam.ExposureTime.GetMax())
+
+        # Lower fps, tint if necessary
+        if mode.tint is not None:
+            self.spinn_cam.ExposureTime.SetValue(mode.tint)
+
+        if mode.fps is not None:
+            self.spinn_cam.AcquisitionFrameRate.SetValue(mode.fps)
 
     def prepare_camera_finalize(self, mode_id=None):
         # Something that we feel is BlackFly specific but not Spinnaker generic

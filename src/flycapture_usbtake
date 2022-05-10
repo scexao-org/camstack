@@ -7,36 +7,57 @@
 
     Options:
         -s <stream_name> SHM name
-        -u <unit>        Number of the camera for the Spinnaker API [default: 0]
+        -u <unit>        Number (index/serial) of the camera for the Spinnaker API [default: 0]
         -l <loops>       Number of images to take (0 for free run) [default: 0]
         -R               Attempt SHM reuse if possible
 '''
+'''
+    THIS FILE DEVELOPMENT IS ABANDONED AFTER REALIZED CAMERAS
+    WE HAVE CAN BE CONTROLLED WITH THE MOST RECENT SPINNAKER.
 
-import PySpin
+    THIS FILE IS A COPY OF THE SPINNAKER FILE
+    WITH PARTIAL CONVERSION TO FLYCAPTURE ALREADY DONE.
+'''
+
+import PyCapture2
 from pyMilk.interfacing.shm import SHM
 
 import time
 
 
-def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
-                           attempt_shm_reuse: bool = True):
+def main_acquire_flycapture(api_cam_num_or_serial: int, stream_name: str,
+                            n_loops: int, attempt_shm_reuse: bool = True):
 
-    spinn_system = None
-    spinn_cam = None
-    spinn_image = None
+    fly_bus = None
+    fly_cam = None
+    fly_image = None
 
     try:  # Except Keyboard Interrupt or any error
 
-        spinn_system = PySpin.System.GetInstance()
-        cam_list = spinn_system.GetCameras()
-        spinn_cam = cam_list[api_cam_num]
-        cam_list.Clear()
+        fly_bus = PyCapture2.BusManager()
+        num_cams = fly_bus.getNumOfCameras()
+        fly_serials = [
+                fly_bus.getCameraSerialNumberFromIndex(ii)
+                for ii in range(num_cams)
+        ]
 
-        spinn_cam.Init()
+        fly_cam = PyCapture2.Camera()
 
-        spinn_cam.BeginAcquisition()
-        spinn_image = spinn_cam.GetNextImage(1000)  # 1 sec timeout
-        print('OK')
+        if api_cam_num_or_serial < num_cams:  # It's an index number
+            uid = fly_bus.getCameraFromIndex(api_cam_num_or_serial)
+        else:  # It's a serial
+            uid = fly_bus.getCameraFromSerialNumber(api_cam_num_or_serial)
+
+        fly_cam.connect(uid)
+        fly_cam.setConfiguration(numBuffers=10,
+                                 grabMode=PyCapture2.GRAB_MODE.DROP_FRAMES,
+                                 grabTimeout=1000)
+
+        fly_cam.startCapture()
+
+        # Get a test image!
+        fly_image = fly_cam.retrieveBuffer()
+        '''
         # We need to convert - not native 8 or 16 ! 10 or 12 bit packed probs.
         # So we convert to Mono16.
         need_convert_16 = spinn_image.GetBitsPerPixel() not in [8, 16]
@@ -46,9 +67,10 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
                                              PySpin.HQ_LINEAR)
         else:
             conv_image = spinn_image
+        '''
 
-        data_arr = conv_image.GetNDArray()
-        spinn_image.Release()
+        shape_rows, shape_cols = fly_image.getRows(), fly_image.getCols()
+        data_arr = fly_image.getData().reshape(shape_rows, shape_cols)
 
         try:
             shm = SHM(stream_name)
@@ -72,9 +94,8 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
         mfrate_gain = 0.01
 
         while True:
-
-            spinn_image = spinn_cam.GetNextImage(1000)  # 1 sec timeout
-
+            fly_image = fly_cam.retrieveBuffer()
+            '''
             if spinn_image.IsIncomplete():
                 print('Image incomplete - status %d ...' %
                       spinn_image.GetImageStatus())
@@ -85,8 +106,11 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
                                                  PySpin.HQ_LINEAR)
             else:
                 conv_image = spinn_image
+            '''
 
-            data_arr = conv_image.GetNDArray()
+            data_arr = fly_image.getData().reshape(shape_rows, shape_cols)
+
+            fly_image = None
 
             time_2 = time.time()
             dt = time_2 - time_1
@@ -106,28 +130,13 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
     finally:
         # Graceful cleanup?
         # How much do we have to clean?
-        # Spinnaker seems **very** resilient to botched pkills, so not to worry too much
         try:
-            if spinn_image is not None:
-                spinn_image.Release()
-        except PySpin.SpinnakerException as ex:
-            print('Error A: %s' % ex)
-        try:
-            if spinn_cam is not None:
-                spinn_cam.EndAcquisition()
-        except PySpin.SpinnakerException as ex:
-            print('Error B: %s' % ex)
-        try:
-            if spinn_cam is not None:
-                spinn_cam.DeInit()
-                del spinn_cam
-        except PySpin.SpinnakerException as ex:
+            if fly_cam is not None and fly_cam.isConnected:
+                fly_cam.disconnect()
+                del fly_cam
+        except PyCapture2.Fc2error as ex:
             print('Error C: %s' % ex)
-        try:
-            if spinn_system is not None:
-                spinn_system.ReleaseInstance()
-        except PySpin.SpinnakerException as ex:
-            print('Error D: %s' % ex)
+        print('\nGraceful cleanup successful. Maybe.\n')
 
 
 if __name__ == "__main__":
@@ -137,7 +146,7 @@ if __name__ == "__main__":
 
     arg_cam_number = int(args["-u"])
     if args["-s"] is None:
-        arg_stream_name = f'spinncam_{arg_cam_number}'
+        arg_stream_name = f'flycam_{arg_cam_number}'
     else:
         arg_stream_name = args["-s"]
 
@@ -145,5 +154,5 @@ if __name__ == "__main__":
 
     arg_attempt_reuse = args["-R"]
 
-    main_acquire_spinnaker(arg_cam_number, arg_stream_name, arg_n_loops,
+    main_acquire_flyapture(arg_cam_number, arg_stream_name, arg_n_loops,
                            arg_attempt_reuse)

@@ -1,3 +1,11 @@
+'''
+    THIS FILE DEVELOPMENT IS ABANDONED AFTER REALIZED CAMERAS
+    WE HAVE CAN BE CONTROLLED WITH THE MOST RECENT SPINNAKER.
+
+    THIS FILE IS A COPY OF THE SPINNAKER FILE
+    WITH PARTIAL CONVERSION TO FLYCAPTURE ALREADY DONE.
+'''
+
 import os
 
 from typing import Union, Tuple, List, Any
@@ -9,10 +17,11 @@ from camstack.core.utilities import CameraMode
 from pyMilk.interfacing.shm import SHM
 import numpy as np
 
-import PySpin  # TODO
+import PyCapture2
+from PyCapture2 import PIXEL_FORMAT, PROPERTY_TYPE as PROPS
 
 
-class SpinnakerUSBCamera(BaseCamera):
+class FlyCaptureUSBCamera(BaseCamera):
 
     INTERACTIVE_SHELL_METHODS = [] + \
         BaseCamera.INTERACTIVE_SHELL_METHODS
@@ -22,21 +31,18 @@ class SpinnakerUSBCamera(BaseCamera):
     KEYWORDS = {}
     KEYWORDS.update(BaseCamera.KEYWORDS)
 
-    def __init__(
-            self,
-            name: str,
-            stream_name: str,
-            mode_id: Union[CameraMode, Tuple[int, int]],
-            spinnaker_number: int,  # TODO
-            no_start: bool = False,
-            taker_cset_prio: Union[str, int] = ('system', None),
-            dependent_processes: List[Any] = []):
+    def __init__(self, name: str, stream_name: str, mode_id: Union[CameraMode,
+                                                                   Tuple[int,
+                                                                         int]],
+                 flycap_number: int, no_start: bool = False,
+                 taker_cset_prio: Union[str, int] = ('system', None),
+                 dependent_processes: List[Any] = []):
 
         # Do basic stuff
-        self.spinn_number = spinnaker_number  # TODO
+        self.fly_number = flycap_number  # Serial is allowed
         # Initialized in init_framegrab_backend
-        self.spinn_system = None  # TODO
-        self.spinn_cam = None  # TODO
+        self.fly_bus = None
+        self.fly_cam = None
 
         BaseCamera.__init__(self, name, stream_name, mode_id,
                             no_start=no_start, taker_cset_prio=taker_cset_prio,
@@ -54,10 +60,13 @@ class SpinnakerUSBCamera(BaseCamera):
         self.spinn_cam.AcquisitionFrameRateEnable.SetValue(False)
         # Disable autoexp
         self.spinn_cam.ExposureAuto.SetValue(0)
-        # Disable autogain
-        self.spinn_cam.GainAuto.SetValue(0)
+        # Disable autogain, set gain to max
+        self.fly_cam.setProperty(type=PROPS.GAIN, absValue=30.0,
+                                 autoManualMode=False)
         # Disable gamma
-        self.spinn_cam.GammaEnable.SetValue(False)
+        self.fly_cam.setProperty(type=PROPS.GAMMA, absValue=1.0,
+                                 autoManualMode=False)
+        # TODO END TODO FINALIZERS
 
     def init_framegrab_backend(self):
         # TODO # TODO
@@ -65,18 +74,27 @@ class SpinnakerUSBCamera(BaseCamera):
             raise AssertionError(
                     'Cannot change camera config while camera is running')
 
-        if self.spinn_system is None:
-            self.spinn_system = PySpin.System.GetInstance()
+        if self.fly_bus is None:
+            self.fly_bus = PyCapture2.BusManager()
 
-        if self.spinn_cam is None:
-            cam_list = self.spinn_system.GetCameras()
-            self.spinn_cam = cam_list[self.spinn_number]
-            cam_list.Clear()
+        if self.fly_cam is None:
+            num_cams = fly_bus.getNumOfCameras()
+            fly_serials = [
+                    self.fly_bus.getCameraSerialNumberFromIndex(ii)
+                    for ii in range(num_cams)
+            ]
 
-            self.spinn_cam.Init()
+            if api_cam_num_or_serial < num_cams:  # It's an index number
+                uid = fly_bus.getCameraFromIndex(api_cam_num_or_serial)
+            else:  # It's a serial
+                uid = fly_bus.getCameraFromSerialNumber(api_cam_num_or_serial)
 
-        # Continuous acquisition
-        self.spinn_cam.AcquisitionMode.SetValue(0)
+            self.fly_cam = PyCapture2.Camera()
+            self.fly_cam.connect(uid)
+
+        self.fly_cam.setConfiguration(
+                numBuffers=10, grabMode=PyCapture2.GRAB_MODE.DROP_FRAMES,
+                grabTimeout=1000)
 
     def prepare_camera_for_size(self, mode_id=None):
         BaseCamera.prepare_camera_for_size(self)
@@ -84,7 +102,11 @@ class SpinnakerUSBCamera(BaseCamera):
         x0, x1 = self.current_mode.x0, self.current_mode.x1
         y0, y1 = self.current_mode.y0, self.current_mode.y1
 
-        # TODO # TODO
+        # Set ADC to 12 bit
+        self.spinn_cam.AdcBitDepth.SetValue(2)
+        # Set pixel format to Mono12p
+        self.spinn_cam.PixelFormat.SetValue(29)
+
         # Reset offsets
         self.spinn_cam.OffsetX.SetValue(0)
         self.spinn_cam.OffsetY.SetValue(0)
@@ -101,11 +123,6 @@ class SpinnakerUSBCamera(BaseCamera):
         self.spinn_cam.OffsetX.SetValue(x0)
         self.spinn_cam.OffsetY.SetValue(y0)
 
-        # Set ADC to 12 bit
-        self.spinn_cam.AdcBitDepth.SetValue(2)
-        # Set pixel format to Mono12p
-        self.spinn_cam.PixelFormat.SetValue(29)
-
     def prepare_camera_finalize(self, mode_id=None):
         # Only the stuff that is mode dependent
         # And/or should be called after each mode change.
@@ -115,22 +132,21 @@ class SpinnakerUSBCamera(BaseCamera):
     def release(self):
         BaseCamera.release(self)
 
-        cam.DeInit()
-        del self.spinn_cam
-        self.spinn_system.ReleaseInstance()
+        self.fly_cam.disconnect()
+        del self.fly_cam
 
     def _prepare_backend_cmdline(self, reuse_shm: bool = False):
 
         # Prepare the cmdline for starting up!
-        exec_path = os.environ['HOME'] + '/src/camstack/src/spinnaker_usbtake'
+        exec_path = os.environ['HOME'] + '/src/camstack/src/flycapture_usbtake'
         self.taker_tmux_command = (f'{exec_path} -s {self.STREAMNAME} '
-                                   f'-u {self.spinn_number} -l 0')
+                                   f'-u {self.fly_number} -l 0')
         if reuse_shm:
             self.taker_tmux_command += ' -R'  # Do not overwrite the SHM.
 
     def _ensure_backend_restarted(self):
-        # Plenty simple enough for spinnaker
-        time.sleep(1.0)
+        # Plenty simple enough for flycapture
+        time.sleep(3.0)
 
     def _fill_keywords(self):
 
@@ -140,7 +156,7 @@ class SpinnakerUSBCamera(BaseCamera):
         self.get_tint()
         self.get_gain()
 
-        self._set_formatted_keyword('DETECTOR', 'FLIR Spinnaker')
+        self._set_formatted_keyword('DETECTOR', 'FLIR Flycapture')
 
         self.poll_camera_for_keywords()
 
@@ -148,48 +164,55 @@ class SpinnakerUSBCamera(BaseCamera):
         self.get_temperature()
 
     def get_fps(self):
+        # TODO
         fps = self.spinn_cam.AcquisitionResultingFrameRate()
         self._set_formatted_keyword('FRATE', fps)
         return fps
 
     def set_fps(self, fps: float):
+        # TODO
         self.spinn_cam.AcquisitionResultingFrameRate.SetValue(fps)
         return self.get_fps()
 
     def get_tint(self):
+        # TODO
         tint = self.spinn_cam.ExposureTime()
         self._set_formatted_keyword('EXPTIME', tint)
         return tint
 
     def set_tint(self, tint: float):
+        # TODO
         self.spinn_cam.ExposureTime.SetValue(tint)
         return self.get_tint()
 
     def get_gain(self):
-        gain = self.spinn_cam.Gain()
+        # TODO
+        gain = self.fly_cam.getProperty(PROPS.GAIN).absValue
         self._set_formatted_keyword('DETGAIN', gain)
         return gain
 
     def set_gain(self, gain: float):
-        self.spinn_cam.Gain.SetValue(gain)
+        # TODO
+        self.fly_cam.setProperty(type=PROPS.GAIN, absValue=gain)
         return self.get_gain()
 
     def get_temperature(self):
-        temp = self.spinn_cam.DeviceTemperature()
+        # FIXME it says consistently 3.1916. I think it's lying.
+        temp = self.fly_cam.getProperty(PROPS.TEMPERATURE).absValue
         self._set_formatted_keyword('DET-TMP', temp + 273.15)
         return temp
 
 
-class BlackFly(SpinnakerUSBCamera):
+class Grasshopper3(FlyCaptureUSBCamera):
 
     INTERACTIVE_SHELL_METHODS = SpinnakerUSBCamera.INTERACTIVE_SHELL_METHODS
 
     FULL = 'FULL'
 
     MODES = {
-            FULL: CameraMode(x0=0, x1=2047, y0=0, y1=1535, tint=0.001),
+            FULL: CameraMode(x0=0, x1=1919, y0=0, y1=1199),
             # Centercrop half-size
-            1: CameraMode(x0=512, x1=1535, y0=384, y1=1151, tint=0.001),
+            1: CameraMode(x0=480, x1=1439, y0=300, y1=899),
             # Full bin 2
             #2: CameraMode(x0=)
     }
@@ -197,29 +220,17 @@ class BlackFly(SpinnakerUSBCamera):
     KEYWORDS = {}
     KEYWORDS.update(SpinnakerUSBCamera.KEYWORDS)
 
-    def __init__(self, name: str, stream_name: str, mode_id: Union[CameraMode,
-                                                                   Tuple[int,
-                                                                         int]],
-                 spinnaker_number: int, no_start: bool = False,
-                 taker_cset_prio: Union[str, int] = ('system', None),
-                 dependent_processes: List[Any] = []):
-
-        SpinnakerUSBCamera.__init__(self, name, stream_name, mode_id,
-                                    spinnaker_number, no_start=no_start,
-                                    taker_cset_prio=taker_cset_prio,
-                                    dependent_processes=dependent_processes)
-
     def _fill_keywords(self):
 
-        SpinnakerUSBCamera._fill_keywords(self)
+        FlyCaptureUSBCamera._fill_keywords(self)
         self._set_formatted_keyword('CROPPED',
                                     self.current_mode_id != self.FULL)
-        self._set_formatted_keyword('DETECTOR', 'BlackFly S')
+        self._set_formatted_keyword('DETECTOR', 'FLIR Grasshopper3')
 
     def prepare_camera_for_size(self, mode_id=None):
-        # Something that we feel is BlackFly specific but not Spinnaker generic
-        SpinnakerUSBCamera.prepare_camera_for_size(self, mode_id)
+        # Something that we feel is Grasshopper3 specific but not FlyCapture generic
+        FlyCaptureUSBCamera.prepare_camera_for_size(self, mode_id)
 
     def prepare_camera_finalize(self, mode_id=None):
-        # Something that we feel is BlackFly specific but not Spinnaker generic
-        SpinnakerUSBCamera.prepare_camera_finalize(self, mode_id)
+        # Something that we feel is Grasshopper3 specific but not FlyCapture generic
+        FlyCaptureUSBCamera.prepare_camera_finalize(self, mode_id)
