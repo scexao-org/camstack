@@ -93,11 +93,22 @@ class SpinnakerUSBCamera(BaseCamera):
         # So we must subclass... again.
         pass
 
-    def prepare_camera_finalize(self, mode_id=None):
+    def prepare_camera_finalize(self):
         # Only the stuff that is mode dependent
         # And/or should be called after each mode change.
-        # And is camera specific
-        pass
+        # And is camera-genre specific
+        
+        # Set fps max
+        self.set_fps(self.spinn_cam.AcquisitionFrameRate.GetMax())
+        # Expo max
+        self.set_tint(self.spinn_cam.ExposureTime.GetMax())
+
+        # Lower fps, tint if necessary
+        if mode.tint is not None:
+            self.set_tint(self.current_mode.tint)
+
+        if mode.fps is not None:
+            self.set_fps(self.current_mode.fps)
 
     def release(self):
         BaseCamera.release(self)
@@ -185,8 +196,8 @@ class FLIR_U3_Camera(SpinnakerUSBCamera):
         compatible with spinnaker but carried a lot of quirks of
         how they worked with PyCapture.
 
-        # TODOTODOTODOTODO
-        12 bit mode, bin modes, crop modes proper
+        #TODO This is not a very working class, use flycapturecam for the USB3 cameras
+        #TODO instead
     '''
 
     INTERACTIVE_SHELL_METHODS = SpinnakerUSBCamera.INTERACTIVE_SHELL_METHODS
@@ -240,8 +251,6 @@ class FLIR_U3_Camera(SpinnakerUSBCamera):
         self.spinn_cam.OffsetX.SetValue(0)
         self.spinn_cam.OffsetY.SetValue(0)
 
-        # TODO cropmodes??
-
         # h, w
         self.spinn_cam.Width.SetValue(x1 - x0 + 1)
         self.spinn_cam.Height.SetValue(y1 - y0 + 1)
@@ -250,24 +259,8 @@ class FLIR_U3_Camera(SpinnakerUSBCamera):
         self.spinn_cam.OffsetX.SetValue(x0)
         self.spinn_cam.OffsetY.SetValue(y0)
 
-        # We're locked in 8 bit acquisition... no idea how to hit the format7 with the 12bit ADC
-
-        # Set fps max
-        self.spinn_cam.AcquisitionFrameRate.SetValue(
-                self.spinn_cam.AcquisitionFrameRate.GetMax())
-        # Expo max
-        self.spinn_cam.ExposureTime.SetValue(
-                self.spinn_cam.ExposureTime.GetMax())
-
-        # Lower fps, tint if necessary
-        if mode.tint is not None:
-            self.spinn_cam.ExposureTime.SetValue(mode.tint)
-
-        if mode.fps is not None:
-            self.spinn_cam.AcquisitionFrameRate.SetValue(mode.fps)
-
     def prepare_camera_finalize(self, mode_id=None):
-        # Something that we feel is BlackFly specific but not Spinnaker generic
+        # Something that we feel is GS3/FL3 specific but not Spinnaker generic
         SpinnakerUSBCamera.prepare_camera_finalize(self, mode_id)
 
 
@@ -343,20 +336,6 @@ class BlackFlyS(SpinnakerUSBCamera):
         self.spinn_cam.AdcBitDepth.SetValue(PySpin.AdcBitDepth_Bit12)
         # Set pixel format to Mono12p
         self.spinn_cam.PixelFormat.SetValue(PySpin.PixelFormat_Mono12Packed)
-
-        # Set fps max
-        self.spinn_cam.AcquisitionFrameRate.SetValue(
-                self.spinn_cam.AcquisitionFrameRate.GetMax())
-        # Expo max
-        self.spinn_cam.ExposureTime.SetValue(
-                self.spinn_cam.ExposureTime.GetMax())
-
-        # Lower fps, tint if necessary
-        if mode.tint is not None:
-            self.spinn_cam.ExposureTime.SetValue(mode.tint)
-
-        if mode.fps is not None:
-            self.spinn_cam.AcquisitionFrameRate.SetValue(mode.fps)
 
     def prepare_camera_finalize(self, mode_id=None):
         # Something that we feel is BlackFly specific but not Spinnaker generic

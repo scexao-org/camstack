@@ -17,12 +17,32 @@
 
     THIS FILE IS A COPY OF THE SPINNAKER FILE
     WITH PARTIAL CONVERSION TO FLYCAPTURE ALREADY DONE.
+
+    NOTE: SERIALS
+    Vampires pupil Flea3:         13380425
+    FIRST pupil Flea3:            14317519
+    Coro spy camera Grasshopper3: 17266134
 '''
 
-import PyCapture2
+import PyCapture2 as PC2
+import numpy as np
 from pyMilk.interfacing.shm import SHM
 
 import time
+
+
+def nparray_from_flyimage(fly_image):
+    shape_rows, shape_cols = fly_image.getRows(), fly_image.getCols()
+    if fly_image.getPixelFormat() == PC2.PIXEL_FORMAT.MONO12:
+        fly_image = fly_image.convert(PC2.PIXEL_FORMAT.MONO16)
+
+    data_raw_arr = fly_image.getData()
+
+    # Cast the array buffer
+    if fly_image.getPixelFormat() == PC2.PIXEL_FORMAT.MONO16:
+        data_raw_arr.dtype = np.uint16
+
+    return data_raw_arr.reshape(shape_rows, shape_cols)
 
 
 def main_acquire_flycapture(api_cam_num_or_serial: int, stream_name: str,
@@ -34,14 +54,14 @@ def main_acquire_flycapture(api_cam_num_or_serial: int, stream_name: str,
 
     try:  # Except Keyboard Interrupt or any error
 
-        fly_bus = PyCapture2.BusManager()
+        fly_bus = PC2.BusManager()
         num_cams = fly_bus.getNumOfCameras()
         fly_serials = [
                 fly_bus.getCameraSerialNumberFromIndex(ii)
                 for ii in range(num_cams)
         ]
 
-        fly_cam = PyCapture2.Camera()
+        fly_cam = PC2.Camera()
 
         if api_cam_num_or_serial < num_cams:  # It's an index number
             uid = fly_bus.getCameraFromIndex(api_cam_num_or_serial)
@@ -50,27 +70,15 @@ def main_acquire_flycapture(api_cam_num_or_serial: int, stream_name: str,
 
         fly_cam.connect(uid)
         fly_cam.setConfiguration(numBuffers=10,
-                                 grabMode=PyCapture2.GRAB_MODE.DROP_FRAMES,
+                                 grabMode=PC2.GRAB_MODE.DROP_FRAMES,
                                  grabTimeout=1000)
 
         fly_cam.startCapture()
 
         # Get a test image!
         fly_image = fly_cam.retrieveBuffer()
-        '''
-        # We need to convert - not native 8 or 16 ! 10 or 12 bit packed probs.
-        # So we convert to Mono16.
-        need_convert_16 = spinn_image.GetBitsPerPixel() not in [8, 16]
-
-        if need_convert_16:
-            conv_image = spinn_image.Convert(PySpin.PixelFormat_Mono16,
-                                             PySpin.HQ_LINEAR)
-        else:
-            conv_image = spinn_image
-        '''
-
-        shape_rows, shape_cols = fly_image.getRows(), fly_image.getCols()
-        data_arr = fly_image.getData().reshape(shape_rows, shape_cols)
+        
+        data_arr = nparray_from_flyimage(fly_image)
 
         try:
             shm = SHM(stream_name)
@@ -95,20 +103,8 @@ def main_acquire_flycapture(api_cam_num_or_serial: int, stream_name: str,
 
         while True:
             fly_image = fly_cam.retrieveBuffer()
-            '''
-            if spinn_image.IsIncomplete():
-                print('Image incomplete - status %d ...' %
-                      spinn_image.GetImageStatus())
-                continue
 
-            if need_convert_16:
-                conv_image = spinn_image.Convert(PySpin.PixelFormat_Mono16,
-                                                 PySpin.HQ_LINEAR)
-            else:
-                conv_image = spinn_image
-            '''
-
-            data_arr = fly_image.getData().reshape(shape_rows, shape_cols)
+            data_arr = nparray_from_flyimage(fly_image)
 
             fly_image = None
 
@@ -134,7 +130,7 @@ def main_acquire_flycapture(api_cam_num_or_serial: int, stream_name: str,
             if fly_cam is not None and fly_cam.isConnected:
                 fly_cam.disconnect()
                 del fly_cam
-        except PyCapture2.Fc2error as ex:
+        except PC2.Fc2error as ex:
             print('Error C: %s' % ex)
         print('\nGraceful cleanup successful. Maybe.\n')
 
@@ -154,5 +150,5 @@ if __name__ == "__main__":
 
     arg_attempt_reuse = args["-R"]
 
-    main_acquire_flyapture(arg_cam_number, arg_stream_name, arg_n_loops,
+    main_acquire_flycapture(arg_cam_number, arg_stream_name, arg_n_loops,
                            arg_attempt_reuse)
