@@ -74,7 +74,8 @@ def pretty_print_prop(cam: PC2.Camera, property_type: PC2.PROPERTY_TYPE):
 
 class FlyCaptureUSBCamera(BaseCamera):
 
-    INTERACTIVE_SHELL_METHODS = [] + \
+    INTERACTIVE_SHELL_METHODS = ['get_fps', 'set_fps', 'get_tint',
+    'set_tint', 'get_gain', 'set_gain', 'get_temperature'] + \
         BaseCamera.INTERACTIVE_SHELL_METHODS
 
     FULL_GS = 'FULL_GS'

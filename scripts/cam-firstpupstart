@@ -3,7 +3,7 @@
 tnew="tmux new-session -d -s"
 tsend="tmux send-keys -t"
 
-tname="fircam_ctrl"
+tname="pupcam_ctrl"
 
 # Create tmuxes and issue kills
 $tnew $tname
@@ -23,6 +23,6 @@ echo "Remember check if 'cset set' is enabled"
 echo "If not sets, run:"
 echo "    sudo cset shield -c 7"
 
-$tsend $tname "python -im camstack.cam_mains.first_orcam" Enter
+$tsend $tname "python -im camstack.cam_mains.first_pupil" Enter
 
 echo "fircamstart completed (but actually not yet, just wait a bit)."
