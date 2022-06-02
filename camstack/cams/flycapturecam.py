@@ -134,7 +134,7 @@ class FlyCaptureUSBCamera(BaseCamera):
 
         self.fly_cam.setConfiguration(numBuffers=10,
                                       grabMode=PC2.GRAB_MODE.DROP_FRAMES,
-                                      grabTimeout=1000)
+                                      grabTimeout=1100)
 
         self.fly_cam.setProperty(type=PROPS.BRIGHTNESS, autoManualMode=False,
                                  onOff=True, absValue=0.0)
@@ -185,7 +185,6 @@ class FlyCaptureUSBCamera(BaseCamera):
         self.fly_cam.setFormat7ConfigurationPacket(
                 fmt7_pkt_inf.recommendedBytesPerPacket, fmt7_set)
 
-
         #TODO binning?
 
     def prepare_camera_finalize(self):
@@ -209,7 +208,7 @@ class FlyCaptureUSBCamera(BaseCamera):
 
         # Lower fps, tint if necessary
         if self.current_mode.tint is not None:
-            self.set_fps(1./self.current_mode.fps)
+            self.set_fps(1. / self.current_mode.fps)
             self.set_tint(self.current_mode.tint)
 
         if self.current_mode.fps is not None:
@@ -250,13 +249,11 @@ class FlyCaptureUSBCamera(BaseCamera):
         self.get_temperature()
 
     def get_fps(self):
-        # TODO
         fps = self.fly_cam.getProperty(PROPS.FRAME_RATE).absValue
         self._set_formatted_keyword('FRATE', fps)
         return fps
 
     def set_fps(self, fps: float):
-        # TODO
         self.fly_cam.setProperty(type=PROPS.FRAME_RATE, absValue=fps)
         return self.get_fps()
 
@@ -306,7 +303,7 @@ class Grasshopper3(FlyCaptureUSBCamera):
         FlyCaptureUSBCamera._fill_keywords(self)
         self._set_formatted_keyword('CROPPED',
                                     self.current_mode_id != self.FULL)
-        self._set_formatted_keyword('DETECTOR', 'FLIR Grasshopper3')
+        self._set_formatted_keyword('DETECTOR', 'FLIR GS3')
 
 
 class Flea3(FlyCaptureUSBCamera):

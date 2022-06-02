@@ -62,16 +62,19 @@ For dumb cameras (acquisition channel but no control channel), the FG acquisitio
 ### Recap
 
 
-| Camera | What      | Class      | Medium               | Bash entry          | Python entry     | Computer | Stream   | Raw stream   |
-| ------ | --------- | ---------- | -------------------- | ------------------- | ---------------- | -------- | -------- | ------------ |
-| Buffy  | CRED1     | Buffy      | Camlink              | `cam-buffystart`    | `buffycam.py`    | scexao5  | `kcam`   | `kcam_raw`   |
-| Chuck  | CRED2     | Chuck      | Camlink              | `cam-chuckstart`    | `chuckcam.py`    | scexao5  | `ircam0` | `ircam0_raw` |
-| GLINT  | CRED2     | GLINT      | Camlink              | `cam-glintstart`    | `glintcam.py`    | scexao5  | `glint`  |              |
-| Rajni  | CRED2     | Rajni      | Camlink              | `cam-rajnistart`    | `rajnicam.py`    | scexao5  | `rajni`  |              |
-| Reno   | Ocam2K    | OCAM2K     | Camlink              | `cam-ocamstart`     | `renocam.py`     | scexao5  | `ocam2d` | `ocam2krc`   |
-| Alala  | OrcaQuest | AlalaOrcam | CoaxPress (x)or USB3 | `cam-alalacamstart` | `first_orcam.py` | alala    | `orcam`  |              |
-| FIRST  | OrcaQuest | FIRSTOrcam | CoaxPress (x)or USB3 | `cam-fircamstart`   | `alala_orcam.py` | first    | `orcam`  |              |
-
+| Camera | What         | Class        | Medium               | Bash entry          | Python entry     | Computer | Stream   | Raw stream   |
+| ------ | ------------ | ------------ | -------------------- | ------------------- | ---------------- | -------- | -------- | ------------ |
+| Buffy  | CRED1        | Buffy        | Camlink              | `cam-buffystart`    | `buffycam.py`    | scexao5  | `kcam`   | `kcam_raw`   |
+| Chuck  | CRED2        | Chuck        | Camlink              | `cam-chuckstart`    | `chuckcam.py`    | scexao5  | `ircam0` | `ircam0_raw` |
+| GLINT  | CRED2        | GLINT        | Camlink              | `cam-glintstart`    | `glintcam.py`    | scexao5  | `glint`  |              |
+| Rajni  | CRED2        | Rajni        | Camlink              | `cam-rajnistart`    | `rajnicam.py`    | scexao5  | `rajni`  |              |
+| Reno   | Ocam2K       | OCAM2K       | Camlink              | `cam-ocamstart`     | `renocam.py`     | scexao5  | `ocam2d` | `ocam2krc`   |
+| Alala  | OrcaQuest    | AlalaOrcam   | CoaxPress (x)or USB3 | `cam-alalacamstart` | `first_orcam.py` | alala    | `orcam`  |              |
+| FIRST  | OrcaQuest    | FIRSTOrcam   | CoaxPress (x)or USB3 | `cam-fircamstart`   | `alala_orcam.py` | first    | `orcam`  |              |
+| FLIR   | BlackFlyS    | BlackFlyS    | USB3                 | ` `                 | ` `              |          |          |              |
+| FLIR   | GS3-U3-23S6M | Grasshopper3 | USB3                 | ` `                 | ` `              | scexao5  |          |              |
+| FLIR   | FL3-U3-13S2M | Flea3        | USB3                 | ` `                 | ` `              | vampires |          |              |
+| FLIR   | FL3-U3-13S2M | Flea3        | USB3                 | ` `                 | ` `              | FIRST    |          |              |
 
 ### Class tree:
 
@@ -92,4 +95,10 @@ For dumb cameras (acquisition channel but no control channel), the FG acquisitio
       - FIRSTOrcam
       - AlalaOrcam
   - SpinnakerUSBCamera
-    - BlackFly
+    - BlackFlyS
+    - FLIR_U3_Camera (broken, use FlyCaptureUSBCamera::(Grasshopper3|Flea3) instead)
+  - FlyCaptureUSBCamera
+    - Grasshopper3
+    - Flea3
+      - VampiresPupilFlea
+      - FirstPupilFlea

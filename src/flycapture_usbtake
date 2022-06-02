@@ -71,13 +71,13 @@ def main_acquire_flycapture(api_cam_num_or_serial: int, stream_name: str,
         fly_cam.connect(uid)
         fly_cam.setConfiguration(numBuffers=10,
                                  grabMode=PC2.GRAB_MODE.DROP_FRAMES,
-                                 grabTimeout=1000)
+                                 grabTimeout=1100)
 
         fly_cam.startCapture()
 
         # Get a test image!
         fly_image = fly_cam.retrieveBuffer()
-        
+
         data_arr = nparray_from_flyimage(fly_image)
 
         try:
@@ -151,4 +151,4 @@ if __name__ == "__main__":
     arg_attempt_reuse = args["-R"]
 
     main_acquire_flycapture(arg_cam_number, arg_stream_name, arg_n_loops,
-                           arg_attempt_reuse)
+                            arg_attempt_reuse)
