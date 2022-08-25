@@ -97,7 +97,7 @@ class SpinnakerUSBCamera(BaseCamera):
         # Only the stuff that is mode dependent
         # And/or should be called after each mode change.
         # And is camera-genre specific
-        
+
         # Set fps max
         self.set_fps(self.spinn_cam.AcquisitionFrameRate.GetMax())
         # Expo max
