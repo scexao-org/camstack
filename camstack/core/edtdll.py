@@ -6,8 +6,9 @@
 # Former EDTIf code (python implementation of CRED2) moved to various files: edtcamera.py, cred2.py.
 #
 
-from ctypes import (CDLL, POINTER, c_char, c_int, c_int64, c_uint, c_void_p, c_char_p, c_short, c_uint16, c_ulong, 
-                    create_string_buffer, byref)
+from ctypes import (CDLL, POINTER, c_char, c_int, c_int64, c_uint, c_void_p,
+                    c_char_p, c_short, c_uint16, c_ulong, create_string_buffer,
+                    byref)
 
 try:
     EdtDLL = CDLL("/opt/EDTpdv/libpdv.so")
@@ -41,7 +42,7 @@ def initEdtDLL():
 
     EdtDLL.pdv_set_width.argtype = [c_void_p, c_int64]
     EdtDLL.pdv_set_width.restype = c_int
-    
+
     EdtDLL.pdv_set_height.argtype = [c_void_p, c_int64]
     EdtDLL.pdv_set_height.restype = c_int
 
@@ -61,6 +62,10 @@ def initEdtDLL():
 
     EdtDLL.pdv_serial_command.argtypes = [c_void_p, c_char_p]
     EdtDLL.pdv_serial_command.restype = c_int
+
+    # pdv_get_waitchar
+    EdtDLL.pdv_get_waitchar.restype = c_int
+    EdtDLL.pdv_get_waitchar.argtype = [c_void_p, c_char_p]
 
     EdtDLL.pdv_serial_read.argtypes = [c_void_p, c_char_p, c_int]
     EdtDLL.pdv_serial_read.restype = c_int
@@ -95,15 +100,14 @@ def initEdtDLL():
     p = CParser(['/opt/EDTpdv/libpdv.h'])
     p.process_all()
     functionSignatures = p.defs['functions']
-    for func_name in functionSignatures: 
-        sign = functionSignatures[func_name] 
-        print(f'# {func_name}') 
-        print(f'EdtDLL.{func_name}.restype = {sign[0]}') 
-        largs = str([s[1] for s in sign[1]]) 
-        print(f'EdtDLL.{func_name}.argtype = {largs}') 
+    for func_name in functionSignatures:
+        sign = functionSignatures[func_name]
+        print(f'# {func_name}')
+        print(f'EdtDLL.{func_name}.restype = {sign[0]}')
+        largs = str([s[1] for s in sign[1]])
+        print(f'EdtDLL.{func_name}.argtype = {largs}')
         print('')
     '''
-
     '''
     # ALL OF THE SUBSEQUENT IS A BIT BROKEN - POSSIBLY BECAUSE
     # libpdv.so is a C++ DLL and CDLL doesn't support it
@@ -819,14 +823,7 @@ def initEdtDLL():
     # pdv_set_waitchar
     EdtDLL.pdv_set_waitchar.restype = c_int
     EdtDLL.pdv_set_waitchar.argtype = [c_void_p, c_int, c_char_p]
-
-    # pdv_get_waitchar
-    EdtDLL.pdv_get_waitchar.restype = c_int
-    EdtDLL.pdv_get_waitchar.argtype = [c_void_p, c_char_p]
     '''
-
-
-
 
 
 initEdtDLL()  # Called once and for all upon module import

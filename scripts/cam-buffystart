@@ -24,4 +24,3 @@ echo ""
 $tsend $tname "python -im camstack.cam_mains.buffycam" Enter
 
 echo "startBuffy completed."
-

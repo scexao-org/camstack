@@ -14,6 +14,7 @@ class EdtInterfaceSerial:
         - Implementation of serial-over-cameralink for EDTs
         - Set the FG config file parameters dynamically (TODO)
     """
+
     def __init__(self, unit, channel=0, devName=b'pdv'):
         self.unit, self.channel = unit, channel
         self.pdvObj = EdtDLL.pdv_open_channel(b'pdv', unit, channel)
@@ -21,7 +22,7 @@ class EdtInterfaceSerial:
         #self.baud_rate = EdtDLL.pdv_set_baud(self.pdvObj, 115200)
 
         self.camName = f'pdv_{unit}_{channel}'
-        
+
         self.initialize()
 
     def initialize(self):
@@ -91,11 +92,10 @@ class EdtInterfaceSerial:
                             return recRes
                     except:
                         continue
-        
 
         if recRes is None:
             raise Exception("Error in sendCommand")
-        return recRes # Which is an empty string at this point
+        return recRes  # Which is an empty string at this point
 
     def get_image_size(self):
         """

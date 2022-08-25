@@ -1,21 +1,17 @@
 from typing import Tuple, List
-from camstack.core import tmux
+
+import os
 import time
 import subprocess
 
+from camstack.core import tmux
+
 
 class CameraMode:
-    def __init__(self,
-                 *,
-                 x0: int = None,
-                 x1: int = None,
-                 y0: int = None,
-                 y1: int = None,
-                 fps: float = None,
-                 tint: float = None,
-                 binx: int = 1,
-                 biny: int = 1,
-                 fgsize: Tuple[int, int] = None):
+
+    def __init__(self, *, x0: int = None, x1: int = None, y0: int = None,
+                 y1: int = None, fps: float = None, tint: float = None,
+                 binx: int = 1, biny: int = 1, fgsize: Tuple[int, int] = None):
 
         self.x0 = x0  # First COLUMN
         self.x1 = x1  # Last COLUMN (inclusive)
@@ -47,16 +43,13 @@ class DependentProcess:
     '''
         Dependent processes are stuff that the camera server should take care of killing before changing the size
         and restarting after changing the size.
-        
+
         They're expected to live in a tmux (local or remote)
         This typically will include ocamdecode, and the TCP transfer.
     '''
-    def __init__(self,
-                 tmux_name: str,
-                 cli_cmd: str,
-                 cli_args: List[str],
-                 cset: str = 'system',
-                 rtprio: int = None,
+
+    def __init__(self, tmux_name: str, cli_cmd: str, cli_args: List[str],
+                 cset: str = 'system', rtprio: int = None,
                  kill_upon_create: bool = True):
 
         self.enabled = True  # Is this registered to run ? #TODO UNUSED
@@ -98,15 +91,14 @@ class DependentProcess:
                 pid = pids.pop()
                 #print('PID: ', pid)
                 ret = subprocess.run([
-                    'milk-makecsetandrt',
-                    str(pid), self.cset,
-                    str(self.rtprio)
-                ],
-                                     stdout=subprocess.DEVNULL)
-                children = subprocess.run(
-                    ['pgrep', '-P', str(pid)],
-                    stdout=subprocess.PIPE).stdout.decode(
-                        'utf8').strip().split('\n')
+                        'milk-makecsetandrt',
+                        str(pid), self.cset,
+                        str(self.rtprio)
+                ], stdout=subprocess.DEVNULL)
+                children = subprocess.run([
+                        'pgrep', '-P', str(pid)
+                ], stdout=subprocess.PIPE).stdout.decode('utf8').strip().split(
+                        '\n')
                 if children[0] != '':
                     pids += [int(c) for c in children]
                 #print('PIDs: ', pids)
@@ -123,23 +115,15 @@ class DependentProcess:
 
 
 class RemoteDependentProcess(DependentProcess):
-    def __init__(self,
-                 tmux_name,
-                 cli_cmd,
-                 cli_args,
-                 remote_host,
-                 cset: str = None,
-                 rtprio: int = None,
+
+    def __init__(self, tmux_name, cli_cmd, cli_args, remote_host,
+                 cset: str = None, rtprio: int = None,
                  kill_upon_create: bool = True):
 
         self.remote_host = remote_host
 
-        DependentProcess.__init__(self,
-                                  tmux_name,
-                                  cli_cmd,
-                                  cli_args,
-                                  cset=cset,
-                                  rtprio=rtprio,
+        DependentProcess.__init__(self, tmux_name, cli_cmd, cli_args,
+                                  cset=cset, rtprio=rtprio,
                                   kill_upon_create=kill_upon_create)
 
     def initialize_tmux(self, kill_upon_create):
@@ -153,7 +137,8 @@ class RemoteDependentProcess(DependentProcess):
         try:
             tmux.send_keys(self.tmux_pane, self.cli_cmd % self.cli_args)
         except subprocess.CalledProcessError as err:
-            print(f"Remote {self.tmux_name} on {self.remote_host} tmux may be dead - attempting re-initialize")
+            print(f"Remote {self.tmux_name} on {self.remote_host} tmux may be dead - attempting re-initialize"
+                  )
             self.initialize_tmux(False)
             tmux.send_keys(self.tmux_pane, self.cli_cmd % self.cli_args)
 
@@ -163,8 +148,19 @@ class RemoteDependentProcess(DependentProcess):
 
 def shellify_methods(instance_of_camera, top_level_globals):
     '''
-        
+
     '''
     for method_name in instance_of_camera.INTERACTIVE_SHELL_METHODS:
         top_level_globals[method_name] = getattr(instance_of_camera,
                                                  method_name)
+
+
+def enforce_whichcomp(comp: str):
+    '''
+        For scripts: enforce we're running on the right computer using the WHICHCOMP variable
+    '''
+    this_comp = os.environ.get('WHICHCOMP', '')
+    if this_comp != comp:
+        raise SystemError(
+                f"WHICHCOMP variable {this_comp} doesn't match {comp}.\nYou need to be on the right computer to run this script."
+        )
