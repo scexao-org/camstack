@@ -21,9 +21,11 @@ class ROMODES:
 class CRED1(EDTCamera):
 
     INTERACTIVE_SHELL_METHODS = [
-        'set_synchro', 'set_readout_mode', 'get_readout_mode', 'set_gain', 'get_gain',
+        'set_synchro', 'set_readout_mode',
+        'get_readout_mode', 'set_gain', 'get_gain',
         'set_NDR', 'get_NDR', 'set_fps',
-        'get_fps', 'set_tint', 'get_tint', 'get_temperature', 'FULL'] + \
+        'get_fps', 'set_tint', 'get_tint',
+        'get_temperature', 'FULL'] + \
         EDTCamera.INTERACTIVE_SHELL_METHODS
 
     FULL = 'full'

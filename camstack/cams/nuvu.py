@@ -1,21 +1,17 @@
 '''
     KALAO NuVu Camera driver
 '''
-import os, sys
+import os
 import time
 import logging
 from enum import Enum
 from typing import Union
 
-camstack_home = '/home/kalao/kalao-camstack'
-
-sys.path.insert(0, "/home/kalao/kalao-cacao/src/pyMilk")
-#sys.path.insert(0, "/home/kalao/kalaco-camstack")
-sys.path.insert(0, camstack_home)
-
 #from camstack.core.edtinterface import EdtInterfaceSerial
 from camstack.core.utilities import CameraMode
-from camstack.cams.edt_base import EDTCamera
+from camstack.cams.edtcam import EDTCamera
+
+CAMSTACK_HOME = os.environ['HOME'] + '/src/camstack'  # AMEND AS NEEDED
 
 
 class NUVU(EDTCamera):
@@ -47,16 +43,27 @@ class NUVU(EDTCamera):
     }
 
     KEYWORDS = {
-            'EMGAIN': (1, 'EM Gain'),
-            'T_CCD': (0.0, 'Detector temperature (C)'),
-            'T_CNTRLR': (0.0, 'Controller temperature (C)'),
-            'T_PSU': (0.0, 'Power supply unit temperature (C)'),
-            'T_FPGA': (0.0, 'FPGA supply temperature (C)'),
-            'T_HSINK': (0.0, 'Heatsink temperature (C)'),
+            # vdeo note: Changed to 4 argument syntax now.
+            # key: Eventual FITS file keyword (8 char)
+            # Tuple:
+            #   (
+            # init value,
+            # FITS file comment,
+            # FITS format string,
+            # internal alternative key (5 char)
+            #    )
+            'EMGAIN': (1, 'EM Gain', '%16d', 'GAIN'),
+            'T_CCD': (0.0, 'Detector temperature (C)', '%20.2f', 'T_CCD'),
+            'T_CNTRLR': (0.0, 'Controller temperature (C)', '%20.2f', 'TCNTR'),
+            'T_PSU': (0.0, 'Power supply unit temperature (C)', '%20.2f',
+                      'T_PSU'),
+            'T_FPGA': (0.0, 'FPGA supply temperature (C)', '%20.2f', 'TFPGA'),
+            'T_HSINK': (0.0, 'Heatsink temperature (C)', '%20.2f', 'TSINK'),
     }
     KEYWORDS.update(EDTCamera.KEYWORDS)
 
     EDTTAKE_UNSIGNED = True
+    EDTTAKE_EMBEDMICROSECOND = True
 
     class _ShutterExternal(Enum):
         NO = 0
@@ -81,7 +88,7 @@ class NUVU(EDTCamera):
     cfgdict = {}
     edt_iface = None
     RO_MODES = []
-    logging.basicConfig(filename=camstack_home + os.sep + 'kalao_nuvu.log',
+    logging.basicConfig(filename=CAMSTACK_HOME + os.sep + 'kalao_nuvu.log',
                         format='kalao_nuvu %(asctime)s %(message)s',
                         level=logging.DEBUG)
 
@@ -92,8 +99,7 @@ class NUVU(EDTCamera):
                                                 None), dependent_processes=[]):
 
         debug = 1
-        #basefile = os.environ['HOME'] + '/src/camstack/config/nuvu_kalao_16bit.cfg'
-        basefile = camstack_home + '/config/nuvu_kalao_16bit.cfg'
+        basefile = CAMSTACK_HOME + '/config/nuvu_kalao_16bit.cfg'
 
         # Call EDT camera init
         # This should pre-kill dependent sessions
