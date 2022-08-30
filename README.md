@@ -37,7 +37,7 @@ Instantiating the Camera class eventually results in the camera freerunning in a
 
 The camera launcher `camstack.cam_mains.<cam>` script, which runs in the `<cam>_ctrl` tmux session, eventually drops to an interactive python prompt. **This is where you control the camera**. A clean quit is performed by issuing the `close()` command.
 
-### Class hierarchy and init sequence:
+### Init sequence:
 
 This is the general outline of what happens during the Camera Class constructor.
 
@@ -51,9 +51,11 @@ This is the general outline of what happens during the Camera Class constructor.
 - `grab_shm_fill_keywords()`: [CAMERA SPECIFIC] get a python handle to the freshly created SHM (by the framegrabbing process), and proceed to populate FITS keywords specific to the camera. They'll propagate through TCP all the way to the logger. This is not backend specific, the access is done through pyMilk, but the exact keywords are camera specific.
 - `prepare_camera_finalize()`: [CAMERA, BACKEND SPECIFIC] Finish configuring the camera for the acquisition mode you want, with those last commands having to / allowed to be issued after the camera freeruns. Such as setting fps, integration time, NDR, exttrig for some models.
 
+See a more extensive example in [this page](DETAILED_CAMERA_INIT.md)
+
 ### Changing camera "mode"
 
-Changing "mode" really means changing crop size. The framegrabber has to be reconfigure, all SHMs re-instantiated with their new size, etc. Pretty much all steps above are called in the same order.
+Changing "mode" really means **changing crop size**. The framegrabber has to be reconfigured, all SHMs re-instantiated with their new size, etc. Pretty much all steps above are called in the same order.
 This is done without quitting at the `<cam>_ctrl` command prompt, by calling `set_camera_mode(some_predefined_mode_id)`.
 
 For dumb cameras (acquisition channel but no control channel), the FG acquisition can be set to an arbitrary size dynamically by calling `set_camera_size(height, width)`.
@@ -75,6 +77,7 @@ For dumb cameras (acquisition channel but no control channel), the FG acquisitio
 | FLIR   | GS3-U3-23S6M | Grasshopper3 | USB3                 | ` `                 | ` `              | scexao5  |          |              |
 | FLIR   | FL3-U3-13S2M | Flea3        | USB3                 | ` `                 | ` `              | vampires |          |              |
 | FLIR   | FL3-U3-13S2M | Flea3        | USB3                 | ` `                 | ` `              | FIRST    |          |              |
+| Nuvu   | HNü128AO     | Kalao        | Camlink              | ` `                 | `kalaocam.py`    |          |          |              |
 
 ### Class tree:
 
@@ -87,6 +90,8 @@ For dumb cameras (acquisition channel but no control channel), the FG acquisitio
       - GLINT
       - Rajni
     - OCAM2K
+    - NUVU
+      - Kalao
     - Andor897 (unused / draft)
       - First
       - Vampires
