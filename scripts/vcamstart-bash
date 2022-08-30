@@ -84,13 +84,13 @@ sudo cset proc --threads -m $PID vcam${NUM}_edt > /dev/null
 sudo chrt -f -p 49 $PID > /dev/null
 
 PID=$(pgrep -f shmimTCPtransmit-vcamim${NUM})
-sudo cset proc --threads -m $PID vcam${NUM}_tcp > /dev/null
+sudo cset proc --threads -m $PID vcam_tcp > /dev/null
 sudo chrt -f -p 47 $PID > /dev/null
 
 echo ""
 echo ""
 cset proc vcam${NUM}_edt
-cset proc vcam${NUM}_tcp
+cset proc vcam_tcp
 
 
 echo "==================================================="
