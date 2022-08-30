@@ -361,6 +361,11 @@ class NUVU(EDTCamera):
 
 
     def SetShutterMode(self, smode: _ShutterMode):
+        '''
+        Shutter modes:   2 opens the shutter;
+                        -2 closes the shutter;
+                        0 sets the shutter to automatic mode
+        '''
         if not smode in [item.value for item in self._ShutterMode]:
             return self.GetShutterMode()
         (success,answer) = self.send_command(f'ssm {smode}')
@@ -377,6 +382,10 @@ class NUVU(EDTCamera):
 
 
     def SetShutterExternal(self, sext: _ShutterExternal):
+        '''
+        0 no external shutter in use; 1 an external shutter is in use
+
+        '''
         if not sext in [item.value for item in self._ShutterExternal]:
             return self.GetShutterExternal()
         (success,answer) = self.send_command(f'sesp {sext}')
@@ -426,6 +435,18 @@ class NUVU(EDTCamera):
 
 
     def SetTriggerMode(self, tmode: _TriggerMode, nimages: int):
+        '''
+        Range of X: -2 for external triggering using the high-to-low transition and the exposure time is dictated by
+                    the trigger;
+                    -1 for external triggering using the high-to-low transition;
+                    0 for internal triggering;
+                    1 for external triggering using the low-to-high transition;
+                    2 for external triggering using the low-to-high transition and the exposure time is dictated by the
+                    trigger;
+
+        Range of Y: This value can vary from 1 to 4 294 967 294 images.
+        This parameter is only taken into account with trigger mode set to -1 or 1.
+        '''
         if not tmode in [item.value for item in self._TriggerMode]:
             return self.GetTriggerMode()
         (success,answer) = self.send_command(f'stm {tmode} {nimages}')
