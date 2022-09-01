@@ -59,7 +59,6 @@ class SpinnakerUSBCamera(BaseCamera):
         # We're gonna have a divergence here between the first U3 generation cameras
         # and the Blackfly S...
 
-        self._spinnaker_subtypes_constructor_finalizer()
 
     def init_framegrab_backend(self):
 
@@ -81,6 +80,8 @@ class SpinnakerUSBCamera(BaseCamera):
         self.spinn_cam.AcquisitionMode.SetValue(
                 PySpin.AcquisitionMode_Continuous)
 
+        self._spinnaker_subtypes_constructor_finalizer()
+
     def prepare_camera_for_size(self, mode_id=None):
 
         BaseCamera.prepare_camera_for_size(self)
@@ -93,21 +94,23 @@ class SpinnakerUSBCamera(BaseCamera):
         # So we must subclass... again.
         pass
 
-    def prepare_camera_finalize(self):
+    def prepare_camera_finalize(self, mode_id=None):
         # Only the stuff that is mode dependent
         # And/or should be called after each mode change.
         # And is camera-genre specific
 
         # Set fps max
-        self.set_fps(self.spinn_cam.AcquisitionFrameRate.GetMax())
+        max_fps = self.spinn_cam.AcquisitionFrameRate.GetMax()
+        self.set_fps(max_fps)
         # Expo max
-        self.set_tint(self.spinn_cam.ExposureTime.GetMax())
+        max_expo_this_fps = min(self.spinn_cam.ExposureTime.GetMax() * 1e-6, 1 / max_fps)
+        self.set_tint(max_expo_this_fps)
 
         # Lower fps, tint if necessary
-        if mode.tint is not None:
+        if self.current_mode.tint is not None:
             self.set_tint(self.current_mode.tint)
 
-        if mode.fps is not None:
+        if self.current_mode.fps is not None:
             self.set_fps(self.current_mode.fps)
 
     def release(self):
@@ -128,7 +131,8 @@ class SpinnakerUSBCamera(BaseCamera):
 
     def _ensure_backend_restarted(self):
         # Plenty simple enough for spinnaker
-        time.sleep(1.0)
+        # But it IS slow...
+        time.sleep(5.0)
 
     def _fill_keywords(self):
 
@@ -161,12 +165,12 @@ class SpinnakerUSBCamera(BaseCamera):
         return self.get_fps()
 
     def get_tint(self):
-        tint = self.spinn_cam.ExposureTime()
+        tint = self.spinn_cam.ExposureTime() *1e-6
         self.camera_shm.update_keyword('EXPTIME', tint)
         return tint
 
     def set_tint(self, tint: float):
-        self.spinn_cam.ExposureTime.SetValue(tint)
+        self.spinn_cam.ExposureTime.SetValue(tint * 1e6)
         return self.get_tint()
 
     def get_gain(self):
@@ -269,7 +273,7 @@ class BlackFlyS(SpinnakerUSBCamera):
         Appropriate class for the Blackfly S camera (Hilo lab?)
     '''
 
-    INTERACTIVE_SHELL_METHODS = SpinnakerUSBCamera.INTERACTIVE_SHELL_METHODS
+    INTERACTIVE_SHELL_METHODS = SpinnakerUSBCamera.INTERACTIVE_SHELL_METHODS + ['FULL']
 
     FULL = 'FULL'
 
@@ -289,7 +293,7 @@ class BlackFlyS(SpinnakerUSBCamera):
         self.spinn_cam.DeviceIndicatorMode.SetValue(
                 PySpin.DeviceIndicatorMode_Inactive)
         # Always max speed given exposure time
-        self.spinn_cam.AcquisitionFrameRateEnable.SetValue(False)
+        self.spinn_cam.AcquisitionFrameRateEnable.SetValue(True)
         # Disable autoexp
         self.spinn_cam.ExposureAuto.SetValue(PySpin.ExposureAuto_Off)
         # Disable autogain
@@ -343,6 +347,6 @@ class BlackFlyS(SpinnakerUSBCamera):
 
 
 if __name__ == "__main__":
-    cam = BlackFlyS('blackfly', 'alicia', mode_id='full', spinnaker_number=0)
+    cam = BlackFlyS('blackfly', 'alicia', mode_id=1, spinnaker_number=0)
     from camstack.core.utilities import shellify_methods
     shellify_methods(cam, globals())

@@ -6,7 +6,11 @@ import threading
 from camstack.core.utilities import CameraMode
 from camstack.core import tmux as tmux_util
 
-from scxkw.config import MAGIC_BOOL_STR, redis_check_enabled
+try:
+    from scxkw.config import MAGIC_BOOL_STR, redis_check_enabled
+except:
+    def redis_check_enabled():
+        return None, False
 
 from pyMilk.interfacing.isio_shmlib import SHM
 
