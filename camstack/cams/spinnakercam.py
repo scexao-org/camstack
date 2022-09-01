@@ -340,3 +340,9 @@ class BlackFlyS(SpinnakerUSBCamera):
     def prepare_camera_finalize(self, mode_id=None):
         # Something that we feel is BlackFly specific but not Spinnaker generic
         SpinnakerUSBCamera.prepare_camera_finalize(self, mode_id)
+
+
+if __name__ == "__main__":
+    cam = BlackFlyS('blackfly', 'alicia', mode_id='full', spinnaker_number=0)
+    from camstack.core.utilities import shellify_methods
+    shellify_methods(cam, globals())
