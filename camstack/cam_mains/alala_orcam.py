@@ -7,6 +7,8 @@ import os
 if __name__ == "__main__":
 
     mode = AlalaOrcam.FULL
+    mode = 1
+    
 
     cam = AlalaOrcam('orcam', 'orcam', dcam_number=0, mode_id=mode,
                      taker_cset_prio=('user', 42), dependent_processes=[])

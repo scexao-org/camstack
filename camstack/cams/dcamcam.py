@@ -155,16 +155,13 @@ class OrcaQuest(DCAMCamera):
 
     FIRST, FULL = 'FIRST', 'FULL'
     MODES = {
-            FULL: CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
-            0: CameraMode(x0=0, x1=4095, y0=0, y1=2303,
-                          tint=0.001),  # Also full
-            1: CameraMode(x0=1748, x1=2347, y0=1000, y1=1303, tint=0.001),
-            2: CameraMode(x0=1448, x1=2647, y0=848, y1=1555, tint=0.001),
-            3: CameraMode(x0=1148, x1=2947, y0=696, y1=1807, tint=0.001),
-            4: CameraMode(x0=1848, x1=3147, y0=848, y1=1555, tint=0.001),
-            # FIRST: CameraMode(x0=256, x1=3835, y0=256, y1=1047, tint=0.001),
-            # FIRST: CameraMode(x0=1056, x1=2455, y0=456, y1=847, tint=0.001),
-            FIRST: CameraMode(x0=952, x1=2915, y0=492, y1=727, tint=0.001),
+        FIRST: CameraMode(x0=952, x1=2915, y0=492, y1=727, tint=0.001),
+        FULL: CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
+        0: CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),  # Also full
+        1: CameraMode(x0=1536, x1=2335, y0=976, y1=1231, tint=0.001),    # Kyohoon is Using for WFS mode
+        2: CameraMode(x0=800, x1=3295, y0=876, y1=1531, tint=0.001),      # Kyohoon is Using for WFS align
+        3: CameraMode(x0=1148, x1=2947, y0=696, y1=1807, tint=0.001),
+        4: CameraMode(x0=1564, x1=1819, y0=976, y1=1231, tint=0.001),    # Jen is using for focal plane mode
     }
 
     KEYWORDS = {}
