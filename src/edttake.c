@@ -460,7 +460,17 @@ int main(int argc, char **argv)
         }
 
         pdv_start_image(pdv_p);
-        timeouts = pdv_timeouts(pdv_p);
+        clock_gettime(CLOCK_REALTIME, &time2);
+        time_acq_micros =
+            ((long) time2.tv_sec * 1000000) + (time2.tv_nsec / 1000);
+        if (EMBED_MICROSECOND)
+        {
+            *p_embed_acqtime =
+                time_acq_micros; // Will go for 4 or 8 pixel dep if
+                                 // type is int8 or int16
+        }
+        image.kw[KW_POS[1]].value.numl = time_acq_micros; // _MAQTIME
+        timeouts                       = pdv_timeouts(pdv_p);
 
         /*
      * check for timeouts or data overruns -- timeouts occur when data
@@ -500,7 +510,6 @@ int main(int argc, char **argv)
         memcpy(image.array.UI8, image_p, bytewidth * height);
 
         // Write the timing !
-        clock_gettime(CLOCK_REALTIME, &time2);
         time_elapsed = difftime(time2.tv_sec, time1.tv_sec);
         time_elapsed += (time2.tv_nsec - time1.tv_nsec) / 1e9;
 
@@ -508,17 +517,8 @@ int main(int argc, char **argv)
         // This is only CPU time - that sucks.
         meas_frate += 1.0 / time_elapsed * meas_frate_gain;
 
-        time_acq_micros =
-            ((long) time2.tv_sec * 1000000) + (time2.tv_nsec / 1000);
-        if (EMBED_MICROSECOND)
-        {
-            *p_embed_acqtime =
-                time_acq_micros; // Will go for 4 or 8 pixel dep if
-                                 // type is int8 or int16
-        }
 
         image.kw[KW_POS[0]].value.numf = (float) meas_frate; // MFRATE
-        image.kw[KW_POS[1]].value.numl = time_acq_micros;    // _MAQTIME
 
         // Embed _MAQTIME in the image starting at pixel 12
         // This will take 8 bytes, which can be either 4 or 8 pixels
