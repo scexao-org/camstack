@@ -79,42 +79,64 @@ def ave_img_data(nave, *args, **kwargs):
 
 
 def arr2im(arr, vmin=0., vmax=10000.0, pwr=1.0, subt_ref=False, lin_scale=True,
-           pos=[0, 0]):
+           pos=[0, 0], pdi=False):
     (ysizeim, xsizeim) = arr.shape
     ymin = xmin = 0
     ymax = ysizeim
     xmax = xsizeim
-    if z2 != 1:
-        ymin = max(128 + round(pos[1] + cor[1] - crop[2] - ysizeim / 2. / z2),
-                   0)
-        ymax = min(128 + round(pos[1] + cor[1] - crop[2] + ysizeim / 2. / z2),
-                   ysizeim)
-        xmin = max(160 + round(pos[0] + cor[0] - crop[0] - xsizeim / 2. / z2),
-                   0)
-        xmax = min(160 + round(pos[0] + cor[0] - crop[0] + xsizeim / 2. / z2),
-                   xsizeim)
-        if ymin == 0:
-            ymax = round(ysizeim / float(z2))
-        elif ymax == ysizeim:
-            ymin = ysizeim - round(ysizeim / float(z2))
-        if xmin == 0:
-            xmax = round(xsizeim / float(z2))
-        elif xmax == xsizeim:
-            xmin = xsizeim - round(xsizeim / float(z2))
-        ymin, ymax = int(ymin), int(ymax)
-        xmin, xmax = int(xmin), int(xmax)
-        arr2 = arr[ymin:ymax, xmin:xmax].astype(np.float32)
-    else:
-        arr2 = arr.astype(np.float32)
 
-    if not lin_scale:
-        lmin = np.percentile(arr2, 0.99)
-        arr2 -= lmin
-        mask = arr2 > 0
-        arr2 *= mask
+    if pdi and (xsizeim // z2) > 160:
+        pdi = False  # image is not zoomed enough to do a dual-center crop
+
+    if not pdi:
+        if z2 != 1:
+            ymin = max(
+                    128 + round(pos[1] + cor[1] - crop[2] - ysizeim / 2. / z2),
+                    0)
+            ymax = min(
+                    128 + round(pos[1] + cor[1] - crop[2] + ysizeim / 2. / z2),
+                    ysizeim)
+            xmin = max(
+                    160 + round(pos[0] + cor[0] - crop[0] - xsizeim / 2. / z2),
+                    0)
+            xmax = min(
+                    160 + round(pos[0] + cor[0] - crop[0] + xsizeim / 2. / z2),
+                    xsizeim)
+            if ymin == 0:
+                ymax = round(ysizeim / float(z2))
+            elif ymax == ysizeim:
+                ymin = ysizeim - round(ysizeim / float(z2))
+            if xmin == 0:
+                xmax = round(xsizeim / float(z2))
+            elif xmax == xsizeim:
+                xmin = xsizeim - round(xsizeim / float(z2))
+            ymin, ymax = int(ymin), int(ymax)
+            xmin, xmax = int(xmin), int(xmax)
+            arr2 = arr[ymin:ymax, xmin:xmax].astype(np.float32)
+        else:
+            arr2 = arr.astype(np.float32)
+    else:  # if pdi, assuming centers = middle -/+ 40 of the 1st axis and middle of 2nd axis
+        cen_row = ymax // 2
+        cen_cols = (xmax // 2 - 37, xmax // 2 + 37)
+        half_size = int(round(ymax / z2 / 2))
+        quart_size = int(round(ymax / z2 / 4))
+        arr2 = np.c_[arr[cen_row - half_size:cen_row + half_size,
+                         cen_cols[0] - quart_size:cen_cols[0] + quart_size],
+                     arr[cen_row - half_size:cen_row + half_size,
+                         cen_cols[1] - quart_size:cen_cols[1] +
+                         quart_size]].astype(np.float32)
+
+    lmin = np.percentile(arr2, 0.1)
+    arr2 -= lmin
+    mask = arr2 > 0
+    arr2 *= mask
+    lmax = np.percentile(arr2, 99.95)
+    mask = arr2 < lmax
+    arr2 *= mask
+    arr2 += (1 - mask) * lmax
     arr3 = arr2**pwr
-    mmin, mmax = arr3[1:].min(), arr3[1:].max(
-    )  # IGNORE THE FIRST ROW, clock pixels etc.
+    mmin, mmax = arr3[1:].min(), arr3[1:].max()
+    # IGNORE THE FIRST ROW, clock pixels etc.
     if subt_ref and lin_scale:
         if mmax > abs(mmin):
             arr3[0, 0] = -mmax
@@ -314,7 +336,7 @@ def whatmsg(pup, reachphoto, gpin, rpin):
 # ------------------------------------------------------------------
 # ------------------------------------------------------------------
 
-hmsg = """BUFFY's INSTRUCTIONS
+hmsg = """APAPANE's INSTRUCTIONS
 -------------------
 
 camera controls:
@@ -379,7 +401,7 @@ mouse controls:
 mouse     : display of the flux under the mouse pointer
 left click: measure distances in mas
 
-ESC       : quit buffycam
+ESC       : quit apapanecam
 
 """
 
@@ -403,7 +425,7 @@ cam = SHM("/milk/shm/kcam.im.shm", verbose=False)
 cam_rawdata = SHM("/milk/shm/kcam_raw.im.shm", verbose=False)
 xsizeim, ysizeim = cam.shape_c
 
-(xsize, ysize) = (320, 256)  #Force size of buffy for the display
+(xsize, ysize) = (320, 256)  #Force size of apapane for the display
 
 cam_dark = cvc.open_shm("buffycam_dark", dims=(xsizeim, ysizeim), check=True)
 cam_badpixmap = cvc.open_shm("buffycam_badpixmap", dims=(xsizeim, ysizeim),
@@ -419,8 +441,8 @@ ircam_retroinj = cvc.open_shm("ircam0_retroinj", dims=(20, 1))
 # ------------------------------------------------------------------
 rdb, rdb_alive = cvc.locate_redis_db()
 
-(pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad,
- target) = cvc.RDB_pull(rdb, rdb_alive, True, do_defaults=True)
+(pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad, target,
+ pdi) = cvc.RDB_pull(rdb, rdb_alive, True, do_defaults=True)
 
 pscale = 16.9  #mas per pixel in Buffycam
 
@@ -454,7 +476,7 @@ fpsClock = pygame.time.Clock()  # start the pygame clock!
 XW, YW = xsize * z1, (ysize + 100) * z1
 
 screen = pygame.display.set_mode((XW, YW), 0, 32)
-pygame.display.set_caption('SCIENCE camera display!')
+pygame.display.set_caption('APAPANE camera display!')
 
 tmux_kcam_ctrl = tmuxlib.find_or_create_remote(
         'kcam_ctrl', 'scexao@10.20.30.5')  # Control shell
@@ -560,16 +582,15 @@ font5.set_bold(True)
 xws = xsize * z1
 yws = ysize * z1
 
-path_cartoon = conf_dir + "Buffy%d.png" % (z1, )
+path_cartoon = conf_dir + "Apapane%d.png" % (z1, )
 cartoon1 = pygame.image.load(path_cartoon).convert_alpha()
 
-lbl = font1.render("SCIENCE camera viewer", True, WHITE, BGCOL)
+lbl = font1.render("APAPANE camera viewer", True, WHITE, BGCOL)
 rct = lbl.get_rect()
 rct.center = (110 * z1, 270 * z1)
 screen.blit(lbl, rct)
 
-lbl2 = font3.render("Buffy saves the helpless who press [h]", True, WHITE,
-                    BGCOL)
+lbl2 = font3.render("For help, press [h]", True, WHITE, BGCOL)
 rct2 = lbl2.get_rect()
 rct2.center = (110 * z1, 285 * z1)
 screen.blit(lbl2, rct2)
@@ -627,19 +648,9 @@ rct_dinfo2.center = (110 * z1, 345 * z1)
 screen.blit(dinfo2, rct_dinfo2)
 
 msgsave1 = "saving images"
-msgsave2 = "  before I   "
-msgsave3 = "dust your ass"
 savem1 = font5.render(msgsave1, True, RED1)
-savem2 = font5.render(msgsave2, True, RED1)
-savem3 = font5.render(msgsave3, True, RED1)
 rct_savem1 = savem1.get_rect()
-rct_savem2 = savem2.get_rect()
-rct_savem3 = savem3.get_rect()
-h_savem2 = savem2.get_height()
-h_savem3 = savem3.get_height()
-rct_savem1.bottomright = (xws - 10 * z1, yws - h_savem2 - h_savem3)
-rct_savem2.bottomright = (xws - 10 * z1, yws - h_savem3)
-rct_savem3.bottomright = (xws - 10 * z1, yws)
+rct_savem1.bottomright = (xws - 10 * z1, yws)
 
 cx = xsize / 2.
 cy = ysize / 2.
@@ -796,10 +807,10 @@ while True:  # the main game loop
                 mycmap = cm.plasma
 
     # ------------------------------------------------------------------
-    # check if camera is paused due to change of window size from other buffycam
+    # check if camera is paused due to change of window size from other apapanecam
     campaused = int(cam_paused.get_data())
     while campaused:
-        print("Buffy is changing size")
+        print("Apapane is changing size")
         time.sleep(1)
         campaused = int(cam_paused.get_data())
         shmreload = True
@@ -814,8 +825,7 @@ while True:  # the main game loop
         tmux_kcam.send_keys("scexaostatus set darkbuffy 'NEW INT DARK    ' 0")
         tmux_kcam.send_keys("log Buffycam: Saving current internal dark")
 
-        print("In the time it takes Buffy to dust a")
-        print("vampire, we'll acquire this dark.")
+        print("Apapanecam: acquiring this dark.")
 
         if not block and bpin:
             tmux_kcam.send_keys("ircam_block")  # blocking the light
@@ -842,7 +852,8 @@ while True:  # the main game loop
 
         tmux_kcam.send_keys("ircam_block")  # blocking the light
         tmux_kcam.send_keys("scexaostatus set darkbuffy 'OFF             ' 1")
-        tmux_kcam.send_keys("log Buffycam: Done saving current internal dark")
+        tmux_kcam.send_keys(
+                "log Apapanecam: Done saving current internal dark")
         cam_dark.set_data(bias.astype(np.float32))
         cam_badpixmap.set_data(badpixmap.astype(np.float32))
         new_dark.set_data(ONES_NODIM)
@@ -944,7 +955,7 @@ while True:  # the main game loop
         imin = np.min(temp2[1:])
         (myim, z3, xmin, xmax, ymin, ymax, xshift,
          yshift) = arr2im(temp2, pwr=pwr0, subt_ref=subt_ref,
-                          lin_scale=lin_scale, pos=pos2)
+                          lin_scale=lin_scale, pos=pos2, pdi=pdi)
         zg = z1 * z2 * z3
         zi = z2 * z3
         pygame.surfarray.blit_array(surf_live, myim)
@@ -1288,9 +1299,7 @@ while True:  # the main game loop
         ]
         if saveim:
             screen.blit(savem1, rct_savem1)
-            screen.blit(savem2, rct_savem2)
-            screen.blit(savem3, rct_savem3)
-            rects += [rct_savem1, rct_savem2, rct_savem3]
+            rects += [rct_savem1]
 
         if wait_for_archive_datatype:
             rects += rctlines
@@ -1302,7 +1311,7 @@ while True:  # the main game loop
             if timeexpt[-1] - timeexpt[0] > 4:
                 tmux_kcam.send_keys(
                         home +
-                        "/bin/log Buffycam: changing exposure time to %d" %
+                        "/bin/log Apapanecam: changing exposure time to %d" %
                         etime)
                 timeexpt = []
                 logexpt = False
@@ -1313,15 +1322,15 @@ while True:  # the main game loop
             if timendr[-1] - timendr[0] > 4:
                 tmux_kcam.send_keys(
                         home +
-                        "/bin/log Buffycam: changing exposure time to %d" %
+                        "/bin/log Apapanecam: changing exposure time to %d" %
                         etime)
                 timendr = []
                 logndr = False
         if cnti % 20 == 0:
             try:
                 (pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad,
-                 target) = cvc.RDB_pull(rdb, rdb_alive, True,
-                                        do_defaults=rdb_alive)
+                 target, pdi) = cvc.RDB_pull(rdb, rdb_alive, True,
+                                             do_defaults=rdb_alive)
             except ConnectionError:
                 pass
             msgwhl = whatfilter(reachphoto, slot, block)
@@ -1334,7 +1343,7 @@ while True:  # the main game loop
     # =====================================================================
     for event in pygame.event.get():
 
-        # exit BuffyCam
+        # exit ApapaneCam
         #------------------------------------------------------------------
         if event.type == QUIT or (event.type == KEYDOWN and
                                   event.key == K_ESCAPE):
@@ -1345,7 +1354,7 @@ while True:  # the main game loop
             cam_badpixmap.close()
             #cam_clean.close()
             new_dark.close()
-            print("Buffycam has ended normally.")
+            print("Apapanecam has ended normally.")
             sys.exit()
 
         elif event.type == KEYDOWN:
@@ -1569,10 +1578,9 @@ while True:  # the main game loop
                                 "scexaostatus set darkbuffy 'NEW INT DARK    ' 0"
                         )
                         tmux_kcam.send_keys(
-                                "log Buffycam: Saving current internal dark")
+                                "log Apapanecam: Saving current internal dark")
 
-                        print("In the time it takes Buffy to dust a")
-                        print("vampire, we'll acquire this dark.")
+                        print("Apapanecam: Acquiring this dark.")
                         if not block and bpin:
                             os.system("ircam_block")  # blocking the light
                         msgwhl = "     BLOCK      "
@@ -1600,7 +1608,7 @@ while True:  # the main game loop
                                 "scexaostatus set darkbuffy 'OFF             ' 1"
                         )
                         tmux_kcam.send_keys(
-                                "log Buffycam: Done saving current internal dark"
+                                "log Apapanecam: Done saving current internal dark"
                         )
                         cam_dark.set_data(bias.astype(np.float32))
                         cam_badpixmap.set_data(badpixmap.astype(np.float32))
@@ -1615,10 +1623,9 @@ while True:  # the main game loop
                                 "scexaostatus set darkbuffy 'ALL INT DARKS   ' 0"
                         )
                         tmux_kcam.send_keys(
-                                "log Buffycam: Saving internal darks")
+                                "log Apapanecam: Saving internal darks")
 
-                        print("In the time it takes Buffy to dust all the")
-                        print("vampires, we'll acquire all biases.")
+                        print("Apapanecam: Acquiring all darks.")
                         if bpin:
                             tmux_kcam.send_keys(
                                     "ircam_block")  # blocking the light
@@ -1659,8 +1666,6 @@ while True:  # the main game loop
                             pf.writeto(bpname, badpixmapi, overwrite=True)
 
                             time.sleep(0.2)
-                        print("\nBuffy dusted the crap out of the poor vampire."
-                              )
                         if bpin:
                             tmux_kcam.send_keys(
                                     "ircam_block")  # opening the shutter
@@ -1668,7 +1673,7 @@ while True:  # the main game loop
                                 "scexaostatus set darkbuffy 'OFF             ' 1"
                         )
                         tmux_kcam.send_keys(
-                                "log Buffycam: Done saving internal darks")
+                                "log Apapanecam: Done saving internal darks")
 
                         if not sync_param[0] and sync_param[1]:
                             sync_param[2] = tint
@@ -1712,42 +1717,43 @@ while True:  # the main game loop
 
             # Start/stop logging images
             #--------------------------
-            if event.key == K_s:
+            if event.key == K_s:  # Key is S
                 mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL):
+                if (mmods & KMOD_LCTRL):  # Ctrl + (something) + S
                     saveim = not saveim
-                    if saveim:
-                        timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
-                        if (mmods & KMOD_LSHIFT):
+                    if saveim:  # We were not saving and we're starting
+                        if (mmods & KMOD_LSHIFT):  # Ctrl + Shift + S
                             # Trigger prompt for datatype
                             wait_for_archive_datatype = True
-                        else:
-                            savepath = '/media/data/' + timestamp + '/kcamlog/'
-                            ospath = os.path.dirname(savepath)
-                            if not os.path.exists(ospath):
-                                os.makedirs(ospath)
-                            nimsave = int(min(10000, (50000000 / etimet)))
-                            # creating a tmux session for logging
+                        else:  #  Ctrl + S
                             os.system(
-                                    "ln -s /tmp/fits/buffy.fits /milk/shm/kcam.auxFITSheader.shm"
+                                    f"ssh scexao@scexao5 updatekw kcam_raw DATA-TYP TEST"
                             )
+                            timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
+                            savepath = '/mnt/tier0/' + timestamp + '/kcam/'
+
+                            ospath = os.path.dirname(savepath)
+
+                            nimsave = int(min(10000, (10000000 / etimet)))
+                            # creating a tmux session for logging
                             tmux_buffylog = tmuxlib.find_or_create_remote(
-                                    "kcam_log", "scexao-op@localhost")
+                                    "kcam_log", "scexao@scexaoRTC")
+
+                            tmux_buffylog.send_keys(f"mkdir -p {ospath}")
                             tmux_buffylog.send_keys("milk-logshim kcam %i %s &"
                                                     % (nimsave, savepath))
-
-                            os.system("log Buffycam: start logging images")
+                            os.system("log Apapanecam: start archiving images")
                             os.system(
-                                    "scexaostatus set logbuffy 'LOGGING (LOCAL) ' 3"
+                                    "scexaostatus set logbuffy 'LOG NOARCH (RTC)' 3"
                             )
 
-                    else:
+                    else:  # We were saving and we're stopping
                         tmux_buffylog.send_keys(
                                 "milk-logshimoff kcam; sleep 4; milk-logshimkill kcam"
                         )
                         #tmux_buffylog.cmd('kill-session')
                         tmux_kcam.send_keys(
-                                "log Buffycam: stop logging images")
+                                "log Apapanecam: stop logging images")
                         tmux_kcam.send_keys(
                                 "scexaostatus set logbuffy 'OFF             ' 1"
                         )
@@ -1771,7 +1777,7 @@ while True:  # the main game loop
                 tmux_buffylog.send_keys(f"mkdir -p {ospath}")
                 tmux_buffylog.send_keys("milk-logshim kcam %i %s &" %
                                         (nimsave, savepath))
-                os.system("log Buffycam: start archiving images")
+                os.system("log Apapanecam: start archiving images")
                 os.system("scexaostatus set logbuffy 'ARCHIVING (RTC) ' 3")
 
             # Save an HDR image/Subtract dark
@@ -2058,7 +2064,7 @@ while True:  # the main game loop
 
                     # All cases, K_w, K_s, K_e
                     gain = float(cam.get_keywords()['DETGAIN'])
-                    print(f"\n=== Buffy camera gain: {gain} ===\n")
+                    print(f"\n=== Apapanecam gain: {gain} ===\n")
 
                 if not (mmods & KMOD_LSHIFT) and (
                         mmods & KMOD_LCTRL) and event.key == K_e:

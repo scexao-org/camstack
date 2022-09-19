@@ -171,7 +171,8 @@ def RDB_pull(rdb, rdb_alive: bool, cam_buffy: bool, do_defaults=True):
         target = 'UNKNOWN'
         pdi = False
 
-    return (pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad, target)
+    return (pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad, target,
+            pdi)
 
 
 def get_img_data(cam, cam_type, bias=None, badpixmap=None, subt_ref=False,
