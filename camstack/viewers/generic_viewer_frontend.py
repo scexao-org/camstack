@@ -8,7 +8,7 @@ from typing import Tuple
 # https://stackoverflow.com/questions/1178094/change-current-process-environments-ld-library-path
 import ctypes
 
-ctypes.cdll.LoadLibrary("/home/scexao/src/camstack/lib/libGL.so.1")
+ctypes.cdll.LoadLibrary(os.environ["HOME"] + "/src/camstack/lib/libGL.so.1")
 
 # Affinity fix for pygame messing up
 _CORES = os.sched_getaffinity(0)
