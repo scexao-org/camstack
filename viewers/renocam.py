@@ -29,12 +29,12 @@ import copy
 import datetime as dt
 from astropy.io import fits as pf
 from pyMilk.interfacing.isio_shmlib import SHM
-import camstack.viewer_common as cvc
+import camstack.viewers.viewer_common as cvc
 
 MILK_SHM_DIR = os.environ['MILK_SHM_DIR']
 home = os.getenv('HOME')
 
-hmsg = """JEAN's INSTRUCTIONS
+hmsg = """PUEOCAM's INSTRUCTIONS
 -------------------
 
 camera controls:
@@ -61,13 +61,13 @@ CTRL+SHIFT+ARROW  : steer mod. piezo offset (0.5V)
 mouse controls:
 --------------
 mouse      : display of the flux under the mouse pointer
-
-ESC   : quit renocam
+ 
+ESC   : quit pueocam
 
 """
 
 args = sys.argv[1:]
-zoom = 2  # zoom for the display (default is 3)
+zoom = 2  # zoom for the display (default is 2)
 if args != []:
     if isinstance(int(args[0]), int):
         zoom = int(args[0]) + 1
@@ -108,7 +108,7 @@ pygame.font.init()
 XW, YW = xsize * zoom, (ysize + 50) * zoom
 
 screen = pygame.display.set_mode((XW, YW), 0, 32)
-pygame.display.set_caption('OCAM camera display!')
+pygame.display.set_caption('PUEO camera display!')
 
 #os.system("tmux new-session -d -s ocam2k") #start a tmux session for messsages
 
@@ -178,10 +178,10 @@ font3 = pygame.font.SysFont("monospace", 4 * zoom)
 font5 = pygame.font.SysFont("monospace", 4 * zoom)
 font5.set_bold(True)
 
-path_cartoon = "/home/scexao/conf/renocam_aux/Reno%db.png" % (zoom, )
+path_cartoon = "/home/scexao/conf/renocam_aux/Pueo%d.png" % (zoom, )
 cartoon1 = pygame.image.load(path_cartoon).convert_alpha()
 
-lbl = font1.render("OCAM camera viewer", True, WHITE, BGCOL)
+lbl = font1.render("PUEO camera viewer", True, WHITE, BGCOL)
 rct = lbl.get_rect()
 rct.center = (45 * zoom, 125 * zoom)
 screen.blit(lbl, rct)
@@ -191,7 +191,7 @@ rct2 = lbl2.get_rect()
 rct2.center = (45 * zoom, 132 * zoom)
 screen.blit(lbl2, rct2)
 
-lbl3 = font2.render("Let's flatten that wavefront, kid.", True, WHITE, BGCOL)
+lbl3 = font2.render("Meha ke kula, 'a'ohe ke'u pueo.", True, WHITE, BGCOL)
 rct3 = lbl3.get_rect()
 rct3.center = (45 * zoom, 140 * zoom)
 screen.blit(lbl3, rct3)
@@ -222,19 +222,9 @@ xws = xsize * zoom
 yws = ysize * zoom
 
 msgsave1 = "saving images"
-msgsave2 = "  before I   "
-msgsave3 = "  kill you   "
 savem1 = font5.render(msgsave1, True, RED1)
-savem2 = font5.render(msgsave2, True, RED1)
-savem3 = font5.render(msgsave3, True, RED1)
 rct_savem1 = savem1.get_rect()
-rct_savem2 = savem2.get_rect()
-rct_savem3 = savem3.get_rect()
-h_savem2 = savem2.get_height()
-h_savem3 = savem3.get_height()
-rct_savem1.bottomright = (xws - 10 * zoom, yws - h_savem2 - h_savem3)
-rct_savem2.bottomright = (xws - 10 * zoom, yws - h_savem3)
-rct_savem3.bottomright = (xws - 10 * zoom, yws)
+rct_savem1.bottomright = (xws - 10 * zoom, yws)
 
 cx = xsize / 2.
 cy = ysize / 2.
@@ -244,6 +234,10 @@ surf_live = pygame.surface.Surface((xws, yws))
 
 rect1 = surf_live.get_rect()
 rect1.topleft = (0, 0)
+
+surf_live2 = pygame.surface.Surface((XW, 50 * zoom))
+rect2b = surf_live2.get_rect()
+rect2b.bottomleft = (0, YW)
 
 rect2 = cartoon1.get_rect()
 rect2.bottomright = XW, YW
@@ -266,11 +260,13 @@ pygame.mouse.set_cursor(*pygame.cursors.broken_x)
 pygame.display.update()
 
 cnta = 0
+cnti = 0
 timeexpt = []
 
 # =======================================================
 # =======================================================
 while True:  # the main game loop
+    cnti += 1
     clicked = False
 
     mycmap = cm.gray
@@ -391,16 +387,15 @@ while True:  # the main game loop
         saveim = True
     else:
         saveim = False
+    if cnti % 20:
+        rects = [rct, rct2, rct3, rect2, rect2b]
+    else:
+        rects = []
+        
+    rects += [rect1, rct_info, rct_info2, rct_dinfo, rct_dinfo2]
     if saveim:
         screen.blit(savem1, rct_savem1)
-        screen.blit(savem2, rct_savem2)
-        screen.blit(savem3, rct_savem3)
-        rects = [
-                rect1, rct_info, rct_info2, rct_dinfo, rct_dinfo2, rct_savem1,
-                rct_savem2, rct_savem3
-        ]
-    else:
-        rects = [rect1, rct_info, rct_info2, rct_dinfo, rct_dinfo2]
+        rects += [rct_savem1]
 
     # =====================================
     for event in pygame.event.get():
@@ -415,7 +410,7 @@ while True:  # the main game loop
             # --------------------------
             cam.close()  # global disp map
             bias_shm.close()
-            print("Renocam has ended normally.")
+            print("Pueocam has ended normally.")
             sys.exit()
 
         elif event.type == KEYDOWN:
@@ -425,7 +420,7 @@ while True:  # the main game loop
                 # close shared memory access
                 # --------------------------
                 cam.close()  # global disp map
-                print("Renocam has ended normally.")
+                print("Pueocam has ended normally.")
                 sys.exit()
 
             if event.key == K_c:
@@ -461,8 +456,7 @@ while True:  # the main game loop
                     pygame.display.update([rct_dinfo2])
                     #os.system("log Chuckcam: Saving internal darks")
 
-                    print("You want to be a cleaner?")
-                    print("acquire all biases first.")
+                    print("Saving dark.")
 
                     subt_bias = False
 
@@ -475,10 +469,10 @@ while True:  # the main game loop
 
                     bname = home + "/conf/renocam_aux/bias.fits"
 
-                    pf.writeto(bname, temp3, clobber=True)
+                    pf.writeto(bname, temp3, overwrite=True)
                     time.sleep(0.2)
 
-            # Reno mode to save and subtract a reference image
+            # Pueo mode to save and subtract a reference image
             # --------------------------------------------------------
             if event.key == K_r:
                 if cvc.check_modifiers(mmods, lc=True):
@@ -497,7 +491,7 @@ while True:  # the main game loop
                             temp3 += get_img_data(True) / float(nref)
 
                     rname = home + "/conf/renocam_aux/ref.fits"
-                    pf.writeto(rname, temp3, clobber=True)
+                    pf.writeto(rname, temp3, overwrite=True)
 
                 else:
                     rname = home + "/conf/renocam_aux/ref.fits"
