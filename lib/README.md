@@ -24,13 +24,14 @@ Then, there's a hack at the top of genericViewerFrontend that allows dynamically
 Explicitly loading the .so with ctypes puts it in the python cache, and eventually calls from the depth of pygame to re-import it just grab this one.
 
 -- Checks (in-progress) --
-| What                                          | Works? |
-| --------------------------------------------- | ------ |
-| Local desktop - nvidia   (Desktop)            |        |
-| Local desktop - nvidia   (VNC sc6)            |        |
-| Local desktop - no nvidia (VNC sc2 old 14.04) |        |
-| Local desktop - no nvidia (VNC sc5 20.04)     |        |
-| X forw. sc6 (NV) -> sc2 (noNV)                |        |
-| X forw. sc5 (noNV) -> sc2 (noNV)              |        |
-| X forw. sc6 (NV) -> laptop (NV)               |        |
-| X forw. sc5 (noNV) -> laptop (NV)             |        |
+| What                                          | Works?                         |
+| --------------------------------------------- | ------------------------------ |
+| Local desktop - nvidia   (laptop)             | NO                             |
+| Local desktop - nvidia   (VNC sc6)            | YES                            |
+| Local desktop - no nvidia (VNC sc2 old 14.04) | YES                            |
+| Local desktop - no nvidia (VNC sc5 20.04)     | YES                            |
+| X forw. sc6 (NV) -> sc2 (noNV)                | YES                            |
+| X forw. sc5 (noNV) -> sc2 (noNV)              | NO - opens but on wrong VNC??? |
+| X forw. sc6 (NV) -> laptop (NV)               | YES                            |
+| X forw. sc5 (noNV) -> laptop (NV)             | YES                            |
+| X forw. sc2 (noNV) -> laptop (NV)             | YES                            |

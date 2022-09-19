@@ -6,9 +6,11 @@ from typing import Tuple
 # conflicts between nvidia and non-nvidia machines over x forwarding
 # the underlying is equivalent to changing the LD_LIBRARY_PATH at runtime.
 # https://stackoverflow.com/questions/1178094/change-current-process-environments-ld-library-path
-import ctypes
-
-ctypes.cdll.LoadLibrary(os.environ["HOME"] + "/src/camstack/lib/libGL.so.1")
+# Only if X forwarding. Detecting "localhost" in $DISPLAY
+if 'localhost:' in os.environ.get('DISPLAY', ''):
+    import ctypes
+    ctypes.cdll.LoadLibrary(os.environ["HOME"] +
+                            "/src/camstack/lib/libGL.so.1")
 
 # Affinity fix for pygame messing up
 _CORES = os.sched_getaffinity(0)
