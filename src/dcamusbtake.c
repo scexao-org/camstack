@@ -202,15 +202,12 @@ int main(int argc, char **argv)
     params_parse_and_set(cam,
                          image_prm,
                          TRUE); // TRUE: return mode, FALSE: print mode
-
-
     ImageStreamIO_semflush(&image_prm, semid_prm);
-    printf("Really???\n");
+
     CHECK_DCAM_ERR_EXIT(
         dcamprop_getvalue(cam, DCAM_IDPROP_SUBARRAYHSIZE, &dcam_retval),
         cam,
         1);
-    printf("Hello???\n");
     width = (int) dcam_retval;
     CHECK_DCAM_ERR_EXIT(
         dcamprop_getvalue(cam, DCAM_IDPROP_SUBARRAYVSIZE, &dcam_retval),
