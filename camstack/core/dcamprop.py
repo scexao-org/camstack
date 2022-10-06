@@ -188,7 +188,7 @@ class EIDString(enum.IntEnum):
     OPTICALBLOCK_CHANNEL_1 = 0x04001104
     OPTICALBLOCK_CHANNEL_2 = 0x04001105
 
-
+    
 class EStatus(enum.IntEnum):
     ERROR = 0x0000
     BUSY = 0x0001
@@ -383,6 +383,11 @@ class EShutterMode(enum.IntEnum):
 class EReadoutSpeed(enum.IntEnum):
     SLOWEST = 1
     FASTEST = 0x7FFFFFFF
+    '''
+    READOUT SPEED ADDITION BECAUSE IT ACTUALLY WANTS FLOATS????
+    '''
+    READOUT_FAST = 2.0
+    READOUT_ULTRAQUIET = 1.0
 
 
 class EReadoutDirection(enum.IntEnum):

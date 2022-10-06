@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 #ifndef ASSERT
 #define ASSERT(c)
@@ -164,9 +165,16 @@ HDCAM dcamcon_init_open(int cam_num)
     memset(&apiinit, 0, sizeof(apiinit));
     apiinit.size = sizeof(apiinit);
 
+	int32 initoption[] = {  
+							DCAMAPI_INITOPTION_APIVER__LATEST,
+							DCAMAPI_INITOPTION_ENDMARK
+						 };
+	apiinit.initoption		= initoption;
+	apiinit.initoptionbytes	= sizeof(initoption);
+
     DCAMERR err;
     err = dcamapi_init(&apiinit);
-    if (err != 1)
+    if (err != DCAMERR_SUCCESS)
     {
         // failure
         dcamcon_show_dcamerr(NULL, err, "dcamapi_init()");

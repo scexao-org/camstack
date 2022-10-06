@@ -202,12 +202,15 @@ int main(int argc, char **argv)
     params_parse_and_set(cam,
                          image_prm,
                          TRUE); // TRUE: return mode, FALSE: print mode
-    ImageStreamIO_semflush(&image_prm, semid_prm);
 
+
+    ImageStreamIO_semflush(&image_prm, semid_prm);
+    printf("Really???\n");
     CHECK_DCAM_ERR_EXIT(
         dcamprop_getvalue(cam, DCAM_IDPROP_SUBARRAYHSIZE, &dcam_retval),
         cam,
         1);
+    printf("Hello???\n");
     width = (int) dcam_retval;
     CHECK_DCAM_ERR_EXIT(
         dcamprop_getvalue(cam, DCAM_IDPROP_SUBARRAYVSIZE, &dcam_retval),
@@ -469,15 +472,15 @@ int main(int argc, char **argv)
 
     // Deinit, cleanup, exit.
     dcamcap_stop(cam);
-    printf("A\n");
+    printf("Deinit: performed dcamcap_stop(cam)\n");
     dcambuf_release(cam, 0);
-    printf("B\n");
+    printf("Deinit: performed dcambuf_release(cam, 0)\n");
     dcamwait_close(dcam_waitopen.hwait);
-    printf("C\n");
+    printf("Deinit: performed dcamwait_close(dcam_waitopen.hwait)\n");
     dcamdev_close(cam);
-    printf("D\n");
+    printf("Deinit: performed dcamdev_close(cam)\n");
     dcamapi_uninit();
-    printf("E\n");
+    printf("Deinit: performed dcamapi_uninit()\n");
 
     printf("\n------\ndcamusbtake.c: successful exit.\n");
     // CHECK_DCAM_ERR_EXIT(0, cam, 1);

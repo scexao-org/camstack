@@ -38,6 +38,7 @@ scripts = [
         './scripts/cam-glintstart',
         './scripts/cam-ocamstart',
         './scripts/cam-orcamstart',
+        './scripts/cam-milesstart',
         './scripts/cam-rajnistart',
         './scripts/cam-fircamstart',
         './scripts/cam-firstpupstart',
