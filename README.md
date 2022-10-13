@@ -75,12 +75,11 @@ For dumb cameras (acquisition channel but no control channel), the FG acquisitio
 | FIRST  | OrcaQuest    | FIRSTOrcam   | CoaxPress (x)or USB3 | `cam-fircamstart`   | `alala_orcam.py` | kamua    | `orcam`     |              |
 | FLIR   | BlackFlyS    | BlackFlyS    | USB3                 | ` `                 | ` `              |          |             |              |
 | FLIR   | GS3-U3-23S6M | Grasshopper3 | USB3                 | ` `                 | ` `              | scexao5  |             |              |
-| FLIR   | FL3-U3-13S2M | Flea3        | USB3                 | ` `                 | ` `              | sonne    |             |              |
+| FLIR   | FL3-U3-13S2M | Flea3        | USB3                 | `cam-vpupcamstart`  | `vpupcam.py`     | vampires | `vpupcam` |              |
 | FLIR   | FL3-U3-13S2M | Flea3        | USB3                 | ` `                 | ` `              | kamua    |             |              |
 | Nuvu   | HNü128AO     | Kalao        | Camlink              | ` `                 | `kalaocam.py`    |          |             |              |
 | VCam   | Andor897     | Vampires     | Camlink              | ` `                 | ` `              | scexao5  | `vcamim<k>` |              |
 | FIRST  | Andor897     | First        | Camlink              | ` `                 | ` `              | kamua    | ` `         |              |
-
 
 ### Class tree:
 
