@@ -2,6 +2,7 @@ import os
 import time
 import subprocess
 import threading
+import logging as logg
 
 from camstack.core.utilities import CameraMode
 from camstack.core import tmux as tmux_util
@@ -16,6 +17,20 @@ from pyMilk.interfacing.isio_shmlib import SHM
 
 from typing import List, Any, Union, Tuple
 
+
+# TODO: class decorator that implements a camera-action-lock
+''' TODO
+Blocking/wait calls for basic set/gets (will also make the polling thread safer)
+(paves way for pyro to be more safe too)
+Non-blocking calls with failure for harcore changes (do we need two locks??)
+
+Implement logging.log
+
+Implement pyro servers in mains.
+
+Viewers in particular can then trivially use an autoreconnecting proxy to hit camera controls - in a thread safe way.
+/TODO
+'''
 
 class BaseCamera:
     '''
