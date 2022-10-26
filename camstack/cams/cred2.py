@@ -313,8 +313,13 @@ class GLINT(CRED2):
                                fps=1394.833104000, tint=0.000711851),
             # PL multicore
             13:
-                    CameraMode(x0=96, x1=319, y0=44, y1=243, fps=1000,
-                               tint=0.001),
+                    CameraMode(
+                            x0=96,
+                            x1=319,
+                            y0=44 + 32,
+                            y1=243 + 32,
+                            fps=1000,  # Was x0=96, x1=319, y0=44, y1=243
+                            tint=0.001),
     }
     MODES.update(CRED2.MODES)
     EDTTAKE_EMBEDMICROSECOND = False

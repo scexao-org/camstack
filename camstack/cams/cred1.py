@@ -280,9 +280,9 @@ class CRED1(EDTCamera):
             self.get_readout_mode()
             self.get_NDR()
 
-        time.sleep(1.)
-        self._kill_taker_no_dependents()
-        self._start_taker_no_dependents(reuse_shm=True)
+            time.sleep(1.)
+            self._kill_taker_no_dependents()
+            self._start_taker_no_dependents(reuse_shm=True)
 
         time.sleep(1.)
         self.set_readout_mode(readout_mode)
