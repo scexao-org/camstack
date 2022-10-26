@@ -795,7 +795,7 @@ cnti = 0
 timeexpt = []
 timendr = []
 nst = 1
-rm = 10
+rm = 15
 a = 128
 
 nhist = 100
@@ -951,13 +951,13 @@ while True:  # the main game loop
             if rpin:
                 cnta %= 20
             cnta += 1
-            binary2 = binary and (cnta == 20)
+            #binary = binary and (cnta == 20)
             if cnta == 1:
                 temp2 = copy.deepcopy(temp)
             else:
                 temp2 *= float(cnta - 1) / float(cnta)
                 temp2 += temp / float(cnta)
-            if seeing or strehl or binary2:
+            if seeing or strehl or binary:
                 timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
                 savepath = '/media/data/' + timestamp + '/ircam%dlog/' % camid
                 ospath = os.path.dirname(savepath)
@@ -1004,6 +1004,7 @@ while True:  # the main game loop
                             strehl_plot = True
                         else:
                             print("start binary fit")
+                            print(temp2.shape, temp2.max, temp2.min)
                             posst, xoff, yoff, strehlv, dia_ring, distco, angleco, contrastco = impro.binary_processing(
                                     temp2, target=target, mas_pix=pscale,
                                     pad=pad, nst=nst - int(rpin), a=a, rm=rm,
@@ -1012,7 +1013,7 @@ while True:  # the main game loop
                             os.system(home +
                                       "/bin/log BINARY %s: %i-star fit" %
                                       (slot, nst))
-                            binary = True
+                            binary = False
                             binary_plot = True
         else:
             temp2 = copy.deepcopy(temp)

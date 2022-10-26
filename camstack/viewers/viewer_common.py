@@ -118,9 +118,10 @@ def RDB_pull(rdb, rdb_alive: bool, cam_buffy: bool, do_defaults=True):
     PUP_KEY = ('X_CHKPUP', 'X_BUFPUP')[cam_buffy]
 
     if rdb_alive:
+        import redis  # Need the namespace for the exception to catch
         try:
             rdb.ping()
-        except TimeoutError:
+        except redis.exceptions.TimeoutError:
             rdb_alive = False
 
     if not rdb_alive and not do_defaults:
