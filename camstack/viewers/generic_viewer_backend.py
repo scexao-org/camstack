@@ -9,8 +9,16 @@ import numpy as np
 
 from matplotlib import cm
 
+from functools import partial
+
 # class BasicCamViewer:
 # More basic, with less text lines at the bottom.
+
+#UUUUUH hacking the fact that I don't want to import pygame
+UP_KEYCODE = 0x40000052
+DOWN_KEYCODE = 0x40000051
+LEFT_KEYCODE = 0x40000050
+RIGHT_KEYCODE = 0x4000004f
 
 
 class GenericViewerBackend:
@@ -63,6 +71,10 @@ class GenericViewerBackend:
                 'l': self.toggle_scaling,
                 'z': self.toggle_crop,
                 'v': self.toggle_averaging,
+                UP_KEYCODE: partial(self.steer_crop, UP_KEYCODE),
+                DOWN_KEYCODE: partial(self.steer_crop, DOWN_KEYCODE),
+                LEFT_KEYCODE: partial(self.steer_crop, LEFT_KEYCODE),
+                RIGHT_KEYCODE: partial(self.steer_crop, RIGHT_KEYCODE),
         }
         # Note escape and X are reserved for quitting
 
@@ -98,12 +110,31 @@ class GenericViewerBackend:
                     self.shm_shape[1] / 2**(self.crop_lvl_id + 1))
         # Could define explicit slices using a self.CROPSLICE. Could be great for buffy PDI.
         cr, cc = self.CROP_CENTER_SPOT
-        self.crop_slice = np.s_[
-                int(round(cr - halfside[0])):int(round(cr + halfside[0])),
-                int(round(cc - halfside[1])):int(round(cc + halfside[1]))]
+        if self.crop_lvl_id > 0:
+            self.crop_slice = np.s_[
+                    int(round(cr - halfside[0])):int(round(cr + halfside[0])),
+                    int(round(cc - halfside[1])):int(round(cc + halfside[1]))]
+        else:
+            self.crop_slice = np.s_[:, :]
+
+    def steer_crop(self, direction):
+        # Move by 1 pixel at max zoom
+        move_how_much = 2**(self.MAX_ZOOM_LEVEL - self.crop_lvl_id)
+        cr, cc = self.CROP_CENTER_SPOT
+        if direction == UP_KEYCODE:
+            cc -= move_how_much
+        elif direction == DOWN_KEYCODE:
+            cc += move_how_much
+        elif direction == LEFT_KEYCODE:
+            cr -= move_how_much
+        elif direction == RIGHT_KEYCODE:
+            cr += move_how_much
+        self.CROP_CENTER_SPOT = cr, cc
+        self.toggle_crop(which=self.crop_lvl_id)
 
     def toggle_averaging(self):
         self.flag_averaging = not self.flag_averaging
+        self.count_averaging = 0
 
     def data_iter(self):
         self._data_grab()
@@ -112,16 +143,17 @@ class GenericViewerBackend:
         self._data_zscaling()
         self._data_coloring()
 
-        self.flag_data_init = True
+        self.flag_data_init = True  # Data is now initialized!
 
     def _data_grab(self):
         '''
         SHM -> self.data_raw_uncrop
         '''
         if self.flag_averaging and self.flag_data_init:
-            # 5 sec running average - cast to float32 is implicit
-            self.data_raw_uncrop = 0.99 * self.data_raw_uncrop + 0.01 * self.input_shm.get_data(
-            )
+            nn = self.count_averaging
+            self.data_raw_uncrop = self.data_raw_uncrop * (
+                    nn / (nn + 1)) + self.input_shm.get_data() / (nn + 1)
+            self.count_averaging += 1
         else:
             self.data_raw_uncrop = self.input_shm.get_data().astype(np.float32)
 
