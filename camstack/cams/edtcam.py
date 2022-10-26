@@ -1,6 +1,8 @@
 import os
 import subprocess
 import time
+import logging as logg
+
 
 from typing import Union, Tuple, List, Any
 
@@ -43,8 +45,11 @@ class EDTCamera(BaseCamera):
                             dependent_processes=dependent_processes)
 
     def init_framegrab_backend(self):
+        logg.debug('init_framegrab_backend @ EDTCamera')
         if self.is_taker_running():
-            raise AssertionError('Cannot change FG config while FG is running')
+            msg = 'Cannot change FG config while FG is running'
+            logg.error(msg)
+            raise AssertionError(msg)
 
         self.width_fg = self.width * (1, 2)[self.EDTTAKE_CAST]
 
@@ -95,6 +100,7 @@ class EDTCamera(BaseCamera):
             Wrap to the serial
             That supposes we HAVE serial... maybe we'll move this to a subclass
         '''
+        logg.debug(f'EDTCamera send_command: "{cmd}"')
         return self.edt_iface.send_command(cmd, base_timeout=base_timeout)
 
     def raw(self, cmd):
