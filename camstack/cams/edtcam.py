@@ -75,7 +75,7 @@ class EDTCamera(BaseCamera):
     def _prepare_backend_cmdline(self, reuse_shm: bool = False):
 
         # Prepare the cmdline for starting up!
-        exec_path = os.environ['HOME'] + '/src/camstack/src/edttake'
+        exec_path = os.environ['SCEXAO_HW'] + '/bin/hwacq-edttake'
         self.taker_tmux_command = f'{exec_path} -s {self.STREAMNAME} -u {self.pdv_unit} -c {self.pdv_channel} -l 0 -N 4'
         if self.EDTTAKE_CAST:
             self.taker_tmux_command += ' -8'  # (byte pair) -> (ushort) casting.
