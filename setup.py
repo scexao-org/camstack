@@ -19,8 +19,9 @@ class PreInstallCommand(develop):
 
     def run(self):
         # Add custom make commands here !
-        os.system('cd src; ./compile_edt; cd ..')
-        os.system('cd src; ./compile_dcamusb; cd ..')
+        # Migration of compiled grabbers to hardwaresecrets repo.
+        #os.system('cd src; ./compile_edt; cd ..')
+        #os.system('cd src; ./compile_dcamusb; cd ..')
         develop.run(self)
 
 

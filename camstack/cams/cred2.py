@@ -1,7 +1,6 @@
 '''
     Chuck, Rajni, GLINT
 '''
-from camstack.core.edtinterface import EdtInterfaceSerial
 import os
 import time
 from typing import Union

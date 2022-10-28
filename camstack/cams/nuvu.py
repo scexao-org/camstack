@@ -7,7 +7,6 @@ import logging
 from enum import Enum
 from typing import Union
 
-#from camstack.core.edtinterface import EdtInterfaceSerial
 from camstack.core.utilities import CameraMode
 from camstack.cams.edtcam import EDTCamera
 
