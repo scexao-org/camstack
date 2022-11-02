@@ -3,8 +3,9 @@ import os
 from typing import Union, Tuple, List, Any
 
 from camstack.cams.base import BaseCamera
-from camstack.core import dcamprop
 from camstack.core.utilities import CameraMode
+
+from hwmain.dcam import dcamprop
 
 from pyMilk.interfacing.shm import SHM
 import numpy as np

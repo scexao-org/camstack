@@ -5,7 +5,7 @@ import time
 from typing import Union, Tuple, List, Any
 
 from camstack.cams.base import BaseCamera
-from pyedt.edtinterface import EdtInterfaceSerial
+from hwmain.edt.edtinterface import EdtInterfaceSerial
 
 from camstack.core.utilities import CameraMode
 
