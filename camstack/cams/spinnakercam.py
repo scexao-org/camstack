@@ -4,7 +4,6 @@ import time
 from typing import Union, Tuple, List, Any
 
 from camstack.cams.base import BaseCamera
-#from camstack.core import dcamprop
 from camstack.core.utilities import CameraMode
 
 from pyMilk.interfacing.shm import SHM
@@ -61,10 +60,12 @@ class SpinnakerUSBCamera(BaseCamera):
 
 
     def init_framegrab_backend(self):
+        logg.debug('init_framegrab_backend @ SpinnakerUSBCamera')
 
         if self.is_taker_running():
-            raise AssertionError(
-                    'Cannot change camera config while camera is running')
+            msg = 'Cannot change camera config while camera is running'
+            logg.error(msg)
+            raise AssertionError()
 
         if self.spinn_system is None:
             self.spinn_system = PySpin.System.GetInstance()
@@ -83,6 +84,7 @@ class SpinnakerUSBCamera(BaseCamera):
         self._spinnaker_subtypes_constructor_finalizer()
 
     def prepare_camera_for_size(self, mode_id=None):
+        logg.debug('prepare_camera_for_size @ SpinnakerUSBCamera')
 
         BaseCamera.prepare_camera_for_size(self)
 
@@ -98,6 +100,8 @@ class SpinnakerUSBCamera(BaseCamera):
         # Only the stuff that is mode dependent
         # And/or should be called after each mode change.
         # And is camera-genre specific
+        
+        logg.debug('prepare_camera_finalize @ SpinnakerUSBCamera')
 
         # Set fps max
         max_fps = self.spinn_cam.AcquisitionFrameRate.GetMax()
@@ -116,8 +120,10 @@ class SpinnakerUSBCamera(BaseCamera):
     def release(self):
         BaseCamera.release(self)
 
+        logg.info('spinn_cam.DeInit()')
         self.spinn_cam.DeInit()
         del self.spinn_cam
+        logg.info('spinn_system.ReleaseInstance()')
         self.spinn_system.ReleaseInstance()
 
     def _prepare_backend_cmdline(self, reuse_shm: bool = False):
@@ -155,6 +161,7 @@ class SpinnakerUSBCamera(BaseCamera):
         except:
             fps = self.spinn_cam.AcquisitionFrameRate()
         self.camera_shm.update_keyword('FRATE', fps)
+        logg.info(f'get_fps: {fps}')
         return fps
 
     def set_fps(self, fps: float):
@@ -165,8 +172,9 @@ class SpinnakerUSBCamera(BaseCamera):
         return self.get_fps()
 
     def get_tint(self):
-        tint = self.spinn_cam.ExposureTime() *1e-6
+        tint = self.spinn_cam.ExposureTime() * 1e-6
         self.camera_shm.update_keyword('EXPTIME', tint)
+        logg.info(f'get_tint: {tint}')
         return tint
 
     def set_tint(self, tint: float):
@@ -176,6 +184,7 @@ class SpinnakerUSBCamera(BaseCamera):
     def get_gain(self):
         gain = self.spinn_cam.Gain()
         self.camera_shm.update_keyword('DETGAIN', gain)
+        logg.info(f'get_gain: {gain}')
         return gain
 
     def set_gain(self, gain: float):
@@ -183,8 +192,9 @@ class SpinnakerUSBCamera(BaseCamera):
         return self.get_gain()
 
     def get_temperature(self):
-        temp = self.spinn_cam.DeviceTemperature()
-        self.camera_shm.update_keyword('DET-TMP', temp + 273.15)
+        temp = self.spinn_cam.DeviceTemperature() + 273.15
+        self.camera_shm.update_keyword('DET-TMP', temp)
+        logg.info(f'get_temperature: {temp}')
         return temp
 
 
@@ -217,6 +227,8 @@ class FLIR_U3_Camera(SpinnakerUSBCamera):
     KEYWORDS.update(SpinnakerUSBCamera.KEYWORDS)
 
     def _spinnaker_subtypes_constructor_finalizer(self):
+        logg.debug('_spinnaker_subtypes_constructor_finalizer @ FLIR_U3_Camera')
+
         # Disable autoexp
         self.spinn_cam.ExposureAuto.SetValue(PySpin.ExposureAuto_Off)
         # Disable autogain
@@ -225,6 +237,7 @@ class FLIR_U3_Camera(SpinnakerUSBCamera):
         try:
             self.spinn_cam.Gamma.SetValue(1.0)
         except PySpin.SpinnakerException:
+            logg.warning('Cannot set Gamma to 1.0 for this camera.')
             pass
         # BlackLevel 0. - May have to add some bias back
         self.spinn_cam.BlackLevel.SetValue(0)
@@ -241,6 +254,8 @@ class FLIR_U3_Camera(SpinnakerUSBCamera):
         self.camera_shm.update_keyword('DETECTOR', 'FLIR GS3 or FL3')
 
     def prepare_camera_for_size(self, mode_id=None):
+        logg.debug('prepare_camera_for_size @ FLIR_U3_Camera')
+
         SpinnakerUSBCamera.prepare_camera_for_size(self, mode_id)
 
         if mode_id is None:
@@ -264,6 +279,8 @@ class FLIR_U3_Camera(SpinnakerUSBCamera):
         self.spinn_cam.OffsetY.SetValue(y0)
 
     def prepare_camera_finalize(self, mode_id=None):
+        logg.debug('prepare_camera_finalize @ FLIR_U3_Camera')
+        
         # Something that we feel is GS3/FL3 specific but not Spinnaker generic
         SpinnakerUSBCamera.prepare_camera_finalize(self, mode_id)
 
@@ -289,6 +306,8 @@ class BlackFlyS(SpinnakerUSBCamera):
     KEYWORDS.update(SpinnakerUSBCamera.KEYWORDS)
 
     def _spinnaker_subtypes_constructor_finalizer(self):
+        logg.debug('_spinnaker_subtypes_constructor_finalizer @ BlackFlyS')
+
         # Disable LED
         self.spinn_cam.DeviceIndicatorMode.SetValue(
                 PySpin.DeviceIndicatorMode_Inactive)
@@ -309,6 +328,8 @@ class BlackFlyS(SpinnakerUSBCamera):
         self.camera_shm.update_keyword('DETECTOR', 'BlackFly S')
 
     def prepare_camera_for_size(self, mode_id=None):
+        logg.debug('prepare_camera_for_size @ BlackFlyS')
+
         # Something that we feel is BlackFly specific but not Spinnaker generic
         SpinnakerUSBCamera.prepare_camera_for_size(self, mode_id)
 
@@ -342,6 +363,8 @@ class BlackFlyS(SpinnakerUSBCamera):
         self.spinn_cam.PixelFormat.SetValue(PySpin.PixelFormat_Mono12Packed)
 
     def prepare_camera_finalize(self, mode_id=None):
+        logg.debug('prepare_camera_finalize @ BlackFlyS')
+
         # Something that we feel is BlackFly specific but not Spinnaker generic
         SpinnakerUSBCamera.prepare_camera_finalize(self, mode_id)
 

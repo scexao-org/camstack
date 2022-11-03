@@ -1,22 +1,12 @@
-'''
-    THIS FILE DEVELOPMENT IS ABANDONED AFTER REALIZED CAMERAS
-    WE HAVE CAN BE CONTROLLED WITH THE MOST RECENT SPINNAKER.
-
-    THIS FILE DEVELOPMENT IS RESTARTED AFTER REALIZING USB3
-    CAMERAS THAT CAN BE CONTROLLED WITH BOTH SPINNAKER AND
-    FLYCAPTURE ARE KINDA GARBAGE WITH SPINNAKER #Raging
-'''
-
 import os
 import time
+import logging as logg
 
 from typing import Union, Tuple, List, Any
 
 from camstack.cams.base import BaseCamera
-#from camstack.core import dcamprop
 from camstack.core.utilities import CameraMode
 
-from pyMilk.interfacing.shm import SHM
 import numpy as np
 
 import PyCapture2 as PC2
@@ -110,9 +100,12 @@ class FlyCaptureUSBCamera(BaseCamera):
         # Constructor finalizers were put init init_framegrab_backend
 
     def init_framegrab_backend(self):
+        logg.debug('init_framegrab_backend @ FlyCaptureUSBCamera')
+
         if self.is_taker_running():
-            raise AssertionError(
-                    'Cannot change camera config while camera is running')
+            msg ='Cannot change camera config while camera is running'
+            logg.error(msg)
+            raise AssertionError(msg)
 
         if self.fly_bus is None:
             self.fly_bus = PC2.BusManager()
@@ -153,6 +146,7 @@ class FlyCaptureUSBCamera(BaseCamera):
                                  onOff=False, absValue=1.0)
 
     def prepare_camera_for_size(self, mode_id=None):
+        logg.debug('prepare_camera_for_size @ FlyCaptureUSBCamera')
         BaseCamera.prepare_camera_for_size(self)
 
         x0, x1 = self.current_mode.x0, self.current_mode.x1
@@ -173,10 +167,13 @@ class FlyCaptureUSBCamera(BaseCamera):
 
         # Preferred: Mono12, Mono16, Mono8
         if (fmt7_info.pixelFormatBitField & PC2.PIXEL_FORMAT.MONO12) > 0:
+            logg.info('pixel format Mono12')
             px_fmt = PC2.PIXEL_FORMAT.MONO12
         elif (fmt7_info.pixelFormatBitField & PC2.PIXEL_FORMAT.MONO16) > 0:
+            logg.info('pixel format Mono16')
             px_fmt = PC2.PIXEL_FORMAT.MONO16
         elif (fmt7_info.pixelFormatBitField & PC2.PIXEL_FORMAT.MONO8) > 0:
+            logg.info('pixel format Mono8')
             px_fmt = PC2.PIXEL_FORMAT.MONO8
 
         fmt7_set = PC2.Format7ImageSettings(PC2.MODE.MODE_0, x0, y0,
@@ -189,13 +186,7 @@ class FlyCaptureUSBCamera(BaseCamera):
         #TODO binning?
 
     def prepare_camera_finalize(self):
-        # Only the stuff that is mode dependent
-        # And/or should be called after each mode change.
-        # And is camera specific
-
-        # Finalize because using set_tint/set_fps requires
-        # Having a valid handle to self.camera_shm
-        # Hence that the fgrab has started.
+        logg.debug('prepare_camera_finalize @ FlyCaptureUSBCamera')
 
         BaseCamera.prepare_camera_finalize(self)
 
@@ -218,6 +209,7 @@ class FlyCaptureUSBCamera(BaseCamera):
     def release(self):
         BaseCamera.release(self)
 
+        logg.info('fly_cam.disconnect()')
         self.fly_cam.disconnect()
         del self.fly_cam
 
@@ -252,6 +244,7 @@ class FlyCaptureUSBCamera(BaseCamera):
     def get_fps(self):
         fps = self.fly_cam.getProperty(PROPS.FRAME_RATE).absValue
         self._set_formatted_keyword('FRATE', fps)
+        logg.info(f'get_fps: {fps}')
         return fps
 
     def set_fps(self, fps: float):
@@ -261,6 +254,7 @@ class FlyCaptureUSBCamera(BaseCamera):
     def get_tint(self):
         tint = self.fly_cam.getProperty(PROPS.SHUTTER).absValue / 1000.
         self._set_formatted_keyword('EXPTIME', tint)
+        logg.info(f'get_fps: {tint}')
         return tint
 
     def set_tint(self, tint: float):
@@ -270,6 +264,7 @@ class FlyCaptureUSBCamera(BaseCamera):
     def get_gain(self):
         gain = self.fly_cam.getProperty(PROPS.GAIN).absValue
         self._set_formatted_keyword('DETGAIN', gain)
+        logg.info(f'get_gain: {gain}')
         return gain
 
     def set_gain(self, gain: float):
@@ -278,8 +273,9 @@ class FlyCaptureUSBCamera(BaseCamera):
 
     def get_temperature(self):
         # FIXME it doesn't change much at all. I think it's lying.
-        temp = self.fly_cam.getProperty(PROPS.TEMPERATURE).absValue
-        self._set_formatted_keyword('DET-TMP', temp + 273.15)
+        temp = self.fly_cam.getProperty(PROPS.TEMPERATURE).absValue + 273.15
+        self._set_formatted_keyword('DET-TMP', temp)
+        logg.info(f'get_temperature: {temp}')
         return temp
 
 

@@ -1,4 +1,5 @@
 import os
+import logging as logg
 
 from typing import Union, Tuple, List, Any
 
@@ -38,13 +39,15 @@ class DCAMCamera(BaseCamera):
                             dependent_processes=dependent_processes)
 
     def init_framegrab_backend(self):
+        logg.debug('init_framegrab_backend @ DCAMCamera')
 
         if self.is_taker_running():
             # Let's give ourselves two tries
             time.sleep(3.0)
             if self.is_taker_running():
-                raise AssertionError(
-                        'Cannot change camera config while camera is running')
+                msg = 'Cannot change camera config while camera is running'
+                logg.error(msg)
+                raise AssertionError(msg)
 
         # Try create a feedback SHM for parameters
         if self.control_shm is None:
@@ -52,6 +55,7 @@ class DCAMCamera(BaseCamera):
                                    np.zeros((1, ), dtype=np.int16))
 
     def prepare_camera_for_size(self, mode_id=None, params_injection = None):
+        logg.debug('prepare_camera_for_size @ DCAMCamera')
 
         BaseCamera.prepare_camera_for_size(self, mode_id=None)
 
@@ -133,6 +137,8 @@ class DCAMCamera(BaseCamera):
             We set the first bit to 1 if it's a set.
         '''
 
+        logg.debug(f'DCAMCamera _dcam_prm_setgetmultivalue [getonly: {getonly_flag}]: {list(zip(fits_keys, values))}')
+
         if getonly_flag:
             dcam_string_keys = [
                     f'{dcam_key | 0x80000000:08x}' for dcam_key in dcam_keys
@@ -202,19 +208,25 @@ class OrcaQuest(DCAMCamera):
     def get_temperature(self):
         # Let's try and play: it's readonly
         # but should trigger the cam calling back home
-        return self._dcam_prm_getvalue('DET-TMP',
+        val = self._dcam_prm_getvalue('DET-TMP',
                                        dcamprop.EProp.SENSORTEMPERATURE)
+        logg.info(f'get_temperature {val}')
+        return val
 
     # And now we fill up... FAN, LIQUID
 
     def get_tint(self):
-        return self._dcam_prm_getvalue('EXPTIME', dcamprop.EProp.EXPOSURETIME)
+        val = self._dcam_prm_getvalue('EXPTIME', dcamprop.EProp.EXPOSURETIME)
+        logg.info(f'get_tint {val}')
+        return val
 
     def set_tint(self, tint: float):
         return self._dcam_prm_setvalue(tint, 'EXPTIME',
                                        dcamprop.EProp.EXPOSURETIME)
         
     def set_readout_ultraquiet(self, ultraquiet: bool):
+        logg.debug('set_readout_ultraquiet @ OrcaQuest')
+
         readmode = (dcamprop.EReadoutSpeed.READOUT_FAST,
                     dcamprop.EReadoutSpeed.READOUT_ULTRAQUIET)[ultraquiet]
         
@@ -251,4 +263,4 @@ class MilesOrcam(OrcaQuest):
         OrcaQuest._fill_keywords(self)
 
         # Override detector name
-        self._set_formatted_keyword('DETECTOR', 'Miles cam')
+        self._set_formatted_keyword('DETECTOR', 'Miles OrcaQ')
