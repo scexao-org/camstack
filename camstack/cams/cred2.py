@@ -97,6 +97,7 @@ class CRED2(EDTCamera):
     # =====================
 
     def prepare_camera_for_size(self, mode_id=None):
+        logg.debug('prepare_camera_for_size @ CRED2')
 
         self.send_command('set cropping on')
 
@@ -118,6 +119,7 @@ class CRED2(EDTCamera):
         EDTCamera.prepare_camera_for_size(self, mode_id=mode_id)
 
     def prepare_camera_finalize(self, mode_id: int = None):
+        logg.debug('prepare_camera_finalize @ CRED2')
 
         if mode_id is None:
             mode_id = self.current_mode_id
@@ -137,6 +139,7 @@ class CRED2(EDTCamera):
 
     def send_command(self, cmd, format=True):
         # Just a little bit of parsing to handle the CRED2 format
+        logg.debug(f'CRED2 send_command: "{cmd}"')
         res = EDTCamera.send_command(self, cmd)[:-10]
 
         while 'cli>' in res:
@@ -179,6 +182,7 @@ class CRED2(EDTCamera):
     # ===========================================
 
     def _get_cropping(self):
+        logg.debug('_get_cropping @ CRED2')
         res = self.send_command('cropping raw')
         xx, yy = res[1:]
         x0, x1 = [int(xxx) for xxx in xx.split('-')]
@@ -187,6 +191,7 @@ class CRED2(EDTCamera):
 
     def _set_check_cropping(self, x0, x1, y0, y1):
         for _ in range(3):
+            logg.debug('_set_check_cropping attempt @ CRED2')
             gx0, gx1, gy0, gy1 = self._get_cropping()
             if gx0 == x0 and gx1 == x1 and gy0 == y0 and gy1 == y1:
                 return x0, x1, y0, y1
@@ -197,8 +202,9 @@ class CRED2(EDTCamera):
             if gy0 != y0 or gy1 != y1:
                 self.send_command('set cropping rows %u-%u' % (y0, y1))
                 time.sleep(.2)
-        raise AssertionError(
-                f'Cannot set desired crop {x0}-{x1} {y0}-{y1} after 3 tries')
+        msg = f'Cannot set desired crop {x0}-{x1} {y0}-{y1} after 3 tries'
+        logg.error(msg)
+        raise AssertionError(msg)
 
     def set_synchro(self, synchro: bool):
         val = ('off', 'on')[synchro]
@@ -206,6 +212,8 @@ class CRED2(EDTCamera):
         res = self.send_command('extsynchro raw')
         self.synchro = {'off': False, 'on': True}[res]
         self._set_formatted_keyword('EXTTRIG', self.synchro)
+
+        logg.info(f'set_synchro: {self.synchro}')
         return self.synchro
 
     def set_gain(self, gain: Union[int, str]):
@@ -221,6 +229,7 @@ class CRED2(EDTCamera):
         res = CRED2_GAINENUM.INT2STR_MAP[self.send_command('sensibility raw')]
         # res is high, medium or low
         self._set_formatted_keyword('DETGAIN', res)
+        logg.info(f'get_gain: {res}')
         return res
 
     def set_NDR(self, NDR: int):
@@ -232,6 +241,7 @@ class CRED2(EDTCamera):
         self._set_formatted_keyword('DET-NSMP', self.NDR)
         self._set_formatted_keyword('DET-SMPL',
                                     ('Single', 'IMRO')[self.NDR > 1])
+        logg.info(f'get_NDR: {self.NDR}')
         return self.NDR
 
     def set_fps(self, fps: float):
@@ -241,6 +251,7 @@ class CRED2(EDTCamera):
     def get_fps(self):
         fps = float(self.send_command('fps raw'))
         self._set_formatted_keyword('FRATE', fps)
+        logg.info(f'get_fps: {fps}')
         return fps
 
     def max_fps(self):
@@ -253,15 +264,17 @@ class CRED2(EDTCamera):
     def get_tint(self):
         tint = float(self.send_command('tint raw'))
         self._set_formatted_keyword('EXPTIME', tint)
+        logg.info(f'get_tint: {tint}')
         return tint
 
     def max_tint(self):
         return float(self.send_command('maxtint raw'))
 
     def get_temperature(self):
-        temp = float(self.send_command('temp raw')[3])
+        temp = float(self.send_command('temp raw')[3]) + 273.15
 
-        self._set_formatted_keyword('DET-TMP', temp + 273.15)
+        self._set_formatted_keyword('DET-TMP', temp)
+        logg.info(f'get_temp: {temp}')
         return temp
 
     def set_temperature_setpoint(self, temp: float):
@@ -275,10 +288,11 @@ class CRED2(EDTCamera):
         if 'OK' in res:
             while True:
                 time.sleep(5)
-                print('Camera shutdown was acknowledged.')
-                print('Processes on this end were killed.')
-                print('You should quit this shell.')
-                print('You\'ll need to power cycle the CRED2 to reboot it.')
+                logg.warning(
+                        'Camera shutdown was acknowledged.'
+                        'Processes on this end were killed.'
+                        'You should quit this shell.'
+                        'You\'ll need to power cycle the CRED2 to reboot it.')
 
 
 class Rajni(CRED2):
@@ -298,6 +312,7 @@ class Rajni(CRED2):
 
     def _thermal_init_commands(self):
         # Rajni + chuck: water cooling,
+        logg.debug('_thermal_init_commands @ Rajni')
         self.send_command('set fan speed 0')
         self.send_command('set fan mode manual')
         self.set_temperature_setpoint(-40.0)
@@ -333,7 +348,8 @@ class GLINT(CRED2):
         self._set_formatted_keyword('DETECTOR', 'CRED2 - GLINT')
 
     def _thermal_init_commands(self):
-        # Glint" automatic fast cooling
+        # Glint" automatic fan cooling
+        logg.debug('_thermal_init_commands @ GLINT')
         self.send_command('set fan mode automatic')
         self.set_temperature_setpoint(-20.0)
 
@@ -404,6 +420,7 @@ class Chuck(CRED2):
 
     def _thermal_init_commands(self):
         # Rajni / Chuck: water cooling
+        logg.debug('_thermal_init_commands @ Chuck')
         self.send_command('set fan speed 0')
         self.send_command('set fan mode manual')
         self.set_temperature_setpoint(-40.0)

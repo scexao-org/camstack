@@ -2,6 +2,7 @@
     Manage the ocam
 '''
 import os
+import logging as logg
 
 from typing import Union
 from camstack.cams.edtcam import EDTCamera
@@ -84,6 +85,7 @@ class OCAM2K(EDTCamera):
     # =====================
 
     def prepare_camera_for_size(self, mode_id: int = None):
+        logg.debug('prepare_camera_for_size @ OCAM2K')
 
         # This function called during the EDTCamera.__init__ from self.__init__
 
@@ -112,6 +114,7 @@ class OCAM2K(EDTCamera):
                 dep_proc.cli_args = (dep_proc.cli_args[0], h, w)
 
     def prepare_camera_finalize(self, mode_id: int = None):
+        logg.debug('prepare_camera_finalize @ OCAM2K')
 
         if mode_id is None:
             mode_id = self.current_mode_id
@@ -121,6 +124,7 @@ class OCAM2K(EDTCamera):
 
     def send_command(self, cmd, format=True):
         # Just a little bit of parsing to handle the OCAM format
+        logg.debug(f'OCAM2K send_command: "{cmd}"')
         res = EDTCamera.send_command(self, cmd)
         if format:
             wherechevron = res.index('>')
@@ -172,6 +176,7 @@ class OCAM2K(EDTCamera):
         self.set_camera_mode((1, 3)[binning])
 
     def gain_protection_reset(self):
+        logg.warning('gain_protection_reset')
         self.send_command('protection reset')
 
     def set_gain(self, gain: int):
@@ -184,6 +189,7 @@ class OCAM2K(EDTCamera):
         res = self.send_command('gain')
         val = int(res[0])
         self._set_formatted_keyword('DETGAIN', val)
+        logg.info(f'get_gain: {val}')
         return val
 
     def set_synchro(self, val: bool):
@@ -191,6 +197,7 @@ class OCAM2K(EDTCamera):
         self.send_command(f'synchro {("off","on")[val]}')
         self.synchro = val
         self._set_formatted_keyword('EXTTRIG', val)
+        logg.info(f'set_synchro: {self.synchro}')
 
     def set_fps(self, fps: float):
         # 0 sets maxfps
@@ -199,10 +206,12 @@ class OCAM2K(EDTCamera):
         res = self.send_command(f'fps {int(fps)}')
         val = float(res[0])
         self._set_formatted_keyword('FRATE', val)
+        logg.info(f'set_fps: {val}')
         return val
 
     def get_temperature(self):
         val = self._get_temperature()[0]
+        logg.info(f'get_temperature: {val}')
         return val
 
     def _get_temperature(self):
@@ -222,4 +231,5 @@ class OCAM2K(EDTCamera):
 
     def set_temperature_setpoint(self, temp: float):
         self.send_command(f'temp {int(temp)}')
+        logg.info(f'set_temperature_setpoint: {temp}')
         return self.get_temperature()

@@ -2,6 +2,7 @@ import os
 import time
 import subprocess
 import threading
+import logging as logg
 
 from camstack.core.utilities import CameraMode
 from camstack.core import tmux as tmux_util
@@ -9,12 +10,28 @@ from camstack.core import tmux as tmux_util
 try:
     from scxkw.config import MAGIC_BOOL_STR, redis_check_enabled
 except:
+
     def redis_check_enabled():
         return None, False
+
 
 from pyMilk.interfacing.isio_shmlib import SHM
 
 from typing import List, Any, Union, Tuple
+
+# TODO: class decorator that implements a camera-action-lock
+''' TODO
+Blocking/wait calls for basic set/gets (will also make the polling thread safer)
+(paves way for pyro to be more safe too)
+Non-blocking calls with failure for harcore changes (do we need two locks??)
+
+Implement logging.log
+
+Implement pyro servers in mains.
+
+Viewers in particular can then trivially use an autoreconnecting proxy to hit camera controls - in a thread safe way.
+/TODO
+'''
 
 
 class BaseCamera:
@@ -165,16 +182,20 @@ class BaseCamera:
         self.prepare_camera_finalize()
 
     def init_framegrab_backend(self):
+        logg.debug('init_framegrab_backend @ BaseCamera')
+
         # TODO: split into a init_framegrab once (open handles to devices)
         # TODO: and what must be done for every mode change (EDT size change)
         raise NotImplementedError("Must be subclassed from the base class")
 
     def prepare_camera_for_size(self, mode_id=None):
+        logg.debug('prepare_camera_for_size @ BaseCamera')
         # Gets called during constructor and set_mode
         if mode_id is None:
             mode_id = self.current_mode_id
-        print('Calling prepare_camera_for_size on generic BaseCamera class. '
-              'Setting size for shmimTCPreceive.')
+        logg.info(
+                'Calling prepare_camera_for_size on generic BaseCamera class. '
+                'Setting size for shmimTCPreceive.')
         for dep_proc in self.dependent_processes:
             if 'shmimTCPreceive' in dep_proc.cli_cmd:
                 cm = self.current_mode
@@ -183,16 +204,18 @@ class BaseCamera:
                 dep_proc.cli_args = (dep_proc.cli_args[0], h, w)
 
     def prepare_camera_finalize(self, mode_id=None):
+        logg.debug('prepare_camera_finalize @ BaseCamera')
         # Gets called after the framegrabbing has restarted spinning
         if mode_id is None:
             mode_id = self.current_mode_id
-        print('Calling prepare_camera on generic BaseCameraClass. '
-              'Nothing happens here.')
+        logg.warning('Calling prepare_camera on generic BaseCameraClass. '
+                     'Nothing happens here.')
 
     def set_camera_mode(self, mode_id):
         '''
             Quite same as above - but mostly meant to be called by subclasses that do have defined modes.
         '''
+        logg.debug('set_camera_mode @ BaseCamera')
         self.kill_taker_and_dependents()
 
         self.current_mode_id = mode_id
@@ -237,6 +260,7 @@ class BaseCamera:
         return tmux_util.find_pane_running_pid(self.take_tmux_pane) is not None
 
     def start_frame_taker_and_dependents(self, skip_taker=False):
+        logg.info('start_frame_taker_and_dependents @ BaseCamera')
 
         if not skip_taker:
             self._start_taker_no_dependents()
@@ -247,6 +271,7 @@ class BaseCamera:
             dep_process.start()
 
     def kill_taker_and_dependents(self, skip_taker=False):
+        logg.info('kill_taker_and_dependents @ BaseCamera')
 
         self.dependent_processes.sort(key=lambda x: x.kill_order)
         for dep_process in self.dependent_processes:
@@ -364,7 +389,7 @@ class BaseCamera:
                 elif fmt[-1] == 's':  # string
                     val = fmt % value
             except:  # Sometime garbage values cannot be formatted properly...
-                print(f"fits_headers: formatting error on {key}, {value}, {fmt}"
+                logg.error(f"fits_headers: formatting error on {key}, {value}, {fmt}"
                       )
 
         self.camera_shm.update_keyword(key, val)
@@ -405,7 +430,7 @@ class BaseCamera:
         return width, height
 
     def poll_camera_for_keywords(self):
-        print('Calling poll_camera_for_keywords on generic BaseCamera class. '
+        logg.warning('Calling poll_camera_for_keywords on generic BaseCamera class. '
               'Nothing happens here.')
 
     def redis_push_values(self):
@@ -428,12 +453,14 @@ class BaseCamera:
                 pass
 
     def start_auxiliary_thread(self):
+        logg.info('start_auxiliary_thread')
         self.event = threading.Event()
         self.thread = threading.Thread(
                 target=self.auxiliary_thread_run_function)
         self.thread.start()
 
     def stop_auxiliary_thread(self):
+        logg.info('stop_auxiliary_thread')
         if self.thread is not None:
             self.event.set()
             self.thread.join()
@@ -452,9 +479,9 @@ class BaseCamera:
             try:
                 self.poll_camera_for_keywords()
             except Exception as e:
-                print("Polling thread: error ", e)
+                logg.error(f"Polling thread: error [{e}]")
 
             try:
                 self.redis_push_values()
             except Exception as e:
-                print("Polling thread: error ", e)
+                logg.error(f"Polling thread: error [{e}]")
