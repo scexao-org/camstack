@@ -336,7 +336,7 @@ class BaseCamera:
 
     def _kill_taker_no_dependents(self, *, bypass_aux_thread: bool = False):
 
-        if not bypass_thread:  # Dangerous not to, only for DumbEDT
+        if not bypass_aux_thread:  # Dangerous not to, only for DumbEDT
             self.stop_auxiliary_thread()
 
         self.take_tmux_name = f'{self.NAME}_fgrab'
