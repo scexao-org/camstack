@@ -41,8 +41,9 @@ class AutoDumbEDTCamera(EDTCamera):
 
     def _start_taker_no_dependents(self, reuse_shm: bool = False):
         logg.debug('_start_taker_no_dependents @ AutoDumbEDTCamera')
-        EDTCamera._start_taker_no_dependents(self, reuse_shm,
-                                             bypass_aux_thread=True)
+        # The first call is from the main thread, we need to start the thread this very first time.
+        EDTCamera._start_taker_no_dependents(
+                self, reuse_shm, bypass_aux_thread=self.thread is not None)
 
     def _kill_taker_no_dependents(self):
         logg.debug('_kill_taker_no_dependents @ AutoDumbEDTCamera')
