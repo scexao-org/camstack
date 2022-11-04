@@ -58,7 +58,6 @@ class SpinnakerUSBCamera(BaseCamera):
         # We're gonna have a divergence here between the first U3 generation cameras
         # and the Blackfly S...
 
-
     def init_framegrab_backend(self):
         logg.debug('init_framegrab_backend @ SpinnakerUSBCamera')
 
@@ -100,14 +99,15 @@ class SpinnakerUSBCamera(BaseCamera):
         # Only the stuff that is mode dependent
         # And/or should be called after each mode change.
         # And is camera-genre specific
-        
+
         logg.debug('prepare_camera_finalize @ SpinnakerUSBCamera')
 
         # Set fps max
         max_fps = self.spinn_cam.AcquisitionFrameRate.GetMax()
         self.set_fps(max_fps)
         # Expo max
-        max_expo_this_fps = min(self.spinn_cam.ExposureTime.GetMax() * 1e-6, 1 / max_fps)
+        max_expo_this_fps = min(self.spinn_cam.ExposureTime.GetMax() * 1e-6,
+                                1 / max_fps)
         self.set_tint(max_expo_this_fps)
 
         # Lower fps, tint if necessary
@@ -227,7 +227,8 @@ class FLIR_U3_Camera(SpinnakerUSBCamera):
     KEYWORDS.update(SpinnakerUSBCamera.KEYWORDS)
 
     def _spinnaker_subtypes_constructor_finalizer(self):
-        logg.debug('_spinnaker_subtypes_constructor_finalizer @ FLIR_U3_Camera')
+        logg.debug(
+                '_spinnaker_subtypes_constructor_finalizer @ FLIR_U3_Camera')
 
         # Disable autoexp
         self.spinn_cam.ExposureAuto.SetValue(PySpin.ExposureAuto_Off)
@@ -280,7 +281,7 @@ class FLIR_U3_Camera(SpinnakerUSBCamera):
 
     def prepare_camera_finalize(self, mode_id=None):
         logg.debug('prepare_camera_finalize @ FLIR_U3_Camera')
-        
+
         # Something that we feel is GS3/FL3 specific but not Spinnaker generic
         SpinnakerUSBCamera.prepare_camera_finalize(self, mode_id)
 
@@ -290,7 +291,9 @@ class BlackFlyS(SpinnakerUSBCamera):
         Appropriate class for the Blackfly S camera (Hilo lab?)
     '''
 
-    INTERACTIVE_SHELL_METHODS = SpinnakerUSBCamera.INTERACTIVE_SHELL_METHODS + ['FULL']
+    INTERACTIVE_SHELL_METHODS = SpinnakerUSBCamera.INTERACTIVE_SHELL_METHODS + [
+            'FULL'
+    ]
 
     FULL = 'FULL'
 

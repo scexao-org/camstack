@@ -389,8 +389,9 @@ class BaseCamera:
                 elif fmt[-1] == 's':  # string
                     val = fmt % value
             except:  # Sometime garbage values cannot be formatted properly...
-                logg.error(f"fits_headers: formatting error on {key}, {value}, {fmt}"
-                      )
+                logg.error(
+                        f"fits_headers: formatting error on {key}, {value}, {fmt}"
+                )
 
         self.camera_shm.update_keyword(key, val)
 
@@ -430,8 +431,9 @@ class BaseCamera:
         return width, height
 
     def poll_camera_for_keywords(self):
-        logg.warning('Calling poll_camera_for_keywords on generic BaseCamera class. '
-              'Nothing happens here.')
+        logg.warning(
+                'Calling poll_camera_for_keywords on generic BaseCamera class. '
+                'Nothing happens here.')
 
     def redis_push_values(self):
         '''

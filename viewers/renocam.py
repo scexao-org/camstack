@@ -61,7 +61,7 @@ CTRL+SHIFT+ARROW  : steer mod. piezo offset (0.5V)
 mouse controls:
 --------------
 mouse      : display of the flux under the mouse pointer
- 
+
 ESC   : quit pueocam
 
 """
@@ -391,7 +391,7 @@ while True:  # the main game loop
         rects = [rct, rct2, rct3, rect2, rect2b]
     else:
         rects = []
-        
+
     rects += [rect1, rct_info, rct_info2, rct_dinfo, rct_dinfo2]
     if saveim:
         screen.blit(savem1, rct_savem1)

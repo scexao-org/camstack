@@ -183,7 +183,8 @@ class CRED1(EDTCamera):
                 self._set_formatted_keyword('FILTER01',
                                             self.RDB.hget('X_IRCFLT', 'value'))
             except:
-                logg.warning('REDIS unavailable @ poll_camera_for_keywords @ CRED1')
+                logg.warning(
+                        'REDIS unavailable @ poll_camera_for_keywords @ CRED1')
                 pass
         self.get_temperature()  # Sets DET-TMP
         time.sleep(.1)
@@ -344,10 +345,11 @@ class CRED1(EDTCamera):
         if 'OK' in res:
             while True:
                 time.sleep(5)
-                logg.warning('Camera shutdown was acknowledged.\n'
-                             'Processes on this end were killed.\n'
-                             'You should quit this shell.\n'
-                             'You\'ll need to power cycle the CRED1 to reboot it.')
+                logg.warning(
+                        'Camera shutdown was acknowledged.\n'
+                        'Processes on this end were killed.\n'
+                        'You should quit this shell.\n'
+                        'You\'ll need to power cycle the CRED1 to reboot it.')
 
 
 class Buffy(CRED1):
@@ -368,6 +370,7 @@ class Buffy(CRED1):
 
         # Override detector name
         self._set_formatted_keyword('DETECTOR', 'CRED1 - BUFFY')
+
 
 class Iiwi(CRED1):
 

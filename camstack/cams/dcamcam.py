@@ -55,7 +55,7 @@ class DCAMCamera(BaseCamera):
             self.control_shm = SHM(self.STREAMNAME + "_params_fb",
                                    np.zeros((1, ), dtype=np.int16))
 
-    def prepare_camera_for_size(self, mode_id=None, params_injection = None):
+    def prepare_camera_for_size(self, mode_id=None, params_injection=None):
         logg.debug('prepare_camera_for_size @ DCAMCamera')
 
         BaseCamera.prepare_camera_for_size(self, mode_id=None)
@@ -76,12 +76,12 @@ class DCAMCamera(BaseCamera):
         # which requires restarting the acquisition
         # This way we can work this out without a full call to set_camera_mode in the base class
         # and avoiding restarting all dependent processes.
-        if params_injection is not None: 
+        if params_injection is not None:
             params.update(params_injection)
-        
+
         if self.current_mode.tint is not None:
             params[dcamprop.EProp.EXPOSURETIME] = self.current_mode.tint
-        
+
         # Convert int keys into hexstrings
         # dcam values require FLOATS - we'll multiply everything by 1.0
         dump_params = {f'{k:08x}': 1.0 * params[k] for k in params}
@@ -138,7 +138,9 @@ class DCAMCamera(BaseCamera):
             We set the first bit to 1 if it's a set.
         '''
 
-        logg.debug(f'DCAMCamera _dcam_prm_setgetmultivalue [getonly: {getonly_flag}]: {list(zip(fits_keys, values))}')
+        logg.debug(
+                f'DCAMCamera _dcam_prm_setgetmultivalue [getonly: {getonly_flag}]: {list(zip(fits_keys, values))}'
+        )
 
         if getonly_flag:
             dcam_string_keys = [
@@ -167,20 +169,25 @@ class DCAMCamera(BaseCamera):
 
 class OrcaQuest(DCAMCamera):
 
-    INTERACTIVE_SHELL_METHODS = ['FIRST', 'FULL', 'set_tint', 'get_tint', 'get_temperature', 
+    INTERACTIVE_SHELL_METHODS = ['FIRST', 'FULL', 'set_tint', 'get_tint', 'get_temperature',
                                  'set_readout_ultraquiet'] + \
         DCAMCamera.INTERACTIVE_SHELL_METHODS
 
     FIRST, FULL = 'FIRST', 'FULL'
     MODES = {
-        FIRST: CameraMode(x0=952, x1=2915, y0=492, y1=727, tint=0.001),
-        FULL: CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
-        0: CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),  # Also full
-        1: CameraMode(x0=1536, x1=2335, y0=976, y1=1231, tint=0.001),    # Kyohoon is Using for WFS mode
-        11: CameraMode(x0=1536, x1=2335, y0=976, y1=1231, tint=0.1), # Same as 1 no tint.
-        2: CameraMode(x0=800, x1=3295, y0=876, y1=1531, tint=0.001),      # Kyohoon is Using for WFS align
-        3: CameraMode(x0=1148, x1=2947, y0=696, y1=1807, tint=0.001),
-        4: CameraMode(x0=1564, x1=1819, y0=976, y1=1231, tint=0.001),    # Jen is using for focal plane mode
+            FIRST: CameraMode(x0=952, x1=2915, y0=492, y1=727, tint=0.001),
+            FULL: CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
+            0: CameraMode(x0=0, x1=4095, y0=0, y1=2303,
+                          tint=0.001),  # Also full
+            1: CameraMode(x0=1536, x1=2335, y0=976, y1=1231,
+                          tint=0.001),  # Kyohoon is Using for WFS mode
+            11: CameraMode(x0=1536, x1=2335, y0=976, y1=1231,
+                           tint=0.1),  # Same as 1 no tint.
+            2: CameraMode(x0=800, x1=3295, y0=876, y1=1531,
+                          tint=0.001),  # Kyohoon is Using for WFS align
+            3: CameraMode(x0=1148, x1=2947, y0=696, y1=1807, tint=0.001),
+            4: CameraMode(x0=1564, x1=1819, y0=976, y1=1231,
+                          tint=0.001),  # Jen is using for focal plane mode
     }
 
     KEYWORDS = {}
@@ -210,7 +217,7 @@ class OrcaQuest(DCAMCamera):
         # Let's try and play: it's readonly
         # but should trigger the cam calling back home
         val = self._dcam_prm_getvalue('DET-TMP',
-                                       dcamprop.EProp.SENSORTEMPERATURE)
+                                      dcamprop.EProp.SENSORTEMPERATURE)
         logg.info(f'get_temperature {val}')
         return val
 
@@ -224,21 +231,21 @@ class OrcaQuest(DCAMCamera):
     def set_tint(self, tint: float):
         return self._dcam_prm_setvalue(tint, 'EXPTIME',
                                        dcamprop.EProp.EXPOSURETIME)
-        
+
     def set_readout_ultraquiet(self, ultraquiet: bool):
         logg.debug('set_readout_ultraquiet @ OrcaQuest')
 
         readmode = (dcamprop.EReadoutSpeed.READOUT_FAST,
                     dcamprop.EReadoutSpeed.READOUT_ULTRAQUIET)[ultraquiet]
-        
+
         self._kill_taker_no_dependents()
-        self.prepare_camera_for_size(params_injection = {dcamprop.EProp.READOUTSPEED: readmode})
-        
+        self.prepare_camera_for_size(
+                params_injection={dcamprop.EProp.READOUTSPEED: readmode})
+
         self._start_taker_no_dependents(reuse_shm=True)
         # Are those two necessary in this context??? reuse_shm should cover.
         self.grab_shm_fill_keywords()
         self.prepare_camera_finalize()
-        
 
 
 class FIRSTOrcam(OrcaQuest):
@@ -258,8 +265,9 @@ class AlalaOrcam(OrcaQuest):
         # Override detector name
         self._set_formatted_keyword('DETECTOR', 'ALALA OrcaQ')
 
+
 class MilesOrcam(OrcaQuest):
-    
+
     def _fill_keywords(self):
         OrcaQuest._fill_keywords(self)
 

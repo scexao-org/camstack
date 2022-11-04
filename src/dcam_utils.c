@@ -165,12 +165,10 @@ HDCAM dcamcon_init_open(int cam_num)
     memset(&apiinit, 0, sizeof(apiinit));
     apiinit.size = sizeof(apiinit);
 
-	int32 initoption[] = {  
-							DCAMAPI_INITOPTION_APIVER__LATEST,
-							DCAMAPI_INITOPTION_ENDMARK
-						 };
-	apiinit.initoption		= initoption;
-	apiinit.initoptionbytes	= sizeof(initoption);
+    int32 initoption[]      = {DCAMAPI_INITOPTION_APIVER__LATEST,
+                          DCAMAPI_INITOPTION_ENDMARK};
+    apiinit.initoption      = initoption;
+    apiinit.initoptionbytes = sizeof(initoption);
 
     DCAMERR err;
     err = dcamapi_init(&apiinit);

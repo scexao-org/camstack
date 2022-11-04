@@ -3,7 +3,6 @@ import subprocess
 import time
 import logging as logg
 
-
 from typing import Union, Tuple, List, Any
 
 from camstack.cams.base import BaseCamera

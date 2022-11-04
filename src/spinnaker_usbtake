@@ -37,7 +37,7 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
 
         spinn_cam.BeginAcquisition()
         spinn_image = spinn_cam.GetNextImage(1000)  # 1 sec timeout
-        
+
         print('OK')
         # We need to convert - not native 8 or 16 ! 10 or 12 bit packed probs.
         # So we convert to Mono16.
@@ -45,7 +45,7 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
 
         if need_convert_16:
             conv_image = spinn_image.Convert(PySpin.PixelFormat_Mono16,
-                                                PySpin.HQ_LINEAR)
+                                             PySpin.HQ_LINEAR)
         else:
             conv_image = spinn_image
 
@@ -61,11 +61,11 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
         shm.set_keywords({
                 'MFRATE': (0.0, "Measured frame rate (Hz)"),
                 '_MAQTIME': (int(time.time() * 1e6),
-                                "Frame acq time (us, CLOCK_REALTIME)"),
+                             "Frame acq time (us, CLOCK_REALTIME)"),
                 '_FGSIZE1': (data_arr.shape[1],
-                                "Size of frame grabber for the X axis (pixel)"),
+                             "Size of frame grabber for the X axis (pixel)"),
                 '_FGSIZE2': (data_arr.shape[0],
-                                "Size of frame grabber for the Y axis (pixel)"),
+                             "Size of frame grabber for the Y axis (pixel)"),
         })
 
         n_img = 0
@@ -83,12 +83,12 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
 
             if spinn_image.IsIncomplete():
                 print('Image incomplete - status %d ...' %
-                        spinn_image.GetImageStatus())
+                      spinn_image.GetImageStatus())
                 continue
 
             if need_convert_16:
                 conv_image = spinn_image.Convert(PySpin.PixelFormat_Mono16,
-                                                    PySpin.HQ_LINEAR)
+                                                 PySpin.HQ_LINEAR)
             else:
                 conv_image = spinn_image
 
@@ -107,7 +107,6 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
             if n_img == n_loops:  # won't happen if n_loops = 0, which is intended.
                 break
 
-    
     except Exception as ex:
         print('Error 0: %s' % ex)
     except KeyboardInterrupt:
