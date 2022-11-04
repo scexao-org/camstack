@@ -36,6 +36,7 @@ class EDTCamera(BaseCamera):
         self.pdv_channel = pdv_channel
 
         self.pdv_basefile = pdv_basefile
+        self.pdv_taps = 1  # We will retrive this from the FG.
 
         self.edt_iface = None  # See self.init_framegrab_backend
 
@@ -62,6 +63,17 @@ class EDTCamera(BaseCamera):
             msg = f'EDT cfg file {self.base_config_file} not found.'
             logg.error(msg)
             raise FileNotFoundError(msg)
+
+        # Find the number of taps from the file.
+        with open(tmp_config, 'r') as file:
+            for line in file:
+                if line == "":  # File finished
+                    msg = f'EDT cfg file {self.base_config_file} contains no CL_DATA_PATH_NORM directive.'
+                    logg.error(msg)
+                    raise AssertionError(msg)
+                linespl = line.rstrip().split()
+                if len(linespl) > 0 and linespl[0] == "CL_DATA_PATH_NORM:":
+                    self.pdv_taps = int('0x' + linespl[1][0], 16) + 1
 
         with open(tmp_config, 'a') as file:
             file.write(f'\n\n'
