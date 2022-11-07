@@ -6,6 +6,8 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <semaphore.h>
+#include <fcntl.h>
 
 #include "ImageStreamIO.h"
 #include "ImageStruct.h"
@@ -62,6 +64,8 @@ int main(int argc, char **argv)
     int REUSE_SHM      = 0;
     int STREAMNAMEINIT = 0;
 
+    int ONLY_BUS_SCAN = 0;
+
     progname = argv[0];
 
     /*
@@ -75,6 +79,9 @@ int main(int argc, char **argv)
         {
         case 'R':
             REUSE_SHM = 1;
+            break;
+        case 'B':
+            ONLY_BUS_SCAN = 1;
             break;
 
         case 'N':
@@ -168,6 +175,56 @@ int main(int argc, char **argv)
         argv++;
     }
 
+    if (ONLY_BUS_SCAN)
+    {
+        dcamcon_init_upto_index(-1);
+        dcamapi_uninit();
+        exit(0);
+    }
+
+    // THIS SECTION IS FORKING MAGIC TO OPEN AND HOLD ONLY ONE CAMERA
+    // AND NONE OTHER
+    {
+        int err;
+
+        sem_t *sem1 = sem_open("/dcamapi_init_sem1", O_CREAT, 0644, 0);
+        sem_t *sem2 = sem_open("/dcamapi_init_sem2", O_CREAT, 0644, 0);
+
+        if (fork())
+        {                   // Parent
+            sem_wait(sem1); // Will be blocked forever if child crashes...
+            printf("Parent process (acquisition):\n");
+            err = dcamcon_init_upto_index(unit + 1);
+            if (err != 0)
+            {
+                dcamapi_uninit();
+                exit(1);
+            }
+
+            sem_post(sem2);
+            sem_wait(sem1);
+        }
+        else // Child
+        {
+            printf("Child process (API holder):\n");
+            dcamcon_init_upto_index(unit);
+            sem_post(sem1);
+            sem_wait(sem2);
+            dcamapi_uninit();
+            sem_post(sem1);
+            exit(0); // Child always exits.
+        }
+        // Parent only continues
+    }
+
+    // Grab DCAM ! Since we hacked around the available cameras, we should open camera 0 always.
+    HDCAM cam = dcamcon_opencam(0);
+    if (cam == NULL) // failed open DCAM handle
+    {
+        exit(1);
+    }
+
+
     IMAGE     image;     // pointer to array of images
     IMAGE     image_prm; // pointer to array of images
     int       semid_prm;
@@ -176,16 +233,6 @@ int main(int argc, char **argv)
     uint32_t *imsize;                   // image size
     int       shared;                   // 1 if image in shared memory
     int       NBkw;                     // number of keywords supported
-
-    /*
-  Open DCAM !
-  */
-
-    HDCAM cam = dcamcon_init_open(unit);
-    if (cam == NULL) // failed open DCAM handle
-    {
-        exit(1);
-    }
 
     // Initialize name
     if (STREAMNAMEINIT == 0)
@@ -308,9 +355,9 @@ int main(int argc, char **argv)
     const char *KW_NAMES[] = {"MFRATE", "_MAQTIME", "_FGSIZE1", "_FGSIZE2"};
     const char  KW_TYPES[] = {'D', 'L', 'L', 'L'};
     const char *KW_COM[]   = {"Measured frame rate (Hz)",
-                            "Frame acq time (us, CLOCK_REALTIME)",
-                            "Size of frame grabber for the X axis (pixel)",
-                            "Size of frame grabber for the Y axis (pixel)"};
+                              "Frame acq time (us, CLOCK_REALTIME)",
+                              "Size of frame grabber for the X axis (pixel)",
+                              "Size of frame grabber for the Y axis (pixel)"};
 
     int KW_POS[] = {0, 1, 2, 3};
 

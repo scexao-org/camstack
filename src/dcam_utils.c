@@ -158,10 +158,14 @@ void dcamcon_show_dcamdev_info_detail(HDCAM hdcam)
 // ----------------------------------------------------------------
 // initialize DCAM-API and get HDCAM camera handle.
 
-HDCAM dcamcon_init_open(int cam_num)
+int dcamcon_init_upto_index(int max_index)
 {
+    // Scan the API after disabling framegrabbers >= max_index.
+    // Max index < 0 will ignore this feature (for scan bus and print)
+
     // Initialize DCAM-API ver 4.0
     DCAMAPI_INIT apiinit;
+    DCAMERR      err;
     memset(&apiinit, 0, sizeof(apiinit));
     apiinit.size = sizeof(apiinit);
 
@@ -170,56 +174,115 @@ HDCAM dcamcon_init_open(int cam_num)
     apiinit.initoption      = initoption;
     apiinit.initoptionbytes = sizeof(initoption);
 
-    DCAMERR err;
-    err = dcamapi_init(&apiinit);
-    if (err != DCAMERR_SUCCESS)
+    // Disable framegrabbers of index >= max_index
+    if (max_index >= 0)
     {
-        // failure
-        dcamcon_show_dcamerr(NULL, err, "dcamapi_init()");
-        return NULL;
+        toggle_readable_all_aslenum_devices(FALSE);
+        for (int ii = 0; ii < max_index; ++ii)
+        {
+            enable_one_aslenum_device(ii);
+        }
     }
 
-    int32 nDevice = apiinit.iDeviceCount;
-    ASSERT(nDevice > 0); // nDevice must be larger than 0
+    err = dcamapi_init(&apiinit);
+
+    // Re-enable framegrabbers of index >= max_index
+    if (max_index >= 0)
+    {
+        toggle_readable_all_aslenum_devices(TRUE);
+    }
+
+    if (err != DCAMERR_SUCCESS && err != DCAMERR_NOCAMERA)
+    { // NOCAMERA error is considered success
+        dcamcon_show_dcamerr(NULL, err, "dcamapi_init()");
+        return EXIT_FAILURE;
+    }
 
     // show all camera information by text
-    printf("DCAM: enumerating cameras [found %d]\n", nDevice);
-    for (int iDevice = 0; iDevice < nDevice; iDevice++)
+    printf("DCAM: enumerating cameras [found %d]\n", apiinit.iDeviceCount);
+    for (int iDevice = 0; iDevice < apiinit.iDeviceCount; iDevice++)
     {
         printf("Cam %d:   ", iDevice);
-        dcamcon_show_dcamdev_info((HDCAM) (long) iDevice);
+        dcamcon_show_dcamdev_info_detail((HDCAM) (long) iDevice);
     }
     printf("----\n");
 
-    if (0 <= cam_num && cam_num < nDevice)
-    {
-        // open specified camera
-        DCAMDEV_OPEN devopen;
-        memset(&devopen, 0, sizeof(devopen));
-        devopen.size  = sizeof(devopen);
-        devopen.index = cam_num;
-        err           = dcamdev_open(&devopen);
-
-        if (err != 0)
-        {
-            HDCAM hdcam = devopen.hdcam;
-            printf("Succesful open on camera %d:\n", cam_num);
-            dcamcon_show_dcamdev_info((HDCAM) (long) cam_num);
-            dcamcon_show_dcamdev_info_detail(hdcam);
-            printf("----\n");
-
-            // SUCCESS
-            return hdcam;
-        }
-
-        dcamcon_show_dcamerr((HDCAM) (long) cam_num, err, "dcamdev_open()");
-    }
-    else
-    {
-        printf("Invalid camera number: %d ?\n", cam_num);
-    }
-
-    // FAILURE - uninitialize DCAM-API
-    dcamapi_uninit();
-    return NULL;
+    return EXIT_SUCCESS;
 }
+
+HDCAM dcamcon_opencam(int cam_num)
+{
+    DCAMERR err;
+
+    // open specified camera
+    DCAMDEV_OPEN devopen;
+    memset(&devopen, 0, sizeof(devopen));
+    devopen.size = sizeof(devopen);
+    devopen.index = cam_num;
+    err = dcamdev_open(&devopen);
+
+    if (err != DCAMERR_SUCCESS)
+    {
+        dcamcon_show_dcamerr((HDCAM) (long) cam_num, err, "dcamdev_open()");
+        return NULL; // Caller should de-init API and quit.
+    }
+
+    HDCAM hdcam = devopen.hdcam;
+    printf("Succesful open on camera %d:\n", cam_num);
+    dcamcon_show_dcamdev_info((HDCAM) (long) 0);
+    dcamcon_show_dcamdev_info_detail(hdcam);
+    printf("----\n");
+
+    // SUCCESS
+    return hdcam;
+
+}
+
+void toggle_readable_all_aslenum_devices(BOOL enable)
+{
+    /*
+    Now this is a hack to enable having only ONE camera plugged to
+    the system by the time we end up calling dcamapi_init()
+    This avoids letting the API get a lock on ALL cameras.
+    And then subsequent processes can still get access to the other ones.
+
+    Essentially, we're doing
+        chmod u-r /dev/aslenum*
+    */
+    int mode_disable = strtol("0266", 0, 8);
+    int mode_enable  = strtol("0666", 0, 8);
+
+    char filename[100];
+    int  device_idx = 0;
+    int  ret_code   = 0;
+    while (ret_code == 0)
+    {
+        sprintf(filename, "/dev/aslenum%d", device_idx++);
+        if (enable)
+        {
+            ret_code = chmod(filename, mode_enable);
+        }
+        else
+        {
+            ret_code = chmod(filename, mode_disable);
+        }
+    }
+}
+
+
+
+void enable_one_aslenum_device(int index)
+{
+    int  mode_enable = strtol("0666", 0, 8);
+    char filename[100];
+    sprintf(filename, "/dev/aslenum%d", index);
+    chmod(filename, mode_enable);
+};
+
+void disable_one_aslenum_device(int index)
+{
+    int  mode_enable = strtol("0266", 0, 8);
+    char filename[100];
+    sprintf(filename, "/dev/aslenum%d", index);
+    chmod(filename, mode_enable);
+};

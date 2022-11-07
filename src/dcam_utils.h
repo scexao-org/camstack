@@ -1,8 +1,7 @@
-// console/misc/common.h
-//
 
 #include "dcamapi4.h"
 #include "dcamprop.h"
+#include <sys/stat.h>
 
 typedef unsigned int BOOL;
 
@@ -11,11 +10,16 @@ typedef unsigned int BOOL;
 
 void dcamcon_show_dcamerr(HDCAM hdcam, DCAMERR errid, const char *apiname);
 
-HDCAM dcamcon_init_open(int cam_num);
+int dcamcon_init_upto_index(int max_index);
+HDCAM dcamcon_opencam(int cam_num);
+
 void  dcamcon_show_dcamdev_info(HDCAM hdcam);
 
 BOOL console_prompt(const char *prompt, char *buf, int32 bufsize);
 void output_data(const char *filename, char *buf, int32 bufsize);
+
+void toggle_readable_all_aslenum_devices(BOOL enable);
+void enable_one_aslenum_device(int index);
 
 // Note: DCAMERR SUCCESS is 1
 
