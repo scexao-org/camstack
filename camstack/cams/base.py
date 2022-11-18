@@ -292,7 +292,8 @@ class BaseCamera:
         '''
         self.release()
 
-    def _start_taker_no_dependents(self, reuse_shm: bool = False):
+    def _start_taker_no_dependents(self, reuse_shm: bool = False, *,
+                                   bypass_aux_thread: bool = False):
         # We have to prepare self.taker_tmux_command
         # we could do that in init_framegrab_backend, but hey we don't
 
@@ -317,7 +318,9 @@ class BaseCamera:
         # Should these 3 be there ???
         self.grab_shm_fill_keywords()
         self.prepare_camera_finalize()
-        self.start_auxiliary_thread()
+
+        if not bypass_aux_thread:
+            self.start_auxiliary_thread()
 
     def _start(self):
         '''
@@ -331,9 +334,10 @@ class BaseCamera:
     def _ensure_backend_restarted(self):
         raise NotImplementedError("Must be subclassed from the base class")
 
-    def _kill_taker_no_dependents(self):
+    def _kill_taker_no_dependents(self, *, bypass_aux_thread: bool = False):
 
-        self.stop_auxiliary_thread()
+        if not bypass_aux_thread:  # Dangerous not to, only for DumbEDT
+            self.stop_auxiliary_thread()
 
         self.take_tmux_name = f'{self.NAME}_fgrab'
         self.take_tmux_pane = tmux_util.find_or_create(self.take_tmux_name)
@@ -449,10 +453,10 @@ class BaseCamera:
                             pipe.hset(self.REDIS_PREFIX + self.KEYWORDS[kw][3],
                                       'value', keywords_shm[kw])
                     pipe.execute()
-            except:
+            except:  #TODO
                 # In case there's a transient unavailability of the DB
                 # Or get_keyword failed or whatnot
-                pass
+                logg.error('Exception in redis_push_values @ BaseCamera')
 
     def start_auxiliary_thread(self):
         logg.info('start_auxiliary_thread')
