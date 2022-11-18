@@ -7,7 +7,7 @@
 '''
 
 from camstack.core.utilities import DependentProcess, RemoteDependentProcess
-from camstack.cams.andors import Vampires
+from camstack.cams.andors_autocamlink import Vampires
 
 import scxconf
 

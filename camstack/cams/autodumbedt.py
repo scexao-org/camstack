@@ -53,8 +53,7 @@ class AutoDumbEDTCamera(EDTCamera):
         kw_dict = self.camera_shm.get_keywords()
 
         detected_height = kw_dict['_FGDETS1']  # Lines per frame
-        detected_width = kw_dict[
-                '_FGDETS2'] * self.pdv_taps  # px per line * n_taps
+        detected_width = kw_dict['_FGDETS2'] * self.pdv_taps  # px/line * n_taps
 
         if (detected_height != self.height) or (detected_width != self.width):
             # Dang, the frame size has change behind our backs!

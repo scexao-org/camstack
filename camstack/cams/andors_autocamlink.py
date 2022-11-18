@@ -9,7 +9,7 @@ from camstack.cams.autodumbedt import AutoDumbEDTCamera
 from camstack.core.utilities import CameraMode
 
 
-class Andor897(AutoDumbEDTCamera):
+class AutoAndor897(AutoDumbEDTCamera):
     MODES = {
             # FULL 512 x 512
             512: CameraMode(x0=0, x1=511, y0=0, y1=511),
@@ -31,7 +31,7 @@ class Andor897(AutoDumbEDTCamera):
                                    dependent_processes=dependent_processes)
 
 
-class Vampires(Andor897):
+class Vampires(AutoAndor897):
     MODES = {
             # 256x256 half frame, centered
             256: CameraMode(x0=128, x1=383, y0=128, y1=383),
@@ -40,7 +40,7 @@ class Vampires(Andor897):
             64: CameraMode(x0=224, x1=287, y0=224, y1=287),
             32: CameraMode(x0=240, x1=271, y0=240, y1=271),
     }
-    MODES.update(Andor897.MODES)
+    MODES.update(AutoAndor897.MODES)
 
     EDTTAKE_EMBEDMICROSECOND = False
 
@@ -50,23 +50,23 @@ class Vampires(Andor897):
         # Just register the vampires camera number... which is the camlink channel.
         self.vcam_num = channel
 
-        Andor897.__init__(self, name, stream_name, unit, channel, mode_id,
-                          taker_cset_prio, dependent_processes)
+        AutoAndor897.__init__(self, name, stream_name, unit, channel, mode_id,
+                              taker_cset_prio, dependent_processes)
 
     def _fill_keywords(self):
-        Andor897._fill_keywords(self)
+        AutoAndor897._fill_keywords(self)
 
         # Override detector name
         self._set_formatted_keyword('DETECTOR',
                                     f'Andor - VCAM{self.vcam_num:1d}')
 
 
-class First(Andor897):
+class First(AutoAndor897):
     MODES = {
             # 512 x 204
             1: CameraMode(x0=0, x1=511, y0=0, y1=203),
     }
-    MODES.update(Andor897.MODES)
+    MODES.update(AutoAndor897.MODES)
 
     EDTTAKE_EMBEDMICROSECOND = False
 
