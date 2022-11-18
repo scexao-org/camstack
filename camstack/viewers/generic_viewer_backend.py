@@ -89,15 +89,18 @@ class GenericViewerBackend:
         self.has_frontend = True
         # Now there's the problem of the reverse-bind of text boxes to mode objects
 
-    def toggle_cmap(self, which=None):
+    def toggle_cmap(self, which: int = None):
         if which is None:
             self.cmap_id = (self.cmap_id + 1) % len(self.COLORMAPS)
         else:
             self.cmap_id = which
         self.cmap = self.COLORMAPS[self.cmap_id]
 
-    def toggle_scaling(self):
-        self.flag_non_linear = (self.flag_non_linear + 1) % 3
+    def toggle_scaling(self, value: int = None):
+        if value is None:
+            self.flag_non_linear = (self.flag_non_linear + 1) % 3
+        else:
+            self.flag_non_linear = value
 
     def toggle_crop(self, which=None):
         if which is None:
