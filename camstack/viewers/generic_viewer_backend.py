@@ -1,14 +1,17 @@
-from typing import Tuple
+from __future__ import annotations  # For type hints
+
+from typing import TYPE_CHECKING  # For type hints
+
+from camstack.viewers import backend_utils as buts
+
+if TYPE_CHECKING:  # this type hint would cause a circular import
+    from camstack.viewers.generic_viewer_frontend import GenericViewerFrontend
 
 from astropy.io import fits
 from pyMilk.interfacing.shm import SHM
 
-from camstack.viewers import backend_utils as buts
-
 import numpy as np
-
 from matplotlib import cm
-
 from functools import partial
 
 # class BasicCamViewer:
@@ -33,7 +36,7 @@ class GenericViewerBackend:
 
     SHORTCUTS = {}  # Do not subclass this, see constructor
 
-    def __init__(self, name_shm):
+    def __init__(self, name_shm: str) -> None:
 
         self.has_frontend = False
 
@@ -47,6 +50,9 @@ class GenericViewerBackend:
         self.data_zmapped = None  # Apply Z scaling
         self.data_rgbimg = None  # Apply colormap / convert to RGB
         self.data_output = None  # Interpolate to frontend display size
+
+        ### Clipping for pipeline
+        self.low_clip, self.high_clip = None, None
 
         ### Various flags
         self.flag_data_init = False
@@ -83,26 +89,26 @@ class GenericViewerBackend:
                 for scut in prep_shortcuts
         })
 
-    def register_frontend(self, frontend):
+    def register_frontend(self, frontend: GenericViewerFrontend) -> None:
 
         self.frontend_obj = frontend
         self.has_frontend = True
         # Now there's the problem of the reverse-bind of text boxes to mode objects
 
-    def toggle_cmap(self, which: int = None):
+    def toggle_cmap(self, which: int = None) -> None:
         if which is None:
             self.cmap_id = (self.cmap_id + 1) % len(self.COLORMAPS)
         else:
             self.cmap_id = which
         self.cmap = self.COLORMAPS[self.cmap_id]
 
-    def toggle_scaling(self, value: int = None):
+    def toggle_scaling(self, value: int = None) -> None:
         if value is None:
             self.flag_non_linear = (self.flag_non_linear + 1) % 3
         else:
             self.flag_non_linear = value
 
-    def toggle_crop(self, which=None):
+    def toggle_crop(self, which: int = None) -> None:
         if which is None:
             self.crop_lvl_id = (self.crop_lvl_id + 1) % (self.MAX_ZOOM_LEVEL +
                                                          1)
@@ -120,7 +126,7 @@ class GenericViewerBackend:
         else:
             self.crop_slice = np.s_[:, :]
 
-    def steer_crop(self, direction):
+    def steer_crop(self, direction) -> None:
         # Move by 1 pixel at max zoom
         move_how_much = 2**(self.MAX_ZOOM_LEVEL - self.crop_lvl_id)
         cr, cc = self.CROP_CENTER_SPOT
@@ -135,11 +141,15 @@ class GenericViewerBackend:
         self.CROP_CENTER_SPOT = cr, cc
         self.toggle_crop(which=self.crop_lvl_id)
 
-    def toggle_averaging(self):
+    def toggle_averaging(self) -> None:
         self.flag_averaging = not self.flag_averaging
         self.count_averaging = 0
 
-    def data_iter(self):
+    def set_clipping_values(self, low: float, high: float) -> None:
+        self.low_clip = low
+        self.high_clip = high
+
+    def data_iter(self) -> None:
         self._data_grab()
         self._data_referencing()
         self._data_crop()
@@ -148,7 +158,7 @@ class GenericViewerBackend:
 
         self.flag_data_init = True  # Data is now initialized!
 
-    def _data_grab(self):
+    def _data_grab(self) -> None:
         '''
         SHM -> self.data_raw_uncrop
         '''
@@ -160,7 +170,7 @@ class GenericViewerBackend:
         else:
             self.data_raw_uncrop = self.input_shm.get_data().astype(np.float32)
 
-    def _data_referencing(self):
+    def _data_referencing(self) -> None:
         '''
         self.data_raw_uncropped -> self.data_debias_uncrop
 
@@ -168,7 +178,7 @@ class GenericViewerBackend:
         '''
         self.data_debias_uncrop = self.data_raw_uncrop
 
-    def _data_crop(self):
+    def _data_crop(self) -> None:
         '''
         SHM -> self.data_debias_uncrop -> self.data_debias
 
@@ -181,42 +191,61 @@ class GenericViewerBackend:
 
         self.data_debias = self.data_debias_uncrop[self.crop_slice]
 
-    def _data_zscaling(self):
+    def _data_zscaling(self) -> None:
         '''
         self.data_debias -> self.data_zmapped
         '''
         self.data_plot_min = self.data_debias[1:, 1:].min()
         self.data_plot_max = self.data_debias[1:, 1:].max()
 
-        if self.flag_non_linear == 0:  # linear
-            data = self.data_debias.copy()
-        elif self.flag_non_linear == 1:  # pow .33
-            # Clip to the 80-th percentile
-            data = self.data_debias - np.percentile(self.data_debias[1:, 1:],
-                                                    0.8)
-            data = np.clip(data, 0.0, None)
-            data = data**0.3
-        elif self.flag_non_linear == 2:  # log
-            data = self.data_debias - np.percentile(self.data_debias[1:, 1:],
-                                                    0.8)
-            data = np.clip(data, 0.0, None)
-            data = np.log10(data + 1)
+        # Temp variables to distinguish per-frame autoclip (nonlinear modes)
+        # Against persistent, user-set clipping
+        low_clip, high_clip = self.low_clip, self.high_clip
 
-        m, M = data[1:, 1:].min(), data[1:, 1:].max()
+        if low_clip is None and self.flag_non_linear != 0:
+            # Clip to the 80-th percentile (for log modes by default
+            low_clip = np.percentile(self.data_debias[1:, 1:], 0.8)
+
+        if low_clip:
+            m = low_clip
+        else:
+            m = self.data_plot_min
+
+        if high_clip:
+            M = high_clip
+        else:
+            M = self.data_plot_max
+
+        if low_clip or high_clip:
+            data = np.clip(self.data_debias, m, M)
+        else:
+            data = self.data_debias.copy()
+
+        if self.flag_non_linear == 0:  # linear
+            op = lambda x: x
+        elif self.flag_non_linear == 1:  # pow .33
+            op = lambda x: (x - m)**0.3
+        elif self.flag_non_linear == 2:  # log
+            op = lambda x: np.log10(x - m + 1)
+
+        data = op(data)
+        m, M = op(m), op(M)
+
         self.data_zmapped = (data - m) / (M - m)
 
-    def _data_coloring(self):
+    def _data_coloring(self) -> None:
         '''
         self.data_zmapped -> self.data_rgbimg
         '''
         # Coloring with cmap, 0-255 uint8, discard alpha channel
         self.data_rgbimg = self.cmap(self.data_zmapped, bytes=True)[:, :, :-1]
 
-    def process_shortcut(self, mods, key):
+    def process_shortcut(self, mods: int, key: int) -> None:
         '''
             Called from the frontend with the pygame modifiers and the key
             We built self.SHORTCUTS as a (mods, key) using pygame hex values, so
             should be OK.
+            Or we can import pygame constants...
         '''
         if (mods, key) in self.SHORTCUTS:
             # Call the mapped callable
