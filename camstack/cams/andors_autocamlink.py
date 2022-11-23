@@ -59,6 +59,9 @@ class Vampires(AutoAndor897):
         # Override detector name
         self._set_formatted_keyword('DETECTOR',
                                     f'Andor - VCAM{self.vcam_num:1d}')
+        # We can guess the cropping
+        self._set_formatted_keyword('CROPPED', (self.height < 512) or
+                                    ((self.width < 512)))
 
 
 class First(AutoAndor897):
@@ -75,7 +78,11 @@ class First(AutoAndor897):
 
 if __name__ == "__main__":
 
+    from camstack.core.logger import init_camstack_logger
+
+    init_camstack_logger('/tmp/andors.py.log')
     logger = logg.getLogger()
-    logger.setLevel(logg.DEBUG)
-    vcam0 = Vampires(name='vcam0', stream_name='vcamim0', unit=2, channel=0,
-                     mode_id=512)
+    stdouthandler = logger.handlers[0]
+    stdouthandler.setLevel(logg.DEBUG)
+    cam = Vampires(name='vcam0', stream_name='vcamim0', unit=2, channel=0,
+                   mode_id=512)

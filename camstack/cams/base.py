@@ -470,6 +470,7 @@ class BaseCamera:
         if self.thread is not None:
             self.event.set()
             self.thread.join()
+            self.thread = None
 
     def auxiliary_thread_run_function(self):
         while True:

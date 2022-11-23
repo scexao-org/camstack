@@ -16,6 +16,7 @@
 
 import os
 import logging as logg
+import time
 
 from camstack.cams.edtcam import EDTCamera
 
@@ -65,3 +66,32 @@ class AutoDumbEDTCamera(EDTCamera):
                     f"({self.height},{self.width}) to ({detected_height},{detected_width})"
             )
             self.set_camera_size(detected_height, detected_width)
+
+    def _fill_keywords(self):
+        EDTCamera._fill_keywords(self)
+
+        # Override keywords that we know aren't known. Maybe this should be done in BaseCamera actually.
+        self._set_formatted_keyword('EXPTIME', -1.0)
+        self._set_formatted_keyword('FRATE', -1.0)
+        self._set_formatted_keyword('DETGAIN', -1.0)
+        self._set_formatted_keyword('GAIN', -1.0)
+
+    def _get_SHM(self):
+        from pyMilk.interfacing.shm import SHM
+
+        while True:
+            # In case the SHM doesn't exist yet
+            try:
+                shm = SHM(self.STREAMNAME, symcode=0)
+                break
+            except:
+                time.sleep(0.1)
+
+        # Difference from the superclass: we don't wait forever til a semaphore is posted
+        # Otherwise, we get stuck if the edttake is stuck into perpetual timeouts
+        shm.IMAGE.semflush(shm.semID)
+        time.sleep(
+                5.0
+        )  # Rather than a forever-wait. No biggie cause edt fgrab start is pretty quick.
+
+        return shm
