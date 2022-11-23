@@ -34,15 +34,12 @@ $tnew vcam${NUM}_edt
 $tnew vcam${NUM}_tcp
 $tnew vcam${NUM}_log
 
-$tnew vcam${NUM}_serial # Tentative
 echo "ssh $SSH_IP \"$tnew $targ_tmux -d\""
 ssh $SSH_IP "$tnew $targ_tmux -d"
 
 $tsend vcam${NUM}_tcp C-c
 sleep 0.2
 $tsend vcam${NUM}_edt C-c
-sleep 0.2
-$tsend vcam${NUM}_serial C-c
 sleep 0.2
 echo "ssh $SSH_IP \"$tsend $targ_tmux C-c\""
 ssh $SSH_IP $tsend $targ_tmux C-c
@@ -99,7 +96,5 @@ read -p "Enter log FITS cube length (int):   " CUBESIZE
 
 TODAY=$(date '+%Y%m%d')
 $tsend vcam${NUM}_log "ssh ${SSH_IP} \"milk-logshim -c aollog vcamim${NUM} ${CUBESIZE} /mnt/tier0/${TODAY}/vcamim${NUM}\"" Enter
-
-
 
 echo "vcamstart ${NUM} ${SIZE} completed."
