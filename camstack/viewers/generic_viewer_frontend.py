@@ -11,6 +11,7 @@ if 'localhost:' in os.environ.get('DISPLAY', ''):
     import ctypes
     ctypes.cdll.LoadLibrary(os.environ["HOME"] +
                             "/src/camstack/lib/libGL.so.1")
+    print('Activated libGL.so.1 hijack.')
 
 # Affinity fix for pygame messing up
 _CORES = os.sched_getaffinity(0)
