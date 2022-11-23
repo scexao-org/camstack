@@ -4,6 +4,7 @@
 import os
 import time
 from typing import Union
+import logging as logg
 
 from camstack.cams.edtcam import EDTCamera
 
