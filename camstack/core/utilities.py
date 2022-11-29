@@ -56,7 +56,8 @@ class DependentProcess:
 
         self.tmux_name = tmux_name
         self.cli_cmd = cli_cmd
-        self.cli_args = cli_args
+        self.cli_original_args = cli_args  # Can hold magic replace-me placeholders, e.g. #HEIGHT#
+        self.cli_args = cli_args  # Then the placeholders get overwritten
 
         self.start_order = 0
         self.kill_order = 0

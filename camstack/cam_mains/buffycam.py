@@ -5,6 +5,8 @@ from camstack.cams.cred1 import Buffy
 
 from camstack.core.logger import init_camstack_logger
 
+from scxkw.config import MAGIC_HW_STR
+
 import scxconf
 
 if __name__ == "__main__":
@@ -20,7 +22,7 @@ if __name__ == "__main__":
             # Urrrrrh this is getting messy
             cli_cmd='creashmim %s %u %u; shmimTCPreceive -c ircam ' +
             f'{scxconf.TCPPORT_BUFFY}',
-            cli_args=('kcam', 320, 256),
+            cli_args=('kcam', MAGIC_HW_STR.HEIGHT, MAGIC_HW_STR.WIDTH),
             remote_host=scxconf.IP_SC6,
             kill_upon_create=False,
     )
@@ -48,7 +50,7 @@ if __name__ == "__main__":
             cli_cmd=
             'milk-exec "creaushortimshm %s %u %u"; shmimTCPreceive -c ircam ' +
             f'{scxconf.TCPPORT_BUFFY_RAW}',
-            cli_args=('kcam_raw', 320, 256),
+            cli_args=('kcam_raw', MAGIC_HW_STR.HEIGHT, MAGIC_HW_STR.WIDTH),
             remote_host=scxconf.IP_SC6,
             kill_upon_create=False,
     )

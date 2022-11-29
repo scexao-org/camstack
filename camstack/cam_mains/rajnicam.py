@@ -5,6 +5,7 @@ from camstack.cams.cred2 import Rajni
 from camstack.core.logger import init_camstack_logger
 
 import scxconf
+from scxkw.config import MAGIC_HW_STR
 
 if __name__ == "__main__":
 
@@ -20,7 +21,7 @@ if __name__ == "__main__":
             cli_cmd=
             'milk-exec "creasshortimshm %s %u %u"; shmimTCPreceive -c ircam ' +
             f'{scxconf.TCPPORT_RAJNI}',
-            cli_args=('rajni', 320, 256),
+            cli_args=('rajni', MAGIC_HW_STR.HEIGHT, MAGIC_HW_STR.WIDTH),
             remote_host=scxconf.IP_SC6,
             kill_upon_create=False,
     )

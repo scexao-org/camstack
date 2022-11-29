@@ -8,7 +8,7 @@ from camstack.core.utilities import CameraMode
 from camstack.core import tmux as tmux_util
 
 try:
-    from scxkw.config import MAGIC_BOOL_STR, redis_check_enabled
+    from scxkw.config import MAGIC_BOOL_STR, MAGIC_HW_STR, redis_check_enabled
 except:
 
     def redis_check_enabled():
@@ -55,43 +55,34 @@ class BaseCamera:
 
     MODES = {}
 
+    # yapf: disable
     KEYWORDS = {
             # Format is name: (value, description, formatter, redis partial push key [5 chars])
             # this list CAN be figured out from a redis query.
             # but I don't want to add the dependency at this point
             # ALSO SHM caps at 16 chars for strings. The %s formats here are (some) shorter than official ones.
-            'BIN-FCT1': (1, 'Binning factor of the X axis (pixel)', '%20d',
-                         'BIN1'),
-            'BIN-FCT2': (1, 'Binning factor of the Y axis (pixel)', '%20d',
-                         'BIN2'),
+            'BIN-FCT1': (1, 'Binning factor of the X axis (pixel)', '%20d', 'BIN1'),
+            'BIN-FCT2': (1, 'Binning factor of the Y axis (pixel)', '%20d', 'BIN2'),
             'BSCALE': (1.0, 'Real=fits-value*BSCALE+BZERO', '%20.8f', 'BSCAL'),
             'BUNIT': ('ADU', 'Unit of original values', '%-10s', 'BUNIT'),
             'BZERO': (0.0, 'Real=fits-value*BSCALE+BZERO', '%20.8f', 'BZERO'),
-            'PRD-MIN1': (0, 'Origin in X of the cropped window (pixel)',
-                         '%16d', 'MIN1'),
-            'PRD-MIN2': (0, 'Origin in Y of the cropped window (pixel)',
-                         '%16d', 'MIN2'),
-            'PRD-RNG1': (1, 'Range in X of the cropped window (pixel)', '%16d',
-                         'RNG1'),
-            'PRD-RNG2': (1, 'Range in Y of the cropped window (pixel)', '%16d',
-                         'RNG2'),
-            'CROPPED':
-                    (False, 'Partial Readout or cropped', 'BOOLEAN', 'CROPD'),
+            'PRD-MIN1': (0, 'Origin in X of the cropped window (pixel)', '%16d', 'MIN1'),
+            'PRD-MIN2': (0, 'Origin in Y of the cropped window (pixel)', '%16d', 'MIN2'),
+            'PRD-RNG1': (1, 'Range in X of the cropped window (pixel)', '%16d', 'RNG1'),
+            'PRD-RNG2': (1, 'Range in Y of the cropped window (pixel)', '%16d', 'RNG2'),
+            'CROPPED': (False, 'Partial Readout or cropped', 'BOOLEAN', 'CROPD'),
             'DET-NSMP': (1, 'Number of non-destructive reads', '%20d', 'NDR'),
             'DET-SMPL': ('base', 'Sampling method', '%-16.16s', 'SAMPL'),
             'DET-TMP': (0.0, 'Detector temperature (K)', '%20.2f', 'TEMP'),
             'DETECTOR': ('DET', 'Name of the detector', '%-16s', 'NAME'),
             'DETGAIN': (1, 'Detector multiplication factor', '%16d', 'GAIN'),
-            'EXPTIME': (0.001, 'Total integration time of the frame (sec)',
-                        '%20.8f', 'EXPO'),
-            'FRATE': (100., 'Frame rate of the acquisition (Hz)', '%16.3f',
-                      'FRATE'),
-            'GAIN': (1., 'AD conversion factor (electron/ADU)', '%20.3f',
-                     'GAIN'),
-            'EXTTRIG': (False, 'Exposure of detector by an external trigger',
-                        'BOOLEAN', 'TRIG'),
+            'EXPTIME': (0.001, 'Total integration time of the frame (sec)', '%20.8f', 'EXPO'),
+            'FRATE': (100., 'Frame rate of the acquisition (Hz)', '%16.3f', 'FRATE'),
+            'GAIN': (1., 'AD conversion factor (electron/ADU)', '%20.3f', 'GAIN'),
+            'EXTTRIG': (False, 'Exposure of detector by an external trigger', 'BOOLEAN', 'TRIG'),
             'DATA-TYP': ('TEST', 'Subaru-style exp. type', '%-16s', 'DATA'),
     }
+    # yapf: enable
 
     def __init__(self, name: str, stream_name: str,
                  mode_id: Union[CameraMode,
@@ -193,15 +184,27 @@ class BaseCamera:
         # Gets called during constructor and set_mode
         if mode_id is None:
             mode_id = self.current_mode_id
+
         logg.info(
                 'Calling prepare_camera_for_size on generic BaseCamera class. '
-                'Setting size for shmimTCPreceive.')
+                'Setting size for shmimTCPreceive et al.')
+
         for dep_proc in self.dependent_processes:
-            if 'shmimTCPreceive' in dep_proc.cli_cmd:
+            if (MAGIC_HW_STR.HEIGHT in dep_proc.cli_original_args or
+                        MAGIC_HW_STR.WIDTH in dep_proc.cli_original_args):
+                arglist = list(dep_proc.cli_original_args)
+
                 cm = self.current_mode
-                h, w = (cm.x1 - cm.x0 + 1) // cm.binx, (cm.y1 - cm.y0 +
-                                                        1) // cm.biny
-                dep_proc.cli_args = (dep_proc.cli_args[0], h, w)
+                h, w = ((cm.x1 - cm.x0 + 1) // cm.binx,
+                        (cm.y1 - cm.y0 + 1) // cm.biny)
+                for kk, arg in enumerate(arglist):
+                    if arg == MAGIC_HW_STR.HEIGHT:
+                        arglist[kk] = h
+                    if arg == MAGIC_HW_STR.WIDTH:
+                        arglist[kk] = w
+                    # ... there might be a transpose error, ofc.
+
+                dep_proc.cli_args = tuple(arglist)  # Must recast to tuple
 
     def prepare_camera_finalize(self, mode_id=None):
         logg.debug('prepare_camera_finalize @ BaseCamera')
@@ -305,13 +308,16 @@ class BaseCamera:
         tmux_util.send_keys(self.take_tmux_pane, self.taker_tmux_command)
 
         if self.taker_cset_prio[1] is not None:  # Set rtprio !
-            subprocess.run([
-                    'milk-makecsetandrt',
-                    str(tmux_util.find_pane_running_pid(
-                            self.take_tmux_pane)),  # PID
-                    self.taker_cset_prio[0],  # CPUSET
-                    str(self.taker_cset_prio[1])  # PRIORITY
-            ])
+            subprocess.run(
+                    [
+                            'milk-makecsetandrt',
+                            str(
+                                    tmux_util.find_pane_running_pid(
+                                            self.take_tmux_pane)),  # PID
+                            self.taker_cset_prio[0],  # CPUSET
+                            str(self.taker_cset_prio[1])  # PRIORITY
+                    ],
+                    stdout=subprocess.PIPE)
 
         self._ensure_backend_restarted()
 

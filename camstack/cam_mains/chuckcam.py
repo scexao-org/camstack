@@ -5,6 +5,8 @@ from camstack.cams.cred2 import Chuck
 
 from camstack.core.logger import init_camstack_logger
 
+from scxkw.config import MAGIC_HW_STR
+
 import scxconf
 
 if __name__ == "__main__":
@@ -20,7 +22,7 @@ if __name__ == "__main__":
             # Urrrrrh this is getting messy
             cli_cmd='creashmim %s %u %u; shmimTCPreceive -c ircam ' +
             f'{scxconf.TCPPORT_CHUCK}',
-            cli_args=('ircam0', 320, 256),
+            cli_args=('ircam0', MAGIC_HW_STR.HEIGHT, MAGIC_HW_STR.WIDTH),
             remote_host='scexao@' + scxconf.IPLAN_SC6,
             kill_upon_create=False,
     )
