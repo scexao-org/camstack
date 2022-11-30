@@ -4,7 +4,7 @@ import os
 import time
 import subprocess
 
-TMUX_SERVER = tmux.Server()
+TMUX_SERVER = tmux.Server()  # Singleton
 
 
 def find_or_create(session_name: str):
