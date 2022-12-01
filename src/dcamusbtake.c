@@ -355,9 +355,9 @@ int main(int argc, char **argv)
     const char *KW_NAMES[] = {"MFRATE", "_MAQTIME", "_FGSIZE1", "_FGSIZE2"};
     const char  KW_TYPES[] = {'D', 'L', 'L', 'L'};
     const char *KW_COM[]   = {"Measured frame rate (Hz)",
-                              "Frame acq time (us, CLOCK_REALTIME)",
-                              "Size of frame grabber for the X axis (pixel)",
-                              "Size of frame grabber for the Y axis (pixel)"};
+                            "Frame acq time (us, CLOCK_REALTIME)",
+                            "Size of frame grabber for the X axis (pixel)",
+                            "Size of frame grabber for the Y axis (pixel)"};
 
     int KW_POS[] = {0, 1, 2, 3};
 
@@ -537,7 +537,7 @@ static void params_parse_and_set(HDCAM cam, IMAGE params_img, BOOL flag)
     // Figure out in the data how many keywords are fresh for writing
     int    N_KEYWORDS = params_img.array.UI16[0];
     long   param_id;
-    double dcam_retval;
+    double dcam_retval = -8.0085;
 
     // Read keywords, send to camera
     for (int kw = 0; kw < N_KEYWORDS; ++kw)

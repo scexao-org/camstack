@@ -169,7 +169,12 @@ class DCAMCamera(BaseCamera):
             if dcamk in dcamprop.PROP_ENUM_MAP:
                 # Response type of requested prop is described by a proper enumeration.
                 # Instantiate the Enum class for the return value.
-                fb_values[idx] = dcamprop.PROP_ENUM_MAP[dcamk](fb_values[idx])
+                if fb_values[
+                        idx] == -8.0085:  # Arbitrary MAGIC value that encodes a "Invalid property" error.
+                    fb_values[idx] = dcamprop.PROP_ENUM_MAP[dcamk](
+                            fb_values[idx])
+                else:
+                    fb_values[idx] = None
 
         return fb_values
 
