@@ -162,7 +162,9 @@ class DCAMCamera(BaseCamera):
         ]  # Get back the cam value
 
         for fk, fbv in zip(fits_keys, fb_values):
-            self._set_formatted_keyword(fk, fbv)
+            if fk is not None:
+                # Can pass None to skip keys entirely.
+                self._set_formatted_keyword(fk, fbv)
 
         return fb_values
 
@@ -174,6 +176,7 @@ class OrcaQuest(DCAMCamera):
         DCAMCamera.INTERACTIVE_SHELL_METHODS
 
     FIRST, FULL, DICHROIC = 'FIRST', 'FULL', 'DICHROIC'
+    # yapf: disable
     MODES = {
             FIRST: CameraMode(x0=952, x1=2915, y0=492, y1=727, tint=0.001),
             FULL: CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
@@ -185,6 +188,7 @@ class OrcaQuest(DCAMCamera):
             4: CameraMode(x0=1812, x1=2067, y0=1008, y1=1263, tint=0.001),    # Jen is using for focal plane mode
             DICHROIC: CameraMode(x0=2336, x1=3135, y0=0, y1=2303, tint=0.01), # Dichroic stack mode
     }
+    # yapf: enable
 
     KEYWORDS = {}
     KEYWORDS.update(DCAMCamera.KEYWORDS)
