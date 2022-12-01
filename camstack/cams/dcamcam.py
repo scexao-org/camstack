@@ -161,10 +161,15 @@ class DCAMCamera(BaseCamera):
                 self.control_shm.get_keywords()[dk] for dk in dcam_string_keys
         ]  # Get back the cam value
 
-        for fk, fbv in zip(fits_keys, fb_values):
+        for idx, (fk, dcamk) in enumerate(zip(fits_keys, dcam_keys)):
             if fk is not None:
                 # Can pass None to skip keys entirely.
-                self._set_formatted_keyword(fk, fbv)
+                self._set_formatted_keyword(fk, fb_values[idx])
+
+            if dcamk in dcamprop.PROP_ENUM_MAP:
+                # Response type of requested prop is described by a proper enumeration.
+                # Instantiate the Enum class for the return value.
+                fb_values[idx] = dcamprop.PROP_ENUM_MAP[dcamk](fb_values[idx])
 
         return fb_values
 
