@@ -93,7 +93,7 @@ class DCAMCamera(BaseCamera):
     def _prepare_backend_cmdline(self, reuse_shm: bool = False):
 
         # Prepare the cmdline for starting up!
-        exec_path = os.environ['HOME'] + '/src/camstack/src/dcamusbtake'
+        exec_path = os.environ['SCEXAO_HW'] + '/bin/hwacq-dcamtake'
         self.taker_tmux_command = (f'{exec_path} -s {self.STREAMNAME} '
                                    f'-u {self.dcam_number} -l 0 -N 4')
         if reuse_shm:
@@ -165,12 +165,15 @@ class DCAMCamera(BaseCamera):
             if fk is not None:
                 # Can pass None to skip keys entirely.
                 self._set_formatted_keyword(fk, fb_values[idx])
-                
+
             if dcamk in dcamprop.PROP_ENUM_MAP and fb_values[idx]:
                 # Response type of requested prop is described by a proper enumeration.
                 # Instantiate the Enum class for the return value.
-                if fb_values[idx] != -8.0085:  # Arbitrary MAGIC encodes a "Invalid property"
-                    fb_values[idx] = dcamprop.PROP_ENUM_MAP[dcamk](fb_values[idx])
+                if fb_values[idx] != -8.0085:
+                    # Arbitrary MAGIC number
+                    # encodes a "Invalid property"
+                    fb_values[idx] = dcamprop.PROP_ENUM_MAP[dcamk](
+                            fb_values[idx])
 
         return fb_values
 
