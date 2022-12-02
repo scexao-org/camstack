@@ -9,6 +9,8 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+#include <errno.h>
+
 #ifndef ASSERT
 #define ASSERT(c)
 #endif
@@ -266,6 +268,11 @@ void toggle_readable_all_aslenum_devices(BOOL enable)
         {
             ret_code = chmod(filename, mode_disable);
         }
+    }
+    // We're expeting to error for the n-th + 1 device, that does not exist.
+    // But if we EPERM (on an existing device), that mean we need to chown.
+    if (ret_code == -1 && errno == EPERM) {
+        printf("Multicam hack errno = EPERM. Maybe you need to 'chown alala:alala /dev/aslenum*' ?\n");
     }
 }
 
