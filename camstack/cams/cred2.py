@@ -224,7 +224,7 @@ class CRED2(EDTCamera):
         return self.get_gain()
 
     def set_sensibility(self, sensibility: Union[int, str]):
-        return self.set_gain(sensisbility)
+        return self.set_gain(sensibility)
 
     def get_gain(self):
         res = CRED2_GAINENUM.INT2STR_MAP[self.send_command('sensibility raw')]
