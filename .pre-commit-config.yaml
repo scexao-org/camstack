@@ -5,10 +5,6 @@ repos:
     hooks:
     -   id: yapf
         additional_dependencies: [toml]
--   repo: https://github.com/pre-commit/mirrors-clang-format.git
-    rev: v13.0.0
-    hooks:
-    -   id: clang-format
 -   repo: https://github.com/pre-commit/pre-commit-hooks.git
     rev: v4.1.0
     hooks:
@@ -22,11 +18,3 @@ repos:
     -   id: check-added-large-files
     -   id: check-ast
     -   id: check-merge-conflict
-#-   repo: git://github.com/detailyang/pre-commit-shell
-#    rev: v1.0.6
-#    hooks:
-#    - id: shell-lint
-#-   repo: https://github.com/lovesegfault/beautysh.git
-#    rev: v6.2.1
-#    hooks:
-#    -   id: beautysh
