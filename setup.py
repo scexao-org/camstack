@@ -33,6 +33,7 @@ scripts = [
         './viewers/renocam.py',
         './viewers/buffycam.py',
         './viewers/chuckcam.py',
+        './viewers/firstcam.py',
         './scripts/cam-restartdeps',
         './scripts/cam-buffystart',
         './scripts/cam-chuckstart',

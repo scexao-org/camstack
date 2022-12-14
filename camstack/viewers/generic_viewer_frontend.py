@@ -29,6 +29,11 @@ from PIL import Image
 
 class GenericViewerFrontend:
 
+    WINDOW_NAME = 'Generic viewer'
+
+    def yolo(self):
+        print("Swag, I'm Generic")
+
     def __init__(self, system_zoom: int, fps: float,
                  display_base_size: Tuple[int, int]):
 
@@ -51,8 +56,10 @@ class GenericViewerFrontend:
                                           dtype=np.uint8)
         # Total window size
         self.pygame_win_size = (self.data_disp_size[0] * self.system_zoom,
-                                self.data_disp_size[1] +
-                                100 * self.system_zoom)
+                                self.data_disp_size[1] * self.system_zoom +
+                                114 * self.system_zoom)
+
+        # self.in_the_middle_of_constructor()
 
         #####
         # Prepare the pygame
@@ -65,9 +72,59 @@ class GenericViewerFrontend:
         # Prefix pygame objects with "pg_"
         self.pg_fonts = futs.gen_zoomed_fonts(self.system_zoom)
 
-        self.pg_screen = pygame.display.set_mode(self.data_disp_size,
+        self.pg_screen = pygame.display.set_mode(self.pygame_win_size,
                                                  flags=0x0, depth=16)
-        pygame.display.set_caption('GenericViewer')
+        pygame.display.set_caption(self.WINDOW_NAME)
+
+        # ------------------------------------------------------------------
+        #              !!! now we are in business !!!!
+        # ------------------------------------------------------------------
+
+        self.WHITE = (255, 255, 255)
+        self.GREEN = (147, 181, 44)
+        self.BLUE = (0, 0, 255)
+        self.RED1 = (255, 0, 0)
+        self.RED = (246, 133, 101)  #(185,  95, 196)
+        self.BLK = (0, 0, 0)
+        self.CYAN = (0, 255, 255)
+
+        self.FGCOL = self.WHITE  # foreground color (text)
+        self.SACOL = self.RED1  # saturation color (text)
+        self.BGCOL = self.BLK  # background color
+        self.BTCOL = self.BLUE  # *button* color
+
+        background = pygame.Surface(self.pg_screen.get_size())
+        background = background.convert()
+
+        # ----------------------------
+        #          labels
+        # ----------------------------
+
+        self.font1 = pygame.font.SysFont("default", 16 * self.system_zoom)
+        self.font2 = pygame.font.SysFont("default", 25 * self.system_zoom)
+        self.font3 = pygame.font.SysFont("monospace", 4 * self.system_zoom)
+        self.font5 = pygame.font.SysFont("monospace", 4 * self.system_zoom)
+        self.font5.set_bold(True)
+
+        lbl = self.font2.render(self.WINDOW_NAME + " viewer", True, self.WHITE,
+                                self.BGCOL)
+        rct = lbl.get_rect()
+        rct.center = (200 * self.system_zoom, 270 * self.system_zoom)
+        self.pg_screen.blit(lbl, rct)
+
+        # path_cartoon = "/home/first/Pictures/renocam_aux/Reno%db.png" % (self.system_zoom, )
+        path_cartoon = "/home/first/Pictures/io.png"
+        cartoon1 = pygame.image.load(path_cartoon).convert_alpha()
+        rect2 = cartoon1.get_rect()
+        rect2.bottomright = self.pygame_win_size
+        self.pg_screen.blit(cartoon1, rect2)
+
+        imin, imax = 1000, 10000
+        msg = "(min,max) = (%5d,%5d)" % (imin, imax)
+        lbl = self.font2.render(msg, True, self.WHITE, self.BGCOL)
+        self.rct_info = lbl.get_rect()
+        self.rct_info.center = (200 * self.system_zoom, 320 * self.system_zoom)
+        # self.pg_screen.blit(lbl, self.rct)
 
         # Is this useful?
         self.pg_background = pygame.Surface(self.pg_screen.get_size())
@@ -81,6 +138,10 @@ class GenericViewerFrontend:
 
         pygame.mouse.set_cursor(*pygame.cursors.broken_x)
         pygame.display.update()
+
+    def in_the_middle_of_constructor(self):
+        raise ArithmeticError(
+                "Generic constructor of anycam is illegal. Must subclass.")
 
     def register_backend(self, backend):
 
@@ -180,11 +241,53 @@ class GenericViewerFrontend:
 
         pygame.surfarray.blit_array(self.pg_datasurface,
                                     self.data_blit_staging)
+
+        # imin,imax = np.min(self.backend_obj.), np.max(data_output)
+        msg = "(min,max) = (%5d,%5d)" % (self.backend_obj.data_min,
+                                         self.backend_obj.data_max)
+        lbl = self.font2.render(msg, True, self.WHITE, self.BGCOL)
+        # rct = lbl.get_rect()
+        # rct.center = (200 * self.system_zoom, 540 * self.system_zoom)
+        self.pg_screen.blit(lbl, self.rct_info)
+
         self.pg_screen.blit(self.pg_datasurface, self.pg_data_rect)
-        self.pg_updated_rects += [self.pg_data_rect]
+        self.pg_updated_rects += [self.pg_data_rect, self.rct_info]
 
         # NOW.... how to process the graphical callbacks from the backend ???
         # Arrows, text, etc ???
+
+        # msg = "(min,max) = (%5d,%5d)" % (imin, imax)
+        # info = font3.render(msg, True, FGCOL, BGCOL)
+        # screen.blit(info, rct_info)
+
+
+class FirstViewerFrontend(GenericViewerFrontend):
+
+    WINDOW_NAME = 'FIRST camera'
+
+    def __init__(self, system_zoom, fps, display_base_size):
+
+        # Hack the arguments BEFORE
+        GenericViewerFrontend.__init__(self, system_zoom, fps,
+                                       display_base_size)
+
+        # Finalize some specifics AFTER
+
+    def yolo(self):
+        print("More swag, I'm specific")
+
+    def in_the_middle_of_constructor(self):
+        print('That\'s valid.')
+
+    def stuff_that_first_can_do_that_nooneelse_can(self):
+        print('Wesh.')
+
+
+class SecondViewerFrontend(GenericViewerFrontend):
+
+    def yolo(self):
+        GenericViewerFrontend.yolo(self)
+        print("This ain't FIRST yo.")
 
 
 if __name__ == "__main__":

@@ -250,3 +250,7 @@ class GenericViewerBackend:
         if (mods, key) in self.SHORTCUTS:
             # Call the mapped callable
             self.SHORTCUTS[(mods, key)]()
+
+
+class FirstViewerBackend(GenericViewerBackend):
+    pass
