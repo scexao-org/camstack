@@ -26,46 +26,43 @@ class CRED1(EDTCamera):
 
     FULL = 'full'
     MODES = {
-        # FULL 320 x 256
-        FULL: CameraMode(x0=0, x1=319, y0=0, y1=255, fps=3460.),
-        0: CameraMode(x0=0, x1=319, y0=0, y1=255, fps=3460.),
-        # 64x64 centered
-        1: CameraMode(x0=128, x1=191, y0=96, y1=159,
-                      fps=40647.),  # 40647. Limiting for now
-        # 128x128 centered
-        2: CameraMode(x0=96, x1=223, y0=64, y1=191, fps=14331.),
-        # 160x160 16px offside
-        3: CameraMode(x0=64, x1=223, y0=48, y1=207, fps=9805.),
-        # 192x192 centered
-        4: CameraMode(x0=64, x1=255, y0=32, y1=223, fps=7115.),
-        # 224x224 16px offside
-        5: CameraMode(x0=32, x1=255, y0=16, y1=239, fps=5390.),
-        # 256x256 centered
-        6: CameraMode(x0=32, x1=287, y0=0, y1=255, fps=4225.),
-        # 160x80
-        7: CameraMode(x0=64, x1=223, y0=88, y1=167, fps=18460.),
-        # 192x80
-        8: CameraMode(x0=64, x1=255, y0=88, y1=167, fps=16020.),
+            # FULL 320 x 256
+            FULL: CameraMode(x0=0, x1=319, y0=0, y1=255, fps=3460.),
+            0: CameraMode(x0=0, x1=319, y0=0, y1=255, fps=3460.),
+            # 64x64 centered
+            1: CameraMode(x0=128, x1=191, y0=96, y1=159,
+                          fps=40647.),  # 40647. Limiting for now
+            # 128x128 centered
+            2: CameraMode(x0=96, x1=223, y0=64, y1=191, fps=14331.),
+            # 160x160 16px offside
+            3: CameraMode(x0=64, x1=223, y0=48, y1=207, fps=9805.),
+            # 192x192 centered
+            4: CameraMode(x0=64, x1=255, y0=32, y1=223, fps=7115.),
+            # 224x224 16px offside
+            5: CameraMode(x0=32, x1=255, y0=16, y1=239, fps=5390.),
+            # 256x256 centered
+            6: CameraMode(x0=32, x1=287, y0=0, y1=255, fps=4225.),
+            # 160x80
+            7: CameraMode(x0=64, x1=223, y0=88, y1=167, fps=18460.),
+            # 192x80
+            8: CameraMode(x0=64, x1=255, y0=88, y1=167, fps=16020.),
     }
 
     # Add mode 0 alias of mode FULL
     MODES[0] = MODES[FULL]
 
     KEYWORDS = {
-        'DET-PRES': (0.0, 'Detector pressure (mbar)'),
+            'DET-PRES': (0.0, 'Detector pressure (mbar)'),
     }
     KEYWORDS.update(EDTCamera.KEYWORDS)
 
     EDTTAKE_UNSIGNED = True
 
-    def __init__(self,
-                 name: str,
-                 stream_name: str,
-                 mode_id: int = 'full',
-                 unit: int = 1,
-                 channel: int = 0,
-                 taker_cset_prio: Union[str, int] = ('system', None),
-                 dependent_processes=[]):
+    def __init__(self, name: str, stream_name: str, mode_id: int = 'full',
+                 unit: int = 1, channel: int = 0,
+                 taker_cset_prio: Union[str,
+                                        int] = ('system',
+                                                None), dependent_processes=[]):
 
         # Allocate and start right in the appropriate binning mode
         self.synchro = False
@@ -75,14 +72,8 @@ class CRED1(EDTCamera):
         # Call EDT camera init
         # This should pre-kill dependent sessions
         # But we should be able to "prepare" the camera before actually starting
-        EDTCamera.__init__(self,
-                           name,
-                           stream_name,
-                           mode_id,
-                           unit,
-                           channel,
-                           basefile,
-                           taker_cset_prio=taker_cset_prio,
+        EDTCamera.__init__(self, name, stream_name, mode_id, unit, channel,
+                           basefile, taker_cset_prio=taker_cset_prio,
                            dependent_processes=dependent_processes)
 
         # ======
@@ -210,7 +201,7 @@ class CRED1(EDTCamera):
                 self.send_command('set cropping rows %u-%u' % (y0 + 1, y1 + 1))
                 time.sleep(.5)
         raise AssertionError(
-            f'Cannot set desired crop {x0}-{x1} {y0}-{y1} after 3 tries')
+                f'Cannot set desired crop {x0}-{x1} {y0}-{y1} after 3 tries')
 
     def set_synchro(self, synchro: bool):
         val = ('off', 'on')[synchro]
@@ -228,7 +219,7 @@ class CRED1(EDTCamera):
     def get_readout_mode(self):
         res = self.send_command('mode raw')
         res = res[:6] + res[
-            11:]  # Removing "reset" after "global", otherwise too long for shm keywords
+                11:]  # Removing "reset" after "global", otherwise too long for shm keywords
         self.camera_shm.update_keyword('DETMODE', res)
         return res
 
@@ -272,7 +263,7 @@ class CRED1(EDTCamera):
         self.set_readout_mode(readout_mode)
 
         self.set_fps(
-            self.current_mode.fps
+                self.current_mode.fps
         )  # Systematically - because AUTO rescaling of fps occurs when changing NDR...
 
         self.set_gain(gain_now)
@@ -318,9 +309,8 @@ class CRED1(EDTCamera):
         return temp
 
     def _shutdown(self):
-        input(
-            f'Detector temperature {self.get_temperature()} K; proceed anyway ? Ctrl+C aborts.'
-        )
+        input(f'Detector temperature {self.get_temperature()} K; proceed anyway ? Ctrl+C aborts.'
+              )
         res = self.send_command('shutdown')
         if 'OK' in res:
             while True:

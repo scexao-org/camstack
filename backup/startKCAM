@@ -38,7 +38,7 @@ echo "------------------------------------------------------------------------"
 
 printHELP1 ()
 {
-    printf "%20s       CRED1 camera startup script\n" "$0" 
+    printf "%20s       CRED1 camera startup script\n" "$0"
 }
 
 
@@ -95,8 +95,8 @@ for arg in "$@"; do
   shift
   case "$arg" in
     "--help") set -- "$@" "-h" ;;
-    "--help1") 
-set -- "$@" "-h" 
+    "--help1")
+set -- "$@" "-h"
 singlelinehelp=1;
 ;;
     *)        set -- "$@" "$arg"
@@ -191,6 +191,3 @@ sleep 0.5
 tmux send-keys -t kcamctrl "./kcamserver" C-m
 
 #tmux send-keys -t kcamctrl "start" C-m
-
-
-

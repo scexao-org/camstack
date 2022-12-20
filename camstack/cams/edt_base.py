@@ -11,6 +11,7 @@ import subprocess
 
 import threading
 
+
 class EDTCameraNoModes:
     '''
         Standard basic stuff that is common over EDT framegrabbers
@@ -19,43 +20,37 @@ class EDTCameraNoModes:
     '''
 
     INTERACTIVE_SHELL_METHODS = [
-        'send_command', 'close', 'release', '_start', '_stop'
+            'send_command', 'close', 'release', '_start', '_stop'
     ]
 
     KEYWORDS = {  # Format is name: (value, description) - this list CAN be figured out from a redis query.
-        'BIN-FCT1': (1, 'Binning factor of the X axis (pixel)'),
-        'BIN-FCT2': (1, 'Binning factor of the Y axis (pixel)'),
-        'BSCALE': (1.0, 'Real=fits-value*BSCALE+BZERO'),
-        'BUNIT': ('ADU', 'Unit of original values'),
-        'BZERO': (0.0, 'Real=fits-value*BSCALE+BZERO'),
-        'CROP_OR1': (0, 'Origin in X of the cropped window (pixel)'),
-        'CROP_OR2': (0, 'Origin in Y of the cropped window (pixel)'),
-        'CROP_EN1': (1, 'End in X of the cropped window (pixel)'),
-        'CROP_EN2': (1, 'End in Y of the cropped window (pixel)'),
-        'CROPPED': ('False', 'Image windowed or full frame'),
-        'DET-TMP': (0.0, 'Detector temperature (K)'),
-        'DETECTOR': ('DET', 'Name of the detector'),
-        'DETGAIN': (1., 'Detector gain'),
-        'DETMODE': ('base', 'Detector mode'),
-        'EXPTIME': (0.001, 'Total integration time of the frame (sec)'),
-        'FRATE': (100., 'Frame rate of the acquisition (Hz)'),
-        'GAIN': (1., 'AD conversion factor (electron/ADU)'),
-        'DET-NSMP': (1, 'Number of non-destructive reads'),
-        'EXTTRIG': ('False', 'Extrernal trigger'),
-        'DATA-TYP': ('TEST', 'Subaru-style exp. type')
+            'BIN-FCT1': (1, 'Binning factor of the X axis (pixel)'),
+            'BIN-FCT2': (1, 'Binning factor of the Y axis (pixel)'),
+            'BSCALE': (1.0, 'Real=fits-value*BSCALE+BZERO'),
+            'BUNIT': ('ADU', 'Unit of original values'),
+            'BZERO': (0.0, 'Real=fits-value*BSCALE+BZERO'),
+            'CROP_OR1': (0, 'Origin in X of the cropped window (pixel)'),
+            'CROP_OR2': (0, 'Origin in Y of the cropped window (pixel)'),
+            'CROP_EN1': (1, 'End in X of the cropped window (pixel)'),
+            'CROP_EN2': (1, 'End in Y of the cropped window (pixel)'),
+            'CROPPED': ('False', 'Image windowed or full frame'),
+            'DET-TMP': (0.0, 'Detector temperature (K)'),
+            'DETECTOR': ('DET', 'Name of the detector'),
+            'DETGAIN': (1., 'Detector gain'),
+            'DETMODE': ('base', 'Detector mode'),
+            'EXPTIME': (0.001, 'Total integration time of the frame (sec)'),
+            'FRATE': (100., 'Frame rate of the acquisition (Hz)'),
+            'GAIN': (1., 'AD conversion factor (electron/ADU)'),
+            'DET-NSMP': (1, 'Number of non-destructive reads'),
+            'EXTTRIG': ('False', 'Extrernal trigger'),
+            'DATA-TYP': ('TEST', 'Subaru-style exp. type')
     }
 
     EDTTAKE_CAST = False  # Only OCAM overrides that
     EDTTAKE_UNSIGNED = True
 
-    def __init__(self,
-                 name: str,
-                 stream_name: str,
-                 height: int,
-                 width: int,
-                 unit: int,
-                 channel: int,
-                 basefile: str,
+    def __init__(self, name: str, stream_name: str, height: int, width: int,
+                 unit: int, channel: int, basefile: str,
                  no_start: bool = False,
                  taker_cset_prio: Union[str, int] = ('system', None),
                  dependent_processes: List[Any] = []):
@@ -75,9 +70,8 @@ class EDTCameraNoModes:
 
         self.height = height
         self.width = width  # IN CASE OF 8/16 CASTING, this is the ISIO width
-        self.width_fg = (
-            width, 2 *
-            width)[self.EDTTAKE_CAST]  # And this is the camlink image width
+        self.width_fg = (width, 2 * width)[
+                self.EDTTAKE_CAST]  # And this is the camlink image width
 
         self.pdv_unit = unit
         self.pdv_channel = channel
@@ -135,7 +129,7 @@ class EDTCameraNoModes:
         # ================
         # Start dependents
         # ================
-        self.start_frame_taker_and_dependents(skip_taker = True)
+        self.start_frame_taker_and_dependents(skip_taker=True)
 
         # =================================
         # FINALIZE A FEW DETAILS POST-START
@@ -145,7 +139,7 @@ class EDTCameraNoModes:
     def init_pdv_configuration(self):
         if self.is_taker_running():
             raise AssertionError(
-                'Cannot change FG config while taker is running')
+                    'Cannot change FG config while taker is running')
 
         tmp_config = '/tmp/' + os.environ['USER'] + '_' + self.NAME + '.cfg'
         # Adding a username here, because we can't overwrite the file of another user !
@@ -153,7 +147,7 @@ class EDTCameraNoModes:
                              stdout=subprocess.PIPE)
         if res.returncode != 0:
             raise FileNotFoundError(
-                f'EDT cfg file {self.base_config_file} not found.')
+                    f'EDT cfg file {self.base_config_file} not found.')
 
         with open(tmp_config, 'a') as file:
             file.write(f'\n\n')
@@ -165,14 +159,12 @@ class EDTCameraNoModes:
                        stdout=subprocess.PIPE)
 
     def prepare_camera_for_size(self):
-        print(
-            'Calling prepare_camera on generic EDTCameraClass. Nothing happens here.'
-        )
+        print('Calling prepare_camera on generic EDTCameraClass. Nothing happens here.'
+              )
 
     def prepare_camera_finalize(self):
-        print(
-            'Calling prepare_camera on generic EDTCameraClass. Nothing happens here.'
-        )
+        print('Calling prepare_camera on generic EDTCameraClass. Nothing happens here.'
+              )
 
     def is_taker_running(self):
         '''
@@ -181,7 +173,7 @@ class EDTCameraNoModes:
         return tmux_util.find_pane_running_pid(self.take_tmux_pane) is not None
 
     def start_frame_taker_and_dependents(self, skip_taker=False):
-        
+
         if not skip_taker:
             self._start_taker_no_dependents()
 
@@ -211,8 +203,7 @@ class EDTCameraNoModes:
         '''
         self.kill_taker_and_dependents()
 
-
-    def _start_taker_no_dependents(self, reuse_shm = False):
+    def _start_taker_no_dependents(self, reuse_shm=False):
         exec_path = os.environ['HOME'] + '/src/camstack/src/edttake'
         self.edttake_tmux_command = f'{exec_path} -s {self.STREAMNAME} -u {self.pdv_unit} -c {self.pdv_channel} -l 0 -N 4'
         if self.EDTTAKE_CAST:
@@ -227,12 +218,13 @@ class EDTCameraNoModes:
         # We recreated the SHM !
         time.sleep(1.)
 
-        if self.taker_cset_prio[1] is not None: # Set rtprio !
+        if self.taker_cset_prio[1] is not None:  # Set rtprio !
             subprocess.run([
-                'milk-makecsetandrt',
-                str(tmux_util.find_pane_running_pid(self.take_tmux_pane)), # PID
-                self.taker_cset_prio[0], # CPUSET
-                str(self.taker_cset_prio[1]) # PRIORITY
+                    'milk-makecsetandrt',
+                    str(tmux_util.find_pane_running_pid(
+                            self.take_tmux_pane)),  # PID
+                    self.taker_cset_prio[0],  # CPUSET
+                    str(self.taker_cset_prio[1])  # PRIORITY
             ])
         self.grab_shm_fill_keywords()
         self.prepare_camera_finalize()
@@ -274,11 +266,12 @@ class EDTCameraNoModes:
         preex_keywords = self.camera_shm.get_keywords(True)
         preex_keywords.update(self.KEYWORDS)
 
-        preex_keywords['DETECTOR'] =  f'FG unit {self.pdv_unit} ch. {self.pdv_channel}'
-        preex_keywords['BIN-FCT1'] =  1
-        preex_keywords['BIN-FCT2'] =  1
-        preex_keywords['CROP_OR1'] =  0
-        preex_keywords['CROP_OR2'] =  0
+        preex_keywords[
+                'DETECTOR'] = f'FG unit {self.pdv_unit} ch. {self.pdv_channel}'
+        preex_keywords['BIN-FCT1'] = 1
+        preex_keywords['BIN-FCT2'] = 1
+        preex_keywords['CROP_OR1'] = 0
+        preex_keywords['CROP_OR2'] = 0
         preex_keywords['CROPPED'] = 'N/A'
 
         self.camera_shm.set_keywords(preex_keywords)
@@ -320,13 +313,13 @@ class EDTCameraNoModes:
         return self.send_command(cmd)
 
     def poll_camera_for_keywords(self):
-        print(
-            'Calling poll_camera_for_keywords on generic EDTCameraClass. Nothing happens here.'
-        )
+        print('Calling poll_camera_for_keywords on generic EDTCameraClass. Nothing happens here.'
+              )
 
     def start_auxiliary_thread(self):
         self.event = threading.Event()
-        self.thread = threading.Thread(target=self.auxiliary_thread_run_function)
+        self.thread = threading.Thread(
+                target=self.auxiliary_thread_run_function)
         self.thread.start()
 
     def stop_auxiliary_thread(self):
@@ -334,13 +327,12 @@ class EDTCameraNoModes:
             self.event.set()
             self.thread.join()
 
-
     def auxiliary_thread_run_function(self):
         while True:
             ret = self.event.wait(10)
-            if ret: # Signal to break the loop
+            if ret:  # Signal to break the loop
                 break
-	
+
             # Dependents cset + RTprio checking
             for proc in self.dependent_processes:
                 proc.make_children_rt()
@@ -354,7 +346,6 @@ class EDTCameraNoModes:
             #print(f'Thread is running at {time.time()}')
 
 
-
 class EDTCamera(EDTCameraNoModes):
 
     INTERACTIVE_SHELL_METHODS = ['set_camera_mode'
@@ -363,13 +354,8 @@ class EDTCamera(EDTCameraNoModes):
     MODES = {}  # Define the format ?
     EDTTAKE_CAST = False
 
-    def __init__(self,
-                 name: str,
-                 stream_name: str,
-                 mode_id,
-                 unit: int,
-                 channel: int,
-                 basefile: str,
+    def __init__(self, name: str, stream_name: str, mode_id, unit: int,
+                 channel: int, basefile: str,
                  taker_cset_prio: Union[str, int] = ('system', None),
                  dependent_processes: List[Any] = []):
         width, height = self._fg_size_from_mode(mode_id)
@@ -377,15 +363,9 @@ class EDTCamera(EDTCameraNoModes):
         self.current_mode_id = mode_id
         self.current_mode = self.MODES[mode_id]
 
-        EDTCameraNoModes.__init__(self,
-                                  name,
-                                  stream_name,
-                                  height,
-                                  width,
-                                  unit,
-                                  channel,
-                                  basefile,
-                                  taker_cset_prio = taker_cset_prio,
+        EDTCameraNoModes.__init__(self, name, stream_name, height, width, unit,
+                                  channel, basefile,
+                                  taker_cset_prio=taker_cset_prio,
                                   dependent_processes=dependent_processes)
 
     def _fg_size_from_mode(self, mode_id):
@@ -396,22 +376,21 @@ class EDTCamera(EDTCameraNoModes):
         # Gets called during constructor and set_mode
         if mode_id is None:
             mode_id = self.current_mode_id
-        print(
-            'Calling prepare_camera_for_size on generic EDTCameraClass. Setting size for shmimTCPreceive.'
-        )
+        print('Calling prepare_camera_for_size on generic EDTCameraClass. Setting size for shmimTCPreceive.'
+              )
         for dep_proc in self.dependent_processes:
             if 'shmimTCPreceive' in dep_proc.cli_cmd:
                 cm = self.current_mode
-                h, w = (cm.x1 - cm.x0 + 1) // cm.binx, (cm.y1 - cm.y0 + 1) // cm.biny
+                h, w = (cm.x1 - cm.x0 + 1) // cm.binx, (cm.y1 - cm.y0 +
+                                                        1) // cm.biny
                 dep_proc.cli_args = (dep_proc.cli_args[0], h, w)
 
     def prepare_camera_finalize(self, mode_id=None):
         # Gets called during constructor and set_mode
         if mode_id is None:
             mode_id = self.current_mode_id
-        print(
-            'Calling prepare_camera_finalize on generic EDTCameraClass. Nothing happens here.'
-        )
+        print('Calling prepare_camera_finalize on generic EDTCameraClass. Nothing happens here.'
+              )
 
     def set_camera_mode(self, mode_id):
         '''
@@ -458,7 +437,7 @@ class EDTCamera(EDTCameraNoModes):
 
     def change_camera_parameters(self):
         raise NotImplementedError(
-            "Set camera mode should have a camera-specific implementation")
+                "Set camera mode should have a camera-specific implementation")
 
     def register_dependent(self):
         pass

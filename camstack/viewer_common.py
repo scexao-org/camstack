@@ -5,13 +5,12 @@ import os
 import sys
 
 MILK_SHM_DIR = os.getenv(
-    'MILK_SHM_DIR')  # Expected /tmp <- MULTIVERSE FIXING NEEDED
+        'MILK_SHM_DIR')  # Expected /tmp <- MULTIVERSE FIXING NEEDED
 
 
 def open_shm(shm_name, dims=(1, 1), check=False):
     return open_shm_fullpath(MILK_SHM_DIR + "/" + shm_name + ".im.shm",
-                             dims=dims,
-                             check=check)
+                             dims=dims, check=check)
 
 
 def open_shm_fullpath(shm_name, dims=(1, 1), check=False):
@@ -37,15 +36,8 @@ CRED1_str = 'cred1'
 CRED2_str = 'cred2'
 
 
-def get_img_data(cam,
-                 cam_type,
-                 bias=None,
-                 badpixmap=None,
-                 subt_ref=False,
-                 ref=None,
-                 lin_scale=True,
-                 clean=True,
-                 check=True):
+def get_img_data(cam, cam_type, bias=None, badpixmap=None, subt_ref=False,
+                 ref=None, lin_scale=True, clean=True, check=True):
     ''' ----------------------------------------
     Return the current image data content,
     formatted as a 2D numpy array.
@@ -90,13 +82,8 @@ def get_img_data_cred2(cam, *args, **kwargs):
     return get_img_data(cam, CRED2_str, *args, **kwargs)
 
 
-def ave_img_data_from_callable(get_img_data,
-                               nave,
-                               bias=None,
-                               badpixmap=None,
-                               clean=True,
-                               disp=False,
-                               tint=0):
+def ave_img_data_from_callable(get_img_data, nave, bias=None, badpixmap=None,
+                               clean=True, disp=False, tint=0):
 
     for i in range(nave):
         if disp:

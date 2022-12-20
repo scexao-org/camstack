@@ -128,7 +128,7 @@ serial_term: <0d>
 
 # Shutter timing method:
 #   set to AIA_SERIAL (or leave out) for freerun cameras
-#   set to AIA_TRIG for triggered 
+#   set to AIA_TRIG for triggered
 #   set to AIA_MCL for pulse-width triggered -- that is, the duration of the
 #     TRUE pulse determines the exposure time, range 1-25500 milliseconds
 #   set to AIA_MCL_100US for pulse-width with a range of 1-25500 microseconds

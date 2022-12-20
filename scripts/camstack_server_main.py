@@ -1,5 +1,4 @@
 #!/bin/env python
-
 '''
     camstack server starter
 
@@ -19,9 +18,9 @@ from camstack.cams.cred2 import CRED2
 from camstack.cams.ocam import OCAM2K
 
 CLASS_DICT = {
-    'dummycam': DummyCamera,
-    'chuck': CRED2,
-    'rajni': CRED2,
-    'reno': OCAM2K,
-    'ocam': OCAM2K,
+        'dummycam': DummyCamera,
+        'chuck': CRED2,
+        'rajni': CRED2,
+        'reno': OCAM2K,
+        'ocam': OCAM2K,
 }

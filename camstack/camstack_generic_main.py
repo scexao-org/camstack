@@ -1,5 +1,4 @@
 #!/bin/env python
-
 '''
     Main camstack starter
 
@@ -11,7 +10,6 @@
 '''
 
 from docopt import docopt
-
 
 import libtmux as tmux
 
@@ -56,8 +54,3 @@ if __name__ == "__main__":
         server_command += f' -m {inital_cropmode}'
 
     pane_srv.send_keys(server_command)
-    
-
-
-
-

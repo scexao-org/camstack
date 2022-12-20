@@ -5,7 +5,6 @@ import sys
 sys.path.insert(0, "/home/kalao/kalao-cacao/src/pyMilk")
 sys.path.insert(0, "/home/kalao/kalao-camstack")
 
-
 from camstack.core.utilities import DependentProcess, RemoteDependentProcess
 from camstack.cams.nuvu import Kalao
 
@@ -14,7 +13,7 @@ from camstack.cams.nuvu import Kalao
 if __name__ == "__main__":
 
     # mode = 0 # 128x128
-    mode = 1 # 64x64 binning
+    mode = 1  # 64x64 binning
 
     # Prepare dependent processes
     #tcp_recv = RemoteDependentProcess(
@@ -58,12 +57,7 @@ if __name__ == "__main__":
     #utr_nuvu.start_order = 0
     #utr_nuvu.kill_order = 2
 
-
-    cam = Kalao('nuvu',
-                'nuvu_raw',
-                unit=0,
-                channel=0,
-                mode_id=mode)
+    cam = Kalao('nuvu', 'nuvu_raw', unit=0, channel=0, mode_id=mode)
 
     from camstack.core.utilities import shellify_methods
     shellify_methods(cam, globals())

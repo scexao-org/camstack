@@ -6,6 +6,7 @@ import subprocess
 
 TMUX_SERVER = tmux.Server()
 
+
 def find_or_create(session_name: str):
     '''
         Return a handle to the active_pane in the "session_name" tmux session
@@ -20,10 +21,12 @@ def find_or_create(session_name: str):
 
     return pane
 
+
 def send_keys(pane, keys, enter=True):
     # This does NOT error if the tmux was destroyed !
     # Mind the different behavior with RemotePanePatch
     pane.send_keys(keys, enter=enter, suppress_history=False)
+
 
 def kill_running(pane):
     pane.send_keys('C-c', enter=False, suppress_history=False)
@@ -31,6 +34,7 @@ def kill_running(pane):
     time.sleep(.1)
     pane.send_keys('C-z', enter=False, suppress_history=False)
     pane.send_keys('kill %')
+
 
 def find_pane_running_pid(pane):
     # Identify the PIDs running in a pane.
@@ -40,25 +44,30 @@ def find_pane_running_pid(pane):
     p = pane.cmd('list-panes', '-F#{pane_pid}').stdout[0].strip()
     # For which we identify children
     if type(pane) is RemotePanePatch:
-        res = subprocess.run(['ssh', pane.host, "pgrep", "-P", p], stdout=subprocess.PIPE)
+        res = subprocess.run(['ssh', pane.host, "pgrep", "-P", p],
+                             stdout=subprocess.PIPE)
     else:
         res = subprocess.run(['pgrep', '-P', p], stdout=subprocess.PIPE)
 
     if res.returncode == 0:
-        return int(res.stdout.decode('utf8').strip()) # A fail here will probably mean many children
+        return int(res.stdout.decode('utf8').strip()
+                   )  # A fail here will probably mean many children
     else:
         return None
+
+
 class RemotePanePatch:
     '''
         Provide a virtual handle to a tmux pane on a remote server
         It's only based on system tmux commands over ssh
     '''
 
-    def __init__(self, session_name:str, host: str):
+    def __init__(self, session_name: str, host: str):
         self.session_name = session_name
         self.host = host
 
-    def send_keys(self, keys: str, enter: bool = True, suppress_history: bool = False):
+    def send_keys(self, keys: str, enter: bool = True,
+                  suppress_history: bool = False):
         # Mind the quotes - we're gonna put keys between double quotes,
         # so we need to escape double quotes inside of keys
         # and we need to escape the backslash so that python knows it's a backslash
@@ -66,24 +75,30 @@ class RemotePanePatch:
             keys = keys.replace('"', '\\"')
         if suppress_history:
             keys = " " + keys
-        cmdstring = ['tmux', 'send-keys', '-t', self.session_name, '"' + keys + '"']
+        cmdstring = [
+                'tmux', 'send-keys', '-t', self.session_name, '"' + keys + '"'
+        ]
         if enter:
             cmdstring += ["Enter"]
 
         # Use check call to return a CalledProcessError
-        subprocess.check_call(['ssh', self.host] + cmdstring, stdout=subprocess.PIPE)
+        subprocess.check_call(['ssh', self.host] + cmdstring,
+                              stdout=subprocess.PIPE)
 
     def cmd(self, command: str, args: str = ''):
         '''
             Carefully mind the single and double quotes
         '''
         cmdstring = ['tmux', command, '-t', self.session_name, args]
-        return subprocess.run(['ssh', self.host] + cmdstring, stdout=subprocess.PIPE)
+        return subprocess.run(['ssh', self.host] + cmdstring,
+                              stdout=subprocess.PIPE)
 
-def find_or_create_remote(session_name:str, host: str):
+
+def find_or_create_remote(session_name: str, host: str):
     '''
         Mimic of find_or_create, but on a remote machine.
         Will return a RemotePanPatch object
     '''
-    subprocess.run(['ssh', host, "tmux new-session -d -s " + session_name], stdout=subprocess.PIPE)
+    subprocess.run(['ssh', host, "tmux new-session -d -s " + session_name],
+                   stdout=subprocess.PIPE)
     return RemotePanePatch(session_name, host)

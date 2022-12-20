@@ -1,5 +1,4 @@
 #!/bin/env python
-
 '''
     Main camstack starter
 
@@ -11,7 +10,6 @@
 '''
 
 from docopt import docopt
-
 
 import libtmux as tmux
 
@@ -30,7 +28,3 @@ if __name__ == "__main__":
     tms = tmux.Server()
     session_server = tms.find_where({'session_name': tmux_server_name})
     session_run = tms.find_where({'session_name': tmux_server_name})
-
-    
-
-

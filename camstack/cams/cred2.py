@@ -10,6 +10,7 @@ from camstack.cams.edt_base import EDTCamera
 
 from camstack.core.utilities import CameraMode
 
+
 class CRED2(EDTCamera):
 
     INTERACTIVE_SHELL_METHODS = [
@@ -21,17 +22,13 @@ class CRED2(EDTCamera):
     FULL = 'full'
 
     MODES = {
-        # FULL 640 x 512
-        FULL:
-        CameraMode(x0=0, x1=639, y0=0, y1=511),
-        # 320x256 half frame, centered
-        0:
-        CameraMode(x0=160,
-                   x1=479,
-                   y0=128,
-                   y1=383,
-                   fps=1500.082358000,
-                   tint=0.000663336),
+            # FULL 640 x 512
+            FULL:
+                    CameraMode(x0=0, x1=639, y0=0, y1=511),
+            # 320x256 half frame, centered
+            0:
+                    CameraMode(x0=160, x1=479, y0=128, y1=383,
+                               fps=1500.082358000, tint=0.000663336),
     }
 
     KEYWORDS = {}
@@ -39,14 +36,11 @@ class CRED2(EDTCamera):
 
     EDTTAKE_UNSIGNED = False
 
-    def __init__(self,
-                 name: str,
-                 stream_name: str,
-                 mode_id: int = 0,
-                 unit: int = 0,
-                 channel: int = 0,
-                 taker_cset_prio: Union[str, int] = ('system', None),
-                 dependent_processes=[]):
+    def __init__(self, name: str, stream_name: str, mode_id: int = 0,
+                 unit: int = 0, channel: int = 0,
+                 taker_cset_prio: Union[str,
+                                        int] = ('system',
+                                                None), dependent_processes=[]):
 
         # Allocate and start right in the appropriate binning mode
         self.synchro = False
@@ -57,7 +51,8 @@ class CRED2(EDTCamera):
         # This should pre-kill dependent sessions
         # But we should be able to "prepare" the camera before actually starting
         EDTCamera.__init__(self, name, stream_name, mode_id, unit, channel,
-                           basefile, taker_cset_prio=taker_cset_prio, dependent_processes=dependent_processes)
+                           basefile, taker_cset_prio=taker_cset_prio,
+                           dependent_processes=dependent_processes)
 
         # ======
         # AD HOC
@@ -75,7 +70,7 @@ class CRED2(EDTCamera):
     # AD HOC PREPARE CAMERA
     # =====================
 
-    def prepare_camera_for_size(self, mode_id = None):
+    def prepare_camera_for_size(self, mode_id=None):
 
         if mode_id is None:
             mode_id = self.current_mode_id
@@ -93,7 +88,6 @@ class CRED2(EDTCamera):
         self._set_check_cropping(mode.x0, mode.x1, mode.y0, mode.y1)
 
         EDTCamera.prepare_camera_for_size(self, mode_id=mode_id)
-
 
     def prepare_camera_finalize(self, mode_id: int = None):
 
@@ -121,7 +115,7 @@ class CRED2(EDTCamera):
             # We might have gotten a double answer
             # Seems to happen when requesting pressure (CRED1) and pretty often with CRED2
             cut = res.index('>')
-            res = res[cut+1:]
+            res = res[cut + 1:]
 
         if format and ':' in res:
             return res.split(':')
@@ -138,7 +132,7 @@ class CRED2(EDTCamera):
         self.get_NDR()  # Sets 'NDR'
         self.get_tint()  # Sets 'EXPTIME'
         self.get_fps()  # Sets 'FRATE'
-        
+
         self.camera_shm.update_keyword('DETECTOR', 'CRED2')
         self.camera_shm.update_keyword('CROPPED',
                                        self.current_mode_id != 'full')
@@ -176,7 +170,7 @@ class CRED2(EDTCamera):
                 self.send_command('set cropping rows %u-%u' % (y0, y1))
                 time.sleep(.2)
         raise AssertionError(
-            f'Cannot set desired crop {x0}-{x1} {y0}-{y1} after 3 tries')
+                f'Cannot set desired crop {x0}-{x1} {y0}-{y1} after 3 tries')
 
     def set_synchro(self, synchro: bool):
         val = ('off', 'on')[synchro]
@@ -245,7 +239,8 @@ class CRED2(EDTCamera):
         return float(self.send_command('temp snake setpoint raw'))
 
     def _shutdown(self):
-        input(f'Detector temperature {self.get_temperature()} K; proceed anyway ? Ctrl+C aborts.')
+        input(f'Detector temperature {self.get_temperature()} K; proceed anyway ? Ctrl+C aborts.'
+              )
         res = self.send_command('shutdown')
         if 'OK' in res:
             while True:
@@ -260,7 +255,7 @@ class Rajni(CRED2):
 
     MODES = {}
     MODES.update(CRED2.MODES)
-    
+
     def _fill_keywords(self):
         CRED2._fill_keywords(self)
 
@@ -268,7 +263,7 @@ class Rajni(CRED2):
         self.camera_shm.update_keyword('DETECTOR', 'CRED2 - RAJNI')
 
     def _thermal_init_commands(self):
-        # Rajni + chuck: water cooling, 
+        # Rajni + chuck: water cooling,
         self.send_command('set fan speed 0')
         self.send_command('set fan mode manual')
         self.set_temperature_setpoint(-40.0)
@@ -281,44 +276,30 @@ class Rajni(CRED2):
     Better, we need to define a passive CRED2, which could send serial commands
     But wouldn't try to alter the camera state
 '''
+
+
 class GLINT(EDTCamera):
 
-    EDTTAKE_UNSIGNED=False
+    EDTTAKE_UNSIGNED = False
 
     MODES = {
-        # GLINT
-        12:
-        CameraMode(x0=224,
-                   x1=319,
-                   y0=80,
-                   y1=423,
-                   fps=1394.833104000,
-                   tint=0.000711851),
+            # GLINT
+            12:
+                    CameraMode(x0=224, x1=319, y0=80, y1=423,
+                               fps=1394.833104000, tint=0.000711851),
     }
     MODES.update(EDTCamera.MODES)
 
-    def __init__(self,
-                 name: str,
-                 stream_name: str,
-                 unit: int = 2,
-                 channel: int = 0,
-                 mode_id=12,
-                 taker_cset_prio=('system', None),
-                 dependent_processes=[]):
+    def __init__(self, name: str, stream_name: str, unit: int = 2,
+                 channel: int = 0, mode_id=12,
+                 taker_cset_prio=('system', None), dependent_processes=[]):
 
         basefile = os.environ['HOME'] + '/src/camstack/config/cred2_glint.cfg'
 
         # Call EDT camera init
-        EDTCamera.__init__(self,
-                           name,
-                           stream_name,
-                           mode_id,
-                           unit,
-                           channel,
-                           basefile,
-                           taker_cset_prio=taker_cset_prio,
+        EDTCamera.__init__(self, name, stream_name, mode_id, unit, channel,
+                           basefile, taker_cset_prio=taker_cset_prio,
                            dependent_processes=dependent_processes)
-
 
     def _fill_keywords(self):
         EDTCamera._fill_keywords(self)
@@ -332,58 +313,34 @@ class Chuck(CRED2):
     INTERACTIVE_SHELL_METHODS = [] + CRED2.INTERACTIVE_SHELL_METHODS
 
     MODES = {
-        # 224 x 156, centered
-        1:
-        CameraMode(x0=192,
-                   x1=447,
-                   y0=178,
-                   y1=333,
-                   fps=2050.202611000,
-                   tint=0.000483913),
-        # 128 x 128, centered
-        2:
-        CameraMode(x0=256,
-                   x1=383,
-                   y0=192,
-                   y1=319,
-                   fps=4500.617741000,
-                   tint=0.000218568),
-        # 64 x 64, centered
-        3:
-        CameraMode(x0=288,
-                   x1=351,
-                   y0=224,
-                   y1=287,
-                   fps=9203.638201000,
-                   tint=0.000105249),
-        # 192 x 192, centered
-        4:
-        CameraMode(x0=224,
-                   x1=415,
-                   y0=160,
-                   y1=351,
-                   fps=2200.024157000,
-                   tint=0.000449819),
-        # 96 x 72, centered
-        5:
-        CameraMode(x0=272,
-                   x1=368,
-                   y0=220,
-                   y1=291,
-                   fps=8002.636203000,
-                   tint=0.000121555),
+            # 224 x 156, centered
+            1:
+                    CameraMode(x0=192, x1=447, y0=178, y1=333,
+                               fps=2050.202611000, tint=0.000483913),
+            # 128 x 128, centered
+            2:
+                    CameraMode(x0=256, x1=383, y0=192, y1=319,
+                               fps=4500.617741000, tint=0.000218568),
+            # 64 x 64, centered
+            3:
+                    CameraMode(x0=288, x1=351, y0=224, y1=287,
+                               fps=9203.638201000, tint=0.000105249),
+            # 192 x 192, centered
+            4:
+                    CameraMode(x0=224, x1=415, y0=160, y1=351,
+                               fps=2200.024157000, tint=0.000449819),
+            # 96 x 72, centered
+            5:
+                    CameraMode(x0=272, x1=368, y0=220, y1=291,
+                               fps=8002.636203000, tint=0.000121555),
     }
     MODES.update(CRED2.MODES)
 
     # Add modes 6-11 (0-5 offseted 32 pix)
     for i in range(6):
         cm = MODES[i]
-        MODES[i + 6] = CameraMode(x0=cm.x0 - 32,
-                                  x1=cm.x1 - 32,
-                                  y0=cm.y0,
-                                  y1=cm.y1,
-                                  fps=cm.fps,
-                                  tint=cm.tint)
+        MODES[i + 6] = CameraMode(x0=cm.x0 - 32, x1=cm.x1 - 32, y0=cm.y0,
+                                  y1=cm.y1, fps=cm.fps, tint=cm.tint)
 
     def _fill_keywords(self):
         CRED2._fill_keywords(self)
@@ -396,6 +353,7 @@ class Chuck(CRED2):
         self.send_command('set fan speed 0')
         self.send_command('set fan mode manual')
         self.set_temperature_setpoint(-40.0)
+
 
 # Quick shorthand for testing
 if __name__ == "__main__":

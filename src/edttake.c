@@ -373,7 +373,7 @@ int main(int argc, char **argv)
          * get the image and immediately start the next one (if not the last
          * time through the loop). Processing (saving to a file in this case)
          * can then occur in parallel with the next acquisition
-         * 
+         *
          * Must use pdv_wait_LAST_image, other than we get the last unread, which may be an older frame.
          */
 

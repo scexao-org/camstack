@@ -1,5 +1,4 @@
 #!/bin/env python
-
 '''
     camstack server starter
 
@@ -23,17 +22,16 @@ from camstack.core.dummyCamera import DummyCamera
 #from camstack.cams.ocam import OCAM2K
 #from camstack.cams.andor import ANDOR_897
 
-
 CLASS_DICT = {
-    'dummycam': DummyCamera,
-    #'chuck': CRED2,
-    #'rajni': CRED2,
-    #'reno': OCAM2K,
-    #'ocam': OCAM2K,
-    #'buffy': CRED1,
-    #'first': ANDOR_897,
-    #'vcam0': ANDOR_897,
-    #'vcam1': ANDOR_897,
+        'dummycam': DummyCamera,
+        #'chuck': CRED2,
+        #'rajni': CRED2,
+        #'reno': OCAM2K,
+        #'ocam': OCAM2K,
+        #'buffy': CRED1,
+        #'first': ANDOR_897,
+        #'vcam0': ANDOR_897,
+        #'vcam1': ANDOR_897,
 }
 
 if __name__ == "__main__":
