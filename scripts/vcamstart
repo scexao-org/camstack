@@ -13,7 +13,11 @@ from docopt import docopt
 import sys
 import subprocess
 
+from camstack.core.utilities import enforce_whichcomp
+
 if __name__ == "__main__":
+
+    enforce_whichcomp('5')
 
     args = docopt(__doc__) # Argument checking really
 
@@ -22,4 +26,7 @@ if __name__ == "__main__":
 
     run_line = ['vcamstart-bash'] + sys.argv[1:]
     print(run_line)
-    subprocess.run(run_line)
+    try:
+        subprocess.run(run_line)
+    except KeyboardInterrupt:
+        print('-Aborted-')

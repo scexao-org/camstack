@@ -19,14 +19,22 @@ def print_linenum(signum, frame):
 
 signal.signal(signal.SIGTTIN, print_linenum)
 
+import os, sys
+
+_CORES = os.sched_getaffinity(0)  # Go around pygame import
+
+signal.signal(signal.SIGTTIN, print_linenum)
+
 import pygame
 from pygame.locals import *
+
+# Pygame import (on AMD Epyc) make affinity drop to CPU 0 only !
+os.sched_setaffinity(0, _CORES)  # Fix the CPU affinity
 
 import numpy as np
 
 from matplotlib import cm
 
-import os, sys
 import struct
 
 from PIL import Image
@@ -37,13 +45,16 @@ import datetime as dt
 from astropy.io import fits as pf
 import subprocess
 
+import scxconf
+
 from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT
 from scxkw.redisutil.typed_db import Redis
 
 from pyMilk.interfacing.isio_shmlib import SHM
 
-home = os.getenv('HOME')  # Expected /home/scexao
+import camstack.viewers.viewer_common as cvc
 
+home = os.getenv('HOME')  # Expected /home/scexao
 conf_dir = home + "/conf/chuckcam_aux/"
 sys.path.append(home + '/src/lib/python/')
 
@@ -56,11 +67,6 @@ ZERO_NODIM = np.array(0., dtype=np.float32)
 ONES_NODIM = np.array(1., dtype=np.float32)
 
 # ------------------------------------------------------------------
-#             short hands for opening and checking shm
-# ------------------------------------------------------------------
-from camstack.viewer_common import open_shm, open_shm_fullpath
-
-# ------------------------------------------------------------------
 #             short hands for tmux commands
 # ------------------------------------------------------------------
 from camstack.core import tmux as tmuxlib
@@ -68,23 +74,21 @@ from camstack.core import tmux as tmuxlib
 # ------------------------------------------------------------------
 #             short hands for shared memory data access
 # ------------------------------------------------------------------
-from camstack.viewer_common import get_img_data_cred2
 
 
 def get_img_data(*args, **kwargs):
     # Arguments: bias, badpixmap, subt_ref, ref, lin_scale, clean, check
-    return get_img_data_cred2(cam, *args, **kwargs)
+    return cvc.get_img_data_cred2(cam, *args, **kwargs)
 
 
 # ------------------------------------------------------------------
 #             short hands for image averaging
 # ------------------------------------------------------------------
-from camstack.viewer_common import ave_img_data_from_callable
 
 
 def ave_img_data(nave, *args, **kwargs):
     # Arguments: bias, badpixmap, clean, disp, tint
-    return ave_img_data_from_callable(get_img_data, nave, *args, **kwargs)
+    return cvc.ave_img_data_from_callable(get_img_data, nave, *args, **kwargs)
 
 
 # ------------------------------------------------------------------
@@ -118,15 +122,16 @@ def arr2im(arr, vmin=0., vmax=10000.0, pwr=1.0, subt_ref=False, lin_scale=True,
             xmin = xsizeim - round(xsizeim / float(z2))
         ymin, ymax = int(ymin), int(ymax)
         xmin, xmax = int(xmin), int(xmax)
-        arr2 = arr[ymin:ymax, xmin:xmax].astype('float')
+        arr2 = arr[ymin:ymax, xmin:xmax].astype(np.float32)
     else:
-        arr2 = arr.astype('float')
+        arr2 = arr.astype(np.float32)
 
     if not lin_scale:
         lmin = np.percentile(arr2, 0.8)
         arr2 -= lmin
         mask = arr2 > 0
         arr2 *= mask
+
     arr3 = arr2**pwr
     mmin, mmax = arr3[1:].min(), arr3[1:].max(
     )  # IGNORE THE FIRST ROW, clock pixels etc.
@@ -139,6 +144,7 @@ def arr2im(arr, vmin=0., vmax=10000.0, pwr=1.0, subt_ref=False, lin_scale=True,
             arr3[0, 0] = -mmin
             arr3[0, 1] = -mmax
             mmax = -mmin
+
     arr3 -= mmin
     if mmin < mmax:
         arr3 /= (mmax - mmin)
@@ -290,49 +296,6 @@ def make_badpix(bias, filt=3.5):
 
 
 # ------------------------------------------------------------------
-#  Read database for some stage status
-# ------------------------------------------------------------------
-def RDB_pull(rdb, alive):
-
-    if alive:
-        fits_keys_to_pull = {
-                'X_IRCFLT', 'X_IRCBLK', 'X_CHKPUP', 'X_CHKPUS', 'X_NULPKO',
-                'X_RCHPKO', 'X_BUFPKO', 'D_IMRPAD', 'D_IMRPAP', 'OBJECT'
-        }
-        # Now Getting the keys
-        with rdb.pipeline() as pipe:
-            for key in fits_keys_to_pull:
-                pipe.hget(key, 'FITS header')
-                pipe.hget(key, 'value')
-            values = pipe.execute()
-        status = {k: v for k, v in zip(values[::2], values[1::2])}
-
-        pup = status['X_CHKPUP'].strip() == 'IN'
-        reachphoto = status['X_CHKPUS'].strip() == 'REACH'
-        gpin = status['X_NULPKO'].strip() == 'IN'
-        rpin = status['X_RCHPKO'].strip() == 'IN'
-        bpin = status['X_BUFPKO'].strip() == 'IN'
-        slot = status['X_IRCFLT']
-        block = status['X_IRCBLK'].strip() == 'IN'
-        pap = float(status['D_IMRPAP'])
-        pad = float(status['D_IMRPAD'])
-        target = status['OBJECT']
-    else:
-        pup = False
-        reachphoto = False
-        gpin = False
-        rpin = False
-        bpin = False
-        slot = 'H-band'
-        block = False
-        pap = 0
-        pad = 0
-        target = ''
-
-    return (pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad, target)
-
-
-# ------------------------------------------------------------------
 #  Filter message
 # ------------------------------------------------------------------
 def whatfilter(reachphoto, slot, block):
@@ -376,7 +339,7 @@ def whatmsg(pup, reachphoto, gpin, rpin, bpin):
 # ------------------------------------------------------------------
 # ------------------------------------------------------------------
 
-hmsg = """CHUCK's INSTRUCTIONS
+hmsg = """PALILACAM's INSTRUCTIONS
 -------------------
 
 camera controls:
@@ -407,6 +370,7 @@ CTRL+1-6    : change filter wheel slot:
               6. H-band
 CTRL+7      : ircam block
 CTRL+ARROW  : move PSF in focal plane
+CTRL+SHIFT+ARROW  : move PSF in focal plane (more)
 CTRL+ALT+f  : change to full frame
 CTRL+ALT+0-=: change window size:
   [0]  320 x 256    ( 160-479 x  128-383)  fps = 1500.1 Hz
@@ -441,7 +405,7 @@ mouse controls:
 mouse     : display of the flux under the mouse pointer
 left click: measure distances in mas
 
-ESC       : quit chuckcam
+ESC       : quit Palilacam
 
 """
 
@@ -468,31 +432,22 @@ xsizeim, ysizeim = cam.shape_c
 
 (xsize, ysize) = (320, 256)  #Force size of old chuck for the display
 
-cam_dark = open_shm("ircam%d_dark" % (camid, ), dims=(xsizeim, ysizeim),
-                    check=True)
-cam_badpixmap = open_shm("ircam%d_badpixmap" % (camid, ),
-                         dims=(xsizeim, ysizeim), check=True)
-cam_paused = open_shm("ircam%d_paused" % (camid, ))
-new_dark = open_shm("ircam%d_newdark" % (camid, ))
-ircam_synchro = open_shm("ircam_synchro", dims=(6, 1))
-ircam_retroinj = open_shm("ircam%d_retroinj" % (camid, ), dims=(20, 1))
+cam_dark = cvc.open_shm("ircam%d_dark" % (camid, ), dims=(xsizeim, ysizeim),
+                        check=True)
+cam_badpixmap = cvc.open_shm("ircam%d_badpixmap" % (camid, ),
+                             dims=(xsizeim, ysizeim), check=True)
+cam_paused = cvc.open_shm("ircam%d_paused" % (camid, ))
+new_dark = cvc.open_shm("ircam%d_newdark" % (camid, ))
+ircam_synchro = cvc.open_shm("ircam_synchro", dims=(6, 1))
+ircam_retroinj = cvc.open_shm("ircam%d_retroinj" % (camid, ), dims=(20, 1))
 
 # ------------------------------------------------------------------
 #            Configure communication with SCExAO's redis
 # ------------------------------------------------------------------
-rdb = Redis(host=REDIS_DB_HOST, port=REDIS_DB_PORT)
-# Is the server alive ?
-try:
-    alive = rdb.ping()
-    if not alive:
-        raise ConnectionError
-except:
-    print('Error: can\'t ping redis DB.')
-    alive = False
-    #sys.exit(1)
+rdb, rdb_alive = cvc.locate_redis_db()
 
-pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad, target = RDB_pull(
-        rdb, alive)
+(pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad, target,
+ pdi) = cvc.RDB_pull(rdb, rdb_alive, False, do_defaults=True)
 
 pscale = 16.2  #mas per pixel in Chuckcam
 
@@ -526,10 +481,10 @@ fpsClock = pygame.time.Clock()  # start the pygame clock!
 XW, YW = xsize * z1, (ysize + 100) * z1
 
 screen = pygame.display.set_mode((XW, YW), 0, 32)
-pygame.display.set_caption('SCIENCE camera display!')
+pygame.display.set_caption('PALILA camera display!')
 
 tmux_ircam_ctrl = tmuxlib.find_or_create_remote(
-        'ircam%dctrl' % camid, 'scexao-op@localhost')  # Control shell
+        'chuck_ctrl', 'scexao@10.20.30.5')  # Control shell
 tmux_ircam = tmuxlib.find_or_create(
         'ircam%d' % camid)  # start a tmux session for messsages
 tmux_ircam_synchro = tmuxlib.find_or_create(
@@ -540,7 +495,7 @@ if bytes(home, 'utf8') + b'/bin/devices/ircam_synchro' not in res:
     tmux_ircam_synchro.send_keys("ircam_synchro")
 
 # ------------------------------------------------------------------
-#              !!! now we are in business !!!!
+# -            !!! now we are in business !!!!                     -
 # ------------------------------------------------------------------
 
 WHITE = (255, 255, 255)
@@ -631,15 +586,15 @@ font5.set_bold(True)
 xws = xsize * z1
 yws = ysize * z1
 
-path_cartoon = conf_dir + "Chuck%d.png" % (z1, )
+path_cartoon = conf_dir + "Palila%d.png" % (z1, )
 cartoon1 = pygame.image.load(path_cartoon).convert_alpha()
 
-lbl = font1.render("SCIENCE camera viewer", True, WHITE, BGCOL)
+lbl = font1.render("PALILA camera viewer", True, WHITE, BGCOL)
 rct = lbl.get_rect()
 rct.center = (110 * z1, 270 * z1)
 screen.blit(lbl, rct)
 
-lbl2 = font3.render("Chuck helps the weak who press [h]", True, WHITE, BGCOL)
+lbl2 = font3.render("For help, press [h]", True, WHITE, BGCOL)
 rct2 = lbl2.get_rect()
 rct2.center = (110 * z1, 285 * z1)
 screen.blit(lbl2, rct2)
@@ -655,7 +610,7 @@ rct_info1 = info1.get_rect()
 rct_info1.center = (110 * z1, 305 * z1)
 
 imin, imax = 10000, 10000
-msg2 = ("t = %f" % (etimet))[:8] + (" min,max = %5d,%5d   " % (imin, imax))
+msg2 = ("t = %f" % (etimet))[:8] + (" min,max = %5d,%7d   " % (imin, imax))
 info2 = font3.render(msg2, True, FGCOL, BGCOL)
 rct_info2 = info2.get_rect()
 rct_info2.center = (110 * z1, 315 * z1)
@@ -702,19 +657,9 @@ rct_dinfo2.center = (110 * z1, 345 * z1)
 screen.blit(dinfo2, rct_dinfo2)
 
 msgsave1 = "saving images"
-msgsave2 = "  before I   "
-msgsave3 = "kick your ass"
 savem1 = font5.render(msgsave1, True, RED1)
-savem2 = font5.render(msgsave2, True, RED1)
-savem3 = font5.render(msgsave3, True, RED1)
 rct_savem1 = savem1.get_rect()
-rct_savem2 = savem2.get_rect()
-rct_savem3 = savem3.get_rect()
-h_savem2 = savem2.get_height()
-h_savem3 = savem3.get_height()
-rct_savem1.bottomright = (xws - 10 * z1, yws - h_savem2 - h_savem3)
-rct_savem2.bottomright = (xws - 10 * z1, yws - h_savem3)
-rct_savem3.bottomright = (xws - 10 * z1, yws)
+rct_savem1.bottomright = (xws - 10 * z1, yws)
 
 cx = xsize / 2.
 cy = ysize / 2.
@@ -742,7 +687,7 @@ rct_sc2.bottomleft = (5 * z1 - 4, ysc - ktot)
 
 #REACH Photometry parameters
 dreachphoto = 64. * z1
-xreachphoto = -0.5 * z1
+xreachphoto = -1.5 * z1
 yreachphoto = -11.5 * z1
 preachphoto = dreachphoto / 7.
 reachphotoc = preachphoto / 2.
@@ -832,11 +777,11 @@ strehl = False
 strehl_plot = False
 binary = False
 binary_plot = False
-plot_pa = False
+plot_pa = False  # flag to plot compass roses
 clr_scale = 0  # flag for the display color scale
 shmreload = 0
 keeprpin = False
-waitfordt = False
+wait_for_archive_datatype = False
 
 (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
 
@@ -851,7 +796,7 @@ cnti = 0
 timeexpt = []
 timendr = []
 nst = 1
-rm = 10
+rm = 15
 a = 128
 
 nhist = 100
@@ -864,6 +809,7 @@ with open(conf_dir + 'hotspots.txt') as file:
 pos2 = pos[0, :]
 
 # ================================================================================
+# MAIN LOOP
 # ================================================================================
 while True:  # the main game loop
     cnti += 1
@@ -887,7 +833,7 @@ while True:  # the main game loop
     # check if camera is paused due to change of window size from other chuckcam
     campaused = int(cam_paused.get_data())
     while campaused:
-        print("Chuck is changing size")
+        print("Palila is changing size")
         time.sleep(1)
         campaused = int(cam_paused.get_data())
         shmreload = True
@@ -900,10 +846,9 @@ while True:  # the main game loop
         dinfo2 = font3.render(msg, True, BGCOL, SACOL)
         screen.blit(dinfo2, rct_dinfo2)
         os.system("scexaostatus set darkchuck 'NEW INT DARK    ' 0")
-        os.system("log Chuckcam: Saving current internal dark")
+        os.system("log Palilacam: Saving current internal dark")
 
-        print("In the time it takes Chuck Norris to sidekick a")
-        print("red-headed stepchild, we'll acquire this dark.")
+        print("Palilacam: dark acquisition.")
 
         if not block:
             os.system("ircam_block")  # blocking the light
@@ -914,7 +859,8 @@ while True:  # the main game loop
         time.sleep(1.0)  # safety
 
         ndark = int(10 * fps / float(ndr))  # 10s of dark
-        ave_dark = ave_img_data(ndark, clean=False, disp=True, tint=etime)
+        ave_dark = ave_img_data(ndark, clean=False, disp=True, tint=etime,
+                                timeout=11.0)
         bname = conf_dir + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
                 % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
         pf.writeto(bname, ave_dark, overwrite=True)
@@ -929,7 +875,7 @@ while True:  # the main game loop
 
         os.system("ircam_block")  # blocking the light
         os.system("scexaostatus set darkchuck 'OFF             ' 1")
-        os.system("log Chuckcam: Done saving current internal dark")
+        os.system("log Palilacam: Done saving current internal dark")
         cam_dark.set_data(bias.astype(np.float32))
         cam_badpixmap.set_data(badpixmap.astype(np.float32))
         new_dark.set_data(ONES_NODIM)
@@ -946,10 +892,10 @@ while True:  # the main game loop
         print("image xsize=%d, ysize=%d" % (xsizeim, ysizeim))
         #os.system("rm %s/ircam%d_*" % (MILK_SHM_DIR, camid, ))
         time.sleep(1)
-        cam_dark = open_shm("ircam%d_dark" % (camid, ),
-                            dims=(xsizeim, ysizeim), check=True)
-        cam_badpixmap = open_shm("ircam%d_badpixmap" % (camid, ),
-                                 dims=(xsizeim, ysizeim), check=True)
+        cam_dark = cvc.open_shm("ircam%d_dark" % (camid, ),
+                                dims=(xsizeim, ysizeim), check=True)
+        cam_badpixmap = cvc.open_shm("ircam%d_badpixmap" % (camid, ),
+                                     dims=(xsizeim, ysizeim), check=True)
         #cam_clean = open_shm("ircam%d_clean" % (camid,), dims=(xsizeim, ysizeim), check=True)
         time.sleep(1)
         tmux_ircam_ctrl.send_keys("get_tint()")
@@ -1006,13 +952,13 @@ while True:  # the main game loop
             if rpin:
                 cnta %= 20
             cnta += 1
-            binary2 = binary and (cnta == 20)
+            #binary = binary and (cnta == 20)
             if cnta == 1:
                 temp2 = copy.deepcopy(temp)
             else:
                 temp2 *= float(cnta - 1) / float(cnta)
                 temp2 += temp / float(cnta)
-            if seeing or strehl or binary2:
+            if seeing or strehl or binary:
                 timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
                 savepath = '/media/data/' + timestamp + '/ircam%dlog/' % camid
                 ospath = os.path.dirname(savepath)
@@ -1059,6 +1005,7 @@ while True:  # the main game loop
                             strehl_plot = True
                         else:
                             print("start binary fit")
+                            print(temp2.shape, temp2.max, temp2.min)
                             posst, xoff, yoff, strehlv, dia_ring, distco, angleco, contrastco = impro.binary_processing(
                                     temp2, target=target, mas_pix=pscale,
                                     pad=pad, nst=nst - int(rpin), a=a, rm=rm,
@@ -1067,13 +1014,13 @@ while True:  # the main game loop
                             os.system(home +
                                       "/bin/log BINARY %s: %i-star fit" %
                                       (slot, nst))
-                            binary = True
+                            binary = False
                             binary_plot = True
         else:
             temp2 = copy.deepcopy(temp)
             cnta = 0
-        imax = np.max(temp2)
-        imin = np.min(temp2)
+        imax = np.max(temp2[1:])
+        imin = np.min(temp2[1:])
         (myim, z3, xmin, xmax, ymin, ymax, xshift,
          yshift) = arr2im(temp2, pwr=pwr0, subt_ref=subt_ref,
                           lin_scale=lin_scale, pos=pos2)
@@ -1440,7 +1387,7 @@ while True:  # the main game loop
 
         # ------------------------------------------------------------------
         # Menu for the DATA-TYP for archiving
-        if waitfordt:
+        if wait_for_archive_datatype:
             pygame.draw.rect(screen, BGCOL, (xws / 4, yws / 2 - dth * ndt,
                                              xws / 2, 2 * dth * ndt), 0)
             rctlines = []
@@ -1454,6 +1401,7 @@ while True:  # the main game loop
 
         # ------------------------------------------------------------------
         # saving images
+        '''
         tmuxon = subprocess.check_output(
                 'ssh scexao-op@localhost "tmux ls" | grep ircam%dlog | awk \'{print $2}\''
                 % (camid, ), shell=True, input=b'')
@@ -1469,6 +1417,8 @@ while True:  # the main game loop
                         f'ircam{camid}log', 'scexao-op@localhost')
         else:
             saveim = False
+        '''
+
         if cnti % 20:
             rects = [rect2b, rect2, rct, rct2]
         else:
@@ -1479,11 +1429,9 @@ while True:  # the main game loop
         ]
         if saveim:
             screen.blit(savem1, rct_savem1)
-            screen.blit(savem2, rct_savem2)
-            screen.blit(savem3, rct_savem3)
-            rects += [rct_savem1, rct_savem2, rct_savem3]
+            rects += [rct_savem1]
 
-        if waitfordt:
+        if wait_for_archive_datatype:
             rects += rctlines
 
         if logexpt:
@@ -1492,7 +1440,7 @@ while True:  # the main game loop
             time.sleep(0.1)
             if timeexpt[-1] - timeexpt[0] > 4:
                 os.system(home +
-                          "/bin/log Chuckcam: changing exposure time to %d" %
+                          "/bin/log Palilacam: changing exposure time to %d" %
                           etime)
                 timeexpt = []
                 logexpt = False
@@ -1502,13 +1450,17 @@ while True:  # the main game loop
             time.sleep(0.1)
             if timendr[-1] - timendr[0] > 4:
                 os.system(home +
-                          "/bin/log Chuckcam: changing exposure time to %d" %
+                          "/bin/log Palilacam: changing exposure time to %d" %
                           etime)
                 timendr = []
                 logndr = False
         if cnti % 20 == 0:
-            pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad, target = RDB_pull(
-                    rdb, alive)
+            try:
+                (pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad,
+                 target, pdi) = cvc.RDB_pull(rdb, rdb_alive, False,
+                                             do_defaults=rdb_alive)
+            except ConnectionError:
+                pass
             msgwhl = whatfilter(reachphoto, slot, block)
             wh = font1.render(msgwhl, True, CYAN)
             msgtop = whatmsg(pup, reachphoto, gpin, rpin, bpin)
@@ -1530,7 +1482,7 @@ while True:  # the main game loop
             cam_badpixmap.close()
             #cam_clean.close()
             new_dark.close()
-            print("Chuckcam has ended normally.")
+            print("Palilacam has ended normally.")
             sys.exit()
 
         elif event.type == KEYDOWN:
@@ -1578,6 +1530,15 @@ while True:  # the main game loop
                         (etimes2, net2, tindex) = whatexpt(etime, fps, delay)
                         logexpt = True
                 (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
+
+            # Print stream KW in terminal
+            #---------------------------
+            if event.key == K_k:
+                mmods = pygame.key.get_mods()
+                if mmods == 0:  # no modifier
+                    kws = cam.get_keywords()
+                    print('\n',
+                          '\n'.join([f'{k:8.8s}:\t{kws[k]}' for k in kws]))
 
             # Decrease exposure time/NDR
             #---------------------------
@@ -1752,11 +1713,10 @@ while True:  # the main game loop
                         os.system(
                                 "scexaostatus set darkchuck 'NEW INT DARK    ' 0"
                         )
-                        os.system("log Chuckcam: Saving current internal dark")
+                        os.system(
+                                "log Palilacam: Saving current internal dark")
 
-                        print("In the time it takes Chuck Norris to sidekick a"
-                              )
-                        print("red-headed stepchild, we'll acquire this dark.")
+                        print("Palilacam: dark acquisition.")
                         if not reachphoto:
                             if not block:
                                 os.system("ircam_block")  # blocking the light
@@ -1768,9 +1728,8 @@ while True:  # the main game loop
                         pygame.display.update([rct_dinfo2, rct_wh])
                         time.sleep(1.0)  # safety
 
-                        ndark = int(10 * fps / float(ndr))  # 10s of dark
-                        ave_dark = ave_img_data(ndark, clean=False, disp=True,
-                                                tint=etime)
+                        ave_dark = ave_img_data(None, clean=False, disp=True,
+                                                tint=etime, timeout=11.0)
                         bname = conf_dir + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
                                 % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
                         pf.writeto(bname, ave_dark, overwrite=True)
@@ -1790,7 +1749,7 @@ while True:  # the main game loop
                                 "scexaostatus set darkchuck 'OFF             ' 1"
                         )
                         os.system(
-                                "log Chuckcam: Done saving current internal dark"
+                                "log Palilacam: Done saving current internal dark"
                         )
                         cam_dark.set_data(bias.astype(np.float32))
                         cam_badpixmap.set_data(badpixmap.astype(np.float32))
@@ -1804,12 +1763,9 @@ while True:  # the main game loop
                         os.system(
                                 "scexaostatus set darkchuck 'ALL INT DARKS   ' 0"
                         )
-                        os.system("log Chuckcam: Saving internal darks")
+                        os.system("log Palilacam: Saving internal darks")
 
-                        print("In the time it takes Chuck Norris to sidekick a"
-                              )
-                        print("red-headed stepchild, we'll acquire all biases."
-                              )
+                        print("Palilacam: dark acquisition.")
                         if not reachphoto:
                             if not block:
                                 os.system("ircam_block")  # blocking the light
@@ -1841,7 +1797,8 @@ while True:  # the main game loop
                             ndark = int(1 * fps /
                                         float(ndr))  # 1s of dark per exposure
                             ave_dark = ave_img_data(ndark, clean=False,
-                                                    disp=True, tint=tint)
+                                                    disp=True, tint=tint,
+                                                    timeout=11.0)
                             bname = conf_dir + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
                                     % (fps, tint, ndr, crop[0], crop[2], xsizeim, ysizeim)
                             pf.writeto(bname, ave_dark, overwrite=True)
@@ -1851,8 +1808,6 @@ while True:  # the main game loop
                             pf.writeto(bpname, badpixmapi, overwrite=True)
 
                             time.sleep(0.2)
-                        print("\nChuck sidekicked the crap out of the poor kid."
-                              )
                         if not reachphoto:
                             os.system("ircam_block")  # opening the shutter
                         else:
@@ -1860,7 +1815,7 @@ while True:  # the main game loop
                         os.system(
                                 "scexaostatus set darkchuck 'OFF             ' 1"
                         )
-                        os.system("log Chuckcam: Done saving internal darks")
+                        os.system("log Palilacam: Done saving internal darks")
 
                         if not sync_param[0] and sync_param[1]:
                             sync_param[2] = tint
@@ -1877,7 +1832,19 @@ while True:  # the main game loop
             # ---------------------------------------------------
             if event.key == K_r:
                 mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL):
+                # Just r
+                if cvc.check_modifiers(mmods):
+                    rname = conf_dir + "ref.fits"
+                    try:
+                        ref_im = pf.getdata(rname) * badpixmap
+                    except:
+                        ref_im = np.zeros((ysizeim, xsizeim))
+                    if ref_im.shape[1] != xsizeim or ref_im.shape[0] != ysizeim:
+                        ref_im = np.zeros((ysizeim, xsizeim))
+                    subt_ref = not subt_ref
+
+                # Ctrl + r
+                elif cvc.check_modifiers(mmods, lc=True):
                     msg = "!! Acquiring reference !! "
                     dinfo2 = font3.render(msg, True, BGCOL, SACOL)
                     screen.blit(dinfo2, rct_dinfo2)
@@ -1888,83 +1855,85 @@ while True:  # the main game loop
                     nref = int(5 * fps / float(ndr))  # 5s of ref
                     ave_ref = ave_img_data(nref, bias=bias,
                                            badpixmap=badpixmap, disp=True,
-                                           tint=etime)
+                                           tint=etime, timeout=11.0)
                     rname = conf_dir + "ref.fits"
                     pf.writeto(rname, ave_ref, overwrite=True)
 
-                else:
-                    rname = conf_dir + "ref.fits"
-                    try:
-                        ref_im = pf.getdata(rname) * badpixmap
-                    except:
-                        ref_im = np.zeros((ysizeim, xsizeim))
-                    if ref_im.shape[1] != xsizeim or ref_im.shape[0] != ysizeim:
-                        ref_im = np.zeros((ysizeim, xsizeim))
-                    subt_ref = not subt_ref
+                # Ctrl + Alt + r
+                elif cvc.check_modifiers(mmods, lc=True, la=True):
+                    tmux_ircam.send_keys(
+                            f"ssh {scxconf.IP_SC5} cam-restartdeps chuck")
+                    print("ssh sc5: restarting all Palilacam auxiliary processes."
+                          )
+
+                # Ctrl + Alt + Shift + R
+                elif cvc.check_modifiers(mmods, lc=True, la=True, ls=True):
+                    tmux_ircam.send_keys(
+                            f"ssh {scxconf.IP_SC5} cam-chuckstart")
+                    print("ssh sc5: restarting Palilacam acquisition entirely."
+                          )
 
             # Start/stop logging images
             #--------------------------
             if event.key == K_s:
                 mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL):
+                if (mmods & KMOD_LCTRL):  # Ctrl + (something) + S
                     saveim = not saveim
-                    if saveim:
-                        timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
-                        if (mmods & KMOD_LSHIFT):
-                            waitfordt = True
-                        else:
-                            savepath = '/media/data/' + timestamp + \
-                                '/ircam%dlog/' % (camid, )
-                            ospath = os.path.dirname(savepath)
-                            if not os.path.exists(ospath):
-                                os.makedirs(ospath)
-                            nimsave = int(min(10000, (50000000 / etimet)))
-                            # creating a tmux session for logging
+                    if saveim:  # We were not saving and we're starting
+                        if (mmods & KMOD_LSHIFT):  # Ctrl + Shift + S
+                            # Trigger prompt for datatype
+                            wait_for_archive_datatype = True
+                        else:  #  Ctrl + S
                             os.system(
-                                    "ln -s /tmp/fits/chuck.fits /milk/shm/ircam0.auxFITSheader.shm"
+                                    f"ssh scexao@scexao5 updatekw ircam0_raw DATA-TYP TEST"
                             )
+                            timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
+                            savepath = '/mnt/tier0/' + timestamp + f'/ircam{camid}/'
+                            ospath = os.path.dirname(savepath)
+
+                            nimsave = int(min(10000, (20000000 / etimet)))
+                            # creating a tmux session for logging
                             tmux_ircamlog = tmuxlib.find_or_create_remote(
-                                    "ircam%dlog" % (camid, ),
-                                    "scexao-op@localhost")
+                                    "ircam%d_log" % (camid, ),
+                                    "scexao@scexaoRTC")
                             #tmux_ircamlog = tmuxlib.find_or_create("ircam%dlog" % (camid, ))
+                            tmux_ircamlog.send_keys(f"mkdir -p {ospath}")
                             tmux_ircamlog.send_keys(
                                     "milk-logshim ircam%d %i %s &" %
                                     (camid, nimsave, savepath))
-                            os.system("log Chuckcam: start logging images")
+                            os.system("log Palilacam: start logging images")
                             os.system(
-                                    "scexaostatus set logchuck 'LOGGING         ' 3"
+                                    "scexaostatus set logchuck 'LOG NOARCH (RTC)' 3"
                             )
                     else:
-                        tmux_ircamlog.send_keys("milk-logshimkill ircam%d" %
-                                                camid)
-                        tmux_ircamlog.cmd("kill-session")
-                        os.system("log Chuckcam: stop logging images")
+                        tmux_ircamlog.send_keys(
+                                f"milk-logshimoff ircam{camid}; sleep 4; milk-logshimkill ircam{camid}"
+                        )
+                        os.system("log Palilacam: stop logging images")
                         os.system(
                                 "scexaostatus set logchuck 'OFF             ' 1"
                         )
 
             # Start archiving images
             #--------------------------
-            if event.key == K_RETURN and waitfordt:
-                cam_rawdata.update_keyword("DATA-TYP", datatyp[idt])
+            if event.key == K_RETURN and wait_for_archive_datatype:
+                os.system(
+                        f"ssh scexao@scexao5 updatekw ircam{camid}_raw DATA-TYP {datatyp[idt]}"
+                )
                 timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
-                savepath = '/media/data/ARCHIVED_DATA/' + timestamp + \
-                           '/ircam%dlog/' % (camid, )
-                waitfordt = False
+                savepath = '/media/data/ARCHIVED_DATA/' + timestamp + '/ircam{camid}/'
+                wait_for_archive_datatype = False
                 ospath = os.path.dirname(savepath)
                 if not os.path.exists(ospath):
                     os.makedirs(ospath)
-                nimsave = int(min(20000, (50000000 / etimet)))
+                nimsave = int(min(10000, (20000000 / etimet)))
                 # creating a tmux session for logging
-                os.system(
-                        "ln -s /tmp/fits/chuck.fits /milk/shm/ircam0.auxFITSheader.shm"
-                )
                 tmux_ircamlog = tmuxlib.find_or_create_remote(
-                        "ircam%dlog" % (camid, ), "scexao-op@localhost")
+                        "ircam%dlog" % (camid, ), "scexao@scexaoRTC")
                 tmux_ircamlog.send_keys("milk-logshim ircam%d %i %s &" %
                                         (camid, nimsave, savepath))
-                os.system("log Chuckcam: start archiving images")
-                os.system("scexaostatus set logchuck 'ARCHIVING       ' 3")
+                os.system("log Palilacam: start archiving images")
+                os.system("scexaostatus set logchuck 'ARCHIVING (RTC) ' 3")
 
             # Save an HDR image/Subtract dark
             #--------------------------------
@@ -2106,6 +2075,7 @@ while True:  # the main game loop
                         else:
                             if not pup:
                                 tmux_ircam.send_keys("chuck_pup")
+
                             tmux_ircam.send_keys("chuck_pup_fcs reach &")
                             tmux_ircam.send_keys("buffy_pickoff in &")
                             tmux_ircam.send_keys("ircam_fcs buffy &")
@@ -2245,11 +2215,11 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_ircam.send_keys("dm_stage phi push 100")
+                        tmux_ircam.send_keys("dm_stage phi push 1000")
                     else:
-                        tmux_ircam.send_keys("dm_stage phi push 20")
+                        tmux_ircam.send_keys("dm_stage phi push 100")
                 else:
-                    if waitfordt:
+                    if wait_for_archive_datatype:
                         idt -= 1
                         idt %= ndt
 
@@ -2257,11 +2227,11 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_ircam.send_keys("dm_stage phi push -100")
+                        tmux_ircam.send_keys("dm_stage phi push -1000")
                     else:
-                        tmux_ircam.send_keys("dm_stage phi push -20")
+                        tmux_ircam.send_keys("dm_stage phi push -100")
                 else:
-                    if waitfordt:
+                    if wait_for_archive_datatype:
                         idt += 1
                         idt %= ndt
 
@@ -2269,17 +2239,17 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_ircam.send_keys("dm_stage theta push -100")
+                        tmux_ircam.send_keys("dm_stage theta push -1000")
                     else:
-                        tmux_ircam.send_keys("dm_stage theta push -20")
+                        tmux_ircam.send_keys("dm_stage theta push -100")
 
             if event.key == K_RIGHT:
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_ircam.send_keys("dm_stage theta push +100")
+                        tmux_ircam.send_keys("dm_stage theta push +1000")
                     else:
-                        tmux_ircam.send_keys("dm_stage theta push +20")
+                        tmux_ircam.send_keys("dm_stage theta push +100")
 
     pygame.display.update(rects)
 

@@ -4,10 +4,13 @@
 import os
 import time
 from typing import Union
+import logging as logg
 
-from camstack.cams.edt_base import EDTCamera
+from camstack.cams.edtcam import EDTCamera
 
 from camstack.core.utilities import CameraMode
+
+from scxkw.config import MAGIC_BOOL_STR
 
 
 class ROMODES:
@@ -19,9 +22,11 @@ class ROMODES:
 class CRED1(EDTCamera):
 
     INTERACTIVE_SHELL_METHODS = [
-        'set_synchro', 'set_readout_mode', 'get_readout_mode', 'set_gain', 'get_gain',
+        'set_synchro', 'set_readout_mode',
+        'get_readout_mode', 'set_gain', 'get_gain',
         'set_NDR', 'get_NDR', 'set_fps',
-        'get_fps', 'set_tint', 'get_tint', 'get_temperature', 'FULL'] + \
+        'get_fps', 'set_tint', 'get_tint',
+        'get_temperature', 'FULL'] + \
         EDTCamera.INTERACTIVE_SHELL_METHODS
 
     FULL = 'full'
@@ -48,15 +53,19 @@ class CRED1(EDTCamera):
             8: CameraMode(x0=64, x1=255, y0=88, y1=167, fps=16020.),
     }
 
-    # Add mode 0 alias of mode FULL
-    MODES[0] = MODES[FULL]
-
     KEYWORDS = {
-            'DET-PRES': (0.0, 'Detector pressure (mbar)'),
+            'DET-PRES': (0.0, 'Detector pressure (mbar)', '%20.8f', 'PRESR'),
+            'FILTER01': ('UNKNOWN', 'IRCAMs filter state', '%-16s', 'FILTR'),
+            # Warning: this means that the two following keywords
+            # CANNOT be set anymore by gen2/auxfitsheader
+            # Because the stream keywords WILL supersede.
+            'RET-ANG1': (0.0, 'Position angle of first retarder plate (deg)',
+                         '%20.2f', 'HWPAG'),
     }
     KEYWORDS.update(EDTCamera.KEYWORDS)
 
     EDTTAKE_UNSIGNED = True
+    EDTTAKE_EMBEDMICROSECOND = True
 
     def __init__(self, name: str, stream_name: str, mode_id: int = 'full',
                  unit: int = 1, channel: int = 0,
@@ -87,13 +96,14 @@ class CRED1(EDTCamera):
         self.send_command('set rawimages on')
         self.send_command('set imagetags on')
 
-        self.set_gain(50)
+        self.set_gain(121)
 
     # =====================
     # AD HOC PREPARE CAMERA
     # =====================
 
     def prepare_camera_for_size(self, mode_id=None):
+        logg.debug('prepare_camera_for_size @ CRED1')
 
         if mode_id is None:
             mode_id = self.current_mode_id
@@ -110,6 +120,7 @@ class CRED1(EDTCamera):
         EDTCamera.prepare_camera_for_size(self, mode_id=mode_id)
 
     def prepare_camera_finalize(self, mode_id: int = None):
+        logg.debug('prepare_camera_finalize @ CRED1')
 
         if mode_id is None:
             mode_id = self.current_mode_id
@@ -131,6 +142,7 @@ class CRED1(EDTCamera):
     def send_command(self, cmd, format=True):
         # Just a little bit of parsing to handle the CRED1 format
         # FLI has *decided* to end all their answers with a return prompt "\r\nfli-cli>"
+        logg.debug(f'CRED1 send_command: "{cmd}"')
         res = EDTCamera.send_command(self, cmd)[:-10]
 
         if 'cli>' in res:
@@ -151,21 +163,29 @@ class CRED1(EDTCamera):
 
         EDTCamera._fill_keywords(self)
 
-        self.camera_shm.update_keyword('DETECTOR', 'CRED2')
-        self.camera_shm.update_keyword('CROPPED',
-                                       self.current_mode_id != 'full')
+        self._set_formatted_keyword('DETECTOR', 'CRED1')
+        self._set_formatted_keyword('CROPPED',
+                                    self.current_mode_id != self.FULL)
         self.get_NDR()  # Sets 'NDR'
         self.get_tint()  # Sets 'EXPTIME'
         self.get_fps()  # Sets 'FRATE'
 
         # Additional fill-up of the camera state
         self.get_gain()  # Sets 'DETGAIN'
-        self.get_readout_mode()  # Set DETMODE
+        self.get_readout_mode()  # Set DET-SMPL
 
         # Call the stuff that we can't know otherwise
         self.poll_camera_for_keywords()  # Sets 'DET-TMP'
 
     def poll_camera_for_keywords(self):
+        if self.HAS_REDIS:
+            try:
+                self._set_formatted_keyword('FILTER01',
+                                            self.RDB.hget('X_IRCFLT', 'value'))
+            except:
+                logg.warning(
+                        'REDIS unavailable @ poll_camera_for_keywords @ CRED1')
+                pass
         self.get_temperature()  # Sets DET-TMP
         time.sleep(.1)
         self.get_cryo_pressure()  # Sets DET-PRES
@@ -178,6 +198,7 @@ class CRED1(EDTCamera):
     def _get_cropping(self):
         # We mimicked the definition of the cropmodes from the CRED2
         # BUT the CRED1 is 1-base indexed.... remove 1
+        logg.debug('_get_cropping @ CRED1')
         xx, yy = self.send_command('cropping raw')[1:]
         x0, x1 = [(int(xxx) - 1) for xxx in xx.split('-')]
         x0 = 32 * x0
@@ -187,6 +208,7 @@ class CRED1(EDTCamera):
 
     def _set_check_cropping(self, x0, x1, y0, y1):
         for _ in range(3):
+            logg.debug('_set_check_cropping attempt @ CRED1')
             gx0, gx1, gy0, gy1 = self._get_cropping()
             if gx0 == x0 and gx1 == x1 and gy0 == y0 and gy1 == y1:
                 return x0, x1, y0, y1
@@ -200,16 +222,18 @@ class CRED1(EDTCamera):
                 # BUT the CRED1 is 1-base indexed.... add 1
                 self.send_command('set cropping rows %u-%u' % (y0 + 1, y1 + 1))
                 time.sleep(.5)
-        raise AssertionError(
-                f'Cannot set desired crop {x0}-{x1} {y0}-{y1} after 3 tries')
+        msg = f'Cannot set desired crop {x0}-{x1} {y0}-{y1} after 3 tries'
+        logg.error(msg)
+        raise AssertionError(msg)
 
     def set_synchro(self, synchro: bool):
         val = ('off', 'on')[synchro]
         _ = self.send_command(f'set extsynchro {val}')
         res = self.send_command('extsynchro raw')
         self.synchro = {'off': False, 'on': True}[res]
-        self.camera_shm.update_keyword('EXTTRIG',
-                                       ('False', 'True')[self.synchro])
+        self._set_formatted_keyword('EXTTRIG', self.synchro)
+
+        logg.info(f'set_synchro: {self.synchro}')
         return self.synchro
 
     def set_readout_mode(self, mode):
@@ -220,7 +244,8 @@ class CRED1(EDTCamera):
         res = self.send_command('mode raw')
         res = res[:6] + res[
                 11:]  # Removing "reset" after "global", otherwise too long for shm keywords
-        self.camera_shm.update_keyword('DETMODE', res)
+        self._set_formatted_keyword('DET-SMPL', res)
+        logg.info(f'get_readout_mode: {res}')
         return res
 
     def set_gain(self, gain: int):
@@ -229,7 +254,8 @@ class CRED1(EDTCamera):
 
     def get_gain(self):
         res = float(self.send_command('gain raw'))
-        self.camera_shm.update_keyword('DETGAIN', res)
+        self._set_formatted_keyword('DETGAIN', res)
+        logg.info(f'get_gain: {res}')
         return res
 
     def set_NDR(self, NDR: int):
@@ -255,9 +281,9 @@ class CRED1(EDTCamera):
             self.get_readout_mode()
             self.get_NDR()
 
-        time.sleep(1.)
-        self._kill_taker_no_dependents()
-        self._start_taker_no_dependents(reuse_shm=True)
+            time.sleep(1.)
+            self._kill_taker_no_dependents()
+            self._start_taker_no_dependents(reuse_shm=True)
 
         time.sleep(1.)
         self.set_readout_mode(readout_mode)
@@ -272,9 +298,10 @@ class CRED1(EDTCamera):
 
     def get_NDR(self):
         self.NDR = int(self.send_command('nbreadworeset raw'))
-        self.camera_shm.update_keyword('DET-NSMP', self.NDR)
-        self.camera_shm.update_keyword('DETMODE', ('globalsingle',
-                                                   'globalcds')[self.NDR > 1])
+        self._set_formatted_keyword('DET-NSMP', self.NDR)
+        self._set_formatted_keyword('DET-SMPL', ('globalsingle',
+                                                 'globalcds')[self.NDR > 1])
+        logg.info(f'get_NDR: {self.NDR}')
         return self.NDR
 
     def set_fps(self, fps: float):
@@ -283,8 +310,9 @@ class CRED1(EDTCamera):
 
     def get_fps(self):
         fps = float(self.send_command('fps raw'))
-        self.camera_shm.update_keyword('FRATE', fps)
-        self.camera_shm.update_keyword('EXPTIME', 1. / fps)
+        self._set_formatted_keyword('FRATE', fps)
+        self._set_formatted_keyword('EXPTIME', 1. / fps)
+        logg.info(f'get_fps: {fps}')
         return fps
 
     def max_fps(self):
@@ -300,12 +328,14 @@ class CRED1(EDTCamera):
 
     def get_cryo_pressure(self):
         pres = float(self.send_command('pressure raw'))
-        self.camera_shm.update_keyword('DET-PRES', pres)
+        self._set_formatted_keyword('DET-PRES', pres)
+        logg.info(f'get_cryo_pressure: {pres}')
         return pres
 
     def get_temperature(self):
         temp = float(self.send_command('temp cryostat diode raw'))
-        self.camera_shm.update_keyword('DET-TMP', temp)
+        self._set_formatted_keyword('DET-TMP', temp)
+        logg.info(f'get_temperature: {temp}')
         return temp
 
     def _shutdown(self):
@@ -315,10 +345,11 @@ class CRED1(EDTCamera):
         if 'OK' in res:
             while True:
                 time.sleep(5)
-                print('Camera shutdown was acknowledged.')
-                print('Processes on this end were killed.')
-                print('You should quit this shell.')
-                print('You\'ll need to power cycle the CRED2 to reboot it.')
+                logg.warning(
+                        'Camera shutdown was acknowledged.\n'
+                        'Processes on this end were killed.\n'
+                        'You should quit this shell.\n'
+                        'You\'ll need to power cycle the CRED1 to reboot it.')
 
 
 class Buffy(CRED1):
@@ -331,11 +362,34 @@ class Buffy(CRED1):
     KEYWORDS = {}
     KEYWORDS.update(CRED1.KEYWORDS)
 
+    REDIS_PUSH_ENABLED = True
+    REDIS_PREFIX = 'x_B'  # LOWERCASE x to not get mixed with the SCExAO keys
+
     def _fill_keywords(self):
         CRED1._fill_keywords(self)
 
         # Override detector name
-        self.camera_shm.update_keyword('DETECTOR', 'CRED1 - BUFFY')
+        self._set_formatted_keyword('DETECTOR', 'CRED1 - BUFFY')
+
+
+class Iiwi(CRED1):
+
+    INTERACTIVE_SHELL_METHODS = [] + CRED1.INTERACTIVE_SHELL_METHODS
+
+    MODES = {}
+    MODES.update(CRED1.MODES)
+
+    KEYWORDS = {}
+    KEYWORDS.update(CRED1.KEYWORDS)
+
+    REDIS_PUSH_ENABLED = True
+    REDIS_PREFIX = 'x_I'  # LOWERCASE x to not get mixed with the SCExAO keys
+
+    def _fill_keywords(self):
+        CRED1._fill_keywords(self)
+
+        # Override detector name
+        self._set_formatted_keyword('DETECTOR', 'CRED1 - IIWI')
 
 
 # Quick shorthand for testing

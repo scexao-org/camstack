@@ -8,7 +8,7 @@
     which also includes ZMQ streaming, UTR, and ocam_decode
 
     Usage:
-        cam-restartdeps (ocam|buffy|rajni|glint)...
+        cam-restartdeps (ocam|chuck|buffy|rajni|glint)...
 '''
 
 
@@ -21,14 +21,7 @@ def main(tmux_list: List[str]) -> None:
 
     for tmux_name in tmux_list:
         tmux_sess = tmux.find_or_create(tmux_name)
-        tmux_sess.send_keys("cam.kill_taker_and_dependents(skip_taker=True)", suppress_history=False)
-
-    time.sleep(10.0)
-
-    for tmux_name in tmux_list:
-        tmux_sess = tmux.find_or_create(tmux_name)
-        tmux_sess.send_keys("cam.start_frame_taker_and_dependents(skip_taker=True)", suppress_history=False)
-
+        tmux_sess.send_keys("cam.kill_taker_and_dependents(skip_taker=True); cam.start_frame_taker_and_dependents(skip_taker=True)", suppress_history=False)
 
 if __name__ == "__main__":
 
@@ -39,6 +32,7 @@ if __name__ == "__main__":
         'glint': 'glint_ctrl',
         'buffy': 'kcam_ctrl',
         'ocam': 'ocam_ctrl',
+        'chuck': 'chuck_ctrl',
     }
 
     tmuxes = [NAME_MAPPING[cam] for cam in args if args[cam]]

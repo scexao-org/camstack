@@ -1,12 +1,20 @@
-# Quick shorthand for testing
+import os
+
 from camstack.core.utilities import DependentProcess, RemoteDependentProcess
 from camstack.cams.cred1 import Buffy
+
+from camstack.core.logger import init_camstack_logger
+
+from scxkw.config import MAGIC_HW_STR
 
 import scxconf
 
 if __name__ == "__main__":
 
-    mode = 0
+    os.makedirs(os.environ['HOME'] + "/logs", exist_ok=True)
+    init_camstack_logger(os.environ['HOME'] + "/logs/camstack-kcam.log")
+
+    mode = 3
 
     # Prepare dependent processes
     tcp_recv = RemoteDependentProcess(
@@ -14,7 +22,7 @@ if __name__ == "__main__":
             # Urrrrrh this is getting messy
             cli_cmd='creashmim %s %u %u; shmimTCPreceive -c ircam ' +
             f'{scxconf.TCPPORT_BUFFY}',
-            cli_args=('kcam', 320, 256),
+            cli_args=('kcam', MAGIC_HW_STR.HEIGHT, MAGIC_HW_STR.WIDTH),
             remote_host=scxconf.IP_SC6,
             kill_upon_create=False,
     )
@@ -42,7 +50,7 @@ if __name__ == "__main__":
             cli_cmd=
             'milk-exec "creaushortimshm %s %u %u"; shmimTCPreceive -c ircam ' +
             f'{scxconf.TCPPORT_BUFFY_RAW}',
-            cli_args=('kcam_raw', 320, 256),
+            cli_args=('kcam_raw', MAGIC_HW_STR.HEIGHT, MAGIC_HW_STR.WIDTH),
             remote_host=scxconf.IP_SC6,
             kill_upon_create=False,
     )
@@ -65,7 +73,7 @@ if __name__ == "__main__":
     utr_red = DependentProcess(
             tmux_name='kcam_utr',
             cli_cmd=
-            'milk-exec "mload milkimageformat; readshmim kcam_raw; imgformat.cred_ql_utr ..procinfo 1; imgformat.cred_ql_utr ..triggermode 3; imgformat.cred_ql_utr ..loopcntMax -1; imgformat.cred_ql_utr kcam_raw kcam 55000"',
+            'milk-exec "mload milkimageformat; readshmim kcam_raw; imgformat.cred_cds_utr ..procinfo 1; imgformat.cred_cds_utr ..triggermode 3; imgformat.cred_cds_utr ..loopcntMax -1; imgformat.cred_cds_utr kcam_raw kcam 37000"',
             cli_args=(),
             kill_upon_create=True,
             cset='kcam_utr',
@@ -88,14 +96,14 @@ if __name__ == "__main__":
     # PIPE over ZMQ into the LAN until we find a better solution (sender)
     zmq_send = DependentProcess(
             tmux_name='kcam_zmq',
-            cli_cmd='zmq_send.py %s:%u %s',
+            cli_cmd='zmq_send.py %s:%u %s -f 100',
             cli_args=(scxconf.IPLAN_SC5, scxconf.ZMQPORT_KCAM, 'kcam'),
             kill_upon_create=True,
     )
     zmq_send.start_order = 6
     zmq_send.kill_order = 5
 
-    cam = Buffy('kcam', 'kcam_raw', unit=1, channel=0, mode_id='full',
+    cam = Buffy('kcam', 'kcam_raw', unit=1, channel=0, mode_id=mode,
                 taker_cset_prio=('kcam_edt', 49), dependent_processes=[
                         tcp_recv, tcp_send, utr_red, zmq_recv, zmq_send
                 ])  #, tcp_send_raw, tcp_recv_raw])

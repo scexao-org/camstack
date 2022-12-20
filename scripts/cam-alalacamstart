@@ -3,11 +3,12 @@
 tnew="tmux new-session -d -s"
 tsend="tmux send-keys -t"
 
-tname="chuck_ctrl"
+tname="orcam_ctrl"
 
 # Create tmuxes and issue kills
-$tsend $tname C-c
+$tnew $tname
 sleep 3.0 # MUST NOT SEND the C-c to interrupt the bashrc !
+$tsend $tname C-c
 sleep 0.1
 $tsend $tname "close()" Enter
 sleep 3
@@ -17,15 +18,12 @@ $tsend $tname C-z
 sleep 0.3
 $tsend $tname "kill %" Enter
 
-sleep 0.1
-tmux kill-session -t $tname
-sleep 1.0
-$tnew $tname
-
-
 echo ""
-#read -p "Everything killed, proceed to startup ? Press enter to continue, Ctrl+C to abort."
+echo "Remember check if 'cset set' is enabled"
+echo "If not sets, run:"
+echo "    sudo cset shield -c 12-15,28-31"
 
-$tsend $tname "python -im camstack.cam_mains.chuckcam" Enter
 
-echo "startChuck completed."
+$tsend $tname "python -im camstack.cam_mains.alala_orcam" Enter
+
+echo "alalacamstart completed (but actually not yet, just wait a bit)."

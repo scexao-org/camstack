@@ -1,13 +1,18 @@
-# Quick shorthand for testing
+import os
+
 from camstack.core.utilities import DependentProcess, RemoteDependentProcess
 from camstack.cams.cred2 import GLINT
+from camstack.core.logger import init_camstack_logger
 
-import os
 import scxconf
+from scxkw.config import MAGIC_HW_STR
 
 if __name__ == "__main__":
 
-    mode = 12
+    os.makedirs(os.environ['HOME'] + "/logs", exist_ok=True)
+    init_camstack_logger(os.environ['HOME'] + "/logs/camstack-glint.log")
+
+    mode = 12  #12
 
     # Prepare dependent processes
     tcp_recv = RemoteDependentProcess(
@@ -16,7 +21,7 @@ if __name__ == "__main__":
             cli_cmd=
             'milk-exec "creasshortimshm %s %u %u"; shmimTCPreceive -c ircam ' +
             f'{scxconf.TCPPORT_GLINT}',
-            cli_args=('glint', 320, 256),
+            cli_args=('glint', MAGIC_HW_STR.HEIGHT, MAGIC_HW_STR.WIDTH),
             remote_host=scxconf.IP_SC6,
             kill_upon_create=False,
     )
@@ -50,9 +55,32 @@ if __name__ == "__main__":
     fits_dump.start_order = 2
     fits_dump.kill_order = 2
 
-    cam = GLINT('glint', 'glint', unit=4, channel=0, mode_id=mode,
-                taker_cset_prio=('glint_edt', 41),
-                dependent_processes=[tcp_recv, tcp_send, fits_dump])
+    # PIPE over ZMQ into the LAN until we find a better solution (receiver)
+    zmq_recv = RemoteDependentProcess(
+            tmux_name='glint_zmq',
+            cli_cmd='zmq_recv.py %s:%u %s',
+            cli_args=(scxconf.IPLAN_SC5, scxconf.ZMQPORT_GLINT, 'glint'),
+            remote_host=f'scexao-op@{scxconf.IP_SC2}',
+            kill_upon_create=False,
+    )
+    zmq_recv.start_order = 3
+    zmq_recv.kill_order = 4
+
+    # PIPE over ZMQ into the LAN until we find a better solution (sender)
+    zmq_send = DependentProcess(
+            tmux_name='glint_zmq',
+            cli_cmd='zmq_send.py %s:%u %s -f 100',
+            cli_args=(scxconf.IPLAN_SC5, scxconf.ZMQPORT_GLINT, 'glint'),
+            kill_upon_create=True,
+    )
+    zmq_send.start_order = 4
+    zmq_send.kill_order = 3
+
+    cam = GLINT(
+            'glint', 'glint', unit=5, channel=0, mode_id=mode,
+            taker_cset_prio=('glint_edt', 41), dependent_processes=[
+                    tcp_recv, tcp_send, fits_dump, zmq_recv, zmq_send
+            ])
 
     from camstack.core.utilities import shellify_methods
     shellify_methods(cam, globals())

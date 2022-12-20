@@ -16,14 +16,17 @@ case $MODE in
 1)
 	npixr=240
 	npixc=240
+	outname="ocam2dhr"
 	;;
 3)
 	npixr=120
 	npixc=120
+	outname="ocam2d"
 	;;
 31)
 	npixr=120
 	npixc=120
+	outname="ocam2d"
 	;;
 *)
 	exit 1
@@ -48,6 +51,6 @@ OMP_NUM_THREADS=1 milk -n ocamdecode << EOF
 readshmim ocam2krc
 loadfits "${PIXIFILE}" ocam2kpixi
 csetpmove ${CSET}
-impixdecodeU ocam2krc ${npixr} ${npixc} ${PIXSLICEFILE} ocam2kpixi ocam2d ${SLICEINDFILE} ${REVERSE}
+impixdecodeU ocam2krc ${npixr} ${npixc} ${PIXSLICEFILE} ocam2kpixi ${outname} ${SLICEINDFILE} ${REVERSE}
 exitCLI
 EOF

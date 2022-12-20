@@ -2,9 +2,10 @@
     Manage the ocam
 '''
 import os
+import logging as logg
 
 from typing import Union
-from camstack.cams.edt_base import EDTCamera
+from camstack.cams.edtcam import EDTCamera
 from camstack.core.utilities import CameraMode
 
 from pyMilk.interfacing.isio_shmlib import SHM
@@ -30,11 +31,17 @@ class OCAM2K(EDTCamera):
                                fgsize=(1056 // 2, 62)),
     }
 
-    KEYWORDS = {}
+    KEYWORDS = {
+            'FILTER01': ('UNKNOWN', 'PyWFS filter state', '%-16s', 'FILTR'),
+            'PICKOFF1': ('UNKNOWN', 'PyWFS pickoff state', '%-16s', 'PICKO'),
+    }
     KEYWORDS.update(EDTCamera.KEYWORDS)
 
     EDTTAKE_CAST = True
     EDTTAKE_UNSIGNED = True
+
+    REDIS_PUSH_ENABLED = True
+    REDIS_PREFIX = 'x_P'
 
     def __init__(self, name: str, mangled_stream_name: str,
                  final_stream_name: str, binning: bool = True, unit: int = 3,
@@ -78,6 +85,7 @@ class OCAM2K(EDTCamera):
     # =====================
 
     def prepare_camera_for_size(self, mode_id: int = None):
+        logg.debug('prepare_camera_for_size @ OCAM2K')
 
         # This function called during the EDTCamera.__init__ from self.__init__
 
@@ -106,6 +114,7 @@ class OCAM2K(EDTCamera):
                 dep_proc.cli_args = (dep_proc.cli_args[0], h, w)
 
     def prepare_camera_finalize(self, mode_id: int = None):
+        logg.debug('prepare_camera_finalize @ OCAM2K')
 
         if mode_id is None:
             mode_id = self.current_mode_id
@@ -115,18 +124,13 @@ class OCAM2K(EDTCamera):
 
     def send_command(self, cmd, format=True):
         # Just a little bit of parsing to handle the OCAM format
+        logg.debug(f'OCAM2K send_command: "{cmd}"')
         res = EDTCamera.send_command(self, cmd)
         if format:
             wherechevron = res.index('>')
             return res[wherechevron + 2:-1].split('][')
         else:
             return res
-
-    '''
-    def _get_SHM(self):
-        # Overload to get a pointer to ocam2d instead of ocam2krc
-        return SHM(self.STREAMNAME_ocam2d, symcode=0)
-    '''
 
     def _fill_keywords(self):
         # Do a little more filling than the subclass after changing a mode
@@ -135,15 +139,15 @@ class OCAM2K(EDTCamera):
 
         EDTCamera._fill_keywords(self)
 
-        self.camera_shm.update_keyword('DETECTOR', 'OCAM2K (RENO)')
-        self.camera_shm.update_keyword('DETMODE', 'GlobRstSingle')
+        self._set_formatted_keyword('DETECTOR', 'OCAM2K (RENO)')
+        self._set_formatted_keyword('DET-SMPL', 'GlobRstSingle')
 
-        self.camera_shm.update_keyword('BIN-FCT1', self.current_mode.binx)
-        self.camera_shm.update_keyword('BIN-FCT2', self.current_mode.biny)
+        self._set_formatted_keyword('BIN-FCT1', self.current_mode.binx)
+        self._set_formatted_keyword('BIN-FCT2', self.current_mode.biny)
 
-        self.camera_shm.update_keyword('CROPPED',
-                                       'False')  # Ocam bins but never crops.
-        self.camera_shm.update_keyword('DET-NSMP', 1)
+        self._set_formatted_keyword('CROPPED',
+                                    False)  # Ocam bins but never crops.
+        self._set_formatted_keyword('DET-NSMP', 1)
 
         # Additional fill-up of the camera state
         self.get_gain()  # Sets 'DETGAIN'
@@ -152,6 +156,16 @@ class OCAM2K(EDTCamera):
         self.poll_camera_for_keywords()  # Sets 'DET-TMP'
 
     def poll_camera_for_keywords(self):
+        if self.HAS_REDIS:
+            try:
+                with self.RDB.pipeline() as pipe:
+                    pipe.hget('X_PYWFLT', 'value')
+                    pipe.hget('X_PYWPKO', 'value')
+                    vals = pipe.execute()
+                self._set_formatted_keyword('FILTER01', vals[0])
+                self._set_formatted_keyword('PICKOFF1', vals[1])
+            except:
+                pass  # TODO some proper logging.log() some day.
         self.get_temperature()
 
     # ===========================================
@@ -162,24 +176,28 @@ class OCAM2K(EDTCamera):
         self.set_camera_mode((1, 3)[binning])
 
     def gain_protection_reset(self):
+        logg.warning('gain_protection_reset')
         self.send_command('protection reset')
 
     def set_gain(self, gain: int):
         res = self.send_command(f'gain {gain}')
         val = int(res[0])
-        self.camera_shm.update_keyword('DETGAIN', val)
+        self._set_formatted_keyword('DETGAIN', val)
         return val
 
     def get_gain(self):
         res = self.send_command('gain')
         val = int(res[0])
-        self.camera_shm.update_keyword('DETGAIN', val)
+        self._set_formatted_keyword('DETGAIN', val)
+        logg.info(f'get_gain: {val}')
         return val
 
     def set_synchro(self, val: bool):
+        val = bool(val)
         self.send_command(f'synchro {("off","on")[val]}')
         self.synchro = val
-        self.camera_shm.update_keyword('EXTTRIG', ('False', 'True')[val])
+        self._set_formatted_keyword('EXTTRIG', val)
+        logg.info(f'set_synchro: {self.synchro}')
 
     def set_fps(self, fps: float):
         # 0 sets maxfps
@@ -187,11 +205,13 @@ class OCAM2K(EDTCamera):
             raise AssertionError('No fps set in synchro mode')
         res = self.send_command(f'fps {int(fps)}')
         val = float(res[0])
-        self.camera_shm.update_keyword('FRATE', val)
+        self._set_formatted_keyword('FRATE', val)
+        logg.info(f'set_fps: {val}')
         return val
 
     def get_temperature(self):
         val = self._get_temperature()[0]
+        logg.info(f'get_temperature: {val}')
         return val
 
     def _get_temperature(self):
@@ -199,7 +219,7 @@ class OCAM2K(EDTCamera):
         # Expected return: <1>[-45.2][23][13][24][0.1][9][12][-450][1][10594]
         temps = [float(x) for x in ret]
         self.is_cooling = bool(temps[8])
-        self.camera_shm.update_keyword('DET-TMP', temps[0] + 273.15)
+        self._set_formatted_keyword('DET-TMP', temps[0] + 273.15)
         return temps[0], temps[7] / 10.  # temp, setpoint
 
     def toggle_cooling(self, cooling: bool = None):
@@ -211,4 +231,5 @@ class OCAM2K(EDTCamera):
 
     def set_temperature_setpoint(self, temp: float):
         self.send_command(f'temp {int(temp)}')
+        logg.info(f'set_temperature_setpoint: {temp}')
         return self.get_temperature()

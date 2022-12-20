@@ -19,7 +19,9 @@ class PreInstallCommand(develop):
 
     def run(self):
         # Add custom make commands here !
-        os.system('cd src; ./compile; cd ..')
+        # Migration of compiled grabbers to hardwaresecrets repo.
+        #os.system('cd src; ./compile_edt; cd ..')
+        #os.system('cd src; ./compile_dcamusb; cd ..')
         develop.run(self)
 
 
@@ -27,6 +29,8 @@ with open("README.md", 'r') as f:
     long_description = f.read()
 
 scripts = [
+        './viewers/anycam.py',
+        './viewers/renocam.py',
         './viewers/buffycam.py',
         './viewers/chuckcam.py',
         './scripts/cam-restartdeps',
@@ -34,7 +38,11 @@ scripts = [
         './scripts/cam-chuckstart',
         './scripts/cam-glintstart',
         './scripts/cam-ocamstart',
+        './scripts/cam-milesstart',
         './scripts/cam-rajnistart',
+        './scripts/cam-fircamstart',
+        './scripts/cam-firstpupstart',
+        './scripts/cam-alalacamstart',
         './scripts/vcamstart',  # FIXME change names - "start" is too vague for something available system-wide
         './scripts/vcamstart-bash',
 ]
