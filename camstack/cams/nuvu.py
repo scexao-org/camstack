@@ -146,8 +146,6 @@ class NUVU(EDTCamera):
 
         logging.debug(self.cfgdict)
 
-    def prepare_camera_finalize(self, mode_id: int = None):
-
         self.SetExposureTime(0)  # milliseconds
         self.SetWaitingTime(0)
 
@@ -161,6 +159,9 @@ class NUVU(EDTCamera):
         self.SetTriggerMode(0, 1)
 
         self.SetContinuousAcquisition()
+
+    def prepare_camera_finalize(self, mode_id: int = None):
+        pass
 
     def _get_nuvu_response(self, response, verbose=0):
         """ convert nuvu response into a key/values dictionary """
