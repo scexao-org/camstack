@@ -149,8 +149,6 @@ class NUVU(EDTCamera):
         self.SetExposureTime(0)  # milliseconds
         self.SetWaitingTime(0)
 
-        # Set EM gain to 1
-        self.SetEMCalibratedGain(1.0)
 
         # Open shutter
         self.SetShutterMode(2)
@@ -161,7 +159,9 @@ class NUVU(EDTCamera):
         self.SetContinuousAcquisition()
 
     def prepare_camera_finalize(self, mode_id: int = None):
-        pass
+        # Set EM gain to 1
+        self.SetEMCalibratedGain(1.0)
+
 
     def _get_nuvu_response(self, response, verbose=0):
         """ convert nuvu response into a key/values dictionary """
