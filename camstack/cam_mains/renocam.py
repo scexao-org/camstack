@@ -12,10 +12,10 @@ if __name__ == "__main__":
     os.makedirs(os.environ['HOME'] + "/logs", exist_ok=True)
     init_camstack_logger(os.environ['HOME'] + "/logs/camstack-ocam.log")
 
-    #binning, mode = True, 3
-    binning, mode = False, 1
-    #name_stream = 'ocam2d'
-    name_stream = 'ocam2dhr'
+    binning, mode = True, 3
+    #binning, mode = False, 1
+    name_stream = 'ocam2d'
+    #name_stream = 'ocam2dhr'
 
     # Prepare dependent processes
 
