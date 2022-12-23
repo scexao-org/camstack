@@ -7,7 +7,8 @@ from typing import Tuple
 # the underlying is equivalent to changing the LD_LIBRARY_PATH at runtime.
 # https://stackoverflow.com/questions/1178094/change-current-process-environments-ld-library-path
 # Only if X forwarding. Detecting "localhost" in $DISPLAY
-if 'localhost:' in os.environ.get('DISPLAY', ''):
+if (('localhost:' in os.environ.get('DISPLAY', '') or
+     "GLHACK_FORCE" in os.environ) and not "GLHACK_FORCENOT" in os.environ):
     import ctypes
     ctypes.cdll.LoadLibrary(os.environ["HOME"] +
                             "/src/camstack/lib/libGL.so.1")
