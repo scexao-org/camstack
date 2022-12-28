@@ -113,8 +113,9 @@ if __name__ == "__main__":
 
     # PYROSERVER
     from scxconf import PYRONS3_HOST, PYRONS3_PORT
+    from camstack import pyro_keys as pk
     from swmain.network.pyroserver_registerable import PyroServer
 
     server = PyroServer(nsAddress=(PYRONS3_HOST, PYRONS3_PORT))
-    server.add_device(cam, 'BUFFYCAM', add_oneway_callables=True)
+    server.add_device(cam, pk.BUFFY, add_oneway_callables=True)
     server.start()
