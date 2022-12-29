@@ -1,5 +1,9 @@
+from __future__ import annotations  # For type hints that would otherwise induce circular imports.
+
 import os, sys
-from typing import Tuple
+from typing import Tuple, Any, TYPE_CHECKING
+if TYPE_CHECKING:  # this type hint would cause an unecessary import.
+    from camstack.viewers.generic_viewer_backend import GenericViewerBackend
 
 # X forwarding hijack of libGL.so
 # Goal is to supersede the system's libGL.so by a Mesa libGL and avoid
@@ -29,15 +33,16 @@ from PIL import Image
 
 class GenericViewerFrontend:
 
+    # A couple numeric constants, can be overriden by subclasses
+    BOTTOM_PX_PAD = 114
+
     WINDOW_NAME = 'Generic viewer'
 
-    def yolo(self):
-        print("Swag, I'm Generic")
-
     def __init__(self, system_zoom: int, fps: float,
-                 display_base_size: Tuple[int, int]):
+                 display_base_size: Tuple[int, int]) -> None:
 
         self.has_backend = False
+        self.backend_obj: GenericViewerBackend = None
 
         self.fps_val = fps
         self.system_zoom = system_zoom  # Former z1
@@ -55,100 +60,121 @@ class GenericViewerFrontend:
         self.data_blit_staging = np.zeros((*self.data_disp_size, 3),
                                           dtype=np.uint8)
         # Total window size
-        self.pygame_win_size = (self.data_disp_size[0] * self.system_zoom,
-                                self.data_disp_size[1] * self.system_zoom +
-                                114 * self.system_zoom)
-
-        # self.in_the_middle_of_constructor()
+        self.pygame_win_size = (self.data_disp_size[0],
+                                self.data_disp_size[1] +
+                                self.BOTTOM_PX_PAD * self.system_zoom)
 
         #####
         # Prepare the pygame
         #####
-        self.fps_clock = pygame.time.Clock()
+        self.pg_clock = pygame.time.Clock()
 
         pygame.display.init()
         pygame.font.init()
 
-        # Prefix pygame objects with "pg_"
-        self.pg_fonts = futs.gen_zoomed_fonts(self.system_zoom)
+        # Prep the fonts.
+        futs.Fonts.init_zoomed_fonts(self.system_zoom)
 
+        # Prefix pygame objects with "pg_"
         self.pg_screen = pygame.display.set_mode(self.pygame_win_size,
                                                  flags=0x0, depth=16)
         pygame.display.set_caption(self.WINDOW_NAME)
 
-        # ------------------------------------------------------------------
-        #              !!! now we are in business !!!!
-        # ------------------------------------------------------------------
+        self.pg_background = pygame.Surface(self.pg_screen.get_size())
+        self.pg_background = self.pg_background.convert(
+        )  # Good to do once-per-surface: converts data type to final one
 
-        self.WHITE = (255, 255, 255)
-        self.GREEN = (147, 181, 44)
-        self.BLUE = (0, 0, 255)
-        self.RED1 = (255, 0, 0)
-        self.RED = (246, 133, 101)  #(185,  95, 196)
-        self.BLK = (0, 0, 0)
-        self.CYAN = (0, 255, 255)
+        self.pg_datasurface = pygame.surface.Surface(self.data_disp_size)
+        self.pg_datasurface.convert()
+        self.pg_data_rect = self.pg_datasurface.get_rect()
+        self.pg_data_rect.topleft = (0, 0)
 
-        self.FGCOL = self.WHITE  # foreground color (text)
-        self.SACOL = self.RED1  # saturation color (text)
-        self.BGCOL = self.BLK  # background color
-        self.BTCOL = self.BLUE  # *button* color
-
-        background = pygame.Surface(self.pg_screen.get_size())
-        background = background.convert()
+        self.pg_updated_rects = []  # For processing in the loop
 
         # ----------------------------
         #          labels
         # ----------------------------
 
-        self.font1 = pygame.font.SysFont("default", 16 * self.system_zoom)
-        self.font2 = pygame.font.SysFont("default", 25 * self.system_zoom)
-        self.font3 = pygame.font.SysFont("monospace", 4 * self.system_zoom)
-        self.font5 = pygame.font.SysFont("monospace", 4 * self.system_zoom)
-        self.font5.set_bold(True)
+        self._init_labels()
 
-        lbl = self.font2.render(self.WINDOW_NAME + " viewer", True, self.WHITE,
-                                self.BGCOL)
-        rct = lbl.get_rect()
-        rct.center = (200 * self.system_zoom, 270 * self.system_zoom)
-        self.pg_screen.blit(lbl, rct)
-
-        # path_cartoon = "/home/first/Pictures/renocam_aux/Reno%db.png" % (self.system_zoom, )
-        path_cartoon = "/home/first/Pictures/io.png"
-        cartoon1 = pygame.image.load(path_cartoon).convert_alpha()
-        rect2 = cartoon1.get_rect()
-        rect2.bottomright = self.pygame_win_size
-        self.pg_screen.blit(cartoon1, rect2)
-
-        imin, imax = 1000, 10000
-        msg = "(min,max) = (%5d,%5d)" % (imin, imax)
-        lbl = self.font2.render(msg, True, self.WHITE, self.BGCOL)
-        self.rct_info = lbl.get_rect()
-        self.rct_info.center = (200 * self.system_zoom, 320 * self.system_zoom)
-        # self.pg_screen.blit(lbl, self.rct)
-
-        # Is this useful?
-        self.pg_background = pygame.Surface(self.pg_screen.get_size())
-        self.pg_background = self.pg_background.convert()  # Is this useful?
-
-        self.pg_datasurface = pygame.surface.Surface(self.data_disp_size)
-        self.pg_data_rect = self.pg_datasurface.get_rect()
-        self.pg_data_rect.topleft = (0, 0)
-
-        self.pg_updated_rects = []
+        # TODO class variable
+        #path_cartoon = os.environ['HOME'] + "/Pictures/io.png"
+        #cartoon1 = pygame.image.load(path_cartoon).convert_alpha()
+        # Move to bottom right, blit once.
+        #rect2 = cartoon1.get_rect()
+        #rect2.bottomright = self.pygame_win_size
+        #self.pg_screen.blit(cartoon1, rect2)
 
         pygame.mouse.set_cursor(*pygame.cursors.broken_x)
         pygame.display.update()
 
-    def in_the_middle_of_constructor(self):
-        raise ArithmeticError(
-                "Generic constructor of anycam is illegal. Must subclass.")
+    def _init_labels(self):
 
-    def register_backend(self, backend):
+        sz = self.system_zoom  # Shorthandy
+        r = self.data_disp_size[1] + 3 * self.system_zoom
+        c = 10 * self.system_zoom
+
+        # Generic camera viewer
+        self.lbl_title = futs.LabelMessage(self.WINDOW_NAME,
+                                           futs.Fonts.DEFAULT_25, topleft=(c,
+                                                                           r))
+        self.lbl_title.blit(self.pg_screen)
+        r += int(self.lbl_title.em_size)
+
+        # For help press [h]
+        self.lbl_help = futs.LabelMessage("For help press [h]",
+                                          futs.Fonts.MONO, topleft=(c, r))
+        self.lbl_help.blit(self.pg_screen)
+        r += int(self.lbl_help.em_size)
+
+        # x0,y0 = {or}, {or} - sx,sy = {size}, {size}
+        self.lbl_cropzone = futs.LabelMessage(
+                "x0, y0 = %3d, %3d - sx, sy = %3d, %3d", futs.Fonts.MONO,
+                topleft=(c, r))
+        r += int(self.lbl_cropzone.em_size)
+
+        # t = {t} us - FPS = {fps} - NDR = {NDR}
+        self.lbl_times = futs.LabelMessage(
+                "t = %6d us - FPS = %4d - NDR = %3d", futs.Fonts.MONO,
+                topleft=(c, r))
+        r += int(self.lbl_times.em_size)
+
+        # T = {t*NDR} ms - min, max = {} {}
+        self.lbl_t_minmax = futs.LabelMessage(
+                "T = %3.1f ms - min, max = %5d, %8d", futs.Fonts.MONO,
+                topleft=(c, r))
+        r += int(self.lbl_times.em_size)
+
+        # mouse = {},{} - flux = {}
+
+        # {scaling type} - {has bias sub}
+
+        # {Status message [sat, acquiring dark, acquiring ref...]}
+
+    def _update_labels_postloop(self):
+        tint = self.backend_obj.input_shm.get_expt()
+        ndr = self.backend_obj.input_shm.get_ndr()
+        self.lbl_cropzone.render(self.backend_obj.input_shm.get_crop(),
+                                 blit_onto=self.pg_screen)
+        self.lbl_times.render(
+                (self.backend_obj.input_shm.get_expt(), tint, ndr),
+                blit_onto=self.pg_screen)
+        self.lbl_t_minmax.render((tint * ndr, self.backend_obj.data_min,
+                                  self.backend_obj.data_max),
+                                 blit_onto=self.pg_screen)
+
+        self.pg_updated_rects += [
+                self.lbl_cropzone.rectangle,
+                self.lbl_times.rectangle,
+                self.lbl_t_minmax.rectangle,
+        ]
+
+    def register_backend(self, backend: GenericViewerBackend) -> None:
 
         self.backend_obj = backend
         self.has_backend = True
 
-    def run(self):
+    def run(self) -> None:
         '''
         Post-init loop entry point
 
@@ -164,12 +190,12 @@ class GenericViewerFrontend:
                 pygame.display.update(self.pg_updated_rects)
                 if self.process_pygame_events():
                     break
-                self.fps_clock.tick(self.fps_val)
+                self.pg_clock.tick(self.fps_val)
         except KeyboardInterrupt:
             pygame.quit()
             print('Abort loop on KeyboardInterrupt')
 
-    def process_pygame_events(self):
+    def process_pygame_events(self) -> None:
         '''
         Process pygame events (mostly keyboard shortcuts)
 
@@ -189,7 +215,7 @@ class GenericViewerFrontend:
 
         return False
 
-    def loop_iter(self):
+    def loop_iter(self) -> None:
 
         self.pg_updated_rects = []
 
@@ -220,8 +246,8 @@ class GenericViewerFrontend:
                         img.resize((self.data_disp_size[0], csize),
                                    Image.NEAREST))
                 self.data_blit_staging[:, :cskip, :] = 0
-                self.data_blit_staging[:,
-                                       -cskip:, :] = 0  # This is gonna be trouble with odd sizes, but we should be OK.
+                # This is gonna be trouble with odd sizes, but we should be OK.
+                self.data_blit_staging[:, -cskip:, :] = 0
             elif col_fac >= row_fac:
                 # Rescale based on columns, pad rows
                 rsize = self.system_zoom * int(
@@ -242,23 +268,11 @@ class GenericViewerFrontend:
         pygame.surfarray.blit_array(self.pg_datasurface,
                                     self.data_blit_staging)
 
-        # imin,imax = np.min(self.backend_obj.), np.max(data_output)
-        msg = "(min,max) = (%5d,%5d)" % (self.backend_obj.data_min,
-                                         self.backend_obj.data_max)
-        lbl = self.font2.render(msg, True, self.WHITE, self.BGCOL)
-        # rct = lbl.get_rect()
-        # rct.center = (200 * self.system_zoom, 540 * self.system_zoom)
-        self.pg_screen.blit(lbl, self.rct_info)
+        # Manage labels
+        self._update_labels_postloop()
 
         self.pg_screen.blit(self.pg_datasurface, self.pg_data_rect)
-        self.pg_updated_rects += [self.pg_data_rect, self.rct_info]
-
-        # NOW.... how to process the graphical callbacks from the backend ???
-        # Arrows, text, etc ???
-
-        # msg = "(min,max) = (%5d,%5d)" % (imin, imax)
-        # info = font3.render(msg, True, FGCOL, BGCOL)
-        # screen.blit(info, rct_info)
+        self.pg_updated_rects += [self.pg_data_rect]
 
 
 class FirstViewerFrontend(GenericViewerFrontend):
@@ -272,22 +286,6 @@ class FirstViewerFrontend(GenericViewerFrontend):
                                        display_base_size)
 
         # Finalize some specifics AFTER
-
-    def yolo(self):
-        print("More swag, I'm specific")
-
-    def in_the_middle_of_constructor(self):
-        print('That\'s valid.')
-
-    def stuff_that_first_can_do_that_nooneelse_can(self):
-        print('Wesh.')
-
-
-class SecondViewerFrontend(GenericViewerFrontend):
-
-    def yolo(self):
-        GenericViewerFrontend.yolo(self)
-        print("This ain't FIRST yo.")
 
 
 if __name__ == "__main__":

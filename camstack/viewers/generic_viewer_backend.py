@@ -1,6 +1,16 @@
-from __future__ import annotations  # For type hints
+from __future__ import annotations  # For type hints that would otherwise induce circular imports.
 
-from typing import TYPE_CHECKING  # For type hints
+from typing import Tuple, TYPE_CHECKING  # For type hints
+
+import os
+
+_CORES = os.sched_getaffinity(0)  # AMD fix
+import pygame.constants as pgm_ct
+
+os.sched_setaffinity(0, _CORES)  # AMD fix
+
+from astropy.io import fits
+from pyMilk.interfacing.shm import SHM
 
 from camstack.viewers import backend_utils as buts
 
@@ -16,12 +26,6 @@ from functools import partial
 
 # class BasicCamViewer:
 # More basic, with less text lines at the bottom.
-
-#UUUUUH hacking the fact that I don't want to import pygame
-UP_KEYCODE = 0x40000052
-DOWN_KEYCODE = 0x40000051
-LEFT_KEYCODE = 0x40000050
-RIGHT_KEYCODE = 0x4000004f
 
 
 class GenericViewerBackend:
@@ -72,15 +76,16 @@ class GenericViewerBackend:
 
         ### Colors
 
+        # WIP: find a way to process modifiers.
         prep_shortcuts = {
-                'm': self.toggle_cmap,
-                'l': self.toggle_scaling,
-                'z': self.toggle_crop,
-                'v': self.toggle_averaging,
-                UP_KEYCODE: partial(self.steer_crop, UP_KEYCODE),
-                DOWN_KEYCODE: partial(self.steer_crop, DOWN_KEYCODE),
-                LEFT_KEYCODE: partial(self.steer_crop, LEFT_KEYCODE),
-                RIGHT_KEYCODE: partial(self.steer_crop, RIGHT_KEYCODE),
+                pgm_ct.K_m: self.toggle_cmap,
+                pgm_ct.K_l: self.toggle_scaling,
+                pgm_ct.K_z: self.toggle_crop,
+                pgm_ct.K_v: self.toggle_averaging,
+                pgm_ct.K_UP: partial(self.steer_crop, pgm_ct.K_UP),
+                pgm_ct.K_DOWN: partial(self.steer_crop, pgm_ct.K_DOWN),
+                pgm_ct.K_LEFT: partial(self.steer_crop, pgm_ct.K_LEFT),
+                pgm_ct.K_RIGHT: partial(self.steer_crop, pgm_ct.K_RIGHT),
         }
         # Note escape and X are reserved for quitting
 
@@ -130,13 +135,13 @@ class GenericViewerBackend:
         # Move by 1 pixel at max zoom
         move_how_much = 2**(self.MAX_ZOOM_LEVEL - self.crop_lvl_id)
         cr, cc = self.CROP_CENTER_SPOT
-        if direction == UP_KEYCODE:
+        if direction == pgm_ct.K_UP:
             cc -= move_how_much
-        elif direction == DOWN_KEYCODE:
+        elif direction == pgm_ct.K_DOWN:
             cc += move_how_much
-        elif direction == LEFT_KEYCODE:
+        elif direction == pgm_ct.K_LEFT:
             cr -= move_how_much
-        elif direction == RIGHT_KEYCODE:
+        elif direction == pgm_ct.K_RIGHT:
             cr += move_how_much
         self.CROP_CENTER_SPOT = cr, cc
         self.toggle_crop(which=self.crop_lvl_id)
