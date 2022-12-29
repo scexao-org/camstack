@@ -34,7 +34,7 @@ from PIL import Image
 class GenericViewerFrontend:
 
     # A couple numeric constants, can be overriden by subclasses
-    BOTTOM_PX_PAD = 114
+    BOTTOM_PX_PAD = 80
 
     WINDOW_NAME = 'Generic viewer'
 

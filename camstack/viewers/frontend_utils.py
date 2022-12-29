@@ -39,13 +39,13 @@ class Fonts:
 
     def init_zoomed_fonts(system_zoom: int):
         Fonts.DEFAULT_25 = \
-            pygame.font.SysFont("default", 25 * system_zoom)
+            pygame.font.SysFont("default", 18 * system_zoom)
         Fonts.DEFAULT_16 = \
-            pygame.font.SysFont("default", 16 * system_zoom)
+            pygame.font.SysFont("default", 10 * system_zoom)
         Fonts.MONO_5 = \
             pygame.font.SysFont("monospace", 5 * (system_zoom + 1))
         Fonts.MONO = \
-            pygame.font.SysFont("monospace", 14 * system_zoom)
+            pygame.font.SysFont("monospace", 8 * system_zoom)
         Fonts.MONOBOLD = \
             pygame.font.SysFont("monospace", 7 + 3 * system_zoom, bold=True)
 
