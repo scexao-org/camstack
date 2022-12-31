@@ -10,6 +10,7 @@ from camstack.core import tmux as tmux_util
 try:
     from scxkw.config import MAGIC_BOOL_STR, MAGIC_HW_STR, redis_check_enabled
 except:
+    logg.error('Import error upon trying to import scxkw.config.')
 
     def redis_check_enabled():
         return None, False
