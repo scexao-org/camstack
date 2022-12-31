@@ -34,7 +34,7 @@ from PIL import Image
 class GenericViewerFrontend:
 
     # A couple numeric constants, can be overriden by subclasses
-    BOTTOM_PX_PAD = 80
+    BOTTOM_PX_PAD = 120
 
     WINDOW_NAME = 'Generic viewer'
 
@@ -128,21 +128,18 @@ class GenericViewerFrontend:
         r += int(self.lbl_help.em_size)
 
         # x0,y0 = {or}, {or} - sx,sy = {size}, {size}
-        self.lbl_cropzone = futs.LabelMessage(
-                "x0, y0 = %3d, %3d - sx, sy = %3d, %3d", futs.Fonts.MONO,
-                topleft=(c, r))
+        self.lbl_cropzone = futs.LabelMessage("crop = [%3d %3d %3d %3d]",
+                                              futs.Fonts.MONO, topleft=(c, r))
         r += int(self.lbl_cropzone.em_size)
 
         # t = {t} us - FPS = {fps} - NDR = {NDR}
-        self.lbl_times = futs.LabelMessage(
-                "t = %6d us - FPS = %4d - NDR = %3d", futs.Fonts.MONO,
-                topleft=(c, r))
+        self.lbl_times = futs.LabelMessage("t=%6dus - fps %4d - NDR=%3d",
+                                           futs.Fonts.MONO, topleft=(c, r))
         r += int(self.lbl_times.em_size)
 
         # T = {t*NDR} ms - min, max = {} {}
-        self.lbl_t_minmax = futs.LabelMessage(
-                "T = %3.1f ms - min, max = %5d, %8d", futs.Fonts.MONO,
-                topleft=(c, r))
+        self.lbl_t_minmax = futs.LabelMessage("T=%3.1fms - m,M=%5d,%8d",
+                                              futs.Fonts.MONO, topleft=(c, r))
         r += int(self.lbl_times.em_size)
 
         # mouse = {},{} - flux = {}
