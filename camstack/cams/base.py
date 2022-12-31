@@ -10,6 +10,7 @@ from camstack.core import tmux as tmux_util
 try:
     from scxkw.config import MAGIC_BOOL_STR, MAGIC_HW_STR, redis_check_enabled
 except:
+    logg.error('Import error upon trying to import scxkw.config.')
 
     def redis_check_enabled():
         return None, False
@@ -57,7 +58,11 @@ class BaseCamera:
 
     # yapf: disable
     KEYWORDS = {
-            # Format is name: (value, description, formatter, redis partial push key [5 chars])
+            # Format is name:
+            #   (value,
+            #    description,
+            #    formatter,
+            #    redis partial push key [5 chars] for per-camera KW)
             # this list CAN be figured out from a redis query.
             # but I don't want to add the dependency at this point
             # ALSO SHM caps at 16 chars for strings. The %s formats here are (some) shorter than official ones.
@@ -455,7 +460,8 @@ class BaseCamera:
                 keywords_shm = self.camera_shm.get_keywords(False)
                 with self.RDB.pipeline() as pipe:
                     for kw in keywords_shm:
-                        if kw in self.KEYWORDS:
+                        if (kw in self.KEYWORDS and
+                                    self.KEYWORDS[kw][3] is not None):
                             pipe.hset(self.REDIS_PREFIX + self.KEYWORDS[kw][3],
                                       'value', keywords_shm[kw])
                     pipe.execute()
