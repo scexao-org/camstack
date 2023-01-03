@@ -119,10 +119,15 @@ class GenericViewerBackend:
                     self.shm_shape[1] / 2**(self.crop_lvl_id + 1))
         # Could define explicit slices using a self.CROPSLICE. Could be great for buffy PDI.
         cr, cc = self.CROP_CENTER_SPOT
+
+        # Adjust, in case we've just zoomed-out from a crop spot that's too close to the edge!
+        cr_temp = min(max(cr, halfside[0]), self.shm_shape[0] - halfside[0])
+        cc_temp = min(max(cc, halfside[1]), self.shm_shape[1] - halfside[1])
+
         if self.crop_lvl_id > 0:
             self.crop_slice = np.s_[
-                    int(round(cr - halfside[0])):int(round(cr + halfside[0])),
-                    int(round(cc - halfside[1])):int(round(cc + halfside[1]))]
+                    int(round(cr_temp - halfside[0])):int(round(cr_temp + halfside[0])),
+                    int(round(cc_temp - halfside[1])):int(round(cc_temp + halfside[1]))]
         else:
             self.crop_slice = np.s_[:, :]
 
@@ -138,7 +143,16 @@ class GenericViewerBackend:
             cr -= move_how_much
         elif direction == RIGHT_KEYCODE:
             cr += move_how_much
+
+        halfside = (self.shm_shape[0] / 2**(self.crop_lvl_id + 1),
+                    self.shm_shape[1] / 2**(self.crop_lvl_id + 1))
+        # Prevent overflows
+        cr = min(max(cr, halfside[0]), self.shm_shape[0] - halfside[0])
+        cc = min(max(cc, halfside[1]), self.shm_shape[1] - halfside[1])
+
+        print(cr, cc, cr - halfside[0], cr + halfside[0], cc - halfside[1], cc + halfside[1])
         self.CROP_CENTER_SPOT = cr, cc
+
         self.toggle_crop(which=self.crop_lvl_id)
 
     def toggle_averaging(self) -> None:
