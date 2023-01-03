@@ -394,7 +394,7 @@ class Buffy(CRED1):
             try:
                 self._set_formatted_keyword('FILTER01',
                                             self.RDB.hget('X_IRCFLT', 'value'))
-                doing_pdi = self.RDB.hget('OBS-MOD') == 'IMAG-PDI'
+                doing_pdi = self.RDB.hget('OBS-MOD', 'value') == 'IMAG-PDI'
             except:
                 logg.warning(
                         'REDIS unavailable @ poll_camera_for_keywords @ CRED1')
