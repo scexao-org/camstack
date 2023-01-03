@@ -247,6 +247,10 @@ class GenericViewerBackend:
             should be OK.
             Or we can import pygame constants...
         '''
+        
+        # Willfully ignore numlock
+        mods = mods & (~0x1000)
+
         if (mods, key) in self.SHORTCUTS:
             # Call the mapped callable
             self.SHORTCUTS[(mods, key)]()
