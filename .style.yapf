@@ -48,7 +48,7 @@ blank_line_before_nested_class_or_def = True
 coalesce_brackets = True
 
 # The column limit.
-column_limit = 79
+column_limit = 80
 
 # Indent width used for line continuations.
 continuation_indent_width = 8

@@ -55,12 +55,6 @@ class CRED1(EDTCamera):
 
     KEYWORDS = {
             'DET-PRES': (0.0, 'Detector pressure (mbar)', '%20.8f', 'PRESR'),
-            'FILTER01': ('UNKNOWN', 'IRCAMs filter state', '%-16s', 'FILTR'),
-            # Warning: this means that the two following keywords
-            # CANNOT be set anymore by gen2/auxfitsheader
-            # Because the stream keywords WILL supersede.
-            'RET-ANG1': (0.0, 'Position angle of first retarder plate (deg)',
-                         '%20.2f', 'HWPAG'),
     }
     KEYWORDS.update(EDTCamera.KEYWORDS)
 
@@ -178,14 +172,7 @@ class CRED1(EDTCamera):
         self.poll_camera_for_keywords()  # Sets 'DET-TMP'
 
     def poll_camera_for_keywords(self):
-        if self.HAS_REDIS:
-            try:
-                self._set_formatted_keyword('FILTER01',
-                                            self.RDB.hget('X_IRCFLT', 'value'))
-            except:
-                logg.warning(
-                        'REDIS unavailable @ poll_camera_for_keywords @ CRED1')
-                pass
+
         self.get_temperature()  # Sets DET-TMP
         time.sleep(.1)
         self.get_cryo_pressure()  # Sets DET-PRES
@@ -359,7 +346,40 @@ class Buffy(CRED1):
     MODES = {}
     MODES.update(CRED1.MODES)
 
-    KEYWORDS = {}
+    # yapf: disable
+    KEYWORDS = {
+        # Warning: this means that the two following keywords
+        # CANNOT be set anymore by gen2/auxfitsheader
+        # Because the stream keywords WILL supersede.
+
+        'FILTER01': ('UNKNOWN', 'IRCAMs filter state', '%-16s', 'FILTR'),
+        'RET-ANG1': (0.0, 'Position angle of first retarder plate (deg)', '%20.2f', 'HWPAG'),
+
+        'CDELT1': (4.5e-6, 'X Scale projected on detector (#/pix)', '%20.8f', 'CDEL1'),
+        'CDELT2': (4.5e-6, 'Y Scale projected on detector (#/pix)', '%20.8f', 'CDEL2'),
+        'C2ELT1': (4.5e-6, 'X Scale projected on detector (#/pix)', '%20.8f', 'C2EL1'),
+        'C2ELT2': (4.5e-6, 'Y Scale projected on detector (#/pix)', '%20.8f', 'C2EL2'),
+        'CTYPE1': ('RA--TAN   ', 'Pixel coordinate system', '%-10s', 'CTYP1'),
+        'CTYPE2': ('DEC--TAN  ', 'Pixel coordinate system', '%-10s', 'CTYP2'),
+        'C2YPE1': ('RA--TAN   ', 'Pixel coordinate system', '%-10s', 'C2YP1'),
+        'C2YPE2': ('DEC--TAN  ', 'Pixel coordinate system', '%-10s', 'C2YP2'),
+        'CUNIT1': ('DEGREE    ', 'Units used in both CRVAL1 and CDELT1', '%-10s', 'CUNI1'),
+        'CUNIT2': ('DEGREE    ', 'Units used in both CRVAL2 and CDELT2', '%-10s', 'CUNI2'),
+        'C2NIT1': ('DEGREE    ', 'Units used in both C2VAL1 and C2ELT1', '%-10s', 'C2NI1'),
+        'C2NIT2': ('DEGREE    ', 'Units used in both C2VAL2 and C2ELT2', '%-10s', 'C2NI2'),
+
+        # Those will change with cropmode
+        'CRPIX1': ( 40., 'Reference pixel in X (pixel)', '%20.1f', 'CRPX1'),
+        'CRPIX2': ( 80., 'Reference pixel in Y (pixel)', '%20.1f', 'CRPX2'),
+        'C2PIX1': (120., 'Reference pixel in X (pixel)', '%20.1f', 'C2PX1'),
+        'C2PIX2': ( 80., 'Reference pixel in Y (pixel)', '%20.1f', 'C2PX2'),
+
+        'CD1_1': (4.5e-6, 'Pixel coordinate translation matrix', '%20.8f', 'CD1_1'),
+        'CD1_2': (    0., 'Pixel coordinate translation matrix', '%20.8f', 'CD1_2'),
+        'CD2_1': (    0., 'Pixel coordinate translation matrix', '%20.8f', 'CD2_1'),
+        'CD2_2': (4.5e-6, 'Pixel coordinate translation matrix', '%20.8f', 'CD2_2'),
+    }
+    # yapf: enable
     KEYWORDS.update(CRED1.KEYWORDS)
 
     REDIS_PUSH_ENABLED = True
@@ -368,8 +388,45 @@ class Buffy(CRED1):
     def _fill_keywords(self):
         CRED1._fill_keywords(self)
 
+        doing_pdi = True
+
+        if self.HAS_REDIS:
+            try:
+                self._set_formatted_keyword('FILTER01',
+                                            self.RDB.hget('X_IRCFLT', 'value'))
+                doing_pdi = self.RDB.hget('OBS-MOD', 'value') == 'IMAG-PDI'
+            except:
+                logg.warning(
+                        'REDIS unavailable @ poll_camera_for_keywords @ CRED1')
+                pass
+
+        # Hotspot of physical detector in the current crop coordinates.
+        # Could be beyond the sensor if the crop does not include the detector center.
+        # Warning: in CRED1, hotspot is 16 pixel off-center along the rows!
+        xfull2 = (self.MODES[self.FULL].x1 - self.MODES[self.FULL].x0 +
+                  1) / 2. - 16.
+        yfull2 = (self.MODES[self.FULL].y1 - self.MODES[self.FULL].y0 + 1) / 2.
+
+        self._set_formatted_keyword('CRPIX2', yfull2 - self.current_mode.y0)
+        self._set_formatted_keyword('C2PIX2', yfull2 - self.current_mode.y0)
+        if doing_pdi:
+            # +/- 40 off of the central column
+            self._set_formatted_keyword('CRPIX1',
+                                        xfull2 - 40. - self.current_mode.x0)
+            self._set_formatted_keyword('C2PIX1',
+                                        xfull2 + 40. - self.current_mode.x0)
+        else:
+            # Central column
+            self._set_formatted_keyword('CRPIX2',
+                                        xfull2 - self.current_mode.x0)
+            self._set_formatted_keyword('C2PIX2',
+                                        xfull2 - self.current_mode.x0)
+
         # Override detector name
-        self._set_formatted_keyword('DETECTOR', 'CRED1 - BUFFY')
+        self._set_formatted_keyword('DETECTOR', 'CRED1 - APAPANE')
+
+        # Note: RET-ANG1 is set externally by a call to "updatekw kcam RET-ANG1" from HWP scripts.
+        # This avoids latency in reporty HWP states.
 
 
 class Iiwi(CRED1):
