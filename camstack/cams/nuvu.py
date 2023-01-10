@@ -149,7 +149,6 @@ class NUVU(EDTCamera):
         self.SetExposureTime(0)  # milliseconds
         self.SetWaitingTime(0)
 
-
         # Open shutter
         self.SetShutterMode(2)
 
@@ -161,7 +160,6 @@ class NUVU(EDTCamera):
     def prepare_camera_finalize(self, mode_id: int = None):
         # Set EM gain to 1
         self.SetEMCalibratedGain(1.0)
-
 
     def _get_nuvu_response(self, response, verbose=0):
         """ convert nuvu response into a key/values dictionary """
@@ -180,9 +178,14 @@ class NUVU(EDTCamera):
                     return (True, rlines[0].split())
         rlines = list(filter(lambda x: ':' in x, rlines))
         rlist = [x.split(":") for x in rlines]
-        rdict = dict(
-                zip(list(map(lambda x: x[0], rlist)),
-                    list(map(lambda x: x[1], rlist))))
+
+        rdict = {}
+        for tuple in rlist:
+            if len(tuple) == 1:
+                rdict[tuple[0]] = None
+            else:
+                rdict[tuple[0]] = tuple[1]
+
         if verbose:
             pass
             #print(rdict.keys())
