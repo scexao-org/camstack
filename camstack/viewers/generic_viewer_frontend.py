@@ -152,22 +152,26 @@ class GenericViewerFrontend:
 
             elif row_fac > col_fac:
                 # Rescale based on rows, pad columns
-                csize = self.system_zoom * int(
-                        round(data_output.shape[1] / row_fac))
+                csize = self.system_zoom *\
+                                int(round(data_output.shape[1] / row_fac))
                 cskip = (self.data_disp_size[1] - csize) // 2
-                self.data_blit_staging[:, cskip:-cskip, :] = np.asarray(
-                        img.resize((self.data_disp_size[0], csize),
-                                   Image.NEAREST))
+                try:
+                    self.data_blit_staging[:, cskip:-cskip, :] = \
+                        np.asarray(img.resize((csize, self.data_disp_size[0]),
+                                       Image.NEAREST))
+                except:
+                    import pdb
+                    pdb.set_trace()
                 self.data_blit_staging[:, :cskip, :] = 0
-                self.data_blit_staging[:,
-                                       -cskip:, :] = 0  # This is gonna be trouble with odd sizes, but we should be OK.
+                # This is gonna be trouble with odd sizes, but we should be OK.
+                self.data_blit_staging[:, -cskip:, :] = 0
             elif col_fac >= row_fac:
                 # Rescale based on columns, pad rows
                 rsize = self.system_zoom * int(
                         round(data_output.shape[0] / col_fac))
                 rskip = (self.data_disp_size[0] - rsize) // 2
                 self.data_blit_staging[rskip:-rskip, :, :] = np.asarray(
-                        img.resize((rsize, self.data_disp_size[1]),
+                        img.resize((self.data_disp_size[1], rsize),
                                    Image.NEAREST))
                 self.data_blit_staging[:rskip, :, :] = 0
                 self.data_blit_staging[-rskip:, :, :] = 0
