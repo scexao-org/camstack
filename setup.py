@@ -45,8 +45,7 @@ scripts = [
         './scripts/cam-firstpupstart',
         './scripts/cam-alalacamstart',
         './scripts/cam-vpupcamstart',
-        './scripts/vcamstart',  # FIXME change names - "start" is too vague for something available system-wide
-        './scripts/vcamstart-bash',
+        './scripts/cam-vcamautostart',
 ]
 
 setup(
