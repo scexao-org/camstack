@@ -35,8 +35,8 @@ class DCAMCamera(BaseCamera):
         self.dcam_number = dcam_number
         self.control_shm = None
 
-        BaseCamera.__init__(self, name, stream_name, mode_id,
-                            no_start=no_start, taker_cset_prio=taker_cset_prio,
+        BaseCamera.__init__(self, name, stream_name, mode_id, no_start=no_start,
+                            taker_cset_prio=taker_cset_prio,
                             dependent_processes=dependent_processes)
 
     def init_framegrab_backend(self):
@@ -86,8 +86,7 @@ class DCAMCamera(BaseCamera):
         # dcam values require FLOATS - we'll multiply everything by 1.0
         dump_params = {f'{k:08x}': 1.0 * params[k] for k in params}
         self.control_shm.reset_keywords(dump_params)
-        self.control_shm.set_data(self.control_shm.get_data() * 0 +
-                                  len(params))
+        self.control_shm.set_data(self.control_shm.get_data() * 0 + len(params))
         # Find a way to (prepare to) feed to the camera
 
     def _prepare_backend_cmdline(self, reuse_shm: bool = False):
@@ -187,7 +186,7 @@ class OrcaQuest(DCAMCamera):
     FIRST, FULL, DICHROIC = 'FIRST', 'FULL', 'DICHROIC'
     # yapf: disable
     MODES = {
-            FIRST: CameraMode(x0=952, x1=2915, y0=492, y1=727, tint=0.001),
+            FIRST: CameraMode(x0=1028, x1=2991, y0=492, y1=727, tint=0.001),
             FULL: CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
             0: CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),  # Also full
             1: CameraMode(x0=1196, x1=2127, y0=784, y1=1039, tint=0.001),    # Kyohoon is Using for WFS mode
@@ -240,6 +239,21 @@ class OrcaQuest(DCAMCamera):
     def set_tint(self, tint: float):
         return self._dcam_prm_setvalue(tint, 'EXPTIME',
                                        dcamprop.EProp.EXPOSURETIME)
+
+    def get_fps(self):
+        exp_time, read_time = self._dcam_prm_getmultivalue(['EXPTIME', None], [
+                dcamprop.EProp.EXPOSURETIME, dcamprop.EProp.TIMING_READOUTTIME
+        ])
+        fps = 1 / max(exp_time, read_time)
+        self._set_formatted_keyword('FRATE', fps)
+        logg.info(f'get_fps {fps}')
+        return fps
+
+    def get_maxfps(self):
+        fps = 1 / self._dcam_prm_getvalue(None,
+                                          dcamprop.EProp.TIMING_READOUTTIME)
+        logg.info(f'get_fps {fps}')
+        return fps
 
     def set_readout_ultraquiet(self, ultraquiet: bool):
         logg.debug('set_readout_ultraquiet @ OrcaQuest')

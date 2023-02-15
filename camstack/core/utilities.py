@@ -65,16 +65,22 @@ class DependentProcess:
         self.cset = cset
         self.rtprio = rtprio
 
-        self.initialize_tmux(kill_upon_create)
+        self.kill_upon_init = kill_upon_create
+
+    def assign_tmux_pane(self):
+        self.tmux_pane = tmux.find_or_create(self.tmux_name)
 
     def initialize_tmux(self, kill_upon_create):
-        self.tmux_pane = tmux.find_or_create(self.tmux_name)
+        self.assign_tmux_pane()
         if kill_upon_create:
             time.sleep(3.0)  # MUST NOT KILL the sourcing of bashrc/profile
-            tmux.kill_running(self.tmux_pane)
+            self.stop()
+
+    def start_command_line(self):
+        tmux.send_keys(self.tmux_pane, self.cli_cmd % self.cli_args)
 
     def start(self):
-        tmux.send_keys(self.tmux_pane, self.cli_cmd % self.cli_args)
+        self.start_command_line()
         time.sleep(1)
         self.make_children_rt()
 
@@ -96,16 +102,18 @@ class DependentProcess:
                         str(pid), self.cset,
                         str(self.rtprio)
                 ], stdout=subprocess.DEVNULL)
-                children = subprocess.run([
-                        'pgrep', '-P', str(pid)
-                ], stdout=subprocess.PIPE).stdout.decode('utf8').strip().split(
-                        '\n')
+                children = subprocess.run(['pgrep', '-P',
+                                           str(pid)],
+                                          stdout=subprocess.PIPE).stdout.decode(
+                                                  'utf8').strip().split('\n')
                 if children[0] != '':
                     pids += [int(c) for c in children]
                 #print('PIDs: ', pids)
 
     def stop(self):
-        tmux.kill_running(self.tmux_pane)
+        tmux.kill_running_Cc(self.tmux_pane)
+        time.sleep(2)
+        tmux.kill_running_Cz(self.tmux_pane)
         time.sleep(1)
 
     def is_running(self):
@@ -123,16 +131,13 @@ class RemoteDependentProcess(DependentProcess):
 
         self.remote_host = remote_host
 
-        DependentProcess.__init__(self, tmux_name, cli_cmd, cli_args,
-                                  cset=cset, rtprio=rtprio,
+        DependentProcess.__init__(self, tmux_name, cli_cmd, cli_args, cset=cset,
+                                  rtprio=rtprio,
                                   kill_upon_create=kill_upon_create)
 
-    def initialize_tmux(self, kill_upon_create):
-
+    def assign_tmux_pane(self):
         self.tmux_pane = tmux.find_or_create_remote(self.tmux_name,
                                                     self.remote_host)
-        if kill_upon_create:
-            tmux.kill_running(self.tmux_pane)
 
     def start(self):
         try:
@@ -145,6 +150,40 @@ class RemoteDependentProcess(DependentProcess):
 
         time.sleep(1)
         self.make_children_rt()
+
+
+class DependentMultiManager:
+    # The only point is to batch all the sleeping... that piles up quite a bit with lots of dependents.
+
+    def __init__(self, dependents: List[DependentProcess]) -> None:
+        self.dependent_list = dependents
+
+    def initialize_tmux(self):
+        for dependent in self.dependent_list:
+            dependent.assign_tmux_pane()
+        time.sleep(3.0)
+
+        self.stop(watch_kill_create_flag=True)
+
+    def start(self):
+        self.dependent_list.sort(key=lambda x: x.start_order)
+
+        for dependent in self.dependent_list:
+            dependent.start_command_line()
+        time.sleep(1.0)
+        for dependent in self.dependent_list:
+            dependent.make_children_rt()
+
+    def stop(self, watch_kill_create_flag: bool = False):
+        self.dependent_list.sort(key=lambda x: x.kill_order)
+        for dependent in self.dependent_list:
+            if (not watch_kill_create_flag) or dependent.kill_upon_init:
+                tmux.kill_running_Cc(dependent.tmux_pane)
+        time.sleep(2.0)
+        for dependent in self.dependent_list:
+            if (not watch_kill_create_flag) or dependent.kill_upon_init:
+                tmux.kill_running_Cz(dependent.tmux_pane)
+        time.sleep(.5)
 
 
 def shellify_methods(instance_of_camera, top_level_globals):

@@ -137,11 +137,13 @@ class FlyCaptureUSBCamera(BaseCamera):
         self.fly_cam.setProperty(type=PROPS.SHARPNESS, autoManualMode=False,
                                  onOff=False)
         self.fly_cam.setProperty(type=PROPS.FRAME_RATE, autoManualMode=False,
-                                 onOff=True)
+                                 onOff=True, absControl=True)
+        self.fly_cam.setProperty(type=PROPS.SHUTTER, autoManualMode=False,
+                                 onOff=True, absControl=True)
 
         maxGain = self.fly_cam.getPropertyInfo(PROPS.GAIN).absMax
         self.fly_cam.setProperty(type=PROPS.GAIN, autoManualMode=False,
-                                 onOff=True, absValue=maxGain)
+                                 onOff=True, absValue=maxGain, absControl=True)
         self.fly_cam.setProperty(type=PROPS.GAMMA, autoManualMode=False,
                                  onOff=False, absValue=1.0)
 
@@ -328,6 +330,10 @@ class Flea3(FlyCaptureUSBCamera):
 
 
 class VampiresPupilFlea(Flea3):
+
+    MODES = {
+        'CROP_VPUP': CameraMode(x0=256, x1=1327-256, y0=524, y1=1047, fps=30, tint=0.03),
+    }
 
     def _fill_keywords(self):
         Flea3._fill_keywords(self)

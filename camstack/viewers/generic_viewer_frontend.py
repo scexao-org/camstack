@@ -14,8 +14,7 @@ if TYPE_CHECKING:  # this type hint would cause an unecessary import.
 if (('localhost:' in os.environ.get('DISPLAY', '') or
      "GLHACK_FORCE" in os.environ) and not "GLHACK_FORCENOT" in os.environ):
     import ctypes
-    ctypes.cdll.LoadLibrary(os.environ["HOME"] +
-                            "/src/camstack/lib/libGL.so.1")
+    ctypes.cdll.LoadLibrary(os.environ["HOME"] + "/src/camstack/lib/libGL.so.1")
     print('Activated libGL.so.1 hijack.')
 
 # Affinity fix for pygame messing up
@@ -60,8 +59,7 @@ class GenericViewerFrontend:
         self.data_blit_staging = np.zeros((*self.data_disp_size, 3),
                                           dtype=np.uint8)
         # Total window size
-        self.pygame_win_size = (self.data_disp_size[0],
-                                self.data_disp_size[1] +
+        self.pygame_win_size = (self.data_disp_size[0], self.data_disp_size[1] +
                                 self.BOTTOM_PX_PAD * self.system_zoom)
 
         #####
@@ -122,8 +120,8 @@ class GenericViewerFrontend:
         r += int(self.lbl_title.em_size)
 
         # For help press [h]
-        self.lbl_help = futs.LabelMessage("For help press [h]",
-                                          futs.Fonts.MONO, topleft=(c, r))
+        self.lbl_help = futs.LabelMessage("For help press [h]", futs.Fonts.MONO,
+                                          topleft=(c, r))
         self.lbl_help.blit(self.pg_screen)
         r += int(self.lbl_help.em_size)
 
@@ -236,12 +234,12 @@ class GenericViewerFrontend:
 
             elif row_fac > col_fac:
                 # Rescale based on rows, pad columns
-                csize = self.system_zoom * int(
-                        round(data_output.shape[1] / row_fac))
+                csize = self.system_zoom *\
+                                int(round(data_output.shape[1] / row_fac))
                 cskip = (self.data_disp_size[1] - csize) // 2
-                self.data_blit_staging[:, cskip:-cskip, :] = np.asarray(
-                        img.resize((self.data_disp_size[0], csize),
-                                   Image.NEAREST))
+                self.data_blit_staging[:, cskip:-cskip, :] = \
+                    np.asarray(img.resize((csize, self.data_disp_size[0]),
+                                    Image.NEAREST))
                 self.data_blit_staging[:, :cskip, :] = 0
                 # This is gonna be trouble with odd sizes, but we should be OK.
                 self.data_blit_staging[:, -cskip:, :] = 0
@@ -251,7 +249,7 @@ class GenericViewerFrontend:
                         round(data_output.shape[0] / col_fac))
                 rskip = (self.data_disp_size[0] - rsize) // 2
                 self.data_blit_staging[rskip:-rskip, :, :] = np.asarray(
-                        img.resize((rsize, self.data_disp_size[1]),
+                        img.resize((self.data_disp_size[1], rsize),
                                    Image.NEAREST))
                 self.data_blit_staging[:rskip, :, :] = 0
                 self.data_blit_staging[-rskip:, :, :] = 0
@@ -262,8 +260,7 @@ class GenericViewerFrontend:
             self.data_blit_staging = np.asarray(
                     img.resize((self.data_disp_size[::-1]), Image.NEAREST))
 
-        pygame.surfarray.blit_array(self.pg_datasurface,
-                                    self.data_blit_staging)
+        pygame.surfarray.blit_array(self.pg_datasurface, self.data_blit_staging)
 
         # Manage labels
         self._update_labels_postloop()

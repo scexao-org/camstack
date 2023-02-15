@@ -1,6 +1,6 @@
 import os
 
-from camstack.core.utilities import DependentProcess, RemoteDependentProcess
+from camstack.core.utilities import DependentProcess, RemoteDependentProcess, DependentMultiManager
 from camstack.cams.cred1 import Buffy
 
 from camstack.core.logger import init_camstack_logger
@@ -103,10 +103,12 @@ if __name__ == "__main__":
     zmq_send.start_order = 6
     zmq_send.kill_order = 5
 
+    dependent_processes = [tcp_recv, tcp_send, utr_red, zmq_recv, zmq_send]
+
     cam = Buffy('kcam', 'kcam_raw', unit=1, channel=0, mode_id=mode,
-                taker_cset_prio=('kcam_edt', 49), dependent_processes=[
-                        tcp_recv, tcp_send, utr_red, zmq_recv, zmq_send
-                ])  #, tcp_send_raw, tcp_recv_raw])
+                taker_cset_prio=('kcam_edt',
+                                 49), dependent_processes=dependent_processes
+                )  #, tcp_send_raw, tcp_recv_raw])
 
     from camstack.core.utilities import shellify_methods
     shellify_methods(cam, globals())

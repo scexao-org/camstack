@@ -4,7 +4,7 @@ import subprocess
 import threading
 import logging as logg
 
-from camstack.core.utilities import CameraMode
+from camstack.core.utilities import CameraMode, DependentMultiManager
 from camstack.core import tmux as tmux_util
 
 try:
@@ -90,8 +90,8 @@ class BaseCamera:
     # yapf: enable
 
     def __init__(self, name: str, stream_name: str,
-                 mode_id: Union[CameraMode,
-                                Tuple[int, int]], no_start: bool = False,
+                 mode_id: Union[CameraMode, Tuple[int,
+                                                  int]], no_start: bool = False,
                  taker_cset_prio: Union[str, int] = ('system', None),
                  dependent_processes: List[Any] = []):
 
@@ -119,6 +119,10 @@ class BaseCamera:
         self.width, self.height = self._fg_size_from_mode(self.current_mode_id)
 
         self.dependent_processes = dependent_processes
+        self.dependent_processes_manager = DependentMultiManager(
+                dependent_processes)
+        self.dependent_processes_manager.initialize_tmux()
+
         self.taker_cset_prio = taker_cset_prio
 
         # Thread:
@@ -256,8 +260,7 @@ class BaseCamera:
             This is a back-compatible mode (width, height) over the camera modes
         '''
         self.MODES['CUSTOM'] = CameraMode(x0=w_offset, x1=w_offset + width - 1,
-                                          y0=h_offset,
-                                          y1=h_offset + height - 1)
+                                          y0=h_offset, y1=h_offset + height - 1)
 
         self.set_camera_mode('CUSTOM')
 
@@ -274,16 +277,12 @@ class BaseCamera:
             self._start_taker_no_dependents()
 
         # Now handle the dependent processes
-        self.dependent_processes.sort(key=lambda x: x.start_order)
-        for dep_process in self.dependent_processes:
-            dep_process.start()
+        self.dependent_processes_manager.start()
 
     def kill_taker_and_dependents(self, skip_taker=False):
         logg.info('kill_taker_and_dependents @ BaseCamera')
 
-        self.dependent_processes.sort(key=lambda x: x.kill_order)
-        for dep_process in self.dependent_processes:
-            dep_process.stop()
+        self.dependent_processes_manager.stop()
 
         if not skip_taker:
             self._kill_taker_no_dependents()

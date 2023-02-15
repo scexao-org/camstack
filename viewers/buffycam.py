@@ -349,7 +349,7 @@ s           : decrease CRED1 gain
 CTRL+q      : increase number of NDR
 CTRL+a      : decrease number of NDR
 CTRL+SHIFT+<number>: jump to NDR 2**<number>
-CRTL+o      : increase frame rate
+CTRL+o      : increase frame rate
 CTRL+l      : decrease frame rate
 CTRL+h      : hotspotalign
 CTRL+p      : camera to pupil plane/focus plane

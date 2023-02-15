@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Camstack acquisition killer for scexao5
+
+tmux send-keys -t kcam_ctrl "release(); quit()" Enter
+tmux send-keys -t chuck_ctrl "release(); quit()" Enter
+tmux send-keys -t vcam_ctrl "release(); quit()" Enter
+tmux send-keys -t ocam_ctrl "release(); quit()" Enter
+tmux send-keys -t rajni_ctrl "release(); quit()" Enter
+tmux send-keys -t glint_ctrl "release(); quit()" Enter

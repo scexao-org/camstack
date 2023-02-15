@@ -34,6 +34,7 @@ scripts = [
         './viewers/buffycam.py',
         './viewers/chuckcam.py',
         './viewers/firstcam.py',
+        './viewers/vpupcam.py',
         './scripts/cam-restartdeps',
         './scripts/cam-buffystart',
         './scripts/cam-chuckstart',
@@ -44,8 +45,8 @@ scripts = [
         './scripts/cam-fircamstart',
         './scripts/cam-firstpupstart',
         './scripts/cam-alalacamstart',
-        './scripts/vcamstart',  # FIXME change names - "start" is too vague for something available system-wide
-        './scripts/vcamstart-bash',
+        './scripts/cam-vpupcamstart',
+        './scripts/cam-vcamautostart',
 ]
 
 setup(

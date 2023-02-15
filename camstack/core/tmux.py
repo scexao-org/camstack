@@ -28,12 +28,20 @@ def send_keys(pane, keys, enter=True):
     pane.send_keys(keys, enter=enter, suppress_history=False)
 
 
-def kill_running(pane):
+def kill_running_Cc(pane):
     pane.send_keys('C-c', enter=False, suppress_history=False)
     pane.send_keys('C-c', enter=False, suppress_history=False)
-    time.sleep(2.0)  # We need longer time for dcamusbtake to clear
+
+
+def kill_running_Cz(pane):
     pane.send_keys('C-z', enter=False, suppress_history=False)
     pane.send_keys('kill %')
+
+
+def kill_running(pane):
+    kill_running_Cc(pane)
+    time.sleep(2.0)  # We need longer time for dcamusbtake to clear
+    kill_running_Cz(pane)
 
 
 def find_pane_running_pid(pane):
@@ -50,8 +58,8 @@ def find_pane_running_pid(pane):
         res = subprocess.run(['pgrep', '-P', p], stdout=subprocess.PIPE)
 
     if res.returncode == 0:
-        return int(res.stdout.decode('utf8').strip()
-                   )  # A fail here will probably mean many children
+        return int(res.stdout.decode(
+                'utf8').strip())  # A fail here will probably mean many children
     else:
         return None
 
