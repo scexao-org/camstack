@@ -186,7 +186,7 @@ class OrcaQuest(DCAMCamera):
     FIRST, FULL, DICHROIC = 'FIRST', 'FULL', 'DICHROIC'
     # yapf: disable
     MODES = {
-            FIRST: CameraMode(x0=952, x1=2915, y0=492, y1=727, tint=0.001),
+            FIRST: CameraMode(x0=1028, x1=2991, y0=492, y1=727, tint=0.001),
             FULL: CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
             0: CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),  # Also full
             1: CameraMode(x0=1196, x1=2127, y0=784, y1=1039, tint=0.001),    # Kyohoon is Using for WFS mode
