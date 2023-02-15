@@ -1,12 +1,21 @@
 #!/usr/bin/env python
-'''
-    pygame SHM viewer - generic basic version
+
+DEFAULT_SHM_NAME = "orcam"
+
+__doc__ = f'''
+    FIRST Orcaquest viewer
 
     Usage:
-        anycam.py <shm_name> [-z <zoom>]
+        firstcam [<shm_name>] [-z <zoom>] [-b <binn>]
+        firstcam (-h | --help)
+
+    Arguments:
+        shm_name:   Shared memory stream name [default: {DEFAULT_SHM_NAME}]
 
     Options:
-        -z <zoom>    System zoom factor [default: 1]
+        -h --help           Show this screen.
+        -z <zoom>           Graphics windows factor [default: 1]
+        -b <binn>           SHM binning factor [default: 1]
 '''
 
 import docopt
@@ -19,6 +28,8 @@ if __name__ == '__main__':
     args = docopt.docopt(__doc__)
     zoom = int(args['-z'])
     shm_name = args['<shm_name>']
+    if shm_name is None:
+        shm_name = DEFAULT_SHM_NAME
 
     backend = FirstViewerBackend(shm_name)
 

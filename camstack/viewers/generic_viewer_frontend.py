@@ -37,6 +37,8 @@ class GenericViewerFrontend:
 
     WINDOW_NAME = 'Generic viewer'
 
+    CARTOON_FILE = None
+
     def __init__(self, system_zoom: int, fps: float,
                  display_base_size: Tuple[int, int]) -> None:
 
@@ -63,7 +65,7 @@ class GenericViewerFrontend:
                                 self.BOTTOM_PX_PAD * self.system_zoom)
 
         #####
-        # Prepare the pygame
+        # Prepare the pygame stuff (prefix pygame objects with "pg_")
         #####
         self.pg_clock = pygame.time.Clock()
 
@@ -73,17 +75,17 @@ class GenericViewerFrontend:
         # Prep the fonts.
         futs.Fonts.init_zoomed_fonts(self.system_zoom)
 
-        # Prefix pygame objects with "pg_"
         self.pg_screen = pygame.display.set_mode(self.pygame_win_size,
                                                  flags=0x0, depth=16)
         pygame.display.set_caption(self.WINDOW_NAME)
 
         self.pg_background = pygame.Surface(self.pg_screen.get_size())
-        self.pg_background = self.pg_background.convert(
-        )  # Good to do once-per-surface: converts data type to final one
+        # Good to "convert" once-per-surface: converts data type to final one
+        self.pg_background = self.pg_background.convert()
 
         self.pg_datasurface = pygame.surface.Surface(self.data_disp_size)
         self.pg_datasurface.convert()
+
         self.pg_data_rect = self.pg_datasurface.get_rect()
         self.pg_data_rect.topleft = (0, 0)
 
@@ -95,13 +97,9 @@ class GenericViewerFrontend:
 
         self._init_labels()
 
+        self._init_cartoon()
+
         # TODO class variable
-        #path_cartoon = os.environ['HOME'] + "/Pictures/io.png"
-        #cartoon1 = pygame.image.load(path_cartoon).convert_alpha()
-        # Move to bottom right, blit once.
-        #rect2 = cartoon1.get_rect()
-        #rect2.bottomright = self.pygame_win_size
-        #self.pg_screen.blit(cartoon1, rect2)
 
         pygame.mouse.set_cursor(*pygame.cursors.broken_x)
         pygame.display.update()
@@ -146,6 +144,26 @@ class GenericViewerFrontend:
 
         # {Status message [sat, acquiring dark, acquiring ref...]}
 
+    def _init_cartoon(self):
+        if self.CARTOON_FILE is None:
+            return
+
+        # FIXME $CAMSTACK_ROOT instead of $HOME/src/camstack
+        path_cartoon = os.environ['HOME'] + "/src/camstack/conf/io.png"
+        cartoon_img = pygame.image.load(path_cartoon).convert_alpha()
+
+        w, h = cartoon_img.get_size()
+
+        cartoon_img_scaled = pygame.transform.scale(cartoon_img,
+                                                    (w * self.system_zoom,
+                                                     h * self.system_zoom))
+
+        # Move to bottom right, blit once.
+        rect = cartoon_img_scaled.get_rect()
+        rect.bottomright = self.pygame_win_size
+
+        self.pg_screen.blit(cartoon_img_scaled, rect)
+
     def _update_labels_postloop(self):
         tint = self.backend_obj.input_shm.get_expt()
         ndr = self.backend_obj.input_shm.get_ndr()
@@ -178,7 +196,6 @@ class GenericViewerFrontend:
         - Calls self.process_pygame_events and propagates quitting.
         - Timer click
         '''
-        import time
         try:
             while True:
                 self.loop_iter()
@@ -272,6 +289,8 @@ class GenericViewerFrontend:
 class FirstViewerFrontend(GenericViewerFrontend):
 
     WINDOW_NAME = 'FIRST camera'
+
+    CARTOON_FILE = 'io.png'
 
     def __init__(self, system_zoom, fps, display_base_size):
 
