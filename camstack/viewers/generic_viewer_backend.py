@@ -278,5 +278,5 @@ class GenericViewerBackend:
             self.SHORTCUTS[(mods, key)]()
 
 
-class FirstViewerBackend(GenericViewerBackend):
+class PueoBackend(GenericViewerBackend):
     pass

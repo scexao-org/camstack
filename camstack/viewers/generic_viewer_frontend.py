@@ -1,4 +1,4 @@
-from __future__ import annotations  # For type hints that would otherwise induce circular imports.
+from __future__ import annotations  # For TYPE_CHECKING
 
 import os, sys
 from typing import Tuple, Any, TYPE_CHECKING
@@ -25,6 +25,7 @@ import pygame.constants as pgm_ct
 os.sched_setaffinity(0, _CORES)
 
 from camstack.viewers import frontend_utils as futs
+from camstack.viewers import onoffmodes
 
 import numpy as np
 from PIL import Image
@@ -89,11 +90,17 @@ class GenericViewerFrontend:
 
         self.pg_updated_rects = []  # For processing in the loop
 
-        # ----------------------------
-        #          labels
-        # ----------------------------
-
+        #####
+        # Labels
+        #####
         self._init_labels()
+
+        #####
+        # OnOff states
+        #####
+        # Generic syntax?
+        # {Attribute: callback} dictionary?
+        self._init_onoff_modes()
 
         # TODO class variable
         #path_cartoon = os.environ['HOME'] + "/Pictures/io.png"
@@ -146,7 +153,10 @@ class GenericViewerFrontend:
 
         # {Status message [sat, acquiring dark, acquiring ref...]}
 
-    def _update_labels_postloop(self):
+    def _init_onoff_modes(self):
+        self._onoffmodes = {'CROSSHAIR': onoffmodes.Crosshair()}
+
+    def _inloop_update_labels(self):
         tint = self.backend_obj.input_shm.get_expt()
         ndr = self.backend_obj.input_shm.get_ndr()
         self.lbl_cropzone.render(self.backend_obj.input_shm.get_crop(),
@@ -168,6 +178,9 @@ class GenericViewerFrontend:
 
         self.backend_obj = backend
         self.has_backend = True
+
+        for mode_key in self._onoffmodes:
+            self._onoffmodes[mode_key].register_backend(backend)
 
     def run(self) -> None:
         '''
@@ -243,33 +256,37 @@ class GenericViewerFrontend:
                 self.data_blit_staging[:, :cskip, :] = 0
                 # This is gonna be trouble with odd sizes, but we should be OK.
                 self.data_blit_staging[:, -cskip:, :] = 0
+
             elif col_fac >= row_fac:
                 # Rescale based on columns, pad rows
-                rsize = self.system_zoom * int(
-                        round(data_output.shape[0] / col_fac))
+                rsize = self.system_zoom *\
+                    int(round(data_output.shape[0] / col_fac))
                 rskip = (self.data_disp_size[0] - rsize) // 2
-                self.data_blit_staging[rskip:-rskip, :, :] = np.asarray(
-                        img.resize((self.data_disp_size[1], rsize),
+                self.data_blit_staging[rskip:-rskip, :, :] = \
+                    np.asarray(img.resize((self.data_disp_size[1], rsize),
                                    Image.NEAREST))
                 self.data_blit_staging[:rskip, :, :] = 0
                 self.data_blit_staging[-rskip:, :, :] = 0
             else:
-                raise ValueError
+                raise ValueError("row_fac / col_fac calculation messed up.")
 
-        else:
+        else:  # Data is the native display size.
             self.data_blit_staging = np.asarray(
                     img.resize((self.data_disp_size[::-1]), Image.NEAREST))
 
         pygame.surfarray.blit_array(self.pg_datasurface, self.data_blit_staging)
 
+        # Drawing for toggled modes
+        self._inloop_onoff_modes()
         # Manage labels
-        self._update_labels_postloop()
+        self._inloop_update_labels()
 
+        # Finally
         self.pg_screen.blit(self.pg_datasurface, self.pg_data_rect)
         self.pg_updated_rects += [self.pg_data_rect]
 
 
-class FirstViewerFrontend(GenericViewerFrontend):
+class PueoFrontend(GenericViewerFrontend):
 
     WINDOW_NAME = 'FIRST camera'
 
