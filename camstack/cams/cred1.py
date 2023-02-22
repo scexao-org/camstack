@@ -97,6 +97,13 @@ class CRED1(EDTCamera):
     # =====================
 
     def prepare_camera_for_size(self, mode_id=None):
+        # Note: when called the first time, this immediately follows
+        # self.init_framegrab_backend()
+        # So, the serial port is live, but we haven't tried to talk yet.
+        # Great time to check camera status!
+
+        self.process_camera_status(self.get_camera_status())
+
         logg.debug('prepare_camera_for_size @ CRED1')
 
         if mode_id is None:
@@ -177,6 +184,9 @@ class CRED1(EDTCamera):
         time.sleep(.1)
         self.get_cryo_pressure()  # Sets DET-PRES
         time.sleep(.1)
+        water_temp = self.get_water_temperature()
+        if water_temp > 40.0:
+            self._emergency_abort()
 
     # ===========================================
     # AD HOC METHODS - TO BE BOUND IN THE SHELL ?
@@ -213,6 +223,13 @@ class CRED1(EDTCamera):
         logg.error(msg)
         raise AssertionError(msg)
 
+    def _emergency_abort(self):
+        # Doing this automatically avoids falling in safe mode
+        # and needing a power cycle.
+        logg.critical('Stopping cooling because water is too hot!')
+        # Self.shutdown is a trap, no return expected ever.
+        self.send_command("set cooling off")
+
     def set_synchro(self, synchro: bool):
         val = ('off', 'on')[synchro]
         _ = self.send_command(f'set extsynchro {val}')
@@ -222,6 +239,61 @@ class CRED1(EDTCamera):
 
         logg.info(f'set_synchro: {self.synchro}')
         return self.synchro
+
+    def get_camera_status(self) -> str:
+        res = self.send_command('status')
+        logg.info(f'get_camera_status: {res}')
+
+        return res
+
+    def process_camera_status(self, status: str) -> None:
+        if status == 'operational':
+            return
+
+        if status == 'standby':
+            logg.error(
+                    "Camera is in standby mode! Need to disable by serial command 'set standby off'."
+            )
+            return
+
+        if status in ['prevsafe', 'poorvacuum']:
+            logg.error(f"Camera status {status}")
+            self.send_command("continue")
+            time.sleep(1.0)
+            # Now expecting 'ready'
+            status = self.get_camera_status()
+
+        if status == 'ready':
+            logg.error(
+                    f"Camera status is 'ready' (OK but warm). Temp = {self.get_temperature():.1f}"
+            )
+            self.send_command("set cooling on")
+            # Now expecting 'isbeingcooled'
+            status = self.get_camera_status()
+
+        if status == 'isbeingcooled':
+            # Start a temperature capture loop.
+            logg.warning(
+                    'Starting temperature watch loop... Ctrl + C to interrupt and abort.'
+            )
+            try:
+                while status == 'isbeingcooled':
+                    # self.poll... will ask for water temperature AND trigger and emergency shutdown if needed.
+                    self.poll_camera_for_keywords()
+                    status = self.get_camera_status()
+                    print(f'status = {status} - Cryo temp = {self.get_temperature():.1f} - Water temp = {self.get_water_temperature:.1f}'
+                          )
+
+            except KeyboardInterrupt:
+                self.logg.error(
+                        'Abort during cooling wait. Camera is still cooling tho!'
+                )
+                self.release()
+
+                class InitializationError(Exception):
+                    pass
+
+                raise InitializationError('CRED1 not cold yet.')
 
     def set_readout_mode(self, mode):
         self.send_command(f'set mode {mode}')
@@ -325,9 +397,23 @@ class CRED1(EDTCamera):
         logg.info(f'get_temperature: {temp}')
         return temp
 
-    def _shutdown(self):
-        input(f'Detector temperature {self.get_temperature()} K; proceed anyway ? Ctrl+C aborts.'
-              )
+    def get_water_temperature(self):
+        temp = float(self.send_command('temp water raw'))
+        logg.info(f'get_water_temperature: {temp}')
+        if temp > 30.0:
+            logg.warn(f'get_water_temperature: {temp}')
+        if temp > 40.0:
+            logg.critical(f'get_water_temperature: {temp}')
+
+        return temp
+
+    def _shutdown(self, force: bool = False):
+        if not force:
+            input(f'Detector temperature {self.get_temperature()} K; proceed anyway ? Ctrl+C aborts.'
+                  )
+        else:
+            print(f'Force shutdown... temp {self.get_temperature()} K')
+
         res = self.send_command('shutdown')
         if 'OK' in res:
             while True:
