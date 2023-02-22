@@ -286,8 +286,8 @@ class CRED1(EDTCamera):
     def get_NDR(self):
         self.NDR = int(self.send_command('nbreadworeset raw'))
         self._set_formatted_keyword('DET-NSMP', self.NDR)
-        self._set_formatted_keyword('DET-SMPL', ('globalsingle',
-                                                 'globalcds')[self.NDR > 1])
+        self._set_formatted_keyword('DET-SMPL',
+                                    ('globalsingle', 'globalcds')[self.NDR > 1])
         logg.info(f'get_NDR: {self.NDR}')
         return self.NDR
 
@@ -417,13 +417,12 @@ class Buffy(CRED1):
                                         xfull2 + 40. - self.current_mode.x0)
         else:
             # Central column
-            self._set_formatted_keyword('CRPIX2',
-                                        xfull2 - self.current_mode.x0)
-            self._set_formatted_keyword('C2PIX2',
-                                        xfull2 - self.current_mode.x0)
+            self._set_formatted_keyword('CRPIX2', xfull2 - self.current_mode.x0)
+            self._set_formatted_keyword('C2PIX2', xfull2 - self.current_mode.x0)
 
         # Override detector name
         self._set_formatted_keyword('DETECTOR', 'CRED1 - APAPANE')
+        self._set_formatted_keyword('GAIN', 0.45)
 
         # Note: RET-ANG1 is set externally by a call to "updatekw kcam RET-ANG1" from HWP scripts.
         # This avoids latency in reporty HWP states.
@@ -447,6 +446,7 @@ class Iiwi(CRED1):
 
         # Override detector name
         self._set_formatted_keyword('DETECTOR', 'CRED1 - IIWI')
+        self._set_formatted_keyword('GAIN', 1.98)
 
 
 # Quick shorthand for testing

@@ -83,7 +83,7 @@ class BaseCamera:
             'DETGAIN': (1, 'Detector multiplication factor', '%16d', 'GAIN'),
             'EXPTIME': (0.001, 'Total integration time of the frame (sec)', '%20.8f', 'EXPO'),
             'FRATE': (100., 'Frame rate of the acquisition (Hz)', '%16.3f', 'FRATE'),
-            'GAIN': (1., 'AD conversion factor (electron/ADU)', '%20.3f', 'GAIN'),
+            'GAIN': (-1., 'AD conversion factor (electron/ADU)', '%20.3f', 'GAIN'),
             'EXTTRIG': (False, 'Exposure of detector by an external trigger', 'BOOLEAN', 'TRIG'),
             'DATA-TYP': ('TEST', 'Subaru-style exp. type', '%-16s', 'DATA'),
     }
