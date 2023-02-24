@@ -178,11 +178,11 @@ class CRED1(EDTCamera):
         # Call the stuff that we can't know otherwise
         self.poll_camera_for_keywords()  # Sets 'DET-TMP'
 
-    def poll_camera_for_keywords(self):
+    def poll_camera_for_keywords(self, shm_write: bool = True):
 
-        self.get_temperature()  # Sets DET-TMP
+        self.get_temperature(shm_write=shm_write)  # Sets DET-TMP
         time.sleep(.1)
-        self.get_cryo_pressure()  # Sets DET-PRES
+        self.get_cryo_pressure(shm_write=shm_write)  # Sets DET-PRES
         time.sleep(.1)
         water_temp = self.get_water_temperature()
         if water_temp > 40.0:
@@ -241,12 +241,16 @@ class CRED1(EDTCamera):
         return self.synchro
 
     def get_camera_status(self) -> str:
-        res = self.send_command('status')
+        res = self.send_command('status')[1][1:]
         logg.info(f'get_camera_status: {res}')
 
         return res
 
     def process_camera_status(self, status: str) -> None:
+
+        class InitializationError(Exception):
+            pass
+
         if status == 'operational':
             return
 
@@ -254,7 +258,8 @@ class CRED1(EDTCamera):
             logg.error(
                     "Camera is in standby mode! Need to disable by serial command 'set standby off'."
             )
-            return
+            raise InitializationError(
+                    'Disable stanby mode manually and restart.')
 
         if status in ['prevsafe', 'poorvacuum']:
             logg.error(f"Camera status {status}")
@@ -265,7 +270,7 @@ class CRED1(EDTCamera):
 
         if status == 'ready':
             logg.error(
-                    f"Camera status is 'ready' (OK but warm). Temp = {self.get_temperature():.1f}"
+                    f"Camera status is 'ready' (OK but warm). Temp = {self.get_temperature(shm_write=False):.1f}"
             )
             self.send_command("set cooling on")
             # Now expecting 'isbeingcooled'
@@ -279,10 +284,12 @@ class CRED1(EDTCamera):
             try:
                 while status == 'isbeingcooled':
                     # self.poll... will ask for water temperature AND trigger and emergency shutdown if needed.
-                    self.poll_camera_for_keywords()
+                    self.poll_camera_for_keywords(shm_write=False)
                     status = self.get_camera_status()
-                    print(f'status = {status} - Cryo temp = {self.get_temperature():.1f} - Water temp = {self.get_water_temperature:.1f}'
+                    print(f'status = {status} - Cryo temp = {self.get_temperature(shm_write=False):.1f} - Water temp = {self.get_water_temperature():.1f}'
                           )
+
+                logg.warning(f'Camera now cold - status: {status}.')
 
             except KeyboardInterrupt:
                 self.logg.error(
@@ -290,10 +297,11 @@ class CRED1(EDTCamera):
                 )
                 self.release()
 
-                class InitializationError(Exception):
-                    pass
-
                 raise InitializationError('CRED1 not cold yet.')
+
+        if status != 'operational':
+            logg.critical(f'Camera status {status} - fatal.')
+            raise InitializationError('Take actions by hand and restart.')
 
     def set_readout_mode(self, mode):
         self.send_command(f'set mode {mode}')
@@ -385,15 +393,18 @@ class CRED1(EDTCamera):
         # CRED1 has no tint management
         return 1. / self.get_fps()
 
-    def get_cryo_pressure(self):
+    def get_cryo_pressure(self, shm_write: bool = True):
         pres = float(self.send_command('pressure raw'))
-        self._set_formatted_keyword('DET-PRES', pres)
+        if shm_write:
+            self._set_formatted_keyword('DET-PRES', pres)
         logg.info(f'get_cryo_pressure: {pres}')
         return pres
 
-    def get_temperature(self):
+    def get_temperature(self, shm_write: bool = True):
+        # We're gonna need this method even when the SHM has not been initialized yet.
         temp = float(self.send_command('temp cryostat diode raw'))
-        self._set_formatted_keyword('DET-TMP', temp)
+        if shm_write:
+            self._set_formatted_keyword('DET-TMP', temp)
         logg.info(f'get_temperature: {temp}')
         return temp
 
