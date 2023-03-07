@@ -243,6 +243,10 @@ class CRED1(EDTCamera):
     def get_camera_status(self) -> str:
         res = self.send_command('status')[1][1:]
         logg.info(f'get_camera_status: {res}')
+        if res == '':
+            # Second chance:
+            res = self.send_command('status')[1][1:]
+            logg.info(f'get_camera_status: {res}')
 
         return res
 
