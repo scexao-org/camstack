@@ -29,7 +29,7 @@ Also includes the camera viewers - and their backups
   - a subclass of the `BaseCamera`
   - with a specialized backend (USB, framegrabber, underlying API...)
   - with model specific definitions (C-Red One, C-Red 2, Orca, etc...)
-  - with camera specific definitions (special cropmodes for Chuck, GLINT, etc...)
+  - with camera specific definitions (special cropmodes for Palila, GLINT, etc...)
 
 ### Camera startup
 
@@ -66,16 +66,16 @@ For dumb cameras (acquisition channel but no control channel), the FG acquisitio
 
 | Camera | What         | Class        | Medium               | Bash entry          | Python entry     | Computer | Stream      | Raw stream   |
 | ------ | ------------ | ------------ | -------------------- | ------------------- | ---------------- | -------- | ----------- | ------------ |
-| Buffy  | CRED1        | Buffy        | Camlink              | `cam-buffystart`    | `buffycam.py`    | scexao5  | `kcam`      | `kcam_raw`   |
-| Chuck  | CRED2        | Chuck        | Camlink              | `cam-chuckstart`    | `chuckcam.py`    | scexao5  | `ircam0`    | `ircam0_raw` |
+| Apapane| CRED1        | Apapane      | Camlink              | `cam-apapanestart`  | `apapane.py`     | scexao5  | `apapane`   | `apapane_raw`|
+| Palila | CRED2        | Palila       | Camlink              | `cam-palilastart`   | `palila.py`      | scexao5  | `palila`    | `palila_raw` |
 | GLINT  | CRED2        | GLINT        | Camlink              | `cam-glintstart`    | `glintcam.py`    | scexao5  | `glint`     |              |
-| Rajni  | CRED2        | Rajni        | Camlink              | `cam-rajnistart`    | `rajnicam.py`    | scexao5  | `rajni`     |              |
+| Kiwikiu| CRED2        | Kiwikiu      | Camlink              | `cam-kiwikiustart`  | `kiwikiu.py`     | scexao5  | `kiwikiu`   |              |
 | Reno   | Ocam2K       | OCAM2K       | Camlink              | `cam-ocamstart`     | `renocam.py`     | scexao5  | `ocam2d`    | `ocam2krc`   |
 | Alala  | OrcaQuest    | AlalaOrcam   | CoaxPress (x)or USB3 | `cam-alalacamstart` | `first_orcam.py` | alala    | `orcam`     |              |
 | FIRST  | OrcaQuest    | FIRSTOrcam   | CoaxPress (x)or USB3 | `cam-fircamstart`   | `alala_orcam.py` | kamua    | `orcam`     |              |
 | FLIR   | BlackFlyS    | BlackFlyS    | USB3                 | ` `                 | ` `              |          |             |              |
 | FLIR   | GS3-U3-23S6M | Grasshopper3 | USB3                 | ` `                 | ` `              | scexao5  |             |              |
-| FLIR   | FL3-U3-13S2M | Flea3        | USB3                 | `cam-vpupcamstart`  | `vpupcam.py`     | vampires | `vpupcam` |              |
+| FLIR   | FL3-U3-13S2M | Flea3        | USB3                 | `cam-vpupcamstart`  | `vpupcam.py`     | vampires | `vpupcam`   |              |
 | FLIR   | FL3-U3-13S2M | Flea3        | USB3                 | ` `                 | ` `              | kamua    |             |              |
 | Nuvu   | HNü128AO     | Kalao        | Camlink              | ` `                 | `kalaocam.py`    |          |             |              |
 | VCam   | Andor897     | Vampires     | Camlink              | ` `                 | ` `              | scexao5  | `vcamim<k>` |              |
@@ -86,11 +86,11 @@ For dumb cameras (acquisition channel but no control channel), the FG acquisitio
 - BaseCamera
   - EDTCamera
     - CRED1
-      - Buffy
+      - Apapane
     - CRED2
-      - Chuck
+      - Palila
       - GLINT
-      - Rajni
+      - Kiwikiu
     - OCAM2K
     - NUVU
       - Kalao

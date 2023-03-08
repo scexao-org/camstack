@@ -1,5 +1,5 @@
 '''
-    Chuck, Rajni, GLINT
+    Palila, Kiwikiu, GLINT
 '''
 import os
 import time
@@ -18,7 +18,7 @@ class CRED2_GAINENUM:
     STRING_MED = 'medium'
     STRING_LOW = 'low'
 
-    # Measured on chuck
+    # Measured on palila
     INT_HIGH = 97
     INT_MED = 26
     INT_LOW = 2
@@ -90,7 +90,7 @@ class CRED2(EDTCamera):
                 'set rawimages on'
         )  # TODO TODO WE DO NOT WANT THAT for all CRED2s, e.g. GLINT
 
-        # Abstract method - subclassed by Rajni/Chuck/GLINT
+        # Abstract method - subclassed by Kiwikiu/Palila/GLINT
         self._thermal_init_commands()
 
     # =====================
@@ -296,7 +296,7 @@ class CRED2(EDTCamera):
                         'You\'ll need to power cycle the CRED2 to reboot it.')
 
 
-class Rajni(CRED2):
+class Kiwikiu(CRED2):
 
     MODES = {}
     MODES.update(CRED2.MODES)
@@ -309,11 +309,11 @@ class Rajni(CRED2):
         CRED2._fill_keywords(self)
 
         # Override detector name
-        self._set_formatted_keyword('DETECTOR', 'CRED2 - RAJNI')
+        self._set_formatted_keyword('DETECTOR', 'CRED2 - KIWIKIU')
 
     def _thermal_init_commands(self):
-        # Rajni + chuck: water cooling,
-        logg.debug('_thermal_init_commands @ Rajni')
+        # Kiwikiu + palila: water cooling,
+        logg.debug('_thermal_init_commands @ Kiwikiu')
         self.send_command('set fan speed 0')
         self.send_command('set fan mode manual')
         self.set_temperature_setpoint(-40.0)
@@ -360,7 +360,7 @@ class GLINT(CRED2):
         self.get_tint()
 
 
-class Chuck(CRED2):
+class Palila(CRED2):
 
     INTERACTIVE_SHELL_METHODS = [] + CRED2.INTERACTIVE_SHELL_METHODS
 
@@ -407,7 +407,7 @@ class Chuck(CRED2):
         CRED2._fill_keywords(self)
 
         # Override detector name
-        self._set_formatted_keyword('DETECTOR', 'CRED2 - CHUCK')
+        self._set_formatted_keyword('DETECTOR', 'CRED2 - PALILA')
 
     def poll_camera_for_keywords(self):
         CRED2.poll_camera_for_keywords(self)
@@ -420,8 +420,8 @@ class Chuck(CRED2):
                 pass
 
     def _thermal_init_commands(self):
-        # Rajni / Chuck: water cooling
-        logg.debug('_thermal_init_commands @ Chuck')
+        # Kiwikiu / Palila: water cooling
+        logg.debug('_thermal_init_commands @ Palila')
         self.send_command('set fan speed 0')
         self.send_command('set fan mode manual')
         self.set_temperature_setpoint(-40.0)
@@ -429,6 +429,6 @@ class Chuck(CRED2):
 
 # Quick shorthand for testing
 if __name__ == "__main__":
-    cam = Chuck('chuck', 'ircam0', mode_id=0, unit=0, channel=0)
+    cam = Palila('palila', 'palila', mode_id=0, unit=0, channel=0)
     from camstack.core.utilities import shellify_methods
     shellify_methods(cam, globals())

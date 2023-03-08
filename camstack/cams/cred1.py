@@ -1,5 +1,5 @@
 '''
-    Buffy
+    Apapane
 '''
 import os
 import time
@@ -440,7 +440,7 @@ class CRED1(EDTCamera):
                         'You\'ll need to power cycle the CRED1 to reboot it.')
 
 
-class Buffy(CRED1):
+class Apapane(CRED1):
 
     INTERACTIVE_SHELL_METHODS = [] + CRED1.INTERACTIVE_SHELL_METHODS
 
@@ -525,7 +525,7 @@ class Buffy(CRED1):
         self._set_formatted_keyword('DETECTOR', 'CRED1 - APAPANE')
         self._set_formatted_keyword('GAIN', 0.45)
 
-        # Note: RET-ANG1 is set externally by a call to "updatekw kcam RET-ANG1" from HWP scripts.
+        # Note: RET-ANG1 is set externally by a call to "updatekw apapane RET-ANG1" from HWP scripts.
         # This avoids latency in reporty HWP states.
 
 
@@ -552,6 +552,6 @@ class Iiwi(CRED1):
 
 # Quick shorthand for testing
 if __name__ == "__main__":
-    cam = Buffy('buffycam', 'kcam', mode_id='full', unit=1, channel=0)
+    cam = Apapane('apapane', 'apapane', mode_id='full', unit=1, channel=0)
     from camstack.core.utilities import shellify_methods
     shellify_methods(cam, globals())

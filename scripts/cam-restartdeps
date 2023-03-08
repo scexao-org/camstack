@@ -8,7 +8,7 @@
     which also includes ZMQ streaming, UTR, and ocam_decode
 
     Usage:
-        cam-restartdeps (ocam|chuck|buffy|rajni|glint)...
+        cam-restartdeps (ocam|palila|apapane|kiwikiu|glint)...
 '''
 
 
@@ -28,11 +28,11 @@ if __name__ == "__main__":
     args = docopt(__doc__)
 
     NAME_MAPPING = {
-        'rajni': 'rajni_ctrl',
+        'kiwikiu': 'kiwikiu_ctrl',
         'glint': 'glint_ctrl',
-        'buffy': 'kcam_ctrl',
+        'apapane': 'apapane_ctrl',
         'ocam': 'ocam_ctrl',
-        'chuck': 'chuck_ctrl',
+        'palila': 'palila_ctrl',
     }
 
     tmuxes = [NAME_MAPPING[cam] for cam in args if args[cam]]

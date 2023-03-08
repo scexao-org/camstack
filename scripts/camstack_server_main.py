@@ -19,8 +19,8 @@ from camstack.cams.ocam import OCAM2K
 
 CLASS_DICT = {
         'dummycam': DummyCamera,
-        'chuck': CRED2,
-        'rajni': CRED2,
+        'palila': CRED2,
+        'kiwikiu': CRED2,
         'reno': OCAM2K,
         'ocam': OCAM2K,
 }

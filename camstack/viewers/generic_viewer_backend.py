@@ -122,7 +122,7 @@ class GenericViewerBackend:
 
         halfside = (self.shm_shape[0] / 2**(self.crop_lvl_id + 1),
                     self.shm_shape[1] / 2**(self.crop_lvl_id + 1))
-        # Could define explicit slices using a self.CROPSLICE. Could be great for buffy PDI.
+        # Could define explicit slices using a self.CROPSLICE. Could be great for apapane PDI.
         cr, cc = self.CROP_CENTER_SPOT
 
         # Adjust, in case we've just zoomed-out from a crop spot that's too close to the edge!

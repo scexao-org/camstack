@@ -1,10 +1,11 @@
 '''
     Generic utilies for all the viewers !
 
-    Factorizing some code between buffycam.py, chuckcam.py, renocam.py
+    Factorizing some code between apapane.py, palila.py, renocam.py
 '''
 
 import numpy as np
+from enum import Enum
 from pyMilk.interfacing.isio_shmlib import SHM
 from pygame.constants import (KMOD_LALT, KMOD_LCTRL, KMOD_LSHIFT, KMOD_LMETA,
                               KMOD_RALT, KMOD_RCTRL, KMOD_RSHIFT)
@@ -29,6 +30,11 @@ FGD_COL = WHITE  # foreground color (text)
 SAT_COL = RED1  # saturation color (text)
 BGD_COL = BLK  # background color
 BUT_COL = BLUE  # button color
+
+
+class CREDWHAT(Enum):
+    ONE = 1
+    TWO = 2
 
 
 def locate_redis_db():
@@ -99,23 +105,17 @@ def open_shm_fullpath(shm_name, dims=(1, 1), check=False):
     return shm_data
 
 
-CRED1_str = 'cred1'
-CRED2_str = 'cred2'
-
-
 # ------------------------------------------------------------------
 #  Read database for some stage status
 # ------------------------------------------------------------------
-def RDB_pull(rdb, rdb_alive: bool, cam_buffy: bool, do_defaults=True):
+def RDB_pull(rdb, rdb_alive: bool, cam_apapane: bool, do_defaults=True):
     '''
-        cam_buffy: False for Chuck, True for Buffy
+        cam_apapane: False for Palila, True for Apapane
         do_defaults: if rdb_alive is False, fallback to defaults
                      ortherwise raise a ConnectionError
                     This Error can be caught in order for a call to just "do nothing" and keep prev. values
                     rather than all of a sudden overwrite with all the defaults.
     '''
-
-    PUP_KEY = ('X_CHKPUP', 'X_BUFPUP')[cam_buffy]
 
     if rdb_alive:
         import redis  # Need the namespace for the exception to catch
@@ -131,11 +131,11 @@ def RDB_pull(rdb, rdb_alive: bool, cam_buffy: bool, do_defaults=True):
         fits_keys_to_pull = {
                 'X_IRCFLT',
                 'X_IRCBLK',
-                PUP_KEY,
-                'X_CHKPUS',
-                'X_NULPKO',
+                'X_PALPUP',
+                'X_PALPUS',
+                'X_PHOPKO',
                 'X_RCHPKO',
-                'X_BUFPKO',
+                'X_APAPKO',
                 'D_IMRPAD',
                 'D_IMRPAP',
                 'OBJECT',
@@ -148,13 +148,13 @@ def RDB_pull(rdb, rdb_alive: bool, cam_buffy: bool, do_defaults=True):
             values = pipe.execute()
         status = {k: v for k, v in zip(fits_keys_to_pull, values)}
 
-        pup = status[PUP_KEY].strip() == 'IN'
-        reachphoto = status['X_CHKPUS'].strip() == 'REACH'
-        gpin = status['X_NULPKO'].strip() == 'IN'
+        pup = status['X_PALPUP'].strip() == 'IN'
+        reachphoto = status['X_PALPUS'].strip() == 'REACH'
+        gpin = status['X_PHOPKO'].strip() == 'IN'
         rpin = status['X_RCHPKO'].strip() == 'IN'
         slot = status['X_IRCFLT']
         block = status['X_IRCBLK'].strip() == 'IN'
-        bpin = status['X_BUFPKO'].strip() == 'IN'
+        bpin = status['X_APAPKO'].strip() == 'IN'
         pap = float(status['D_IMRPAP'])
         pad = float(status['D_IMRPAD'])
         target = status['OBJECT']
@@ -184,10 +184,10 @@ def get_img_data(cam, cam_type, bias=None, badpixmap=None, subt_ref=False,
     Reads from the already-opened shared memory
     data structure.
     ---------------------------------------- '''
-    if cam_type == CRED1_str:
+    if cam_type == CREDWHAT.ONE:
         temp = cam.get_data(check, timeout=1.0).astype(np.float32)
         temp[temp == 65535] = 1.
-    elif cam_type == CRED2_str:
+    elif cam_type == CREDWHAT.TWO:
         temp = cam.get_data(check, timeout=1.0)
         temp = temp.astype(np.float32)  # CONVERSION
     else:
@@ -215,11 +215,11 @@ def get_img_data(cam, cam_type, bias=None, badpixmap=None, subt_ref=False,
 
 
 def get_img_data_cred1(cam, *args, **kwargs):
-    return get_img_data(cam, CRED1_str, *args, **kwargs)
+    return get_img_data(cam, CREDWHAT.ONE, *args, **kwargs)
 
 
 def get_img_data_cred2(cam, *args, **kwargs):
-    return get_img_data(cam, CRED2_str, *args, **kwargs)
+    return get_img_data(cam, CREDWHAT.TWO, *args, **kwargs)
 
 
 def ave_img_data_from_callable(get_img_data, nave, bias=None, badpixmap=None,
@@ -235,8 +235,7 @@ def ave_img_data_from_callable(get_img_data, nave, bias=None, badpixmap=None,
     t_start = time.time()
     for i in range(nave):
         if disp:
-            sys.stdout.write('\r tint = %8.6f s: acq. #%5d' %
-                             (tint * 1.e-6, i))
+            sys.stdout.write('\r tint = %8.6f s: acq. #%5d' % (tint * 1.e-6, i))
             sys.stdout.flush()
         if i == 0:
             ave_im = get_img_data(bias=bias, badpixmap=badpixmap,
