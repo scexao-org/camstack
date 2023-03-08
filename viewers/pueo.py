@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
-# -------------------------------------------- #
-#    __                    ___                 #
-#   /__\ ___ _ __   ___   / __\__ _ _ __ ___   #
-#  / \/// _ \ '_ \ / _ \ / /  / _` | '_ ` _ \  #
-# / _  \  __/ | | | (_) / /__| (_| | | | | | | #
-# \/ \_/\___|_| |_|\___/\____/\__,_|_| |_| |_| #
-#                                              #
-# -------------------------------------------- #
+# ------------------------ #
+#    ___                   #
+#   / _ \_   _  ___  ___   #
+#  / /_)/ | | |/ _ \/ _ \  #
+# / ___/| |_| |  __/ (_) | #
+# \/     \__,_|\___|\___/  #
+#                          #
+# ------------------------ #
 
 import os
 
@@ -34,7 +34,7 @@ import camstack.viewers.viewer_common as cvc
 MILK_SHM_DIR = os.environ['MILK_SHM_DIR']
 home = os.getenv('HOME')
 
-hmsg = """PUEOCAM's INSTRUCTIONS
+hmsg = """PUEO's INSTRUCTIONS
 -------------------
 
 camera controls:
@@ -62,7 +62,7 @@ mouse controls:
 --------------
 mouse      : display of the flux under the mouse pointer
 
-ESC   : quit pueocam
+ESC   : quit pueo
 
 """
 
@@ -178,7 +178,7 @@ font3 = pygame.font.SysFont("monospace", 4 * zoom)
 font5 = pygame.font.SysFont("monospace", 4 * zoom)
 font5.set_bold(True)
 
-path_cartoon = "/home/scexao/conf/renocam_aux/Pueo%d.png" % (zoom, )
+path_cartoon = "/home/scexao/conf/pueo_aux/Pueo%d.png" % (zoom, )
 cartoon1 = pygame.image.load(path_cartoon).convert_alpha()
 
 lbl = font1.render("PUEO camera viewer", True, WHITE, BGCOL)
@@ -410,7 +410,7 @@ while True:  # the main game loop
             # --------------------------
             cam.close()  # global disp map
             bias_shm.close()
-            print("Pueocam has ended normally.")
+            print("Pueo has ended normally.")
             sys.exit()
 
         elif event.type == KEYDOWN:
@@ -420,7 +420,7 @@ while True:  # the main game loop
                 # close shared memory access
                 # --------------------------
                 cam.close()  # global disp map
-                print("Pueocam has ended normally.")
+                print("Pueo has ended normally.")
                 sys.exit()
 
             if event.key == K_c:
@@ -435,7 +435,7 @@ while True:  # the main game loop
             if event.key == K_d:
                 subt_bias = not subt_bias
                 if subt_bias:
-                    bname = home + "/conf/renocam_aux/bias.fits"
+                    bname = home + "/conf/pueo_aux/bias.fits"
                     try:
                         # bias = pf.getdata(bname)
                         bias = bias_shm.get_data()
@@ -467,7 +467,7 @@ while True:  # the main game loop
                         else:
                             temp3 += get_img_data(True) / float(ndark)
 
-                    bname = home + "/conf/renocam_aux/bias.fits"
+                    bname = home + "/conf/pueo_aux/bias.fits"
 
                     pf.writeto(bname, temp3, overwrite=True)
                     time.sleep(0.2)
@@ -490,11 +490,11 @@ while True:  # the main game loop
                         else:
                             temp3 += get_img_data(True) / float(nref)
 
-                    rname = home + "/conf/renocam_aux/ref.fits"
+                    rname = home + "/conf/pueo_aux/ref.fits"
                     pf.writeto(rname, temp3, overwrite=True)
 
                 else:
-                    rname = home + "/conf/renocam_aux/ref.fits"
+                    rname = home + "/conf/pueo_aux/ref.fits"
                     ref_im = pf.getdata(rname)
                     subt_ref = not subt_ref
 
@@ -525,8 +525,8 @@ while True:  # the main game loop
                         #os.system("log Chuckcam: stop logging images")
 
             # Reset gain safety with Ctrl+Alt+G
-            if event.key == K_g and cvc.check_modifiers(
-                    mmods, lc=True, la=True):
+            if event.key == K_g and cvc.check_modifiers(mmods, lc=True,
+                                                        la=True):
                 os.system("pywfs_gainreset")
 
             # Direct gains Ctrl+Shift 2**number

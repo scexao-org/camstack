@@ -1,5 +1,4 @@
 import os
-
 from camstack.core.utilities import DependentProcess, RemoteDependentProcess
 from camstack.cams.ocam import OCAM2K
 from camstack.core.logger import init_camstack_logger
@@ -72,5 +71,5 @@ if __name__ == "__main__":
 
     server = PyroServer(bindTo=(IP_SC5, 0),
                         nsAddress=(PYRONS3_HOST, PYRONS3_PORT))
-    server.add_device(cam, pk.RENO, add_oneway_callables=True)
+    server.add_device(cam, pk.pueo, add_oneway_callables=True)
     server.start()
