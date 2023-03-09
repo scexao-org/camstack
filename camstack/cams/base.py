@@ -374,11 +374,15 @@ class BaseCamera:
 
         while True:
             # In case the SHM doesn't exist yet
-            try:
-                shm = SHM(self.STREAMNAME, symcode=0)
-                break
-            except:
-                time.sleep(0.1)
+            if os.path.isfile(os.environ['MILK_SHM_DIR'] + '/' +
+                              self.STREAMNAME + '.im.shm'):
+                try:
+                    shm = SHM(self.STREAMNAME, symcode=0)
+                    break
+                except:
+                    pass
+
+            time.sleep(0.1)
 
         shm.IMAGE.semflush(shm.semID)
         while shm.IMAGE.semtrywait(shm.semID):
