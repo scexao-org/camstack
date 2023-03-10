@@ -30,7 +30,7 @@ with open("README.md", 'r') as f:
 
 scripts = [
         './viewers/anycam.py',
-        './viewers/renocam.py',
+        './viewers/pueo.py',
         './viewers/apapane.py',
         './viewers/palila.py',
         './viewers/firstcam.py',
