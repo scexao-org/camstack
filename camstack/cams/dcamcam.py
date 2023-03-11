@@ -89,6 +89,18 @@ class DCAMCamera(BaseCamera):
         self.control_shm.set_data(self.control_shm.get_data() * 0 + len(params))
         # Find a way to (prepare to) feed to the camera
 
+    def abort_exposure(self):
+        # Basically restart the stack. Hacky way to abort a very long exposure.
+        # This will kill the fgrab process, and re-init
+        # We're reinjecting a short exposure time to reset a potentially very long exposure mode.
+        
+        # This is a faster version of the intended:
+        # self.set_camera_mode(self.current_mode_id)
+        
+        self._kill_taker_no_dependents()
+        self.prepare_camera_for_size(self.current_mode_id, params_injection={dcamprop.EProp.EXPOSURETIME: 0.1})
+        self._start_taker_no_dependents(reuse_shm=True)
+
     def _prepare_backend_cmdline(self, reuse_shm: bool = False):
 
         # Prepare the cmdline for starting up!
@@ -137,9 +149,12 @@ class DCAMCamera(BaseCamera):
             We set the first bit to 1 if it's a set.
         '''
 
+
         logg.debug(
                 f'DCAMCamera _dcam_prm_setgetmultivalue [getonly: {getonly_flag}]: {list(zip(fits_keys, values))}'
         )
+        
+        n_keywords = len(values)
 
         if getonly_flag:
             dcam_string_keys = [
@@ -152,9 +167,8 @@ class DCAMCamera(BaseCamera):
                 dk: v
                 for dk, v in zip(dcam_string_keys, values)
         })
-        self.control_shm.set_data(self.control_shm.get_data() * 0 +
-                                  1)  # Toggle grabber process
-        self.camera_shm.multi_recv_data(2, True)  # Ensure re-sync
+        self.control_shm.set_data(self.control_shm.get_data() * 0 + n_keywords)  # Toggle grabber process
+        self.control_shm.multi_recv_data(3, True)  # Ensure re-sync
 
         fb_values = [
                 self.control_shm.get_keywords()[dk] for dk in dcam_string_keys
