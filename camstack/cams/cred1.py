@@ -550,6 +550,28 @@ class Iiwi(CRED1):
         self._set_formatted_keyword('GAIN', 1.98)
 
 
+class Ristretto(CRED1):
+
+    INTERACTIVE_SHELL_METHODS = [] + CRED1.INTERACTIVE_SHELL_METHODS
+
+    MODES = {}
+    MODES.update(CRED1.MODES)
+
+    KEYWORDS = {}
+    KEYWORDS.update(CRED1.KEYWORDS)
+
+    REDIS_PUSH_ENABLED = True
+    REDIS_PREFIX = 'x_I'  # LOWERCASE x to not get mixed with the SCExAO keys
+
+    def _fill_keywords(self):
+        CRED1._fill_keywords(self)
+
+        # Override detector name
+        self._set_formatted_keyword('DETECTOR', 'CRED1 - IIWI')
+        self._set_formatted_keyword('GAIN', 1.98)
+
+
+
 # Quick shorthand for testing
 if __name__ == "__main__":
     cam = Apapane('apapane', 'apapane', mode_id='full', unit=1, channel=0)
