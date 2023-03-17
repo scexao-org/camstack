@@ -12,6 +12,7 @@ from pyMilk.interfacing.shm import SHM
 import numpy as np
 
 import time
+import threading
 
 
 class DCAMCamera(BaseCamera):
@@ -34,6 +35,7 @@ class DCAMCamera(BaseCamera):
         # Do basic stuff
         self.dcam_number = dcam_number
         self.control_shm = None
+        self.control_shm_lock = threading.Lock()
 
         BaseCamera.__init__(self, name, stream_name, mode_id, no_start=no_start,
                             taker_cset_prio=taker_cset_prio,
@@ -93,12 +95,14 @@ class DCAMCamera(BaseCamera):
         # Basically restart the stack. Hacky way to abort a very long exposure.
         # This will kill the fgrab process, and re-init
         # We're reinjecting a short exposure time to reset a potentially very long exposure mode.
-        
+
         # This is a faster version of the intended:
         # self.set_camera_mode(self.current_mode_id)
-        
+
         self._kill_taker_no_dependents()
-        self.prepare_camera_for_size(self.current_mode_id, params_injection={dcamprop.EProp.EXPOSURETIME: 0.1})
+        self.prepare_camera_for_size(
+                self.current_mode_id,
+                params_injection={dcamprop.EProp.EXPOSURETIME: 0.1})
         self._start_taker_no_dependents(reuse_shm=True)
 
     def _prepare_backend_cmdline(self, reuse_shm: bool = False):
@@ -149,11 +153,10 @@ class DCAMCamera(BaseCamera):
             We set the first bit to 1 if it's a set.
         '''
 
-
         logg.debug(
                 f'DCAMCamera _dcam_prm_setgetmultivalue [getonly: {getonly_flag}]: {list(zip(fits_keys, values))}'
         )
-        
+
         n_keywords = len(values)
 
         if getonly_flag:
@@ -163,16 +166,19 @@ class DCAMCamera(BaseCamera):
         else:
             dcam_string_keys = [f'{dcam_key:08x}' for dcam_key in dcam_keys]
 
-        self.control_shm.reset_keywords({
-                dk: v
-                for dk, v in zip(dcam_string_keys, values)
-        })
-        self.control_shm.set_data(self.control_shm.get_data() * 0 + n_keywords)  # Toggle grabber process
-        self.control_shm.multi_recv_data(3, True)  # Ensure re-sync
+        with self.control_shm_lock:
+            self.control_shm.reset_keywords({
+                    dk: v
+                    for dk, v in zip(dcam_string_keys, values)
+            })
+            self.control_shm.set_data(self.control_shm.get_data() * 0 +
+                                      n_keywords)  # Toggle grabber process
+            self.control_shm.multi_recv_data(3, True)  # Ensure re-sync
 
-        fb_values = [
-                self.control_shm.get_keywords()[dk] for dk in dcam_string_keys
-        ]  # Get back the cam value
+            fb_values = [
+                    self.control_shm.get_keywords()[dk]
+                    for dk in dcam_string_keys
+            ]  # Get back the cam value
 
         for idx, (fk, dcamk) in enumerate(zip(fits_keys, dcam_keys)):
             if fk is not None:
