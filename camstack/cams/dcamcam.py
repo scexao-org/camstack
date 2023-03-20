@@ -257,7 +257,7 @@ class OrcaQuest(DCAMCamera):
         return val
 
     def set_tint(self, tint: float):
-        return self._dcam_prm_setvalue(tint, 'EXPTIME',
+        return self._dcam_prm_setvalue(float(tint), 'EXPTIME',
                                        dcamprop.EProp.EXPOSURETIME)
 
     def get_fps(self):
