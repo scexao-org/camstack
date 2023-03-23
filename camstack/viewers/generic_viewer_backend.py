@@ -62,6 +62,7 @@ class GenericViewerBackend:
         self.flag_data_init = False
         self.flag_averaging = False
         self.flag_non_linear = False
+        self.flag_cross = False
 
         ### COLORING
         self.cmap_id = 1
@@ -82,6 +83,7 @@ class GenericViewerBackend:
                 pgm_ct.K_l: self.toggle_scaling,
                 pgm_ct.K_z: self.toggle_crop,
                 pgm_ct.K_v: self.toggle_averaging,
+                pgm_ct.K_c: self.toggle_cross,
                 pgm_ct.K_UP: partial(self.steer_crop, pgm_ct.K_UP),
                 pgm_ct.K_DOWN: partial(self.steer_crop, pgm_ct.K_DOWN),
                 pgm_ct.K_LEFT: partial(self.steer_crop, pgm_ct.K_LEFT),
@@ -112,6 +114,12 @@ class GenericViewerBackend:
             self.flag_non_linear = (self.flag_non_linear + 1) % 3
         else:
             self.flag_non_linear = value
+
+    def toggle_cross(self, state: bool=None):
+        if state is None:
+            state = not self.flag_cross
+        self.flag_cross = bool(state)
+
 
     def toggle_crop(self, which: int = None) -> None:
         if which is None:

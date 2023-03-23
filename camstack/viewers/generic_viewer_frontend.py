@@ -182,6 +182,14 @@ class GenericViewerFrontend:
                 self.lbl_t_minmax.rectangle,
         ]
 
+    def _plot_cross(self):
+        if self.backend_obj.flag_cross:
+            xc, yc = self.backend_obj.CROP_CENTER_SPOT
+            xw, yw = self.data_disp_size
+            color = pygame.Color("#4AC985")
+            pygame.draw.line(self.pg_datasurface, color, (0, yc), (xw, yc), 1)
+            pygame.draw.line(self.pg_datasurface, color, (xc, 0), (xc, yw), 1)
+
     def register_backend(self, backend: GenericViewerBackend) -> None:
 
         self.backend_obj = backend
@@ -281,6 +289,7 @@ class GenericViewerFrontend:
 
         # Manage labels
         self._update_labels_postloop()
+        self._plot_cross()
 
         self.pg_screen.blit(self.pg_datasurface, self.pg_data_rect)
         self.pg_updated_rects += [self.pg_data_rect]
