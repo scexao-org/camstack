@@ -1,11 +1,16 @@
 from __future__ import annotations  # For type hints that would otherwise induce circular imports.
 
-from typing import Tuple, TYPE_CHECKING  # For type hints
+from typing import (Tuple, Dict, List, Optional, Callable,
+                    TYPE_CHECKING)  # For type hints
+
+if TYPE_CHECKING:  # this type hint would cause a circular import
+    from .generic_viewer_frontend import GenericViewerFrontend
+    from .plugin_arch import BasePlugin
 
 import os
 
 _CORES = os.sched_getaffinity(0)  # AMD fix
-import pygame.constants as pgm_ct
+import pygame.constants as pgmc
 
 os.sched_setaffinity(0, _CORES)  # AMD fix
 
@@ -13,9 +18,6 @@ from astropy.io import fits
 from pyMilk.interfacing.shm import SHM
 
 from camstack.viewers import backend_utils as buts
-
-if TYPE_CHECKING:  # this type hint would cause a circular import
-    from camstack.viewers.generic_viewer_frontend import GenericViewerFrontend
 
 from astropy.io import fits
 from pyMilk.interfacing.shm import SHM
@@ -27,6 +29,8 @@ from functools import partial
 # class BasicCamViewer:
 # More basic, with less text lines at the bottom.
 
+# TODO: a batched Redis query.
+
 
 class GenericViewerBackend:
 
@@ -35,7 +39,7 @@ class GenericViewerBackend:
 
     COLORMAPS = COLORMAPS_A
 
-    CROP_CENTER_SPOT = None
+    CROP_CENTER_SPOT: Tuple[float, float] = None
     MAX_ZOOM_LEVEL = 4  # Power of 2, 4 is 16x, 3 is 8x
 
     SHORTCUTS = {}  # Do not subclass this, see constructor
@@ -48,12 +52,12 @@ class GenericViewerBackend:
         self.input_shm = SHM(name_shm, symcode=0)
 
         ### DATA Pipeline
-        self.data_raw_uncrop = None  # Fresh out of SHM
-        self.data_debias_uncrop = None  # Debiased (ref, bias, badpix)
-        self.data_debias = None  # Cropped
-        self.data_zmapped = None  # Apply Z scaling
-        self.data_rgbimg = None  # Apply colormap / convert to RGB
-        self.data_output = None  # Interpolate to frontend display size
+        self.data_raw_uncrop: np.ndarray = None  # Fresh out of SHM
+        self.data_debias_uncrop: np.ndarray = None  # Debiased (ref, bias, badpix)
+        self.data_debias: np.ndarray = None  # Cropped
+        self.data_zmapped: np.ndarray = None  # Apply Z scaling
+        self.data_rgbimg: np.ndarray = None  # Apply colormap / convert to RGB
+        self.data_output: np.ndarray = None  # Interpolate to frontend display size
 
         ### Clipping for pipeline
         self.low_clip, self.high_clip = None, None
@@ -71,28 +75,33 @@ class GenericViewerBackend:
         self.shm_shape = self.input_shm.shape
         self.crop_lvl_id = 0
         if self.CROP_CENTER_SPOT is None:
-            self.CROP_CENTER_SPOT = self.shm_shape[0] / 2, self.shm_shape[1] / 2
+            self.CROP_CENTER_SPOT = self.shm_shape[0] / 2., self.shm_shape[1] / 2.
         self.toggle_crop(self.crop_lvl_id)
 
         ### Colors
 
         # WIP: find a way to process modifiers.
-        prep_shortcuts = {
-                pgm_ct.K_m: self.toggle_cmap,
-                pgm_ct.K_l: self.toggle_scaling,
-                pgm_ct.K_z: self.toggle_crop,
-                pgm_ct.K_v: self.toggle_averaging,
-                pgm_ct.K_UP: partial(self.steer_crop, pgm_ct.K_UP),
-                pgm_ct.K_DOWN: partial(self.steer_crop, pgm_ct.K_DOWN),
-                pgm_ct.K_LEFT: partial(self.steer_crop, pgm_ct.K_LEFT),
-                pgm_ct.K_RIGHT: partial(self.steer_crop, pgm_ct.K_RIGHT),
+        this_shortcuts: Dict[buts.Shortcut, Callable] = {
+                buts.Shortcut(pgmc.K_m, 0x0):
+                        self.toggle_cmap,
+                buts.Shortcut(pgmc.K_l, 0x0):
+                        self.toggle_scaling,
+                buts.Shortcut(pgmc.K_z, 0x0):
+                        self.toggle_crop,
+                buts.Shortcut(pgmc.K_v, 0x0):
+                        self.toggle_averaging,
+                buts.Shortcut(pgmc.K_UP, 0x0):
+                        partial(self.steer_crop, pgmc.K_UP),
+                buts.Shortcut(pgmc.K_DOWN, 0x0):
+                        partial(self.steer_crop, pgmc.K_DOWN),
+                buts.Shortcut(pgmc.K_LEFT, 0x0):
+                        partial(self.steer_crop, pgmc.K_LEFT),
+                buts.Shortcut(pgmc.K_RIGHT, 0x0):
+                        partial(self.steer_crop, pgmc.K_RIGHT),
         }
         # Note escape and X are reserved for quitting
 
-        self.SHORTCUTS.update({
-                buts.encode_shortcuts(scut): prep_shortcuts[scut]
-                for scut in prep_shortcuts
-        })
+        self.SHORTCUTS.update(this_shortcuts)
 
     def register_frontend(self, frontend: GenericViewerFrontend) -> None:
 
@@ -100,20 +109,41 @@ class GenericViewerBackend:
         self.has_frontend = True
         # Now there's the problem of the reverse-bind of text boxes to mode objects
 
-    def toggle_cmap(self, which: int = None) -> None:
+    def cross_register_plugins(self, plugins: List[BasePlugin]) -> None:
+        self.plugin_objs = plugins
+
+        key_set = set(self.SHORTCUTS.keys())
+
+        for plugin in self.plugin_objs:
+            plugin.register_backend(self)
+
+            plugin_keys = set(plugin.shortcut_map.keys())
+
+            if key_set.intersection(plugin_keys):
+                raise AssertionError(
+                        f'Shortcut collision with {type(plugin)} {plugin}.')
+
+            key_set = key_set.union(plugin_keys)
+            self.SHORTCUTS.update(plugin.shortcut_map)
+
+    def _inloop_plugin_action(self) -> None:
+        for plugin in self.plugin_objs:
+            plugin.backend_action()
+
+    def toggle_cmap(self, which: Optional[int] = None) -> None:
         if which is None:
             self.cmap_id = (self.cmap_id + 1) % len(self.COLORMAPS)
         else:
             self.cmap_id = which
         self.cmap = self.COLORMAPS[self.cmap_id]
 
-    def toggle_scaling(self, value: int = None) -> None:
+    def toggle_scaling(self, value: Optional[int] = None) -> None:
         if value is None:
             self.flag_non_linear = (self.flag_non_linear + 1) % 3
         else:
             self.flag_non_linear = value
 
-    def toggle_crop(self, which: int = None) -> None:
+    def toggle_crop(self, which: Optional[int] = None) -> None:
         if which is None:
             self.crop_lvl_id = (self.crop_lvl_id + 1) % (self.MAX_ZOOM_LEVEL +
                                                          1)
@@ -142,13 +172,13 @@ class GenericViewerBackend:
         # Move by 1 pixel at max zoom
         move_how_much = 2**(self.MAX_ZOOM_LEVEL - self.crop_lvl_id)
         cr, cc = self.CROP_CENTER_SPOT
-        if direction == pgm_ct.K_UP:
+        if direction == pgmc.K_UP:
             cc -= move_how_much
-        elif direction == pgm_ct.K_DOWN:
+        elif direction == pgmc.K_DOWN:
             cc += move_how_much
-        elif direction == pgm_ct.K_LEFT:
+        elif direction == pgmc.K_LEFT:
             cr -= move_how_much
-        elif direction == pgm_ct.K_RIGHT:
+        elif direction == pgmc.K_RIGHT:
             cr += move_how_much
 
         halfside = (self.shm_shape[0] / 2**(self.crop_lvl_id + 1),
@@ -157,8 +187,8 @@ class GenericViewerBackend:
         cr = min(max(cr, halfside[0]), self.shm_shape[0] - halfside[0])
         cc = min(max(cc, halfside[1]), self.shm_shape[1] - halfside[1])
 
-        print(cr, cc, cr - halfside[0], cr + halfside[0], cc - halfside[1],
-              cc + halfside[1])
+        #print(cr, cc, cr - halfside[0], cr + halfside[0], cc - halfside[1],
+        #      cc + halfside[1])
         self.CROP_CENTER_SPOT = cr, cc
 
         self.toggle_crop(which=self.crop_lvl_id)
@@ -177,6 +207,8 @@ class GenericViewerBackend:
         self._data_crop()
         self._data_zscaling()
         self._data_coloring()
+
+        self._inloop_plugin_action()
 
         self.flag_data_init = True  # Data is now initialized!
 
@@ -224,7 +256,7 @@ class GenericViewerBackend:
         # Against persistent, user-set clipping
         low_clip, high_clip = self.low_clip, self.high_clip
 
-        if low_clip is None and self.flag_non_linear != 0:
+        if low_clip is None and self.flag_non_linear != buts.ZScaleEnum.LIN:
             # Clip to the 80-th percentile (for log modes by default
             low_clip = np.percentile(self.data_debias[1:, 1:], 0.8)
 
@@ -243,12 +275,15 @@ class GenericViewerBackend:
         else:
             data = self.data_debias.copy()
 
-        if self.flag_non_linear == 0:  # linear
+        if self.flag_non_linear == buts.ZScaleEnum.LIN:  # linear
             op = lambda x: x
-        elif self.flag_non_linear == 1:  # pow .33
+        elif self.flag_non_linear == buts.ZScaleEnum.ROOT3:  # pow .33
             op = lambda x: (x - m)**0.3
-        elif self.flag_non_linear == 2:  # log
+        elif self.flag_non_linear == buts.ZScaleEnum.LOG:  # log
             op = lambda x: np.log10(x - m + 1)
+        else:
+            raise AssertionError(
+                    f"self.flag_non_linear {self.flag_non_linear} is invalid")
 
         data = op(data)
         m, M = op(m), op(M)
@@ -273,9 +308,11 @@ class GenericViewerBackend:
         # Willfully ignore numlock
         mods = mods & (~0x1000)
 
-        if (mods, key) in self.SHORTCUTS:
+        this_shortcut = buts.Shortcut(key=key, modifier_mask=mods)
+
+        if this_shortcut in self.SHORTCUTS:
             # Call the mapped callable
-            self.SHORTCUTS[(mods, key)]()
+            self.SHORTCUTS[this_shortcut]()
 
 
 class FirstViewerBackend(GenericViewerBackend):

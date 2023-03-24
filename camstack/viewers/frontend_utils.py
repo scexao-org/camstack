@@ -37,7 +37,8 @@ class Fonts:
     MONO = None
     MONOBOLD = None
 
-    def init_zoomed_fonts(system_zoom: int):
+    @classmethod
+    def init_zoomed_fonts(cls, system_zoom: int):
 
         Fonts.DEFAULT_25 = \
             pygame.font.SysFont("default", 20 * system_zoom)
@@ -53,8 +54,7 @@ class Fonts:
 
 class LabelMessage:
 
-    def __init__(self, template_str: str, font, topleft: Tuple[int,
-                                                               int] = None,
+    def __init__(self, template_str: str, font, topleft: Tuple[int, int] = None,
                  center: Tuple[int, int] = None, fg_col=Colors.WHITE,
                  bg_col=COLOR_BACKGROUND):
 

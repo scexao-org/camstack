@@ -1,9 +1,10 @@
-from __future__ import annotations  # For type hints that would otherwise induce circular imports.
+from __future__ import annotations  # For TYPE_CHECKING
 
 import os, sys
-from typing import Tuple, Any, TYPE_CHECKING
+from typing import List, Tuple, Any, Dict, TYPE_CHECKING
 if TYPE_CHECKING:  # this type hint would cause an unecessary import.
-    from camstack.viewers.generic_viewer_backend import GenericViewerBackend
+    from .generic_viewer_backend import GenericViewerBackend
+    from .plugin_arch import BasePlugin
 
 # X forwarding hijack of libGL.so
 # Goal is to supersede the system's libGL.so by a Mesa libGL and avoid
@@ -20,11 +21,12 @@ if (('localhost:' in os.environ.get('DISPLAY', '') or
 # Affinity fix for pygame messing up
 _CORES = os.sched_getaffinity(0)
 import pygame
-import pygame.constants as pgm_ct
+import pygame.constants as pgmc
 
 os.sched_setaffinity(0, _CORES)
 
-from camstack.viewers import frontend_utils as futs
+from . import frontend_utils as futs
+from . import plugins
 
 import numpy as np
 from PIL import Image
@@ -39,7 +41,7 @@ class GenericViewerFrontend:
 
     CARTOON_FILE = None
 
-    def __init__(self, system_zoom: int, fps: float,
+    def __init__(self, system_zoom: int, fps: int,
                  display_base_size: Tuple[int, int]) -> None:
 
         self.has_backend = False
@@ -63,6 +65,12 @@ class GenericViewerFrontend:
         # Total window size
         self.pygame_win_size = (self.data_disp_size[0], self.data_disp_size[1] +
                                 self.BOTTOM_PX_PAD * self.system_zoom)
+
+        #####
+        # Prep plugins
+        #####
+        # Probs don't do this? Cuz inheritance problems?
+        self.plugins: List[BasePlugin] = []
 
         #####
         # Prepare the pygame stuff (prefix pygame objects with "pg_")
@@ -97,6 +105,13 @@ class GenericViewerFrontend:
         self._init_labels()
 
         self._init_cartoon()
+
+        #####
+        # OnOff states
+        #####
+        # Generic syntax?
+        # {Attribute: callback} dictionary?
+        self._init_onoff_modes()
 
         # TODO class variable
 
@@ -163,6 +178,13 @@ class GenericViewerFrontend:
 
         self.pg_screen.blit(cartoon_img_scaled, rect)
 
+    def _init_onoff_modes(self):
+        # That, or an inherited class variable dict?
+        # Why a dict actually?
+        self.plugins = [
+                plugins.CrossHairPlugin(self, pgmc.K_c)
+        ]  # Shit I would want this to take backend-referenced coordinates as an argument.
+
     def _inloop_update_labels(self):
         fps = self.backend_obj.input_shm.get_fps()
         tint = self.backend_obj.input_shm.get_expt()
@@ -181,10 +203,16 @@ class GenericViewerFrontend:
                 self.lbl_t_minmax.rectangle,
         ]
 
+    def _inloop_plugin_modes(self) -> None:
+        for plugin in self.plugins:
+            plugin.frontend_action()
+
     def register_backend(self, backend: GenericViewerBackend) -> None:
 
         self.backend_obj = backend
         self.has_backend = True
+
+        self.backend_obj.cross_register_plugins(self.plugins)
 
     def run(self) -> None:
         '''
@@ -206,7 +234,7 @@ class GenericViewerFrontend:
             pygame.quit()
             print('Abort loop on KeyboardInterrupt')
 
-    def process_pygame_events(self) -> None:
+    def process_pygame_events(self) -> bool:
         '''
         Process pygame events (mostly keyboard shortcuts)
 
@@ -215,13 +243,13 @@ class GenericViewerFrontend:
         for event in pygame.event.get():
             modifiers = pygame.key.get_mods()
 
-            if (event.type == pgm_ct.QUIT or
-                (event.type == pgm_ct.KEYDOWN and
-                 event.key in [pgm_ct.K_ESCAPE, pgm_ct.K_x])):
+            if (event.type == pgmc.QUIT or
+                (event.type == pgmc.KEYDOWN and
+                 event.key in [pgmc.K_ESCAPE, pgmc.K_x])):
                 pygame.quit()
                 return True
 
-            elif event.type == pgm_ct.KEYDOWN:
+            elif event.type == pgmc.KEYDOWN:
                 self.backend_obj.process_shortcut(modifiers, event.key)
 
         return False
@@ -279,6 +307,8 @@ class GenericViewerFrontend:
 
         pygame.surfarray.blit_array(self.pg_datasurface, self.data_blit_staging)
 
+        # Drawing for toggled modes
+        self._inloop_plugin_modes()
         # Manage labels
         self._inloop_update_labels()
 
