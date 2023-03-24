@@ -20,16 +20,16 @@ class OCAM2K(EDTCamera):
     ] + EDTCamera.INTERACTIVE_SHELL_METHODS
 
     # For ocam, the CameraMode content is *not* used for the camera setup, only the FG setup
+    # yapf: disable
     MODES = {
             # Ocam full, unbinned
-            1:
-                    CameraMode(x0=0, x1=239, y0=0, y1=239, binx=1, biny=1,
-                               fgsize=(1056 // 2, 121)),
-            # Ocam bin x2 - numbering (1,3) is from first light, for historical origins ?
-            3:
-                    CameraMode(x0=0, x1=239, y0=0, y1=239, binx=2, biny=2,
-                               fgsize=(1056 // 2, 62)),
+            1: CameraMode(x0=0, x1=239, y0=0, y1=239, binx=1, biny=1,
+                          fgsize=(1056 // 2, 121)),
+            # Ocam bin x2 - numbering (1,3) is from First Light.
+            3: CameraMode(x0=0, x1=239, y0=0, y1=239, binx=2, biny=2,
+                          fgsize=(1056 // 2, 62)),
     }
+    # yapf: enable
 
     KEYWORDS = {
             'FILTER01': ('UNKNOWN', 'PyWFS filter state', '%-16s', 'FILTR'),
@@ -45,9 +45,8 @@ class OCAM2K(EDTCamera):
 
     def __init__(self, name: str, mangled_stream_name: str,
                  final_stream_name: str, binning: bool = True, unit: int = 3,
-                 channel: int = 0, taker_cset_prio: Union[str,
-                                                          int] = ('system',
-                                                                  None),
+                 channel: int = 0, taker_cset_prio: Union[str, int] = ('system',
+                                                                       None),
                  dependent_processes=[]):
 
         # Allocate and start right in the appropriate binning mode
@@ -183,6 +182,7 @@ class OCAM2K(EDTCamera):
         res = self.send_command(f'gain {gain}')
         val = int(res[0])
         self._set_formatted_keyword('DETGAIN', val)
+        logg.info(f'set_gain: {val}')
         return val
 
     def get_gain(self):
