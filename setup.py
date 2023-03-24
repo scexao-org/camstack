@@ -29,12 +29,12 @@ with open("README.md", 'r') as f:
     long_description = f.read()
 
 scripts = [
-        './viewers/anycam.py',
-        './viewers/pueo.py',
-        './viewers/apapane.py',
-        './viewers/palila.py',
-        './viewers/firstcam.py',
-        './viewers/vpupcam.py',
+        './camstack/viewers/viewers/anycam.py',
+        './camstack/viewers/viewers/pueo.py',
+        './camstack/viewers/viewers/apapane.py',
+        './camstack/viewers/viewers/palila.py',
+        './camstack/viewers/viewers/firstcam.py',
+        './camstack/viewers/viewers/vpupcam.py',
         './scripts/cam-restartdeps',
         './scripts/cam-apapanestart',
         './scripts/cam-palilastart',

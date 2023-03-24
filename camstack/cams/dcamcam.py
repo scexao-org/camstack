@@ -207,19 +207,15 @@ class OrcaQuest(DCAMCamera):
     # yapf: disable
     MODES = {
             FIRST: CameraMode(x0=1028, x1=2991, y0=492, y1=727, tint=0.001),
-            FULL: CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
-            0: CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),  # Also full
-            1: CameraMode(x0=1196, x1=2127, y0=784, y1=1039, tint=0.001),    # Kyohoon is Using for WFS mode
+            FULL: CameraMode(x0=0, x1=2303, y0=0, y1=4095, tint=0.01),
+            1: CameraMode(x0=1636, x1=2735, y0=1104, y1=1279, tint=0.001),    # Kyohoon is Using for WFS mode
             11: CameraMode(x0=1536, x1=2335, y0=976, y1=1231, tint=0.1), # Same as 1 no tint.
             2: CameraMode(x0=800, x1=3295, y0=876, y1=1531, tint=0.001),      # Kyohoon is Using for WFS align
-            3: CameraMode(x0=1148, x1=2947, y0=696, y1=1807, tint=0.001),
-            4: CameraMode(x0=1700, x1=1963, y0=760, y1=1015, tint=0.001),    # Jen is using for focal plane mode
+            3: CameraMode(x0=2280, x1=3303, y0=1044, y1=2067, tint=0.01),
+            4: CameraMode(x0=2072, x1=2327, y0=1024, y1=1279, tint=0.000001),    # Jen is using for focal plane mode .000001 tint
             DICHROIC: CameraMode(x0=2336, x1=3135, y0=0, y1=2303, tint=0.01), # Dichroic stack mode
     }
-    # yapf: enable
-
-    KEYWORDS = {}
-    KEYWORDS.update(DCAMCamera.KEYWORDS)
+    MODES[0] = MODES[FULL]
 
     def __init__(self, name: str, stream_name: str, mode_id: Union[CameraMode,
                                                                    Tuple[int,
