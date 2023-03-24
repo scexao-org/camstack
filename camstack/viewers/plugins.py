@@ -35,7 +35,7 @@ class PupilMode(OnOffPlugin):  # Fuck I desire double inheritance now.
 
     def frontend_action(self) -> None:
         # Just remind the front end to blit on top of the data.
-        if self.enabled:
+        if self.enabled and self.textbox:
             self.frontend_obj.pg_updated_rects.append(self.textbox)
 
     def backend_action(self) -> None:

@@ -67,6 +67,40 @@ class BasePlugin(ABC):
         pass
 
 
+# Warning: abstract
+class OneShotActionPlugin(BasePlugin):
+
+    def __init__(self, frontend_obj: GenericViewerFrontend, key_action: int,
+                 modifier_and: int = 0x0) -> None:
+        super().__init__(frontend_obj)
+
+        self.shortcut_action = buts.Shortcut(key_action, modifier_and)
+
+        this_shortcuts = {self.shortcut_action: self.try_action}
+
+        self._append_shortcuts(this_shortcuts)
+
+    def try_action(self) -> None:
+        if self.is_running():
+            print('Cannot run {self} - running already')
+
+        self.do_action()
+
+    @abstractmethod
+    def do_action(self) -> None:
+        pass
+
+    @abstractmethod
+    def is_running(self) -> bool:
+        '''
+        Warning - this is gonna get called maybe a lot... so we don't
+        necessarily want to perform a resource intensive/agressive check.
+        Like: I have counted to 1000 frames yet is OK
+        But: Has my stage moved? and now? and now? probably isn't
+        '''
+        pass
+
+
 class OnOffPlugin(BasePlugin):
 
     def __init__(self, frontend_obj: GenericViewerFrontend, key_onoff: int,
@@ -79,6 +113,8 @@ class OnOffPlugin(BasePlugin):
         this_shortcuts = {self.shortcut_onoff: self.toggle}
 
         self._append_shortcuts(this_shortcuts)
+
+        self.enabled = False
 
     def enable(self) -> None:
         self.enabled = True
