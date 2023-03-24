@@ -93,8 +93,7 @@ class CRED1(EDTCamera):
         self.send_command('set rawimages on')
         self.send_command('set imagetags on')
 
-        # FIXME!!! Only OK for Apapane, Not Iiwi
-        self.set_gain(121)
+        self.set_gain(self.get_maxpossiblegain())
 
     # =====================
     # AD HOC PREPARE CAMERA
@@ -332,6 +331,9 @@ class CRED1(EDTCamera):
         self._set_formatted_keyword('DETGAIN', res)
         logg.info(f'get_gain: {res}')
         return res
+
+    def get_maxpossiblegain(self) -> int:
+        return int(self.send_command('maxpossiblegain raw'))
 
     def set_NDR(self, NDR: int) -> int:
         if NDR < 1 or not type(NDR) is int:
