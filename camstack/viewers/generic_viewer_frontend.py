@@ -91,10 +91,9 @@ class GenericViewerFrontend:
 
         self.pg_updated_rects = []  # For processing in the loop
 
-        # ----------------------------
-        #          labels
-        # ----------------------------
-
+        #####
+        # Labels
+        #####
         self._init_labels()
 
         self._init_cartoon()
@@ -164,7 +163,7 @@ class GenericViewerFrontend:
 
         self.pg_screen.blit(cartoon_img_scaled, rect)
 
-    def _update_labels_postloop(self):
+    def _inloop_update_labels(self):
         fps = self.backend_obj.input_shm.get_fps()
         tint = self.backend_obj.input_shm.get_expt()
         ndr = self.backend_obj.input_shm.get_ndr()
@@ -260,28 +259,30 @@ class GenericViewerFrontend:
                 self.data_blit_staging[:, :cskip, :] = 0
                 # This is gonna be trouble with odd sizes, but we should be OK.
                 self.data_blit_staging[:, -cskip:, :] = 0
+
             elif col_fac >= row_fac:
                 # Rescale based on columns, pad rows
-                rsize = self.system_zoom * int(
-                        round(data_output.shape[0] / col_fac))
+                rsize = self.system_zoom *\
+                    int(round(data_output.shape[0] / col_fac))
                 rskip = (self.data_disp_size[0] - rsize) // 2
-                self.data_blit_staging[rskip:-rskip, :, :] = np.asarray(
-                        img.resize((self.data_disp_size[1], rsize),
+                self.data_blit_staging[rskip:-rskip, :, :] = \
+                    np.asarray(img.resize((self.data_disp_size[1], rsize),
                                    Image.NEAREST))
                 self.data_blit_staging[:rskip, :, :] = 0
                 self.data_blit_staging[-rskip:, :, :] = 0
             else:
-                raise ValueError
+                raise ValueError("row_fac / col_fac calculation messed up.")
 
-        else:
+        else:  # Data is the native display size.
             self.data_blit_staging = np.asarray(
                     img.resize((self.data_disp_size[::-1]), Image.NEAREST))
 
         pygame.surfarray.blit_array(self.pg_datasurface, self.data_blit_staging)
 
         # Manage labels
-        self._update_labels_postloop()
+        self._inloop_update_labels()
 
+        # Finally
         self.pg_screen.blit(self.pg_datasurface, self.pg_data_rect)
         self.pg_updated_rects += [self.pg_data_rect]
 
