@@ -10,7 +10,7 @@ from camstack.cams.edtcam import EDTCamera
 
 from camstack.core.utilities import CameraMode
 
-from scxkw.config import MAGIC_BOOL_STR
+#from scxkw.config import MAGIC_BOOL_STR
 
 
 class ROMODES:
