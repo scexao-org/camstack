@@ -1,14 +1,16 @@
+from typing import Union, Tuple, List, Any, TYPE_CHECKING, Optional as Op
+if TYPE_CHECKING:
+    from camstack.core.utilities import DependentProcess
+
 import os
 import subprocess
 import time
 import logging as logg
 
-from typing import Union, Tuple, List, Any
-
 from camstack.cams.base import BaseCamera
 from hwmain.edt.edtinterface import EdtInterfaceSerial
 
-from camstack.core.utilities import CameraMode
+from camstack.core.utilities import CameraMode, ModeIDorHWType, CsetPrioType
 
 
 class EDTCamera(BaseCamera):
@@ -27,24 +29,25 @@ class EDTCamera(BaseCamera):
     EDTTAKE_EMBEDMICROSECOND = False  # We want this for CRED1 / 2 but not elsewhere
 
     def __init__(self, name: str, stream_name: str,
-                 mode_id: Union[CameraMode, Tuple[int, int]], pdv_unit: int,
-                 pdv_channel: int, pdv_basefile: str, no_start: bool = False,
-                 taker_cset_prio: Union[str, int] = ('system', None),
-                 dependent_processes: List[Any] = []):
+                 mode_id_or_hw: ModeIDorHWType, pdv_unit: int, pdv_channel: int,
+                 pdv_basefile: str, no_start: bool = False,
+                 taker_cset_prio: CsetPrioType = ('system', None),
+                 dependent_processes: List[DependentProcess] = []) -> None:
 
-        self.pdv_unit = pdv_unit
-        self.pdv_channel = pdv_channel
+        self.pdv_unit: int = pdv_unit
+        self.pdv_channel: int = pdv_channel
 
-        self.pdv_basefile = pdv_basefile
-        self.pdv_taps = 1  # We will retrive this from the FG.
+        self.pdv_basefile: str = pdv_basefile
+        self.pdv_taps: int = 1  # We will retrive this from the FG.
 
-        self.edt_iface = None  # See self.init_framegrab_backend
+        # See self.init_framegrab_backend
+        self.edt_iface: Op[EdtInterfaceSerial] = None
 
-        BaseCamera.__init__(self, name, stream_name, mode_id,
+        BaseCamera.__init__(self, name, stream_name, mode_id_or_hw,
                             no_start=no_start, taker_cset_prio=taker_cset_prio,
                             dependent_processes=dependent_processes)
 
-    def init_framegrab_backend(self):
+    def init_framegrab_backend(self) -> None:
         logg.debug('init_framegrab_backend @ EDTCamera')
         if self.is_taker_running():
             msg = 'Cannot change FG config while FG is running'
@@ -60,7 +63,7 @@ class EDTCamera(BaseCamera):
         res = subprocess.run(['cp', self.pdv_basefile, tmp_config],
                              stdout=subprocess.PIPE)
         if res.returncode != 0:
-            msg = f'EDT cfg file {self.base_config_file} not found.'
+            msg = f'EDT cfg file {self.pdv_basefile} not found.'
             logg.error(msg)
             raise FileNotFoundError(msg)
 
@@ -68,7 +71,7 @@ class EDTCamera(BaseCamera):
         with open(tmp_config, 'r') as file:
             for line in file:
                 if line == "":  # File finished
-                    msg = f'EDT cfg file {self.base_config_file} contains no CL_DATA_PATH_NORM directive.'
+                    msg = f'EDT cfg file {self.pdv_basefile} contains no CL_DATA_PATH_NORM directive.'
                     logg.error(msg)
                     raise AssertionError(msg)
                 linespl = line.rstrip().split()
@@ -89,7 +92,7 @@ class EDTCamera(BaseCamera):
         # It's possible initcam messed with it so we reopen it
         self.edt_iface = EdtInterfaceSerial(self.pdv_unit, self.pdv_channel)
 
-    def _prepare_backend_cmdline(self, reuse_shm: bool = False):
+    def _prepare_backend_cmdline(self, reuse_shm: bool = False) -> None:
 
         # Prepare the cmdline for starting up!
         exec_path = os.environ['SCEXAO_HW'] + '/bin/hwacq-edttake'
@@ -103,19 +106,22 @@ class EDTCamera(BaseCamera):
         if reuse_shm:
             self.taker_tmux_command += ' -R'  # Do not overwrite the SHM.
 
-    def _ensure_backend_restarted(self):
+    def _ensure_backend_restarted(self) -> None:
         # Plenty simple enough for EDT, never failed me
         time.sleep(1.0)
 
-    def send_command(self, cmd, base_timeout: float = 100.):
+    def send_command(self, cmd: str, base_timeout: float = 100.) -> str:
         '''
             Wrap to the serial
             That supposes we HAVE serial... maybe we'll move this to a subclass
         '''
+        assert self.edt_iface is not None  # mypy happy.
+
         logg.debug(f'EDTCamera: send_command: "{cmd}"')
+
         return self.edt_iface.send_command(cmd, base_timeout=base_timeout)
 
-    def raw(self, cmd):
+    def raw(self, cmd: str) -> str:
         '''
             Just an alias
         '''

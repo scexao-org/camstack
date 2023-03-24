@@ -1,14 +1,17 @@
 '''
     Apapane
 '''
+from typing import Union, Optional as Op, Tuple, TYPE_CHECKING, List
+if TYPE_CHECKING:
+    from camstack.core.utilities import DependentProcess
+
 import os
 import time
-from typing import Union
 import logging as logg
 
 from camstack.cams.edtcam import EDTCamera
 
-from camstack.core.utilities import CameraMode
+from camstack.core.utilities import CameraMode, ModeIDType, CsetPrioType
 
 from scxkw.config import MAGIC_BOOL_STR
 
@@ -30,13 +33,13 @@ class CRED1(EDTCamera):
         EDTCamera.INTERACTIVE_SHELL_METHODS
 
     FULL = 'full'
+    # yapf: disable
     MODES = {
             # FULL 320 x 256
             FULL: CameraMode(x0=0, x1=319, y0=0, y1=255, fps=3460.),
             0: CameraMode(x0=0, x1=319, y0=0, y1=255, fps=3460.),
             # 64x64 centered
-            1: CameraMode(x0=128, x1=191, y0=96, y1=159,
-                          fps=40647.),  # 40647. Limiting for now
+            1: CameraMode(x0=128, x1=191, y0=96, y1=159, fps=40647.),  # 40647. Limiting for now
             # 128x128 centered
             2: CameraMode(x0=96, x1=223, y0=64, y1=191, fps=14331.),
             # 160x160 16px offside
@@ -52,6 +55,7 @@ class CRED1(EDTCamera):
             # 192x80
             8: CameraMode(x0=64, x1=255, y0=88, y1=167, fps=16020.),
     }
+    # yapf: enable
 
     KEYWORDS = {
             'DET-PRES': (0.0, 'Detector pressure (mbar)', '%20.8f', 'PRESR'),
@@ -61,16 +65,15 @@ class CRED1(EDTCamera):
     EDTTAKE_UNSIGNED = True
     EDTTAKE_EMBEDMICROSECOND = True
 
-    def __init__(self, name: str, stream_name: str, mode_id: int = 'full',
-                 unit: int = 1, channel: int = 0,
-                 taker_cset_prio: Union[str,
-                                        int] = ('system',
-                                                None), dependent_processes=[]):
+    def __init__(self, name: str, stream_name: str,
+                 mode_id: ModeIDType = 'full', unit: int = 1, channel: int = 0,
+                 taker_cset_prio: CsetPrioType = ('system', None),
+                 dependent_processes: List[DependentProcess] = []) -> None:
 
         # Allocate and start right in the appropriate binning mode
-        self.synchro = False
+        self.synchro: bool = False
         basefile = os.environ['HOME'] + '/src/camstack/config/cred1_16bit.cfg'
-        self.NDR = None  # Grabbed in prepare_camera_finalize
+        self.NDR: Op[int] = None  # Grabbed in prepare_camera_finalize
 
         # Call EDT camera init
         # This should pre-kill dependent sessions
@@ -90,13 +93,14 @@ class CRED1(EDTCamera):
         self.send_command('set rawimages on')
         self.send_command('set imagetags on')
 
+        # FIXME!!! Only OK for Apapane, Not Iiwi
         self.set_gain(121)
 
     # =====================
     # AD HOC PREPARE CAMERA
     # =====================
 
-    def prepare_camera_for_size(self, mode_id=None):
+    def prepare_camera_for_size(self, mode_id: Op[ModeIDType] = None) -> None:
         # Note: when called the first time, this immediately follows
         # self.init_framegrab_backend()
         # So, the serial port is live, but we haven't tried to talk yet.
@@ -120,7 +124,7 @@ class CRED1(EDTCamera):
 
         EDTCamera.prepare_camera_for_size(self, mode_id=mode_id)
 
-    def prepare_camera_finalize(self, mode_id: int = None):
+    def prepare_camera_finalize(self, mode_id: Op[ModeIDType] = None) -> None:
         logg.debug('prepare_camera_finalize @ CRED1')
 
         if mode_id is None:
@@ -140,7 +144,7 @@ class CRED1(EDTCamera):
         if cm.tint is not None:
             self.set_tint(cm.tint)
 
-    def send_command(self, cmd, format=True):
+    def send_command(self, cmd: str) -> str:
         # Just a little bit of parsing to handle the CRED1 format
         # FLI has *decided* to end all their answers with a return prompt "\r\nfli-cli>"
         logg.debug(f'CRED1 send_command: "{cmd}"')
@@ -152,12 +156,9 @@ class CRED1(EDTCamera):
             cut = res.index('>')
             res = res[cut + 1:]
 
-        if format and ':' in res:
-            return res.split(':')
-        else:
-            return res
+        return res
 
-    def _fill_keywords(self):
+    def _fill_keywords(self) -> None:
         # Do a little more filling than the subclass after changing a mode
         # And call the thread-polling function
         #TODO: thread temp polling
@@ -178,7 +179,7 @@ class CRED1(EDTCamera):
         # Call the stuff that we can't know otherwise
         self.poll_camera_for_keywords()  # Sets 'DET-TMP'
 
-    def poll_camera_for_keywords(self, shm_write: bool = True):
+    def poll_camera_for_keywords(self, shm_write: bool = True) -> None:
 
         self.get_temperature(shm_write=shm_write)  # Sets DET-TMP
         time.sleep(.1)
@@ -192,18 +193,20 @@ class CRED1(EDTCamera):
     # AD HOC METHODS - TO BE BOUND IN THE SHELL ?
     # ===========================================
 
-    def _get_cropping(self):
+    def _get_cropping(self) -> Tuple[int, int, int, int]:
         # We mimicked the definition of the cropmodes from the CRED2
         # BUT the CRED1 is 1-base indexed.... remove 1
         logg.debug('_get_cropping @ CRED1')
-        xx, yy = self.send_command('cropping raw')[1:]
+        _, xx, yy = self.send_command('cropping raw').split(
+                ':')  # return is "(on|off):x0-x1:y0-y1"
         x0, x1 = [(int(xxx) - 1) for xxx in xx.split('-')]
         x0 = 32 * x0
         x1 = 32 * x1 + 31  # column blocks of 32
         y0, y1 = [int(yyy) - 1 for yyy in yy.split('-')]
         return x0, x1, y0, y1
 
-    def _set_check_cropping(self, x0, x1, y0, y1):
+    def _set_check_cropping(self, x0: int, x1: int, y0: int,
+                            y1: int) -> Tuple[int, int, int, int]:
         for _ in range(3):
             logg.debug('_set_check_cropping attempt @ CRED1')
             gx0, gx1, gy0, gy1 = self._get_cropping()
@@ -219,18 +222,19 @@ class CRED1(EDTCamera):
                 # BUT the CRED1 is 1-base indexed.... add 1
                 self.send_command('set cropping rows %u-%u' % (y0 + 1, y1 + 1))
                 time.sleep(.5)
+
         msg = f'Cannot set desired crop {x0}-{x1} {y0}-{y1} after 3 tries'
         logg.error(msg)
         raise AssertionError(msg)
 
-    def _emergency_abort(self):
+    def _emergency_abort(self) -> None:
         # Doing this automatically avoids falling in safe mode
         # and needing a power cycle.
         logg.critical('Stopping cooling because water is too hot!')
         # Self.shutdown is a trap, no return expected ever.
         self.send_command("set cooling off")
 
-    def set_synchro(self, synchro: bool):
+    def set_synchro(self, synchro: bool) -> bool:
         val = ('off', 'on')[synchro]
         _ = self.send_command(f'set extsynchro {val}')
         res = self.send_command('extsynchro raw')
@@ -241,11 +245,11 @@ class CRED1(EDTCamera):
         return self.synchro
 
     def get_camera_status(self) -> str:
-        res = self.send_command('status')[1][1:]
+        res = self.send_command('status raw')
         logg.info(f'get_camera_status: {res}')
         if res == '':
             # Second chance:
-            res = self.send_command('status')[1][1:]
+            res = self.send_command('status raw')
             logg.info(f'get_camera_status: {res}')
 
         return res
@@ -296,7 +300,7 @@ class CRED1(EDTCamera):
                 logg.warning(f'Camera now cold - status: {status}.')
 
             except KeyboardInterrupt:
-                self.logg.error(
+                logg.error(
                         'Abort during cooling wait. Camera is still cooling tho!'
                 )
                 self.release()
@@ -307,11 +311,11 @@ class CRED1(EDTCamera):
             logg.critical(f'Camera status {status} - fatal.')
             raise InitializationError('Take actions by hand and restart.')
 
-    def set_readout_mode(self, mode):
+    def set_readout_mode(self, mode: str) -> str:
         self.send_command(f'set mode {mode}')
         return self.get_readout_mode()
 
-    def get_readout_mode(self):
+    def get_readout_mode(self) -> str:
         res = self.send_command('mode raw')
         res = res[:6] + res[
                 11:]  # Removing "reset" after "global", otherwise too long for shm keywords
@@ -319,17 +323,17 @@ class CRED1(EDTCamera):
         logg.info(f'get_readout_mode: {res}')
         return res
 
-    def set_gain(self, gain: int):
+    def set_gain(self, gain: int) -> int:
         self.send_command(f'set gain {gain}')
         return self.get_gain()
 
-    def get_gain(self):
-        res = float(self.send_command('gain raw'))
+    def get_gain(self) -> int:
+        res = int(self.send_command('gain raw'))
         self._set_formatted_keyword('DETGAIN', res)
         logg.info(f'get_gain: {res}')
         return res
 
-    def set_NDR(self, NDR: int):
+    def set_NDR(self, NDR: int) -> int:
         if NDR < 1 or not type(NDR) is int:
             raise AssertionError(f'Illegal NDR value: {NDR}')
 
@@ -367,7 +371,7 @@ class CRED1(EDTCamera):
 
         return self.get_NDR()
 
-    def get_NDR(self):
+    def get_NDR(self) -> int:
         self.NDR = int(self.send_command('nbreadworeset raw'))
         self._set_formatted_keyword('DET-NSMP', self.NDR)
         self._set_formatted_keyword('DET-SMPL',
@@ -375,36 +379,36 @@ class CRED1(EDTCamera):
         logg.info(f'get_NDR: {self.NDR}')
         return self.NDR
 
-    def set_fps(self, fps: float):
+    def set_fps(self, fps: float) -> float:
         self.send_command(f'set fps {fps}')
         return self.get_fps()
 
-    def get_fps(self):
+    def get_fps(self) -> float:
         fps = float(self.send_command('fps raw'))
         self._set_formatted_keyword('FRATE', fps)
         self._set_formatted_keyword('EXPTIME', 1. / fps)
         logg.info(f'get_fps: {fps}')
         return fps
 
-    def max_fps(self):
+    def max_fps(self) -> float:
         return float(self.send_command('maxfps raw'))
 
-    def set_tint(self, tint: float):
+    def set_tint(self, tint: float) -> float:
         # CRED1 has no tint management
         return 1. / self.set_fps(1 / tint)
 
-    def get_tint(self):
+    def get_tint(self) -> float:
         # CRED1 has no tint management
         return 1. / self.get_fps()
 
-    def get_cryo_pressure(self, shm_write: bool = True):
+    def get_cryo_pressure(self, shm_write: bool = True) -> float:
         pres = float(self.send_command('pressure raw'))
         if shm_write:
             self._set_formatted_keyword('DET-PRES', pres)
         logg.info(f'get_cryo_pressure: {pres}')
         return pres
 
-    def get_temperature(self, shm_write: bool = True):
+    def get_temperature(self, shm_write: bool = True) -> float:
         # We're gonna need this method even when the SHM has not been initialized yet.
         temp = float(self.send_command('temp cryostat diode raw'))
         if shm_write:
@@ -412,7 +416,7 @@ class CRED1(EDTCamera):
         logg.info(f'get_temperature: {temp}')
         return temp
 
-    def get_water_temperature(self):
+    def get_water_temperature(self) -> float:
         temp = float(self.send_command('temp water raw'))
         logg.info(f'get_water_temperature: {temp}')
         if temp > 30.0:
@@ -422,7 +426,7 @@ class CRED1(EDTCamera):
 
         return temp
 
-    def _shutdown(self, force: bool = False):
+    def _shutdown(self, force: bool = False) -> None:
         if not force:
             input(f'Detector temperature {self.get_temperature()} K; proceed anyway ? Ctrl+C aborts.'
                   )
@@ -486,7 +490,7 @@ class Apapane(CRED1):
     REDIS_PUSH_ENABLED = True
     REDIS_PREFIX = 'x_B'  # LOWERCASE x to not get mixed with the SCExAO keys
 
-    def _fill_keywords(self):
+    def _fill_keywords(self) -> None:
         CRED1._fill_keywords(self)
 
         doing_pdi = True
@@ -542,7 +546,7 @@ class Iiwi(CRED1):
     REDIS_PUSH_ENABLED = True
     REDIS_PREFIX = 'x_I'  # LOWERCASE x to not get mixed with the SCExAO keys
 
-    def _fill_keywords(self):
+    def _fill_keywords(self) -> None:
         CRED1._fill_keywords(self)
 
         # Override detector name
