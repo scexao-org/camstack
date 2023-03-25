@@ -1,12 +1,13 @@
 '''
     Manage the ocam
 '''
+from typing import Union, List, Optional as Op, Tuple
+
 import os
 import logging as logg
 
-from typing import Union
 from camstack.cams.edtcam import EDTCamera
-from camstack.core.utilities import CameraMode
+from camstack.core import utilities as util
 
 from pyMilk.interfacing.isio_shmlib import SHM
 
@@ -23,11 +24,11 @@ class OCAM2K(EDTCamera):
     # yapf: disable
     MODES = {
             # Ocam full, unbinned
-            1: CameraMode(x0=0, x1=239, y0=0, y1=239, binx=1, biny=1,
-                          fgsize=(1056 // 2, 121)),
+            1: util.CameraMode(x0=0, x1=239, y0=0, y1=239, binx=1, biny=1,
+                               fgsize=(1056 // 2, 121)),
             # Ocam bin x2 - numbering (1,3) is from First Light.
-            3: CameraMode(x0=0, x1=239, y0=0, y1=239, binx=2, biny=2,
-                          fgsize=(1056 // 2, 62)),
+            3: util.CameraMode(x0=0, x1=239, y0=0, y1=239, binx=2, biny=2,
+                               fgsize=(1056 // 2, 62)),
     }
     # yapf: enable
 
@@ -45,9 +46,9 @@ class OCAM2K(EDTCamera):
 
     def __init__(self, name: str, mangled_stream_name: str,
                  final_stream_name: str, binning: bool = True, unit: int = 3,
-                 channel: int = 0, taker_cset_prio: Union[str, int] = ('system',
-                                                                       None),
-                 dependent_processes=[]):
+                 channel: int = 0,
+                 taker_cset_prio: util.CsetPrioType = ('system', None),
+                 dependent_processes: List[util.DependentProcess] = []) -> None:
 
         # Allocate and start right in the appropriate binning mode
 
@@ -83,14 +84,15 @@ class OCAM2K(EDTCamera):
     # AD HOC PREPARE CAMERA
     # =====================
 
-    def prepare_camera_for_size(self, mode_id: int = None):
+    def prepare_camera_for_size(self,
+                                mode_id: Op[util.ModeIDType] = None) -> None:
         logg.debug('prepare_camera_for_size @ OCAM2K')
 
         # This function called during the EDTCamera.__init__ from self.__init__
 
         # The "interface 0" in the constructor does not happen early enough.
         # We need format=False because if the camera was verbose til now, output is not yet parsable.
-        self.send_command('interface 0', format=False)
+        self.send_command('interface 0')
 
         if mode_id is None:
             mode_id = self.current_mode_id
@@ -112,7 +114,8 @@ class OCAM2K(EDTCamera):
                                                         1) // cm.biny
                 dep_proc.cli_args = (dep_proc.cli_args[0], h, w)
 
-    def prepare_camera_finalize(self, mode_id: int = None):
+    def prepare_camera_finalize(self,
+                                mode_id: Op[util.ModeIDType] = None) -> None:
         logg.debug('prepare_camera_finalize @ OCAM2K')
 
         if mode_id is None:
@@ -121,17 +124,12 @@ class OCAM2K(EDTCamera):
         # Changing the binning trips the external sync.
         self.set_synchro(self.synchro)
 
-    def send_command(self, cmd, format=True):
+    def send_command(self, cmd: str, base_timeout: float = 100.) -> str:
         # Just a little bit of parsing to handle the OCAM format
         logg.debug(f'OCAM2K send_command: "{cmd}"')
-        res = EDTCamera.send_command(self, cmd)
-        if format:
-            wherechevron = res.index('>')
-            return res[wherechevron + 2:-1].split('][')
-        else:
-            return res
+        return EDTCamera.send_command(self, cmd, base_timeout)
 
-    def _fill_keywords(self):
+    def _fill_keywords(self) -> None:
         # Do a little more filling than the subclass after changing a mode
         # And call the thread-polling function
         #TODO: thread temp polling
@@ -154,7 +152,7 @@ class OCAM2K(EDTCamera):
         # Call the stuff that we can't know otherwise
         self.poll_camera_for_keywords()  # Sets 'DET-TMP'
 
-    def poll_camera_for_keywords(self):
+    def poll_camera_for_keywords(self) -> None:
         if self.HAS_REDIS:
             try:
                 with self.RDB.pipeline() as pipe:
@@ -171,35 +169,35 @@ class OCAM2K(EDTCamera):
     # AD HOC METHODS - TO BE BOUND IN THE SHELL ?
     # ===========================================
 
-    def set_binning(self, binning: bool):
+    def set_binning(self, binning: bool) -> None:
         self.set_camera_mode((1, 3)[binning])
 
-    def gain_protection_reset(self):
+    def gain_protection_reset(self) -> None:
         logg.warning('gain_protection_reset')
         self.send_command('protection reset')
 
-    def set_gain(self, gain: int):
+    def set_gain(self, gain: int) -> int:
         res = self.send_command(f'gain {gain}')
         val = int(res[0])
         self._set_formatted_keyword('DETGAIN', val)
         logg.info(f'set_gain: {val}')
         return val
 
-    def get_gain(self):
+    def get_gain(self) -> int:
         res = self.send_command('gain')
         val = int(res[0])
         self._set_formatted_keyword('DETGAIN', val)
         logg.info(f'get_gain: {val}')
         return val
 
-    def set_synchro(self, val: bool):
+    def set_synchro(self, val: bool) -> None:
         val = bool(val)
         self.send_command(f'synchro {("off","on")[val]}')
         self.synchro = val
         self._set_formatted_keyword('EXTTRIG', val)
         logg.info(f'set_synchro: {self.synchro}')
 
-    def set_fps(self, fps: float):
+    def set_fps(self, fps: float) -> float:
         # 0 sets maxfps
         if self.synchro:
             raise AssertionError('No fps set in synchro mode')
@@ -209,27 +207,30 @@ class OCAM2K(EDTCamera):
         logg.info(f'set_fps: {val}')
         return val
 
-    def get_temperature(self):
+    def get_temperature(self) -> float:
         val = self._get_temperature()[0]
         logg.info(f'get_temperature: {val}')
         return val
 
-    def _get_temperature(self):
+    def _get_temperature(self) -> Tuple[float, float]:
         ret = self.send_command('temp')
         # Expected return: <1>[-45.2][23][13][24][0.1][9][12][-450][1][10594]
-        temps = [float(x) for x in ret]
+        wherechevron = ret.index('>')
+        ret_split = ret[wherechevron + 2:-1].split('][')
+        temps = [float(x) for x in ret_split]
+
         self.is_cooling = bool(temps[8])
         self._set_formatted_keyword('DET-TMP', temps[0] + 273.15)
         return temps[0], temps[7] / 10.  # temp, setpoint
 
-    def toggle_cooling(self, cooling: bool = None):
+    def toggle_cooling(self, cooling: Op[bool] = None) -> None:
         if cooling is None:  # Perform a toggle
             self.get_temperature()  # Populate self.is_cooling = bool(temp[8])
             cooling = not self.is_cooling
         self.send_command('temp ' + ('off', 'on')[self.is_cooling])
         self.is_cooling = cooling
 
-    def set_temperature_setpoint(self, temp: float):
+    def set_temperature_setpoint(self, temp: float) -> float:
         self.send_command(f'temp {int(temp)}')
         logg.info(f'set_temperature_setpoint: {temp}')
         return self.get_temperature()

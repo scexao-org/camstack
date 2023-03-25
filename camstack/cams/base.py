@@ -1,4 +1,4 @@
-from typing import List, Any, Union, Tuple, Optional as Op
+from typing import List, Any, Union, Tuple, Optional as Op, Dict
 
 import os
 import time
@@ -42,8 +42,8 @@ class BaseCamera:
         And implements the server side management of the imgtake
     '''
 
-    REDIS_PUSH_ENABLED = False
-    REDIS_PREFIX = None
+    REDIS_PUSH_ENABLED: bool = False
+    REDIS_PREFIX: Op[str] = None
 
     INTERACTIVE_SHELL_METHODS = [
             'close',
@@ -54,10 +54,10 @@ class BaseCamera:
             'set_camera_size',
     ]
 
-    MODES = {}
+    MODES: Dict[util.ModeIDType, util.CameraMode] = {}
 
     # yapf: disable
-    KEYWORDS = {
+    KEYWORDS: Dict[str, Tuple[util.KWType, str, str, str]] = {
             # Format is name:
             #   (value,
             #    description,
@@ -474,6 +474,7 @@ class BaseCamera:
         assert self.camera_shm is not None  # mypy happy assert
 
         if self.REDIS_PUSH_ENABLED and self.HAS_REDIS:
+            assert self.REDIS_PREFIX  # mypy
             try:
                 keywords_shm = self.camera_shm.get_keywords(False)
                 with self.RDB.pipeline() as pipe:

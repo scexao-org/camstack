@@ -23,6 +23,8 @@ def enforce_optional(anything: Op[T]) -> T:
 ModeIDType = Union[str, int]
 ModeIDorHWType = Union[ModeIDType, Tuple[int, int]]
 CsetPrioType = Tuple[str, Op[int]]
+KWType = Union[bool, int, float, str]
+KWTypeNoBool = Union[int, float, str]
 
 
 class CameraMode:

@@ -143,11 +143,11 @@ class CRED1(EDTCamera):
         if cm.tint is not None:
             self.set_tint(cm.tint)
 
-    def send_command(self, cmd: str) -> str:
+    def send_command(self, cmd: str, base_timeout: float = 100.0) -> str:
         # Just a little bit of parsing to handle the CRED1 format
         # FLI has *decided* to end all their answers with a return prompt "\r\nfli-cli>"
         logg.debug(f'CRED1 send_command: "{cmd}"')
-        res = EDTCamera.send_command(self, cmd)[:-10]
+        res = EDTCamera.send_command(self, cmd, base_timeout=base_timeout)[:-10]
 
         if 'cli>' in res:
             # We might have gotten a double answer
