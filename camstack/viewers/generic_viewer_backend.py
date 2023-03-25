@@ -1,6 +1,6 @@
 from __future__ import annotations  # For type hints that would otherwise induce circular imports.
 
-from typing import (Tuple, Dict, List, Optional, Callable,
+from typing import (Tuple, Dict, List, Optional as Op, Callable,
                     TYPE_CHECKING)  # For type hints
 
 if TYPE_CHECKING:  # this type hint would cause a circular import
@@ -39,10 +39,11 @@ class GenericViewerBackend:
 
     COLORMAPS = COLORMAPS_A
 
-    CROP_CENTER_SPOT: Tuple[float, float] = None
+    CROP_CENTER_SPOT: Op[Tuple[float, float]] = None
     MAX_ZOOM_LEVEL = 4  # Power of 2, 4 is 16x, 3 is 8x
 
-    SHORTCUTS = {}  # Do not subclass this, see constructor
+    SHORTCUTS: Dict[buts.Shortcut,
+                    Callable] = {}  # Do not subclass this, see constructor
 
     def __init__(self, name_shm: str) -> None:
 
@@ -52,20 +53,24 @@ class GenericViewerBackend:
         self.input_shm = SHM(name_shm, symcode=0)
 
         ### DATA Pipeline
-        self.data_raw_uncrop: np.ndarray = None  # Fresh out of SHM
-        self.data_debias_uncrop: np.ndarray = None  # Debiased (ref, bias, badpix)
-        self.data_debias: np.ndarray = None  # Cropped
-        self.data_zmapped: np.ndarray = None  # Apply Z scaling
-        self.data_rgbimg: np.ndarray = None  # Apply colormap / convert to RGB
-        self.data_output: np.ndarray = None  # Interpolate to frontend display size
+        self.data_raw_uncrop: Op[np.ndarray] = None  # Fresh out of SHM
+        self.data_debias_uncrop: Op[
+                np.ndarray] = None  # Debiased (ref, bias, badpix)
+        self.data_debias: Op[np.ndarray] = None  # Cropped
+        self.data_zmapped: Op[np.ndarray] = None  # Apply Z scaling
+        self.data_rgbimg: Op[
+                np.ndarray] = None  # Apply colormap / convert to RGB
+        self.data_output: Op[
+                np.ndarray] = None  # Interpolate to frontend display size
 
         ### Clipping for pipeline
-        self.low_clip, self.high_clip = None, None
+        self.low_clip: Op[float] = None
+        self.high_clip: Op[float] = None
 
         ### Various flags
-        self.flag_data_init = False
-        self.flag_averaging = False
-        self.flag_non_linear = False
+        self.flag_data_init: bool = False
+        self.flag_averaging: bool = False
+        self.flag_non_linear: int = 0
 
         ### COLORING
         self.cmap_id = 1
@@ -130,20 +135,20 @@ class GenericViewerBackend:
         for plugin in self.plugin_objs:
             plugin.backend_action()
 
-    def toggle_cmap(self, which: Optional[int] = None) -> None:
+    def toggle_cmap(self, which: Op[int] = None) -> None:
         if which is None:
             self.cmap_id = (self.cmap_id + 1) % len(self.COLORMAPS)
         else:
             self.cmap_id = which
         self.cmap = self.COLORMAPS[self.cmap_id]
 
-    def toggle_scaling(self, value: Optional[int] = None) -> None:
+    def toggle_scaling(self, value: Op[int] = None) -> None:
         if value is None:
             self.flag_non_linear = (self.flag_non_linear + 1) % 3
         else:
             self.flag_non_linear = value
 
-    def toggle_crop(self, which: Optional[int] = None) -> None:
+    def toggle_crop(self, which: Op[int] = None) -> None:
         if which is None:
             self.crop_lvl_id = (self.crop_lvl_id + 1) % (self.MAX_ZOOM_LEVEL +
                                                          1)
@@ -153,6 +158,7 @@ class GenericViewerBackend:
         halfside = (self.shm_shape[0] / 2**(self.crop_lvl_id + 1),
                     self.shm_shape[1] / 2**(self.crop_lvl_id + 1))
         # Could define explicit slices using a self.CROPSLICE. Could be great for apapane PDI.
+        assert self.CROP_CENTER_SPOT
         cr, cc = self.CROP_CENTER_SPOT
 
         # Adjust, in case we've just zoomed-out from a crop spot that's too close to the edge!
@@ -168,7 +174,9 @@ class GenericViewerBackend:
         else:
             self.crop_slice = np.s_[:, :]
 
-    def steer_crop(self, direction) -> None:
+    def steer_crop(self, direction: int) -> None:
+        assert self.CROP_CENTER_SPOT
+
         # Move by 1 pixel at max zoom
         move_how_much = 2**(self.MAX_ZOOM_LEVEL - self.crop_lvl_id)
         cr, cc = self.CROP_CENTER_SPOT
@@ -217,6 +225,8 @@ class GenericViewerBackend:
         SHM -> self.data_raw_uncrop
         '''
         if self.flag_averaging and self.flag_data_init:
+            assert self.data_raw_uncrop  # from self.flag_data_init
+
             nn = self.count_averaging
             self.data_raw_uncrop = self.data_raw_uncrop * (
                     nn / (nn + 1)) + self.input_shm.get_data() / (nn + 1)
@@ -230,6 +240,8 @@ class GenericViewerBackend:
 
         Subtract dark, ref, etc
         '''
+        assert self.data_raw_uncrop
+
         self.data_debias_uncrop = self.data_raw_uncrop
 
     def _data_crop(self) -> None:
@@ -239,6 +251,9 @@ class GenericViewerBackend:
         Crop, but also compute some uncropped stats
         that will be useful further down the pipeline
         '''
+        assert self.data_raw_uncrop
+        assert self.data_debias_uncrop
+
         self.data_min = self.data_raw_uncrop[1:, 1:].min()
         self.data_max = self.data_raw_uncrop[1:, 1:].max()
         self.data_mean = np.mean(self.data_raw_uncrop[1:])
@@ -249,6 +264,8 @@ class GenericViewerBackend:
         '''
         self.data_debias -> self.data_zmapped
         '''
+        assert self.data_debias
+
         self.data_plot_min = self.data_debias[1:, 1:].min()
         self.data_plot_max = self.data_debias[1:, 1:].max()
 

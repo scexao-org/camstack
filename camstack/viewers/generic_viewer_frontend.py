@@ -1,7 +1,7 @@
 from __future__ import annotations  # For TYPE_CHECKING
 
 import os, sys
-from typing import List, Tuple, Any, Dict, TYPE_CHECKING
+from typing import List, Tuple, Any, Dict, TYPE_CHECKING, Optional as Op
 if TYPE_CHECKING:  # this type hint would cause an unecessary import.
     from .generic_viewer_backend import GenericViewerBackend
     from .plugin_arch import BasePlugin
@@ -39,13 +39,13 @@ class GenericViewerFrontend:
 
     WINDOW_NAME = 'Generic viewer'
 
-    CARTOON_FILE = None
+    CARTOON_FILE: Op[str] = None
 
     def __init__(self, system_zoom: int, fps: int,
                  display_base_size: Tuple[int, int]) -> None:
 
         self.has_backend = False
-        self.backend_obj: GenericViewerBackend = None
+        self.backend_obj: Op[GenericViewerBackend] = None
 
         self.fps_val = fps
         self.system_zoom = system_zoom  # Former z1
@@ -87,7 +87,7 @@ class GenericViewerFrontend:
                                                  flags=0x0, depth=16)
         pygame.display.set_caption(self.WINDOW_NAME)
 
-        self.pg_background = pygame.Surface(self.pg_screen.get_size())
+        self.pg_background = pygame.surface.Surface(self.pg_screen.get_size())
         # Good to "convert" once-per-surface: converts data type to final one
         self.pg_background = self.pg_background.convert()
 
@@ -97,7 +97,8 @@ class GenericViewerFrontend:
         self.pg_data_rect = self.pg_datasurface.get_rect()
         self.pg_data_rect.topleft = (0, 0)
 
-        self.pg_updated_rects = []  # For processing in the loop
+        self.pg_updated_rects: List[pygame.rect.Rect] = [
+        ]  # For processing in the loop
 
         #####
         # Labels
@@ -115,10 +116,10 @@ class GenericViewerFrontend:
 
         # TODO class variable
 
-        pygame.mouse.set_cursor(*pygame.cursors.broken_x)
+        pygame.mouse.set_cursor(pygame.cursors.broken_x)
         pygame.display.update()
 
-    def _init_labels(self):
+    def _init_labels(self) -> None:
 
         sz = self.system_zoom  # Shorthandy
         r = self.data_disp_size[1] + 3 * self.system_zoom
@@ -158,7 +159,7 @@ class GenericViewerFrontend:
 
         # {Status message [sat, acquiring dark, acquiring ref...]}
 
-    def _init_cartoon(self):
+    def _init_cartoon(self) -> None:
         if self.CARTOON_FILE is None:
             return
 
@@ -178,14 +179,16 @@ class GenericViewerFrontend:
 
         self.pg_screen.blit(cartoon_img_scaled, rect)
 
-    def _init_onoff_modes(self):
+    def _init_onoff_modes(self) -> None:
         # That, or an inherited class variable dict?
         # Why a dict actually?
         self.plugins = [
                 plugins.CrossHairPlugin(self, pgmc.K_c)
         ]  # Shit I would want this to take backend-referenced coordinates as an argument.
 
-    def _inloop_update_labels(self):
+    def _inloop_update_labels(self) -> None:
+        assert self.backend_obj
+
         fps = self.backend_obj.input_shm.get_fps()
         tint = self.backend_obj.input_shm.get_expt()
         ndr = self.backend_obj.input_shm.get_ndr()
@@ -226,7 +229,7 @@ class GenericViewerFrontend:
         try:
             while True:
                 self.loop_iter()
-                pygame.display.update(self.pg_updated_rects)
+                pygame.display.update(self.pg_updated_rects)  # type: ignore
                 if self.process_pygame_events():
                     break
                 self.pg_clock.tick(self.fps_val)
@@ -240,6 +243,8 @@ class GenericViewerFrontend:
 
         Returns True if and only if quitting
         '''
+        assert self.backend_obj
+
         for event in pygame.event.get():
             modifiers = pygame.key.get_mods()
 
@@ -255,14 +260,15 @@ class GenericViewerFrontend:
         return False
 
     def loop_iter(self) -> None:
+        assert self.backend_obj
 
         self.pg_updated_rects = []
-
-        import numpy as np
 
         self.backend_obj.data_iter()
 
         data_output = self.backend_obj.data_rgbimg
+        assert data_output  # backend is init, data_output is not None
+
         img = Image.fromarray(data_output)
 
         # Rescale and pad if necessary - using PIL is much faster than scipy.ndimage
@@ -323,7 +329,8 @@ class FirstViewerFrontend(GenericViewerFrontend):
 
     CARTOON_FILE = 'io.png'
 
-    def __init__(self, system_zoom, fps, display_base_size):
+    def __init__(self, system_zoom: int, fps: int,
+                 display_base_size: Tuple[int, int]) -> None:
 
         # Hack the arguments BEFORE
         GenericViewerFrontend.__init__(self, system_zoom, fps,

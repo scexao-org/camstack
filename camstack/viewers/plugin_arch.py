@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Callable, Optional, TYPE_CHECKING
+from typing import Dict, Callable, Optional as Op, TYPE_CHECKING
 if TYPE_CHECKING:
     from .generic_viewer_frontend import GenericViewerFrontend
     from .generic_viewer_backend import GenericViewerBackend
@@ -27,7 +27,7 @@ class BasePlugin(ABC):
 
         self.frontend_obj: GenericViewerFrontend = frontend_obj
 
-        self.backend_obj: GenericViewerBackend = None
+        self.backend_obj: Op[GenericViewerBackend] = None
         self.has_backend: bool = False
 
         self.shortcut_map: Dict[buts.Shortcut, Callable] = {}

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Callable, Optional, TYPE_CHECKING
+from typing import Dict, Callable, Optional as Op, TYPE_CHECKING
 if TYPE_CHECKING:
     from .generic_viewer_frontend import GenericViewerFrontend
     from .generic_viewer_backend import GenericViewerBackend
@@ -26,7 +26,7 @@ class RefImageAcquirePlugin(OneShotActionPlugin):
     def __init__(self, frontend_obj: GenericViewerFrontend,
                  key_onoff: int = pgmc.K_r,
                  modifier_and: int = pgmc.KMOD_LCTRL & pgmc.KMOD_LSHIFT,
-                 textbox: Optional[futs.LabelMessage] = None):
+                 textbox: Op[futs.LabelMessage] = None):
 
         super().__init__(frontend_obj, key_onoff, modifier_and)
 
@@ -34,15 +34,19 @@ class RefImageAcquirePlugin(OneShotActionPlugin):
             assert textbox.template_str == '%s'
         self.textbox = textbox
 
-        self.averaged_data: np.ndarray = None
+        self.averaged_data: Op[np.ndarray] = None
 
     def register_backend(self,
                          backend_obj: GenericViewerBackend) -> None:  # Override
         super().register_backend(backend_obj)
 
+        assert self.backend_obj  # assigned in supercall
+
         self.averaged_data = np.zeros(self.backend_obj.shm_shape, np.float64)
 
     def do_action(self) -> None:  # abstract impl
+        assert self.averaged_data
+
         if self.textbox:
             self.textbox.render(('ACQUIRING REF IMG.', ),
                                 fg_col=futs.Colors.RED)
@@ -55,15 +59,20 @@ class RefImageAcquirePlugin(OneShotActionPlugin):
         # Run for 10 seconds from the starting point.
         return time.time() - self.start_time <= 10.0
 
-    def _complete_action(self):
+    def _complete_action(self) -> None:
+        assert self.backend_obj
+        assert self.averaged_data
+
         self.backend_obj.reference_image = self.averaged_data / self.averaging_counter  # FIXME reference_image exists?
         self.averaging_counter = 0  # Mark for reset.
 
     def frontend_action(self) -> None:  # abstract impl
         if self.is_running() and self.textbox:
-            self.frontend_obj.pg_updated_rects.append(self.textbox)
+            self.frontend_obj.pg_updated_rects.append(self.textbox.rectangle)
 
     def backend_action(self) -> None:  # abstract impl
+        assert self.backend_obj  # ...
+
         if not self.is_running():
             if self.averaging_counter > 0:
                 self._complete_action()
@@ -86,24 +95,28 @@ class DarkAcquirePlugin(RefImageAcquirePlugin):
 
         self.move_appropriate_block(True)
 
-    def _complete_action(self):  # Override
-        return super()._complete_action()
+    def _complete_action(
+            self) -> None:  # Override because we want to write in bias_image
+        assert self.backend_obj
+        assert self.averaged_data
 
-    @abstractmethod
-    def move_appropriate_block(self, in_true: bool):
         self.backend_obj.bias_image = self.averaged_data / self.averaging_counter  # FIXME reference_image exists?
         self.averaging_counter = 0  # Mark for reset.
+
+    @abstractmethod
+    def move_appropriate_block(self, in_true: bool) -> None:
+        pass
 
 
 class PueoDarkAcquirePlugin(DarkAcquirePlugin):
 
-    def move_appropriate_block(self, in_true: bool):
+    def move_appropriate_block(self, in_true: bool) -> None:
         # FIXME
         os.system('ssh sc2 pywfs_fcs_pickoff')
 
 
 class ApapanePalilaDarkAcquirePlugin(DarkAcquirePlugin):
 
-    def move_appropriate_block(self, in_true: bool):
+    def move_appropriate_block(self, in_true: bool) -> None:
         # FIXME
         os.system('ssh sc2 ircam_block')

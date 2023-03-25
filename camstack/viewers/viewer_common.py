@@ -3,6 +3,9 @@
 
     Factorizing some code between apapane.py, palila.py, renocam.py
 '''
+from typing import Tuple, Optional as Op, TYPE_CHECKING, Callable
+if TYPE_CHECKING:
+    from scxkw.redisutil.typed_db import Redis
 
 import numpy as np
 from enum import Enum
@@ -37,7 +40,7 @@ class CREDWHAT(Enum):
     TWO = 2
 
 
-def locate_redis_db():
+def locate_redis_db() -> Tuple[Op[Redis], bool]:
     from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT
     from scxkw.redisutil.typed_db import Redis
     rdb = Redis(host=REDIS_DB_HOST, port=REDIS_DB_PORT)
@@ -54,9 +57,9 @@ def locate_redis_db():
     return rdb, rdb_alive
 
 
-def check_modifiers(mods, lc: bool = False, la: bool = False, ls: bool = False,
-                    rc: bool = False, ra: bool = False, rs: bool = False,
-                    mw: bool = False):
+def check_modifiers(mods: int, lc: bool = False, la: bool = False,
+                    ls: bool = False, rc: bool = False, ra: bool = False,
+                    rs: bool = False, mw: bool = False) -> bool:
     '''
         Check keyboard modifiers from a pygame event.
 
@@ -81,12 +84,15 @@ def check_modifiers(mods, lc: bool = False, la: bool = False, ls: bool = False,
     return ok_mods
 
 
-def open_shm(shm_name, dims=(1, 1), check=False):
+def open_shm(shm_name: str, dims: Tuple[int, int] = (1, 1),
+             check: bool = False) -> SHM:
+    assert MILK_SHM_DIR
     return open_shm_fullpath(MILK_SHM_DIR + "/" + shm_name + ".im.shm",
                              dims=dims, check=check)
 
 
-def open_shm_fullpath(shm_name, dims=(1, 1), check=False):
+def open_shm_fullpath(shm_name: str, dims: Tuple[int, int] = (1, 1),
+                      check: bool = False) -> SHM:
     data = np.zeros((dims[1], dims[0]), dtype=np.float32).squeeze()
     if not os.path.isfile(shm_name):
         shm_data = SHM(shm_name, data=data, verbose=False)
@@ -108,7 +114,12 @@ def open_shm_fullpath(shm_name, dims=(1, 1), check=False):
 # ------------------------------------------------------------------
 #  Read database for some stage status
 # ------------------------------------------------------------------
-def RDB_pull(rdb, rdb_alive: bool, cam_apapane: bool, do_defaults=True):
+CrazyTuple = Tuple[bool, bool, bool, bool, bool, str, bool, float, float, str,
+                   bool]
+
+
+def RDB_pull(rdb: Redis, rdb_alive: bool, cam_apapane: bool,
+             do_defaults: bool = True) -> CrazyTuple:
     '''
         cam_apapane: False for Palila, True for Apapane
         do_defaults: if rdb_alive is False, fallback to defaults
@@ -167,8 +178,8 @@ def RDB_pull(rdb, rdb_alive: bool, cam_apapane: bool, do_defaults=True):
         bpin = False
         slot = 'H-band'
         block = False
-        pap = 0
-        pad = 0
+        pap = 0.
+        pad = 0.
         target = 'UNKNOWN'
         pdi = False
 
@@ -176,8 +187,11 @@ def RDB_pull(rdb, rdb_alive: bool, cam_apapane: bool, do_defaults=True):
             pdi)
 
 
-def get_img_data(cam, cam_type, bias=None, badpixmap=None, subt_ref=False,
-                 ref=None, lin_scale=True, clean=True, check=True):
+def get_img_data(cam: SHM, cam_type: CREDWHAT, bias: Op[np.ndarray] = None,
+                 badpixmap: Op[np.ndarray] = None, subt_ref: bool = False,
+                 ref: Op[np.ndarray] = None, lin_scale: bool = True,
+                 clean: bool = True,
+                 check: bool = True) -> Tuple[np.ndarray, float]:
     ''' ----------------------------------------
     Return the current image data content,
     formatted as a 2D numpy array.
@@ -207,6 +221,7 @@ def get_img_data(cam, cam_type, bias=None, badpixmap=None, subt_ref=False,
     #cam_clean.set_data(temp.astype(np.float32))
 
     if subt_ref:
+        assert ref
         temp -= ref
         if not lin_scale:
             temp = np.abs(temp)
@@ -214,23 +229,27 @@ def get_img_data(cam, cam_type, bias=None, badpixmap=None, subt_ref=False,
     return (temp, isat)
 
 
-def get_img_data_cred1(cam, *args, **kwargs):
-    return get_img_data(cam, CREDWHAT.ONE, *args, **kwargs)
+from functools import partial
+
+get_img_data_cred1 = partial(get_img_data, cam_type=CREDWHAT.ONE)
+get_img_data_cred2 = partial(get_img_data, cam_type=CREDWHAT.TWO)
 
 
-def get_img_data_cred2(cam, *args, **kwargs):
-    return get_img_data(cam, CREDWHAT.TWO, *args, **kwargs)
-
-
-def ave_img_data_from_callable(get_img_data, nave, bias=None, badpixmap=None,
-                               clean=True, disp=False, tint=0, timeout=None):
+def ave_img_data_from_callable(get_img_data: Callable, nave: int,
+                               bias: Op[np.ndarray] = None,
+                               badpixmap: Op[np.ndarray] = None,
+                               clean: bool = True, disp: bool = False,
+                               tint: float = 0,
+                               timeout: Op[float] = None) -> np.ndarray:
 
     if nave is None:
         nave = 1000000
-        if timeout is None:
-            timeout = 10.0
+
+    if timeout is None:
+        timeout = 10.0
 
     count = 0
+    ave_im: Op[np.ndarray] = None
 
     t_start = time.time()
     for i in range(nave):
@@ -241,12 +260,14 @@ def ave_img_data_from_callable(get_img_data, nave, bias=None, badpixmap=None,
             ave_im = get_img_data(bias=bias, badpixmap=badpixmap,
                                   clean=clean)[0].astype(np.float32)
         else:
+            assert ave_im
             ave_im += get_img_data(bias=bias, badpixmap=badpixmap,
                                    clean=clean)[0]
         count += 1
         if time.time() - t_start > timeout:
             break
 
+    assert ave_im
     ave_im /= float(count)
 
-    return (ave_im)
+    return ave_im

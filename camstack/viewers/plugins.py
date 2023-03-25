@@ -36,7 +36,7 @@ class PupilMode(OnOffPlugin):  # Fuck I desire double inheritance now.
     def frontend_action(self) -> None:
         # Just remind the front end to blit on top of the data.
         if self.enabled and self.textbox:
-            self.frontend_obj.pg_updated_rects.append(self.textbox)
+            self.frontend_obj.pg_updated_rects.append(self.textbox.rectangle)
 
     def backend_action(self) -> None:
         # Need it, it's an abstract method
@@ -71,6 +71,8 @@ class CrossHairPlugin(OnOffPlugin):
         self.color = color
 
     def frontend_action(self) -> None:
+
+        assert self.backend_obj  # mypy happy
 
         if not self.enabled:  # OK maybe this responsibility could be handled to the caller.
             return
