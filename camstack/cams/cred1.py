@@ -573,7 +573,7 @@ class Ristretto(CRED1):
         CRED1._fill_keywords(self)
 
         # Override detector name
-        self._set_formatted_keyword('DETECTOR', 'CRED1 - RISTRETTO')
+        self._set_formatted_keyword('DETECTOR', 'CRED1-RISTRETTO')
         self._set_formatted_keyword('GAIN', 1.98)
 
 
