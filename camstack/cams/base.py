@@ -92,7 +92,7 @@ class BaseCamera:
     def __init__(self, name: str, stream_name: str,
                  mode_id_or_hw: util.ModeIDorHWType, no_start: bool = False,
                  taker_cset_prio: util.CsetPrioType = ('system', None),
-                 dependent_processes: List[Any] = []) -> None:
+                 dependent_processes: List[util.DependentProcess] = []) -> None:
 
         #=======================
         # COPYING ARGS

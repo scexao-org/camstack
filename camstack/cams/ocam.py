@@ -1,7 +1,7 @@
 '''
     Manage the ocam
 '''
-from typing import Union, List, Optional as Op, Tuple
+from typing import List, Optional as Op, Tuple
 
 import os
 import logging as logg

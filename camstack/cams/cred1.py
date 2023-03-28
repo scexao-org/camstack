@@ -1,9 +1,7 @@
 '''
     Apapane
 '''
-from typing import Union, Optional as Op, Tuple, TYPE_CHECKING, List
-if TYPE_CHECKING:
-    from camstack.core.utilities import DependentProcess
+from typing import Union, Optional as Op, Tuple, List
 
 import os
 import time
@@ -11,7 +9,8 @@ import logging as logg
 
 from camstack.cams.edtcam import EDTCamera
 
-from camstack.core.utilities import CameraMode, ModeIDType, CsetPrioType
+from camstack.core.utilities import (CameraMode, ModeIDType, CsetPrioType,
+                                     DependentProcess)
 
 from scxkw.config import MAGIC_BOOL_STR
 
