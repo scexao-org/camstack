@@ -11,8 +11,6 @@ from camstack.cams.edtcam import EDTCamera
 
 from camstack.core import utilities as util
 
-from scxkw.config import MAGIC_BOOL_STR
-
 
 class CRED2_GAINENUM:
     STRING_HIGH = 'high'
