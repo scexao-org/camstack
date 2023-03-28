@@ -1,10 +1,30 @@
-from typing import Tuple, List
+from typing import Tuple, List, TypeVar, Optional as Op, Any, Union
 
 import os
 import time
 import subprocess
 
 from camstack.core import tmux
+
+
+class CamstackStateException(Exception):
+    pass
+
+
+T = TypeVar('T')
+
+
+def enforce_optional(anything: Op[T]) -> T:
+    if anything is None:
+        raise CamstackStateException('None shall not pass.')
+    return anything
+
+
+ModeIDType = Union[str, int]
+ModeIDorHWType = Union[ModeIDType, Tuple[int, int]]
+CsetPrioType = Tuple[str, Op[int]]
+KWType = Union[bool, int, float, str]
+KWTypeNoBool = Union[int, float, str]
 
 
 class CameraMode:

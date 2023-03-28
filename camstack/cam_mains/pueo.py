@@ -71,5 +71,5 @@ if __name__ == "__main__":
 
     server = PyroServer(bindTo=(IP_SC5, 0),
                         nsAddress=(PYRONS3_HOST, PYRONS3_PORT))
-    server.add_device(cam, pk.pueo, add_oneway_callables=True)
+    server.add_device(cam, pk.PUEO, add_oneway_callables=True)
     server.start()

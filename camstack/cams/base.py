@@ -1,10 +1,12 @@
+from typing import List, Any, Union, Tuple, Optional as Op, Dict
+
 import os
 import time
 import subprocess
 import threading
 import logging as logg
 
-from camstack.core.utilities import CameraMode, DependentMultiManager
+from camstack.core import utilities as util
 from camstack.core import tmux as tmux_util
 
 try:
@@ -12,13 +14,11 @@ try:
 except:
     logg.error('Import error upon trying to import scxkw.config.')
 
-    def redis_check_enabled():
+    def redis_check_enabled() -> Tuple[Any, bool]:
         return None, False
 
 
 from pyMilk.interfacing.isio_shmlib import SHM
-
-from typing import List, Any, Union, Tuple
 
 # TODO: class decorator that implements a camera-action-lock
 ''' TODO
@@ -42,8 +42,8 @@ class BaseCamera:
         And implements the server side management of the imgtake
     '''
 
-    REDIS_PUSH_ENABLED = False
-    REDIS_PREFIX = None
+    REDIS_PUSH_ENABLED: bool = False
+    REDIS_PREFIX: Op[str] = None
 
     INTERACTIVE_SHELL_METHODS = [
             'close',
@@ -54,10 +54,10 @@ class BaseCamera:
             'set_camera_size',
     ]
 
-    MODES = {}
+    MODES: Dict[util.ModeIDType, util.CameraMode] = {}
 
     # yapf: disable
-    KEYWORDS = {
+    KEYWORDS: Dict[str, Tuple[util.KWType, str, str, str]] = {
             # Format is name:
             #   (value,
             #    description,
@@ -90,10 +90,9 @@ class BaseCamera:
     # yapf: enable
 
     def __init__(self, name: str, stream_name: str,
-                 mode_id: Union[CameraMode, Tuple[int,
-                                                  int]], no_start: bool = False,
-                 taker_cset_prio: Union[str, int] = ('system', None),
-                 dependent_processes: List[Any] = []):
+                 mode_id_or_hw: util.ModeIDorHWType, no_start: bool = False,
+                 taker_cset_prio: util.CsetPrioType = ('system', None),
+                 dependent_processes: List[Any] = []) -> None:
 
         #=======================
         # COPYING ARGS
@@ -107,27 +106,27 @@ class BaseCamera:
         #=======================
         self.RDB, self.HAS_REDIS = redis_check_enabled()
 
-        if isinstance(mode_id, tuple):  # Allow (width, height) fallback
-            width, height = mode_id
-            self.current_mode_id = 'CUSTOM'
-            self.MODES['CUSTOM'] = CameraMode(x0=0, x1=width - 1, y0=0,
-                                              y1=height - 1)
+        if isinstance(mode_id_or_hw, tuple):  # Allow (width, height) fallback
+            width, height = mode_id_or_hw
+            self.current_mode_id: Union[str, int] = 'CUSTOM'
+            self.MODES['CUSTOM'] = util.CameraMode(x0=0, x1=width - 1, y0=0,
+                                                   y1=height - 1)
         else:
-            self.current_mode_id = mode_id
+            self.current_mode_id = mode_id_or_hw
 
         self.current_mode = self.MODES[self.current_mode_id]
         self.width, self.height = self._fg_size_from_mode(self.current_mode_id)
 
         self.dependent_processes = dependent_processes
-        self.dependent_processes_manager = DependentMultiManager(
+        self.dependent_processes_manager = util.DependentMultiManager(
                 dependent_processes)
         self.dependent_processes_manager.initialize_tmux()
 
         self.taker_cset_prio = taker_cset_prio
 
         # Thread:
-        self.event = None
-        self.thread = None
+        self.event: Op[threading.Event] = None
+        self.thread: Op[threading.Thread] = None
 
         #=======================
         # TMUX TAKE SESSION MGMT
@@ -135,7 +134,8 @@ class BaseCamera:
         # The taker tmux name will be allocated in the call to kill_taker_and_dependents
         # The tmux will also be created if it doesn't exist
         # If this session dies, we'll have to call this again
-        self.take_tmux_name = None
+        self.take_tmux_name: Op[str] = None
+        self.taker_tmux_command: Op[str] = None
         self.kill_taker_and_dependents()
 
         #============================================
@@ -166,7 +166,7 @@ class BaseCamera:
         # =================
         # ALLOCATE KEYWORDS
         # =================
-        self.camera_shm = None
+        self.camera_shm: Op[SHM] = None
         self.grab_shm_fill_keywords()
         self.redis_push_values()
         # Maybe we can use a class variable as well to define what the expected keywords are ?
@@ -181,14 +181,15 @@ class BaseCamera:
         # =================================
         self.prepare_camera_finalize()
 
-    def init_framegrab_backend(self):
+    def init_framegrab_backend(self) -> None:
         logg.debug('init_framegrab_backend @ BaseCamera')
 
         # TODO: split into a init_framegrab once (open handles to devices)
         # TODO: and what must be done for every mode change (EDT size change)
         raise NotImplementedError("Must be subclassed from the base class")
 
-    def prepare_camera_for_size(self, mode_id=None):
+    def prepare_camera_for_size(self,
+                                mode_id: Op[util.ModeIDType] = None) -> None:
         logg.debug('prepare_camera_for_size @ BaseCamera')
         # Gets called during constructor and set_mode
         if mode_id is None:
@@ -215,7 +216,8 @@ class BaseCamera:
 
                 dep_proc.cli_args = tuple(arglist)  # Must recast to tuple
 
-    def prepare_camera_finalize(self, mode_id=None):
+    def prepare_camera_finalize(self,
+                                mode_id: Op[util.ModeIDType] = None) -> None:
         logg.debug('prepare_camera_finalize @ BaseCamera')
         # Gets called after the framegrabbing has restarted spinning
         if mode_id is None:
@@ -223,7 +225,7 @@ class BaseCamera:
         logg.warning('Calling prepare_camera on generic BaseCameraClass. '
                      'Nothing happens here.')
 
-    def set_camera_mode(self, mode_id):
+    def set_camera_mode(self, mode_id: util.ModeIDType) -> None:
         '''
             Quite same as above - but mostly meant to be called by subclasses that do have defined modes.
         '''
@@ -244,14 +246,14 @@ class BaseCamera:
 
         self.prepare_camera_finalize()
 
-    def set_mode(self, mode_id):
+    def set_mode(self, mode_id: util.ModeIDType) -> None:
         '''
             Alias
         '''
         self.set_camera_mode(mode_id)
 
     def set_camera_size(self, height: int, width: int, h_offset: int = 0,
-                        w_offset: int = 0):
+                        w_offset: int = 0) -> None:
         '''
             That's a pretty agressive change - and thus,
             we're pretty much restarting everything
@@ -259,18 +261,20 @@ class BaseCamera:
 
             This is a back-compatible mode (width, height) over the camera modes
         '''
-        self.MODES['CUSTOM'] = CameraMode(x0=w_offset, x1=w_offset + width - 1,
-                                          y0=h_offset, y1=h_offset + height - 1)
+        self.MODES['CUSTOM'] = util.CameraMode(x0=w_offset, x1=w_offset +
+                                               width - 1, y0=h_offset,
+                                               y1=h_offset + height - 1)
 
         self.set_camera_mode('CUSTOM')
 
-    def is_taker_running(self):
+    def is_taker_running(self) -> bool:
         '''
             Send a signal to the take process PID to figure out if it's alive
         '''
         return tmux_util.find_pane_running_pid(self.take_tmux_pane) is not None
 
-    def start_frame_taker_and_dependents(self, skip_taker=False):
+    def start_frame_taker_and_dependents(self,
+                                         skip_taker: bool = False) -> None:
         logg.info('start_frame_taker_and_dependents @ BaseCamera')
 
         if not skip_taker:
@@ -279,7 +283,7 @@ class BaseCamera:
         # Now handle the dependent processes
         self.dependent_processes_manager.start()
 
-    def kill_taker_and_dependents(self, skip_taker=False):
+    def kill_taker_and_dependents(self, skip_taker: bool = False) -> None:
         logg.info('kill_taker_and_dependents @ BaseCamera')
 
         self.dependent_processes_manager.stop()
@@ -287,25 +291,25 @@ class BaseCamera:
         if not skip_taker:
             self._kill_taker_no_dependents()
 
-    def release(self):
+    def release(self) -> None:
         '''
             Just an alias
         '''
         self.kill_taker_and_dependents()
 
-    def close(self):
+    def close(self) -> None:
         '''
             Just an alias
         '''
         self.release()
 
     def _start_taker_no_dependents(self, reuse_shm: bool = False, *,
-                                   bypass_aux_thread: bool = False):
+                                   bypass_aux_thread: bool = False) -> None:
         # We have to prepare self.taker_tmux_command
         # we could do that in init_framegrab_backend, but hey we don't
 
         self._prepare_backend_cmdline(reuse_shm=reuse_shm)
-        if not hasattr(self, 'taker_tmux_command'):
+        if self.taker_tmux_command is None:
             raise AssertionError('self.taker_tmux_command is not defined?!')
 
         # Let's do it.
@@ -332,19 +336,20 @@ class BaseCamera:
         if not bypass_aux_thread:
             self.start_auxiliary_thread()
 
-    def _start(self):
+    def _start(self) -> None:
         '''
         Alias
         '''
         self._start_taker_no_dependents()
 
-    def _prepare_backend_cmdline(self, reuse_shm: bool = False):
+    def _prepare_backend_cmdline(self, reuse_shm: bool = False) -> None:
         raise NotImplementedError("Must be subclassed from the base class")
 
-    def _ensure_backend_restarted(self):
+    def _ensure_backend_restarted(self) -> None:
         raise NotImplementedError("Must be subclassed from the base class")
 
-    def _kill_taker_no_dependents(self, *, bypass_aux_thread: bool = False):
+    def _kill_taker_no_dependents(self, *,
+                                  bypass_aux_thread: bool = False) -> None:
 
         if not bypass_aux_thread:  # Dangerous not to, only for DumbEDT
             self.stop_auxiliary_thread()
@@ -353,13 +358,13 @@ class BaseCamera:
         self.take_tmux_pane = tmux_util.find_or_create(self.take_tmux_name)
         tmux_util.kill_running(self.take_tmux_pane)
 
-    def _stop(self):
+    def _stop(self) -> None:
         '''
         Alias
         '''
         self._kill_taker_no_dependents()
 
-    def grab_shm_fill_keywords(self):
+    def grab_shm_fill_keywords(self) -> None:
         # Problem: we need to be sure the taker has restarted
         # before filling keywords !
         # Second problem: if the taker is **slow**, we may regrab a
@@ -369,7 +374,7 @@ class BaseCamera:
         time.sleep(0.3)  # Avoid initial race condition on keywords
         self._fill_keywords()
 
-    def _get_SHM(self):
+    def _get_SHM(self) -> SHM:
         # Separated to be overloaded if need be (thinking of you, OCAM !)
 
         while True:
@@ -392,13 +397,17 @@ class BaseCamera:
 
         return shm
 
-    def _set_formatted_keyword(self, key, value):
+    def _set_formatted_keyword(self, key: str, value: Union[str, int,
+                                                            float]) -> None:
+
+        assert self.camera_shm is not None  # mypy happy assert
 
         fmt = self.KEYWORDS[key][2]
         val = value
         if value is not None:
             try:
                 if fmt == 'BOOLEAN':
+                    assert isinstance(value, bool)  # mypy happy assert
                     val = MAGIC_BOOL_STR.TUPLE[value]
                 elif fmt[-1] == 'd':
                     val = int(fmt % value)
@@ -413,7 +422,10 @@ class BaseCamera:
 
         self.camera_shm.update_keyword(key, val)
 
-    def _fill_keywords(self):
+    def _fill_keywords(self) -> None:
+
+        assert self.camera_shm is not None  # mypy happy assert
+
         # These are pretty much defaults - we don't know anything about this
         # basic abstract camera
         preex_keywords = self.camera_shm.get_keywords(True)
@@ -437,28 +449,32 @@ class BaseCamera:
         self._set_formatted_keyword('PRD-RNG2', cm.y1 - cm.y0 + 1)
         self._set_formatted_keyword('CROPPED', False)
 
-    def get_fg_parameters(self):
+    def get_fg_parameters(self) -> None:
         # We don't need to get them, because we set them in init_pdv_configuration
         pass
 
-    def set_fg_parameters(self):
+    def set_fg_parameters(self) -> None:
         pass
 
-    def _fg_size_from_mode(self, mode_id):
+    def _fg_size_from_mode(self, mode_id: util.ModeIDType) -> Tuple[int, int]:
         width, height = self.MODES[mode_id].fgsize
         return width, height
 
-    def poll_camera_for_keywords(self):
+    def poll_camera_for_keywords(self) -> None:
         logg.warning(
                 'Calling poll_camera_for_keywords on generic BaseCamera class. '
                 'Nothing happens here.')
 
-    def redis_push_values(self):
+    def redis_push_values(self) -> None:
         '''
             Push the keys stored locally in the stream to the
             Redis database as disambiguated technical keys
         '''
+
+        assert self.camera_shm is not None  # mypy happy assert
+
         if self.REDIS_PUSH_ENABLED and self.HAS_REDIS:
+            assert self.REDIS_PREFIX  # mypy
             try:
                 keywords_shm = self.camera_shm.get_keywords(False)
                 with self.RDB.pipeline() as pipe:
@@ -473,21 +489,25 @@ class BaseCamera:
                 # Or get_keyword failed or whatnot
                 logg.error('Exception in redis_push_values @ BaseCamera')
 
-    def start_auxiliary_thread(self):
+    def start_auxiliary_thread(self) -> None:
         logg.info('start_auxiliary_thread')
         self.event = threading.Event()
         self.thread = threading.Thread(
                 target=self.auxiliary_thread_run_function)
         self.thread.start()
 
-    def stop_auxiliary_thread(self):
+    def stop_auxiliary_thread(self) -> None:
         logg.info('stop_auxiliary_thread')
+        assert self.event is not None  # mypy happy assert
+
         if self.thread is not None:
             self.event.set()
             self.thread.join()
             self.thread = None
 
-    def auxiliary_thread_run_function(self):
+    def auxiliary_thread_run_function(self) -> None:
+        assert self.event is not None  # mypy happy assert
+
         while True:
             ret = self.event.wait(10)
             if ret:  # Signal to break the loop

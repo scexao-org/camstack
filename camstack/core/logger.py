@@ -16,5 +16,5 @@ def init_camstack_logger(file_fullpath: str, file_debug: bool = False) -> None:
 
     logg.basicConfig(
             format=
-            "[%(asctime)s] p%(process)s {%(pathname)s:%(lineno)d}\n\t%(levelname)s - %(message)s",
+            "[%(asctime)s] p%(process)s {%(pathname)s:%(lineno)d}\t%(levelname)s - %(message)s",
             handlers=handlers, level=logg.DEBUG)

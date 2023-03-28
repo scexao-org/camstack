@@ -1,10 +1,10 @@
+from typing import Union, Tuple, List, Any, Optional as Op, Dict
+
 import os
 import logging as logg
 
-from typing import Union, Tuple, List, Any
-
 from camstack.cams.base import BaseCamera
-from camstack.core.utilities import CameraMode
+from camstack.core import utilities as util
 
 from hwmain.dcam import dcamprop
 
@@ -12,6 +12,7 @@ from pyMilk.interfacing.shm import SHM
 import numpy as np
 
 import time
+import threading
 
 
 class DCAMCamera(BaseCamera):
@@ -24,22 +25,22 @@ class DCAMCamera(BaseCamera):
     KEYWORDS = {}
     KEYWORDS.update(BaseCamera.KEYWORDS)
 
-    def __init__(self, name: str, stream_name: str, mode_id: Union[CameraMode,
-                                                                   Tuple[int,
-                                                                         int]],
-                 dcam_number: int, no_start: bool = False,
-                 taker_cset_prio: Union[str, int] = ('system', None),
-                 dependent_processes: List[Any] = []):
+    def __init__(self, name: str, stream_name: str,
+                 mode_id: util.ModeIDorHWType, dcam_number: int,
+                 no_start: bool = False,
+                 taker_cset_prio: util.CsetPrioType = ('system', None),
+                 dependent_processes: List[util.DependentProcess] = []) -> None:
 
         # Do basic stuff
         self.dcam_number = dcam_number
-        self.control_shm = None
+        self.control_shm: Op[SHM] = None
+        self.control_shm_lock = threading.Lock()
 
         BaseCamera.__init__(self, name, stream_name, mode_id, no_start=no_start,
                             taker_cset_prio=taker_cset_prio,
                             dependent_processes=dependent_processes)
 
-    def init_framegrab_backend(self):
+    def init_framegrab_backend(self) -> None:
         logg.debug('init_framegrab_backend @ DCAMCamera')
 
         if self.is_taker_running():
@@ -55,7 +56,12 @@ class DCAMCamera(BaseCamera):
             self.control_shm = SHM(self.STREAMNAME + "_params_fb",
                                    np.zeros((1, ), dtype=np.int16))
 
-    def prepare_camera_for_size(self, mode_id=None, params_injection=None):
+    def prepare_camera_for_size(
+            self, mode_id: Op[util.ModeIDType] = None,
+            params_injection: Op[Dict[dcamprop.EProp, Union[int, float]]] = None
+    ) -> None:
+        assert self.control_shm
+
         logg.debug('prepare_camera_for_size @ DCAMCamera')
 
         BaseCamera.prepare_camera_for_size(self, mode_id=None)
@@ -63,7 +69,7 @@ class DCAMCamera(BaseCamera):
         x0, x1 = self.current_mode.x0, self.current_mode.x1
         y0, y1 = self.current_mode.y0, self.current_mode.y1
 
-        params = {
+        params: Dict[dcamprop.EProp, Union[int, float]] = {
                 dcamprop.EProp.SUBARRAYHPOS: x0,
                 dcamprop.EProp.SUBARRAYVPOS: y0,
                 dcamprop.EProp.SUBARRAYHSIZE: x1 - x0 + 1,
@@ -89,19 +95,21 @@ class DCAMCamera(BaseCamera):
         self.control_shm.set_data(self.control_shm.get_data() * 0 + len(params))
         # Find a way to (prepare to) feed to the camera
 
-    def abort_exposure(self):
+    def abort_exposure(self) -> None:
         # Basically restart the stack. Hacky way to abort a very long exposure.
         # This will kill the fgrab process, and re-init
         # We're reinjecting a short exposure time to reset a potentially very long exposure mode.
-        
+
         # This is a faster version of the intended:
         # self.set_camera_mode(self.current_mode_id)
-        
+
         self._kill_taker_no_dependents()
-        self.prepare_camera_for_size(self.current_mode_id, params_injection={dcamprop.EProp.EXPOSURETIME: 0.1})
+        self.prepare_camera_for_size(
+                self.current_mode_id,
+                params_injection={dcamprop.EProp.EXPOSURETIME: 0.1})
         self._start_taker_no_dependents(reuse_shm=True)
 
-    def _prepare_backend_cmdline(self, reuse_shm: bool = False):
+    def _prepare_backend_cmdline(self, reuse_shm: bool = False) -> None:
 
         # Prepare the cmdline for starting up!
         exec_path = os.environ['SCEXAO_HW'] + '/bin/hwacq-dcamtake'
@@ -110,33 +118,37 @@ class DCAMCamera(BaseCamera):
         if reuse_shm:
             self.taker_tmux_command += ' -R'  # Do not overwrite the SHM.
 
-    def _ensure_backend_restarted(self):
+    def _ensure_backend_restarted(self) -> None:
         # In case we recreated the SHM...
         # The sleep(1.0) used elsewhere, TOO FAST FOR DCAM!
         # so dcamusbtake.c implements a forced feedback
+        assert self.control_shm  # mypy happyness check.
         self.control_shm.get_data(check=True, checkSemAndFlush=True,
                                   timeout=None)
 
-    def _dcam_prm_setvalue(self, value: Any, fits_key: str, dcam_key: int):
+    def _dcam_prm_setvalue(self, value: Any, fits_key: Op[str],
+                           dcam_key: int) -> float:
         return self._dcam_prm_setmultivalue([value], [fits_key], [dcam_key])[0]
 
-    def _dcam_prm_setmultivalue(self, values: List[Any], fits_keys: List[str],
-                                dcam_keys: List[int]):
+    def _dcam_prm_setmultivalue(self, values: List[Any],
+                                fits_keys: List[Op[str]],
+                                dcam_keys: List[int]) -> List[float]:
         return self._dcam_prm_setgetmultivalue(values, fits_keys, dcam_keys,
                                                getonly_flag=False)
 
-    def _dcam_prm_getvalue(self, fits_key: str, dcam_key: int):
+    def _dcam_prm_getvalue(self, fits_key: Op[str], dcam_key: int) -> float:
         return self._dcam_prm_getmultivalue([fits_key], [dcam_key])[0]
 
-    def _dcam_prm_getmultivalue(self, fits_keys: List[str],
-                                dcam_keys: List[int]):
+    def _dcam_prm_getmultivalue(self, fits_keys: List[Op[str]],
+                                dcam_keys: List[int]) -> List[float]:
         return self._dcam_prm_setgetmultivalue([0.0] * len(fits_keys),
                                                fits_keys, dcam_keys,
                                                getonly_flag=True)
 
     def _dcam_prm_setgetmultivalue(self, values: List[Any],
-                                   fits_keys: List[str], dcam_keys: List[int],
-                                   getonly_flag: bool):
+                                   fits_keys: List[Op[str]],
+                                   dcam_keys: List[int],
+                                   getonly_flag: bool) -> List[float]:
         '''
             Setter - implements a quick feedback between this code and dcamusbtake
 
@@ -149,11 +161,11 @@ class DCAMCamera(BaseCamera):
             We set the first bit to 1 if it's a set.
         '''
 
-
         logg.debug(
                 f'DCAMCamera _dcam_prm_setgetmultivalue [getonly: {getonly_flag}]: {list(zip(fits_keys, values))}'
         )
-        
+        assert self.control_shm
+
         n_keywords = len(values)
 
         if getonly_flag:
@@ -163,16 +175,19 @@ class DCAMCamera(BaseCamera):
         else:
             dcam_string_keys = [f'{dcam_key:08x}' for dcam_key in dcam_keys]
 
-        self.control_shm.reset_keywords({
-                dk: v
-                for dk, v in zip(dcam_string_keys, values)
-        })
-        self.control_shm.set_data(self.control_shm.get_data() * 0 + n_keywords)  # Toggle grabber process
-        self.control_shm.multi_recv_data(3, True)  # Ensure re-sync
+        with self.control_shm_lock:
+            self.control_shm.reset_keywords({
+                    dk: v
+                    for dk, v in zip(dcam_string_keys, values)
+            })
+            self.control_shm.set_data(self.control_shm.get_data() * 0 +
+                                      n_keywords)  # Toggle grabber process
+            self.control_shm.multi_recv_data(3, True)  # Ensure re-sync
 
-        fb_values = [
-                self.control_shm.get_keywords()[dk] for dk in dcam_string_keys
-        ]  # Get back the cam value
+            fb_values: List[float] = [
+                    self.control_shm.get_keywords()[dk]
+                    for dk in dcam_string_keys
+            ]  # Get back the cam value
 
         for idx, (fk, dcamk) in enumerate(zip(fits_keys, dcam_keys)):
             if fk is not None:
@@ -200,42 +215,41 @@ class OrcaQuest(DCAMCamera):
     FIRST, FULL, DICHROIC = 'FIRST', 'FULL', 'DICHROIC'
     # yapf: disable
     MODES = {
-            FIRST: CameraMode(x0=1028, x1=2991, y0=492, y1=727, tint=0.001),
-            FULL: CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
-            0: CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),  # Also full
-            1: CameraMode(x0=1196, x1=2127, y0=784, y1=1039, tint=0.001),    # Kyohoon is Using for WFS mode
-            11: CameraMode(x0=1536, x1=2335, y0=976, y1=1231, tint=0.1), # Same as 1 no tint.
-            2: CameraMode(x0=800, x1=3295, y0=876, y1=1531, tint=0.001),      # Kyohoon is Using for WFS align
-            3: CameraMode(x0=1148, x1=2947, y0=696, y1=1807, tint=0.001),
-            4: CameraMode(x0=1700, x1=1963, y0=760, y1=1015, tint=0.001),    # Jen is using for focal plane mode
-            DICHROIC: CameraMode(x0=2336, x1=3135, y0=0, y1=2303, tint=0.01), # Dichroic stack mode
+            FIRST: util.CameraMode(x0=1028, x1=2991, y0=492, y1=727, tint=0.001),
+            FULL: util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
+            0: util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),  # Also full
+            1: util.CameraMode(x0=1196, x1=2127, y0=784, y1=1039, tint=0.001),    # Kyohoon is Using for WFS mode
+            11: util.CameraMode(x0=1536, x1=2335, y0=976, y1=1231, tint=0.1), # Same as 1 no tint.
+            2: util.CameraMode(x0=800, x1=3295, y0=876, y1=1531, tint=0.001),      # Kyohoon is Using for WFS align
+            3: util.CameraMode(x0=1148, x1=2947, y0=696, y1=1807, tint=0.001),
+            4: util.CameraMode(x0=1700, x1=1963, y0=760, y1=1015, tint=0.001),    # Jen is using for focal plane mode
+            DICHROIC: util.CameraMode(x0=2336, x1=3135, y0=0, y1=2303, tint=0.01), # Dichroic stack mode
     }
     # yapf: enable
 
     KEYWORDS = {}
     KEYWORDS.update(DCAMCamera.KEYWORDS)
 
-    def __init__(self, name: str, stream_name: str, mode_id: Union[CameraMode,
-                                                                   Tuple[int,
-                                                                         int]],
-                 dcam_number: int, no_start: bool = False,
-                 taker_cset_prio: Union[str, int] = ('system', None),
-                 dependent_processes: List[Any] = []):
+    def __init__(self, name: str, stream_name: str,
+                 mode_id: util.ModeIDorHWType, dcam_number: int,
+                 no_start: bool = False,
+                 taker_cset_prio: util.CsetPrioType = ('system', None),
+                 dependent_processes: List[util.DependentProcess] = []) -> None:
 
         DCAMCamera.__init__(self, name, stream_name, mode_id, dcam_number,
                             no_start=no_start, taker_cset_prio=taker_cset_prio,
                             dependent_processes=dependent_processes)
 
-    def _fill_keywords(self):
+    def _fill_keywords(self) -> None:
         DCAMCamera._fill_keywords(self)
 
         # Override detector name
         self._set_formatted_keyword('DETECTOR', 'Orca Quest')
 
-    def poll_camera_for_keywords(self):
+    def poll_camera_for_keywords(self) -> None:
         self.get_temperature()
 
-    def get_temperature(self):
+    def get_temperature(self) -> float:
         # Let's try and play: it's readonly
         # but should trigger the cam calling back home
         val = self._dcam_prm_getvalue('DET-TMP',
@@ -245,16 +259,16 @@ class OrcaQuest(DCAMCamera):
 
     # And now we fill up... FAN, LIQUID
 
-    def get_tint(self):
+    def get_tint(self) -> float:
         val = self._dcam_prm_getvalue('EXPTIME', dcamprop.EProp.EXPOSURETIME)
         logg.info(f'get_tint {val}')
         return val
 
-    def set_tint(self, tint: float):
-        return self._dcam_prm_setvalue(tint, 'EXPTIME',
+    def set_tint(self, tint: float) -> float:
+        return self._dcam_prm_setvalue(float(tint), 'EXPTIME',
                                        dcamprop.EProp.EXPOSURETIME)
 
-    def get_fps(self):
+    def get_fps(self) -> float:
         exp_time, read_time = self._dcam_prm_getmultivalue(['EXPTIME', None], [
                 dcamprop.EProp.EXPOSURETIME, dcamprop.EProp.TIMING_READOUTTIME
         ])
@@ -263,13 +277,13 @@ class OrcaQuest(DCAMCamera):
         logg.info(f'get_fps {fps}')
         return fps
 
-    def get_maxfps(self):
+    def get_maxfps(self) -> float:
         fps = 1 / self._dcam_prm_getvalue(None,
                                           dcamprop.EProp.TIMING_READOUTTIME)
         logg.info(f'get_fps {fps}')
         return fps
 
-    def set_readout_ultraquiet(self, ultraquiet: bool):
+    def set_readout_ultraquiet(self, ultraquiet: bool) -> None:
         logg.debug('set_readout_ultraquiet @ OrcaQuest')
 
         readmode = (dcamprop.EReadoutSpeed.READOUT_FAST,
@@ -287,7 +301,7 @@ class OrcaQuest(DCAMCamera):
 
 class FIRSTOrcam(OrcaQuest):
 
-    def _fill_keywords(self):
+    def _fill_keywords(self) -> None:
         OrcaQuest._fill_keywords(self)
 
         # Override detector name
@@ -296,7 +310,7 @@ class FIRSTOrcam(OrcaQuest):
 
 class AlalaOrcam(OrcaQuest):
 
-    def _fill_keywords(self):
+    def _fill_keywords(self) -> None:
         OrcaQuest._fill_keywords(self)
 
         # Override detector name
@@ -305,7 +319,7 @@ class AlalaOrcam(OrcaQuest):
 
 class MilesOrcam(OrcaQuest):
 
-    def _fill_keywords(self):
+    def _fill_keywords(self) -> None:
         OrcaQuest._fill_keywords(self)
 
         # Override detector name

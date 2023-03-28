@@ -14,11 +14,12 @@
     camera taps.
 '''
 
-import os
 import logging as logg
 import time
 
 from camstack.cams.edtcam import EDTCamera
+
+from pyMilk.interfacing.shm import SHM
 
 
 class AutoDumbEDTCamera(EDTCamera):
@@ -40,17 +41,22 @@ class AutoDumbEDTCamera(EDTCamera):
         So I guess it's Okay?
     '''
 
-    def _start_taker_no_dependents(self, reuse_shm: bool = False):
+    def _start_taker_no_dependents(
+            self, reuse_shm: bool = False
+    ) -> None:  # type: ignore # signature change from superclass.
         logg.debug('_start_taker_no_dependents @ AutoDumbEDTCamera')
         # The first call is from the main thread, we need to start the thread this very first time.
         EDTCamera._start_taker_no_dependents(
                 self, reuse_shm, bypass_aux_thread=self.thread is not None)
 
-    def _kill_taker_no_dependents(self):
+    def _kill_taker_no_dependents(
+            self) -> None:  # type: ignore # signature change from superclass.
         logg.debug('_kill_taker_no_dependents @ AutoDumbEDTCamera')
         EDTCamera._kill_taker_no_dependents(self, bypass_aux_thread=True)
 
-    def poll_camera_for_keywords(self):
+    def poll_camera_for_keywords(self) -> None:
+        assert self.camera_shm
+
         kw_dict = self.camera_shm.get_keywords()
 
         detected_height = kw_dict['_FGDETS1']  # Lines per frame
@@ -71,7 +77,7 @@ class AutoDumbEDTCamera(EDTCamera):
             )
             self.set_camera_size(detected_height, detected_width)
 
-    def _fill_keywords(self):
+    def _fill_keywords(self) -> None:
         EDTCamera._fill_keywords(self)
 
         # Override keywords that we know aren't known. Maybe this should be done in BaseCamera actually.
@@ -80,8 +86,7 @@ class AutoDumbEDTCamera(EDTCamera):
         self._set_formatted_keyword('DETGAIN', -1.0)
         self._set_formatted_keyword('GAIN', -1.0)
 
-    def _get_SHM(self):
-        from pyMilk.interfacing.shm import SHM
+    def _get_SHM(self) -> SHM:
 
         while True:
             # In case the SHM doesn't exist yet
@@ -94,8 +99,7 @@ class AutoDumbEDTCamera(EDTCamera):
         # Difference from the superclass: we don't wait forever til a semaphore is posted
         # Otherwise, we get stuck if the edttake is stuck into perpetual timeouts
         shm.IMAGE.semflush(shm.semID)
-        time.sleep(
-                5.0
-        )  # Rather than a forever-wait. No biggie cause edt fgrab start is pretty quick.
+        # Rather than a forever-wait. No biggie cause edt fgrab start is pretty quick.
+        time.sleep(5.0)
 
         return shm
