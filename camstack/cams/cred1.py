@@ -364,9 +364,9 @@ class CRED1(EDTCamera):
         time.sleep(1.)
         self.set_readout_mode(readout_mode)
 
-        self.set_fps(
-                self.current_mode.fps
-        )  # Systematically - because AUTO rescaling of fps occurs when changing NDR...
+        # Systematically - because AUTO rescaling of fps occurs when changing NDR...
+        assert self.current_mode.fps is not None  # FIXME we should actually define fps when modesetting - OR use maxfps.
+        self.set_fps(self.current_mode.fps)
 
         self.set_gain(gain_now)
 

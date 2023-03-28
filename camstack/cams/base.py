@@ -202,7 +202,7 @@ class BaseCamera:
         for dep_proc in self.dependent_processes:
             if (MAGIC_HW_STR.HEIGHT in dep_proc.cli_original_args or
                         MAGIC_HW_STR.WIDTH in dep_proc.cli_original_args):
-                arglist = list(dep_proc.cli_original_args)
+                arglist: List[util.KWType] = list(dep_proc.cli_original_args)
 
                 cm = self.current_mode
                 h, w = ((cm.x1 - cm.x0 + 1) // cm.binx,
@@ -214,7 +214,7 @@ class BaseCamera:
                         arglist[kk] = w
                     # ... there might be a transpose error, ofc.
 
-                dep_proc.cli_args = tuple(arglist)  # Must recast to tuple
+                dep_proc.cli_args = arglist
 
     def prepare_camera_finalize(self,
                                 mode_id: Op[util.ModeIDType] = None) -> None:

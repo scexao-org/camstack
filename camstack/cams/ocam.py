@@ -107,12 +107,12 @@ class OCAM2K(EDTCamera):
         # Change the argument to ocam_decode
         for dep_proc in self.dependent_processes:
             if 'decode' in dep_proc.cli_cmd:
-                dep_proc.cli_args = (mode_id, )
-            if 'shmimTCPreceive' in dep_proc.cli_cmd:
+                dep_proc.cli_args = [mode_id]
+            if 'shmimTCPreceive' in dep_proc.cli_cmd:  # This is very likely obsolete to MAGIC_HEIGHT_KW... in BaseCamera.
                 cm = self.current_mode
                 h, w = (cm.x1 - cm.x0 + 1) // cm.binx, (cm.y1 - cm.y0 +
                                                         1) // cm.biny
-                dep_proc.cli_args = (dep_proc.cli_args[0], h, w)
+                dep_proc.cli_args = [dep_proc.cli_args[0], h, w]
 
     def prepare_camera_finalize(self,
                                 mode_id: Op[util.ModeIDType] = None) -> None:
