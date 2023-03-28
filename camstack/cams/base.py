@@ -92,7 +92,7 @@ class BaseCamera:
     def __init__(self, name: str, stream_name: str,
                  mode_id_or_hw: util.ModeIDorHWType, no_start: bool = False,
                  taker_cset_prio: util.CsetPrioType = ('system', None),
-                 dependent_processes: List[Any] = []) -> None:
+                 dependent_processes: List[util.DependentProcess] = []) -> None:
 
         #=======================
         # COPYING ARGS
@@ -202,7 +202,7 @@ class BaseCamera:
         for dep_proc in self.dependent_processes:
             if (MAGIC_HW_STR.HEIGHT in dep_proc.cli_original_args or
                         MAGIC_HW_STR.WIDTH in dep_proc.cli_original_args):
-                arglist = list(dep_proc.cli_original_args)
+                arglist: List[util.KWType] = list(dep_proc.cli_original_args)
 
                 cm = self.current_mode
                 h, w = ((cm.x1 - cm.x0 + 1) // cm.binx,
@@ -214,7 +214,7 @@ class BaseCamera:
                         arglist[kk] = w
                     # ... there might be a transpose error, ofc.
 
-                dep_proc.cli_args = tuple(arglist)  # Must recast to tuple
+                dep_proc.cli_args = arglist
 
     def prepare_camera_finalize(self,
                                 mode_id: Op[util.ModeIDType] = None) -> None:
@@ -498,8 +498,10 @@ class BaseCamera:
 
     def stop_auxiliary_thread(self) -> None:
         logg.info('stop_auxiliary_thread')
-        assert self.event is not None  # mypy happy assert
+        if self.thread is None:
+            return
 
+        assert self.event is not None  # mypy happy assert
         if self.thread is not None:
             self.event.set()
             self.thread.join()

@@ -1,4 +1,4 @@
-from typing import Union, Tuple, List, Any, Dict, TYPE_CHECKING
+from typing import Union, Tuple, List, Any, Dict
 
 import os
 import subprocess
@@ -6,8 +6,7 @@ import time
 import logging as logg
 
 import numpy as np
-if TYPE_CHECKING:
-    from numpy.typing import DTypeLike
+from numpy.typing import DTypeLike
 
 from camstack.cams.base import BaseCamera
 

@@ -1,9 +1,7 @@
 '''
     Apapane
 '''
-from typing import Union, Optional as Op, Tuple, TYPE_CHECKING, List
-if TYPE_CHECKING:
-    from camstack.core.utilities import DependentProcess
+from typing import Union, Optional as Op, Tuple, List
 
 import os
 import time
@@ -11,7 +9,8 @@ import logging as logg
 
 from camstack.cams.edtcam import EDTCamera
 
-from camstack.core.utilities import CameraMode, ModeIDType, CsetPrioType
+from camstack.core.utilities import (CameraMode, ModeIDType, CsetPrioType,
+                                     DependentProcess)
 
 #from scxkw.config import MAGIC_BOOL_STR
 
@@ -365,9 +364,9 @@ class CRED1(EDTCamera):
         time.sleep(1.)
         self.set_readout_mode(readout_mode)
 
-        self.set_fps(
-                self.current_mode.fps
-        )  # Systematically - because AUTO rescaling of fps occurs when changing NDR...
+        # Systematically - because AUTO rescaling of fps occurs when changing NDR...
+        assert self.current_mode.fps is not None  # FIXME we should actually define fps when modesetting - OR use maxfps.
+        self.set_fps(self.current_mode.fps)
 
         self.set_gain(gain_now)
 

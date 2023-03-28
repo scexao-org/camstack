@@ -1,6 +1,4 @@
 from typing import Union, Tuple, List, Any, TYPE_CHECKING, Optional as Op
-if TYPE_CHECKING:
-    from camstack.core.utilities import DependentProcess
 
 import os
 import subprocess
@@ -10,7 +8,8 @@ import logging as logg
 from camstack.cams.base import BaseCamera
 from hwmain.edt.edtinterface import EdtInterfaceSerial
 
-from camstack.core.utilities import CameraMode, ModeIDorHWType, CsetPrioType
+from camstack.core.utilities import (ModeIDorHWType, CsetPrioType,
+                                     DependentProcess)
 
 
 class EDTCamera(BaseCamera):

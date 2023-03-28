@@ -29,9 +29,9 @@ KWTypeNoBool = Union[int, float, str]
 
 class CameraMode:
 
-    def __init__(self, *, x0: int = None, x1: int = None, y0: int = None,
-                 y1: int = None, fps: float = None, tint: float = None,
-                 binx: int = 1, biny: int = 1, fgsize: Tuple[int, int] = None):
+    def __init__(self, *, x0: int, x1: int, y0: int, y1: int,
+                 fps: Op[float] = None, tint: Op[float] = None, binx: int = 1,
+                 biny: int = 1, fgsize: Op[Tuple[int, int]] = None):
 
         self.x0 = x0  # First COLUMN
         self.x1 = x1  # Last COLUMN (inclusive)
@@ -69,7 +69,7 @@ class DependentProcess:
     '''
 
     def __init__(self, tmux_name: str, cli_cmd: str, cli_args: List[str],
-                 cset: str = 'system', rtprio: int = None,
+                 cset: str = 'system', rtprio: Op[int] = None,
                  kill_upon_create: bool = True):
 
         self.enabled = True  # Is this registered to run ? #TODO UNUSED
@@ -77,7 +77,7 @@ class DependentProcess:
         self.tmux_name = tmux_name
         self.cli_cmd = cli_cmd
         self.cli_original_args = cli_args  # Can hold magic replace-me placeholders, e.g. #HEIGHT#
-        self.cli_args = cli_args  # Then the placeholders get overwritten
+        self.cli_args: List[KWType] = [t for t in cli_args]  # Deepcopy
 
         self.start_order = 0
         self.kill_order = 0
@@ -97,7 +97,7 @@ class DependentProcess:
             self.stop()
 
     def start_command_line(self):
-        tmux.send_keys(self.tmux_pane, self.cli_cmd % self.cli_args)
+        tmux.send_keys(self.tmux_pane, self.cli_cmd % tuple(self.cli_args))
 
     def start(self):
         self.start_command_line()
@@ -146,7 +146,7 @@ class DependentProcess:
 class RemoteDependentProcess(DependentProcess):
 
     def __init__(self, tmux_name, cli_cmd, cli_args, remote_host,
-                 cset: str = None, rtprio: int = None,
+                 cset: str = 'system', rtprio: Op[int] = None,
                  kill_upon_create: bool = True):
 
         self.remote_host = remote_host
