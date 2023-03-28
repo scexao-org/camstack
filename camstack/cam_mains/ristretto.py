@@ -14,7 +14,7 @@ if __name__ == "__main__":
     mode = 3
 
     cam = Ristretto('ristretto', 'ristretto_raw', unit=0, channel=0,
-                    mode_id=mode)
+                    mode_id=mode, dependent_processes=[])
     #, taker_cset_prio=('ristretto_edt', None))
 
     from camstack.core.utilities import shellify_methods
