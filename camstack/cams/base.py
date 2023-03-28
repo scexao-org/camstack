@@ -498,8 +498,10 @@ class BaseCamera:
 
     def stop_auxiliary_thread(self) -> None:
         logg.info('stop_auxiliary_thread')
-        assert self.event is not None  # mypy happy assert
+        if self.thread is None:
+            return
 
+        assert self.event is not None  # mypy happy assert
         if self.thread is not None:
             self.event.set()
             self.thread.join()
