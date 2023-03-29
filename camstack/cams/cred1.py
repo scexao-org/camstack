@@ -80,7 +80,7 @@ class CRED1(EDTCamera):
         # This should pre-kill dependent sessions
         # But we should be able to "prepare" the camera before actually starting
         EDTCamera.__init__(self, name, stream_name, mode_id, unit, channel,
-                           basefile=basefile, taker_cset_prio=taker_cset_prio,
+                           basefile, taker_cset_prio=taker_cset_prio,
                            dependent_processes=dependent_processes)
 
         # ======
