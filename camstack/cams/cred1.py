@@ -559,7 +559,10 @@ class Ristretto(CRED1):
 
     INTERACTIVE_SHELL_METHODS = [] + CRED1.INTERACTIVE_SHELL_METHODS
 
-    MODES = {}
+    MODES = {
+            99: CameraMode(x0=0, x1=319, y0=0, y1=255, fps=100.),
+    }
+
     MODES.update(CRED1.MODES)
 
     KEYWORDS = {}
