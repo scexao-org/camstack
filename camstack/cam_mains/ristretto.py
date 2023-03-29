@@ -11,7 +11,8 @@ if __name__ == "__main__":
 
     init_camstack_logger(os.environ['HOME'] + "/logs/camstack-ristretto.log")
 
-    mode = 99
+    #mode = 99
+    mode = 'full'
 
     cam = Ristretto(
             'ristretto', 'ristretto_raw', unit=0, channel=0,
