@@ -122,4 +122,6 @@ class CrossHairPlugin(OnOffPlugin):
                              (xc_fe, 0), (xc_fe, ytot_fe), 1)
 
     def backend_action(self) -> None:
-        pass
+
+        if not self.enabled:
+            return
