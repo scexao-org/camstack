@@ -66,8 +66,13 @@ class RefImageAcquirePlugin(OneShotActionPlugin):
         assert self.backend_obj is not None
         assert self.averaged_data is not None
 
-        self.backend_obj.data_for_sub_ref = self.averaged_data / self.averaging_counter  # FIXME reference_image exists?
+        self.backend_obj.data_for_sub_ref = self.averaged_data / self.averaging_counter
         self.averaging_counter = 0  # Mark for reset.
+
+        if self.textbox:
+            self.textbox.render_whitespace()
+            self.textbox.blit(self.frontend_obj.pg_screen)
+            self.frontend_obj.pg_updated_rects.append(self.textbox.rectangle)
 
     def frontend_action(self) -> None:  # abstract impl
         if self.is_running() and self.textbox:
@@ -77,6 +82,7 @@ class RefImageAcquirePlugin(OneShotActionPlugin):
     def backend_action(self) -> None:  # abstract impl
         assert self.backend_obj  # ...
 
+        # Trigger the finalization
         if not self.is_running():
             if self.averaging_counter > 0:
                 self._complete_action()

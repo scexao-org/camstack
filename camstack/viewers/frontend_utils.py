@@ -68,12 +68,15 @@ class LabelMessage:
         self.template_str = template_str
         self.n_args = self.template_str.count('%')
 
+        self.last_rendered = ''
+
         self.font = font
         self.em_size = font.size('0')[1]
 
         self.fg_col = fg_col
         self.bg_col = bg_col
 
+        self.rectangle = None
         self.label: Op[pygame.surface.Surface] = None
         self.render(tuple(0 for _ in range(self.n_args)))
 
@@ -86,7 +89,6 @@ class LabelMessage:
             self.rectangle.center = center
         elif topright is not None:
             self.rectangle.topright = topright
-
         else:
             raise AssertionError(
                     'Either of topleft, center, topright required.')
@@ -98,8 +100,23 @@ class LabelMessage:
         fg_col = self.fg_col if fg_col is None else fg_col
         bg_col = self.bg_col if bg_col is None else bg_col
 
-        self.label = self.font.render(self.template_str % format_args, True,
-                                      fg_col, bg_col)
+        self.last_rendered = self.template_str % format_args
+        self.label = self.font.render(self.last_rendered, True, fg_col, bg_col)
+
+        if blit_onto is not None:
+            self.blit(blit_onto)
+
+    def render_whitespace(self,
+                          blit_onto: Op[pygame.surface.Surface] = None) -> None:
+        # Because not all our fonts are monospaced:
+        how_big_last_rendered = sum([
+                c[-1] for c in self.font.metrics(self.last_rendered)
+        ])
+        space_width = self.font.metrics(' ')[0][-1]
+        n_char = how_big_last_rendered // space_width + 1
+        self.last_rendered = ''
+        self.label = self.font.render(' ' * n_char, True, self.fg_col,
+                                      self.bg_col)
 
         if blit_onto is not None:
             self.blit(blit_onto)

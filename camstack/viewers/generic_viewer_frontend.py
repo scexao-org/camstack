@@ -35,20 +35,23 @@ from PIL import Image
 class GenericViewerFrontend:
 
     # A couple numeric constants, can be overriden by subclasses
-    BOTTOM_PX_PAD = 120
+    BOTTOM_PX_PAD = 140
 
     WINDOW_NAME = 'Generic viewer'
 
     CARTOON_FILE: Op[str] = None
 
     def __init__(self, system_zoom: int, fps: int,
-                 display_base_size: Tuple[int, int]) -> None:
+                 display_base_size: Tuple[int, int],
+                 fonts_zoom: Op[int] = None) -> None:
 
         self.has_backend = False
         self.backend_obj: Op[GenericViewerBackend] = None
 
         self.fps_val = fps
         self.system_zoom = system_zoom  # Former z1
+        self.fonts_zoom = self.system_zoom if fonts_zoom is None else fonts_zoom
+
         # Data area width x height, before window scale
         self.data_disp_basesize = display_base_size
         self.data_blit_base_staging = np.zeros((*self.data_disp_basesize, 3),
@@ -81,7 +84,7 @@ class GenericViewerFrontend:
         pygame.font.init()
 
         # Prep the fonts.
-        futs.Fonts.init_zoomed_fonts(self.system_zoom)
+        futs.Fonts.init_zoomed_fonts(self.fonts_zoom)
 
         self.pg_screen = pygame.display.set_mode(self.pygame_win_size,
                                                  flags=0x0, depth=16)
@@ -160,7 +163,7 @@ class GenericViewerFrontend:
         # {Status message [sat, acquiring dark, acquiring ref...]}
         # At the bottom right.
         self.lbl_ref_dark = futs.LabelMessage(
-                '%s', futs.Fonts.DEFAULT_25,
+                '%s', futs.Fonts.DEFAULT_16,
                 topleft=(8 * self.system_zoom,
                          self.pygame_win_size[1] - 20 * self.system_zoom))
 
@@ -179,10 +182,10 @@ class GenericViewerFrontend:
                                                      h * self.system_zoom))
 
         # Move to bottom right, blit once.
-        rect = cartoon_img_scaled.get_rect()
-        rect.bottomright = self.pygame_win_size
+        self.pg_cartoon_rect = cartoon_img_scaled.get_rect()
+        self.pg_cartoon_rect.bottomright = self.pygame_win_size
 
-        self.pg_screen.blit(cartoon_img_scaled, rect)
+        self.pg_screen.blit(cartoon_img_scaled, self.pg_cartoon_rect)
 
     def _init_onoff_modes(self) -> None:
         # That, or an inherited class variable dict?
