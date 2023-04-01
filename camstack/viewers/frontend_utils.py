@@ -34,11 +34,12 @@ COLOR_BUTTON = Colors.BLUE  # button color
 
 # Dynamic generation of fonts with the system zoom
 class Fonts:
-    DEFAULT_25 = pygame.font.SysFont("default", 20)
-    DEFAULT_16 = pygame.font.SysFont("default", 10)
-    MONO_5 = pygame.font.SysFont("monospace", 5)
-    MONO = pygame.font.SysFont("monospace", 8)
-    MONOBOLD = pygame.font.SysFont("monospace", 7, bold=True)
+    # Cannot initialize from the get go, cause we need pygame to be initialized.
+    DEFAULT_25 = None
+    DEFAULT_16 = None
+    MONO_5 = None
+    MONO = None
+    MONOBOLD = None
 
     @classmethod
     def init_zoomed_fonts(cls, system_zoom: int) -> None:
@@ -59,6 +60,7 @@ class LabelMessage:
 
     def __init__(self, template_str: str, font: pygame.font.Font,
                  topleft: Op[Tuple[int, int]] = None,
+                 topright: Op[Tuple[int, int]] = None,
                  center: Op[Tuple[int,
                                   int]] = None, fg_col: RGBType = Colors.WHITE,
                  bg_col: RGBType = COLOR_BACKGROUND) -> None:
@@ -80,8 +82,14 @@ class LabelMessage:
 
         if topleft is not None:
             self.rectangle.topleft = topleft
-        else:
+        elif center is not None:
             self.rectangle.center = center
+        elif topright is not None:
+            self.rectangle.topright = topright
+
+        else:
+            raise AssertionError(
+                    'Either of topleft, center, topright required.')
 
     def render(self, format_args: Tuple[Any, ...], fg_col: Op[RGBType] = None,
                bg_col: Op[RGBType] = None,

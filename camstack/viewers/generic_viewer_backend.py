@@ -53,21 +53,25 @@ class GenericViewerBackend:
         self.input_shm = SHM(name_shm, symcode=0)
 
         ### DATA Pipeline
+        # yapf: disable
         self.data_raw_uncrop: Op[np.ndarray] = None  # Fresh out of SHM
-        self.data_debias_uncrop: Op[
-                np.ndarray] = None  # Debiased (ref, bias, badpix)
+        self.data_debias_uncrop: Op[np.ndarray] = None  # Debiased (ref, bias, badpix)
         self.data_debias: Op[np.ndarray] = None  # Cropped
         self.data_zmapped: Op[np.ndarray] = None  # Apply Z scaling
-        self.data_rgbimg: Op[
-                np.ndarray] = None  # Apply colormap / convert to RGB
-        self.data_output: Op[
-                np.ndarray] = None  # Interpolate to frontend display size
+        self.data_rgbimg: Op[np.ndarray] = None  # Apply colormap / convert to RGB
+        self.data_output: Op[np.ndarray] = None  # Interpolate to frontend display size
+
+        self.data_for_sub_dark: Op[np.ndarray] = None
+        self.data_for_sub_ref: Op[np.ndarray] = None
+        #yapf: enable
 
         ### Clipping for pipeline
         self.low_clip: Op[float] = None
         self.high_clip: Op[float] = None
 
         ### Various flags
+        self.flag_subref_on: bool = False
+        self.flag_subdark_on: bool = False
         self.flag_data_init: bool = False
         self.flag_averaging: bool = False
         self.flag_non_linear: int = 0
@@ -103,6 +107,10 @@ class GenericViewerBackend:
                         partial(self.steer_crop, pgmc.K_LEFT),
                 buts.Shortcut(pgmc.K_RIGHT, 0x0):
                         partial(self.steer_crop, pgmc.K_RIGHT),
+                buts.Shortcut(pgmc.K_d, 0x0):
+                        self.toggle_sub_dark,
+                buts.Shortcut(pgmc.K_r, 0x0):
+                        self.toggle_sub_ref,
         }
         # Note escape and X are reserved for quitting
 
@@ -142,6 +150,24 @@ class GenericViewerBackend:
             self.cmap_id = which
         self.cmap = self.COLORMAPS[self.cmap_id]
 
+    def toggle_sub_dark(self, state: Op[bool] = None):
+        if state is None:
+            state = not self.flag_subdark_on
+        if state and self.data_for_sub_dark is not None:
+            self.flag_subdark_on = True
+            self.flag_subref_on = False
+        if not state:
+            self.flag_subdark_on = False
+
+    def toggle_sub_ref(self, state: Op[bool] = None):
+        if state is None:
+            state = not self.flag_subref_on
+        if state and self.data_for_sub_ref is not None:
+            self.flag_subref_on = True
+            self.flag_subdark_on = False
+        if not state:
+            self.flag_subref_on = False
+
     def toggle_scaling(self, value: Op[int] = None) -> None:
         if value is None:
             self.flag_non_linear = (self.flag_non_linear + 1) % 3
@@ -150,8 +176,8 @@ class GenericViewerBackend:
 
     def toggle_crop(self, which: Op[int] = None) -> None:
         if which is None:
-            self.crop_lvl_id = (self.crop_lvl_id + 1) % (self.MAX_ZOOM_LEVEL +
-                                                         1)
+            self.crop_lvl_id = (self.crop_lvl_id + 1) % \
+                        (self.MAX_ZOOM_LEVEL + 1)
         else:
             self.crop_lvl_id = which
 
@@ -225,7 +251,7 @@ class GenericViewerBackend:
         SHM -> self.data_raw_uncrop
         '''
         if self.flag_averaging and self.flag_data_init:
-            assert self.data_raw_uncrop  # from self.flag_data_init
+            assert self.data_raw_uncrop is not None  # from self.flag_data_init
 
             nn = self.count_averaging
             self.data_raw_uncrop = self.data_raw_uncrop * (
@@ -240,9 +266,14 @@ class GenericViewerBackend:
 
         Subtract dark, ref, etc
         '''
-        assert self.data_raw_uncrop
+        assert self.data_raw_uncrop is not None
 
-        self.data_debias_uncrop = self.data_raw_uncrop
+        if self.flag_subref_on:
+            self.data_debias_uncrop = self.data_raw_uncrop - self.data_for_sub_ref
+        elif self.flag_subdark_on:
+            self.data_debias_uncrop = self.data_raw_uncrop - self.data_for_sub_dark
+        else:
+            self.data_debias_uncrop = self.data_raw_uncrop
 
     def _data_crop(self) -> None:
         '''
@@ -251,8 +282,8 @@ class GenericViewerBackend:
         Crop, but also compute some uncropped stats
         that will be useful further down the pipeline
         '''
-        assert self.data_raw_uncrop
-        assert self.data_debias_uncrop
+        assert self.data_raw_uncrop is not None
+        assert self.data_debias_uncrop is not None
 
         self.data_min = self.data_raw_uncrop[1:, 1:].min()
         self.data_max = self.data_raw_uncrop[1:, 1:].max()
@@ -264,7 +295,7 @@ class GenericViewerBackend:
         '''
         self.data_debias -> self.data_zmapped
         '''
-        assert self.data_debias
+        assert self.data_debias is not None
 
         self.data_plot_min = self.data_debias[1:, 1:].min()
         self.data_plot_max = self.data_debias[1:, 1:].max()

@@ -34,18 +34,21 @@ class RefImageAcquirePlugin(OneShotActionPlugin):
             assert textbox.template_str == '%s'
         self.textbox = textbox
 
+        self.start_time = 0.0
+        self.averaging_counter = 0
+
         self.averaged_data: Op[np.ndarray] = None
 
     def register_backend(self,
                          backend_obj: GenericViewerBackend) -> None:  # Override
         super().register_backend(backend_obj)
 
-        assert self.backend_obj  # assigned in supercall
+        assert self.backend_obj is not None  # assigned in supercall
 
-        self.averaged_data = np.zeros(self.backend_obj.shm_shape, np.float64)
+        self.averaged_data = np.zeros(self.backend_obj.shm_shape, np.float32)
 
     def do_action(self) -> None:  # abstract impl
-        assert self.averaged_data
+        assert self.averaged_data is not None
 
         if self.textbox:
             self.textbox.render(('ACQUIRING REF IMG.', ),
@@ -60,14 +63,15 @@ class RefImageAcquirePlugin(OneShotActionPlugin):
         return time.time() - self.start_time <= 10.0
 
     def _complete_action(self) -> None:
-        assert self.backend_obj
-        assert self.averaged_data
+        assert self.backend_obj is not None
+        assert self.averaged_data is not None
 
-        self.backend_obj.reference_image = self.averaged_data / self.averaging_counter  # FIXME reference_image exists?
+        self.backend_obj.data_for_sub_ref = self.averaged_data / self.averaging_counter  # FIXME reference_image exists?
         self.averaging_counter = 0  # Mark for reset.
 
     def frontend_action(self) -> None:  # abstract impl
         if self.is_running() and self.textbox:
+            self.textbox.blit(self.frontend_obj.pg_screen)
             self.frontend_obj.pg_updated_rects.append(self.textbox.rectangle)
 
     def backend_action(self) -> None:  # abstract impl
@@ -100,7 +104,7 @@ class DarkAcquirePlugin(RefImageAcquirePlugin):
         assert self.backend_obj
         assert self.averaged_data
 
-        self.backend_obj.bias_image = self.averaged_data / self.averaging_counter  # FIXME reference_image exists?
+        self.backend_obj.data_for_sub_dark = self.averaged_data / self.averaging_counter  # FIXME reference_image exists?
         self.averaging_counter = 0  # Mark for reset.
 
     @abstractmethod

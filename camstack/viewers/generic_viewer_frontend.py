@@ -26,7 +26,7 @@ import pygame.constants as pgmc
 os.sched_setaffinity(0, _CORES)
 
 from . import frontend_utils as futs
-from . import plugins
+from . import plugins, image_stacking_plugins
 
 import numpy as np
 from PIL import Image
@@ -158,6 +158,11 @@ class GenericViewerFrontend:
         # {scaling type} - {has bias sub}
 
         # {Status message [sat, acquiring dark, acquiring ref...]}
+        # At the bottom right.
+        self.lbl_ref_dark = futs.LabelMessage(
+                '%s', futs.Fonts.DEFAULT_25,
+                topleft=(8 * self.system_zoom,
+                         self.pygame_win_size[1] - 20 * self.system_zoom))
 
     def _init_cartoon(self) -> None:
         if self.CARTOON_FILE is None:
@@ -183,8 +188,11 @@ class GenericViewerFrontend:
         # That, or an inherited class variable dict?
         # Why a dict actually?
         self.plugins = [
-                plugins.CrossHairPlugin(self, pgmc.K_c)
-        ]  # Shit I would want this to take backend-referenced coordinates as an argument.
+                plugins.CrossHairPlugin(self, pgmc.K_c),
+                image_stacking_plugins.RefImageAcquirePlugin(
+                        self, pgmc.K_r, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT,
+                        textbox=self.lbl_ref_dark)
+        ]
 
     def _inloop_update_labels(self) -> None:
         assert self.backend_obj
@@ -267,7 +275,7 @@ class GenericViewerFrontend:
         self.backend_obj.data_iter()
 
         data_output = self.backend_obj.data_rgbimg
-        assert data_output  # backend is init, data_output is not None
+        assert data_output is not None  # backend is init, data_output is not None
 
         img = Image.fromarray(data_output)
 

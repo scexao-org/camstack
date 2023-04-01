@@ -82,7 +82,7 @@ class OneShotActionPlugin(BasePlugin):
 
     def try_action(self) -> None:
         if self.is_running():
-            print('Cannot run {self} - running already')
+            print(f'Cannot run {self} - running already')
 
         self.do_action()
 
