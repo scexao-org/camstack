@@ -82,6 +82,8 @@ if __name__ == '__main__':
 
     data_circ_buff = make_data_circ_buff(arg_size_x, arg_size_y, data_type)
 
+    data_circ_buff = np.random.poisson(data_circ_buff).astype(data_type)
+
     exptime = shm.get_keywords()['_ETIMEUS']
     count = 1
     mfrate = 1e6 / exptime
