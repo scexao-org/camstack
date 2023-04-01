@@ -37,8 +37,8 @@ if __name__ == "__main__":
             # Sender is kill_upon_create - rather than when starting. that ensures it dies well before the receiver
             # Which is better for flushing TCP sockets
             kill_upon_create=True,
-            cset='apapane_tcp',
-            rtprio=49,
+            cset='a_tcp',
+            rtprio=46,
     )
     tcp_send.start_order = 2
     tcp_send.kill_order = 0
@@ -66,8 +66,8 @@ if __name__ == "__main__":
             # Sender is kill_upon_create - rather than when starting. that ensures it dies well before the receiver
             # Which is better for flushing TCP sockets
             kill_upon_create=True,
-            cset='apapane_tcp',
-            rtprio=48,
+            cset='a_tcp',
+            rtprio=45,
     )
     tcp_send.start_order = 4
     tcp_send.kill_order = 3
@@ -78,8 +78,8 @@ if __name__ == "__main__":
             'milk-exec "mload milkimageformat; readshmim apapane_raw; imgformat.cred_cds_utr ..procinfo 1; imgformat.cred_cds_utr ..triggermode 3; imgformat.cred_cds_utr ..loopcntMax -1; imgformat.cred_cds_utr apapane_raw apapane 37000"',
             cli_args=(),
             kill_upon_create=True,
-            cset='apapane_utr',
-            rtprio=49,
+            cset='a_utr',
+            rtprio=45,
     )
     utr_red.start_order = 0
     utr_red.kill_order = 2
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     zmq_send.kill_order = 5
 
     cam = Apapane('apapane', 'apapane_raw', unit=1, channel=0, mode_id=mode,
-                  taker_cset_prio=('apapane_edt', 49), dependent_processes=[
+                  taker_cset_prio=('a_edt', 48), dependent_processes=[
                           tcp_recv, tcp_send, utr_red, zmq_recv, zmq_send
                   ])  #, tcp_send_raw, tcp_recv_raw])
 

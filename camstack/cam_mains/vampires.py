@@ -63,11 +63,10 @@ if __name__ == "__main__":
     tcp_send_0 = DependentProcess(
             tmux_name='vcam0_tcp',
             cli_cmd='sleep 3; OMP_NUM_THREADS=1 shmimTCPtransmit %s %s %u',
-            cli_args=('vcamim0', scxconf.IPP2P_SC6FROM5,
-                      scxconf.TCPPORT_VCAM0),
+            cli_args=('vcamim0', scxconf.IPP2P_SC6FROM5, scxconf.TCPPORT_VCAM0),
             kill_upon_create=True,
-            cset='vcam_tcp',
-            rtprio=49,
+            cset='v_tcp',
+            rtprio=45,
     )
     tcp_send_0.start_order = 2
     tcp_send_0.kill_order = 2
@@ -75,22 +74,21 @@ if __name__ == "__main__":
     tcp_send_1 = DependentProcess(
             tmux_name='vcam1_tcp',
             cli_cmd='sleep 3; OMP_NUM_THREADS=1 shmimTCPtransmit %s %s %u',
-            cli_args=('vcamim1', scxconf.IPP2P_SC6FROM5,
-                      scxconf.TCPPORT_VCAM1),
+            cli_args=('vcamim1', scxconf.IPP2P_SC6FROM5, scxconf.TCPPORT_VCAM1),
             kill_upon_create=True,
-            cset='vcam_tcp',
-            rtprio=49,
+            cset='v_tcp',
+            rtprio=45,
     )
     tcp_send_1.start_order = 2
     tcp_send_1.kill_order = 2
 
     cam0 = Vampires(
             name='vcam0', stream_name='vcamim0', unit=2, channel=0,
-            mode_id=mode, taker_cset_prio=('vcam0_edt', 49),
+            mode_id=mode, taker_cset_prio=('v0_asl', 45),
             dependent_processes=[tcp_recv_0, tcp_send_0, kill_logshim_0])
     cam1 = Vampires(
             name='vcam1', stream_name='vcamim1', unit=2, channel=1,
-            mode_id=mode, taker_cset_prio=('vcam1_edt', 49),
+            mode_id=mode, taker_cset_prio=('v1_asl', 45),
             dependent_processes=[tcp_recv_1, tcp_send_1, kill_logshim_1])
 
     def release():
