@@ -86,20 +86,22 @@ class CRED1(EDTCamera):
         # ======
 
         # Issue a few standards for CRED1
-        
+
         self.send_command('set led off')
         self.send_command('set events off')
 
         self.set_gain(self.get_maxpossiblegain())
-        
+
         self._constructor_finalize()
 
     # =====================
     # AD HOC PREPARE CAMERA
     # =====================
-    
+
     def _constructor_finalize(self) -> None:
-        logg.error('Calling _constructor_finalize on base CRED1 class. Must subclass.')
+        logg.error(
+                'Calling _constructor_finalize on base CRED1 class. Must subclass.'
+        )
 
     def prepare_camera_for_size(self, mode_id: Op[ModeIDType] = None) -> None:
         # Note: when called the first time, this immediately follows
@@ -273,7 +275,7 @@ class CRED1(EDTCamera):
         if status in ['prevsafe', 'poorvacuum']:
             logg.error(f"Camera status {status}")
             self.send_command("continue")
-            time.sleep(1.0)
+            time.sleep(5.0)
             # Now expecting 'ready'
             status = self.get_camera_status()
 
@@ -293,12 +295,12 @@ class CRED1(EDTCamera):
             try:
                 while status == 'isbeingcooled':
                     # self.poll... will ask for water temperature AND trigger and emergency shutdown if needed.
+                    # Just calling get_water_temp() is not enough to trigger cooling stop.
                     self.poll_camera_for_keywords(shm_write=False)
                     status = self.get_camera_status()
-                    print(f'status = {status} - Cryo temp = {self.get_temperature(shm_write=False):.1f} - Water temp = {self.get_water_temperature():.1f}'
-                          )
-
-                logg.warning(f'Camera now cold - status: {status}.')
+                    logg.warning(
+                            f'status = {status} - Cryo temp = {self.get_temperature(shm_write=False):.1f} - Water temp = {self.get_water_temperature():.1f}'
+                    )
 
             except KeyboardInterrupt:
                 logg.error(
@@ -309,8 +311,11 @@ class CRED1(EDTCamera):
                 raise InitializationError('CRED1 not cold yet.')
 
         if status != 'operational':
-            logg.critical(f'Camera status {status} - fatal.')
+            logg.critical(f'Camera status "{status}" - fatal.')
             raise InitializationError('Take actions by hand and restart.')
+
+        assert status == 'operational'
+        logg.warning(f'Camera now cold - status: {status}.')
 
     def set_readout_mode(self, mode: str) -> str:
         self.send_command(f'set mode {mode}')
@@ -424,7 +429,7 @@ class CRED1(EDTCamera):
         temp = float(self.send_command('temp water raw'))
         logg.info(f'get_water_temperature: {temp}')
         if temp > 30.0:
-            logg.warn(f'get_water_temperature: {temp}')
+            logg.warning(f'get_water_temperature: {temp}')
         if temp > 40.0:
             logg.critical(f'get_water_temperature: {temp}')
 
@@ -493,7 +498,7 @@ class Apapane(CRED1):
 
     REDIS_PUSH_ENABLED = True
     REDIS_PREFIX = 'x_B'  # LOWERCASE x to not get mixed with the SCExAO keys
-    
+
     def _constructor_finalize(self) -> None:
         self.send_command('set imagetags on')
         self.send_command('set rawimages on')
@@ -553,7 +558,7 @@ class Iiwi(CRED1):
 
     REDIS_PUSH_ENABLED = True
     REDIS_PREFIX = 'x_I'  # LOWERCASE x to not get mixed with the SCExAO keys
-    
+
     def _constructor_finalize(self) -> None:
         self.send_command('set imagetags off')
         self.send_command('set rawimages off')
