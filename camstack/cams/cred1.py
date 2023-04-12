@@ -86,17 +86,20 @@ class CRED1(EDTCamera):
         # ======
 
         # Issue a few standards for CRED1
+        
         self.send_command('set led off')
         self.send_command('set events off')
 
-        self.send_command('set rawimages on')
-        self.send_command('set imagetags on')
-
         self.set_gain(self.get_maxpossiblegain())
+        
+        self._constructor_finalize()
 
     # =====================
     # AD HOC PREPARE CAMERA
     # =====================
+    
+    def _constructor_finalize(self) -> None:
+        logg.error('Calling _constructor_finalize on base CRED1 class. Must subclass.')
 
     def prepare_camera_for_size(self, mode_id: Op[ModeIDType] = None) -> None:
         # Note: when called the first time, this immediately follows
@@ -490,6 +493,10 @@ class Apapane(CRED1):
 
     REDIS_PUSH_ENABLED = True
     REDIS_PREFIX = 'x_B'  # LOWERCASE x to not get mixed with the SCExAO keys
+    
+    def _constructor_finalize(self) -> None:
+        self.send_command('set imagetags on')
+        self.send_command('set rawimages on')
 
     def _fill_keywords(self) -> None:
         CRED1._fill_keywords(self)
@@ -546,6 +553,10 @@ class Iiwi(CRED1):
 
     REDIS_PUSH_ENABLED = True
     REDIS_PREFIX = 'x_I'  # LOWERCASE x to not get mixed with the SCExAO keys
+    
+    def _constructor_finalize(self) -> None:
+        self.send_command('set imagetags off')
+        self.send_command('set rawimages off')
 
     def _fill_keywords(self) -> None:
         CRED1._fill_keywords(self)
