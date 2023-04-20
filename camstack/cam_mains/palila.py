@@ -36,8 +36,8 @@ if __name__ == "__main__":
             # Sender is kill_upon_create - rather than when starting. that ensures it dies well before the receiver
             # Which is better for flushing TCP sockets
             kill_upon_create=True,
-            cset='palila_tcp',
-            rtprio=49,
+            cset='p_tcp',
+            rtprio=45,
     )
     tcp_send.start_order = 2
     tcp_send.kill_order = 0
@@ -50,8 +50,8 @@ if __name__ == "__main__":
             'imgformat.cred_cds_utr palila_raw palila 5000"',
             cli_args=(),
             kill_upon_create=True,
-            cset='palila_utr',
-            rtprio=49,
+            cset='p_utr',
+            rtprio=45,
     )
     utr_red.start_order = 0
     utr_red.kill_order = 2
@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
     cam = Palila(
             'palila', 'palila_raw', unit=4, channel=0, mode_id=mode,
-            taker_cset_prio=('palila_edt', 49), dependent_processes=[
+            taker_cset_prio=('p_edt', 48), dependent_processes=[
                     tcp_recv, tcp_send, utr_red, zmq_recv, zmq_send
             ])
 

@@ -24,8 +24,8 @@ if __name__ == "__main__":
             'cd /home/scexao/src/camstack/ocamdecode; /home/scexao/src/camstack/ocamdecode/ocamdecoderun_mode %u',
             cli_args=(mode, ),
             kill_upon_create=False,
-            cset='ocam_decode',
-            rtprio=48,
+            cset='o_work',
+            rtprio=45,
     )
     ocam_decode.start_order = 0
     ocam_decode.kill_order = 2
@@ -51,14 +51,14 @@ if __name__ == "__main__":
             # Sender is kill_upon_create - rather than when starting. that ensures it dies well before the receiver
             # Which is better for flushing TCP sockets
             kill_upon_create=True,
-            cset='ocam_tcp',
-            rtprio=49,
+            cset='o_work',
+            rtprio=44,
     )
     tcp_send.start_order = 2
     tcp_send.kill_order = 0
 
     cam = OCAM2K('ocam', 'ocam2krc', name_stream, unit=0, channel=0,
-                 binning=binning, taker_cset_prio=('ocam_edt', 49),
+                 binning=binning, taker_cset_prio=('o_work', 48),
                  dependent_processes=[ocam_decode, tcp_recv, tcp_send])
 
     from camstack.core.utilities import shellify_methods
