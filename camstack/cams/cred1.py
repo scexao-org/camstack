@@ -12,7 +12,10 @@ from camstack.cams.edtcam import EDTCamera
 from camstack.core.utilities import (CameraMode, ModeIDType, CsetPrioType,
                                      DependentProcess)
 
-#from scxkw.config import MAGIC_BOOL_STR
+try:
+    from scxkw.config import MAGIC_BOOL_STR
+except:
+    logg.error('Import error upon trying to import scxkw.config.')
 
 
 class ROMODES:
@@ -199,6 +202,7 @@ class CRED1(EDTCamera):
         logg.debug('_get_cropping @ CRED1')
         _, xx, yy = self.send_command('cropping raw').split(
                 ':')  # return is "(on|off):x0-x1:y0-y1"
+        # The line below will crash if cropping is set to a single column such that xx, yy = 10, 1-256
         x0, x1 = [(int(xxx) - 1) for xxx in xx.split('-')]
         x0 = 32 * x0
         x1 = 32 * x1 + 31  # column blocks of 32
