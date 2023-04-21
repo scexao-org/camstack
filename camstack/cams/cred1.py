@@ -69,13 +69,14 @@ class CRED1(EDTCamera):
 
     def __init__(self, name: str, stream_name: str,
                  mode_id: ModeIDType = 'full', unit: int = 1, channel: int = 0,
-                 taker_cset_prio: CsetPrioType = ('system', None),
+                 basefile=None, taker_cset_prio: CsetPrioType = ('system',
+                                                                 None),
                  dependent_processes: List[DependentProcess] = []) -> None:
 
         # Allocate and start right in the appropriate binning mode
         self.synchro: bool = False
-
-        basefile = os.environ['HOME'] + '/src/camstack/config/cred1_16bit.cfg'
+        if basefile is None:
+            basefile = os.environ['HOME'] + '/src/camstack/config/cred1_16bit.cfg'
         self.NDR: Op[int] = None  # Grabbed in prepare_camera_finalize
 
         # Call EDT camera init
