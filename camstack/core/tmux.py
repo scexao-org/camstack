@@ -13,7 +13,8 @@ def find_or_create(session_name: str):
         Create it if necessary.
         This relies on our extensive use of single-pane sessions.
     '''
-    session = TMUX_SERVER.find_where({'session_name': session_name})
+
+    session = TMUX_SERVER.windows.get(session_name=session_name, default=None)
     if session is None:
         session = TMUX_SERVER.new_session(session_name)
 

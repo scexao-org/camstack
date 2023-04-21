@@ -70,12 +70,12 @@ class OCAM2K(EDTCamera):
         # ======
 
         # Issue a few standards for OCAM
-        self.send_command(
+        self.send_command_parsed(
                 'interface 0')  # Disable verbosity to be able to parse temp
         self.toggle_cooling(True)
         self.set_temperature_setpoint(-45.0)
-        self.send_command('led off')
-        self.send_command('temp reset')
+        self.send_command_parsed('led off')
+        self.send_command_parsed('temp reset')
         self.gain_protection_reset()
         self.set_gain(1)
         self.set_synchro(True)  # Is called by the setmode in the constructor.
@@ -92,16 +92,16 @@ class OCAM2K(EDTCamera):
 
         # The "interface 0" in the constructor does not happen early enough.
         # We need format=False because if the camera was verbose til now, output is not yet parsable.
-        self.send_command('interface 0')
+        self.send_command_parsed('interface 0')
 
         if mode_id is None:
             mode_id = self.current_mode_id
 
         # Not really handling fps/tint for the OCAM, we just assume an ext trigger
         if mode_id == 1:
-            self.send_command('binning off')
+            self.send_command_parsed('binning off')
         elif mode_id == 3:
-            self.send_command('binning on')
+            self.send_command_parsed('binning on')
 
         # AD HOC PREPARE DEPENDENTS
         # Change the argument to ocam_decode
@@ -124,10 +124,16 @@ class OCAM2K(EDTCamera):
         # Changing the binning trips the external sync.
         self.set_synchro(self.synchro)
 
-    def send_command(self, cmd: str, base_timeout: float = 100.) -> str:
+    def send_command_parsed(self, cmd: str,
+                            base_timeout: float = 100.) -> List[str]:
         # Just a little bit of parsing to handle the OCAM format
+        # We override the method signature from the superclass.
         logg.debug(f'OCAM2K send_command: "{cmd}"')
-        return EDTCamera.send_command(self, cmd, base_timeout)
+
+        ret_str = self.send_command(cmd, base_timeout)
+        wherechevron = ret_str.index('>')
+        ret_split = ret_str[wherechevron + 2:-1].split('][')
+        return ret_split
 
     def _fill_keywords(self) -> None:
         # Do a little more filling than the subclass after changing a mode
@@ -174,17 +180,17 @@ class OCAM2K(EDTCamera):
 
     def gain_protection_reset(self) -> None:
         logg.warning('gain_protection_reset')
-        self.send_command('protection reset')
+        self.send_command_parsed('protection reset')
 
     def set_gain(self, gain: int) -> int:
-        res = self.send_command(f'gain {gain}')
+        res = self.send_command_parsed(f'gain {gain}')
         val = int(res[0])
         self._set_formatted_keyword('DETGAIN', val)
         logg.info(f'set_gain: {val}')
         return val
 
     def get_gain(self) -> int:
-        res = self.send_command('gain')
+        res = self.send_command_parsed('gain')
         val = int(res[0])
         self._set_formatted_keyword('DETGAIN', val)
         logg.info(f'get_gain: {val}')
@@ -192,17 +198,29 @@ class OCAM2K(EDTCamera):
 
     def set_synchro(self, val: bool) -> None:
         val = bool(val)
-        self.send_command(f'synchro {("off","on")[val]}')
+        self.send_command_parsed(f'synchro {("off","on")[val]}')
         self.synchro = val
         self._set_formatted_keyword('EXTTRIG', val)
         logg.info(f'set_synchro: {self.synchro}')
+
+    def get_fps(self) -> float:
+        res = self.send_command_parsed('fps')
+        val = float(res[0])
+        self._set_formatted_keyword('FRATE', val)
+        logg.info(f'get_fps: {val}')
+        return val
 
     def set_fps(self, fps: float) -> float:
         # 0 sets maxfps
         if self.synchro:
             raise AssertionError('No fps set in synchro mode')
-        res = self.send_command(f'fps {int(fps)}')
-        val = float(res[0])
+        res = self.send_command_parsed(f'fps {int(fps)}')
+        if len(res) == 1:  # Success
+            val = float(res[0])
+        else:  # Retcode + value
+            logg.warning(f'set_fps failure {int(fps)} not accepted')
+            return self.get_fps()
+
         self._set_formatted_keyword('FRATE', val)
         logg.info(f'set_fps: {val}')
         return val
@@ -213,24 +231,24 @@ class OCAM2K(EDTCamera):
         return val
 
     def _get_temperature(self) -> Tuple[float, float]:
-        ret = self.send_command('temp')
-        # Expected return: <1>[-45.2][23][13][24][0.1][9][12][-450][1][10594]
-        wherechevron = ret.index('>')
-        ret_split = ret[wherechevron + 2:-1].split('][')
-        temps = [float(x) for x in ret_split]
+        ret = self.send_command_parsed('temp')
+        # Expected raw return: <1>[-45.2][23][13][24][0.1][9][12][-450][1][10594]
+        temps = [float(s) for s in ret]
 
         self.is_cooling = bool(temps[8])
         self._set_formatted_keyword('DET-TMP', temps[0] + 273.15)
         return temps[0], temps[7] / 10.  # temp, setpoint
 
-    def toggle_cooling(self, cooling: Op[bool] = None) -> None:
+    def toggle_cooling(self, cooling: Op[bool] = None) -> bool:
         if cooling is None:  # Perform a toggle
             self.get_temperature()  # Populate self.is_cooling = bool(temp[8])
             cooling = not self.is_cooling
-        self.send_command('temp ' + ('off', 'on')[self.is_cooling])
+        self.send_command_parsed('temp ' + ('off', 'on')[self.is_cooling])
         self.is_cooling = cooling
 
+        return self.is_cooling
+
     def set_temperature_setpoint(self, temp: float) -> float:
-        self.send_command(f'temp {int(temp)}')
+        self.send_command_parsed(f'temp {int(temp)}')
         logg.info(f'set_temperature_setpoint: {temp}')
         return self.get_temperature()

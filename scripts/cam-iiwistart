@@ -1,0 +1,24 @@
+#!/bin/bash
+
+tnew="tmux new-session -d -s"
+tsend="tmux send-keys -t"
+
+tname="iiwi_ctrl"
+
+# Create tmuxes and issue kills
+$tnew $tname
+sleep 3.0 # MUST NOT SEND the C-c to interrupt the bashrc !
+$tsend $tname C-c
+sleep 0.1
+$tsend $tname "close()" Enter
+sleep 3
+$tsend $tname C-c
+sleep 0.3
+$tsend $tname C-z
+sleep 0.3
+$tsend $tname "kill %" Enter
+
+
+$tsend $tname "python -im camstack.cam_mains.iiwi" Enter
+
+echo "startIiwi completed. See tmux iiwi_ctrl"

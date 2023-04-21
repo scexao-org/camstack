@@ -35,8 +35,8 @@ if __name__ == "__main__":
             # Sender is kill_upon_create - rather than when starting. that ensures it dies well before the receiver
             # Which is better for flushing TCP sockets
             kill_upon_create=True,
-            cset='glint_tcp',
-            rtprio=40,
+            cset='g_work',
+            rtprio=44,
     )
     tcp_send.start_order = 1
     tcp_send.kill_order = 0
@@ -82,7 +82,7 @@ if __name__ == "__main__":
             unit=5,
             channel=0,
             mode_id=mode,
-            taker_cset_prio=('glint_edt', 41),
+            taker_cset_prio=('g_work', 45),
             dependent_processes=[
                     tcp_recv,
                     tcp_send,
