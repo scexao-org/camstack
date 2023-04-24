@@ -12,7 +12,10 @@ from camstack.cams.edtcam import EDTCamera
 from camstack.core.utilities import (CameraMode, ModeIDType, CsetPrioType,
                                      DependentProcess)
 
-from scxkw.config import MAGIC_BOOL_STR
+try:
+    from scxkw.config import MAGIC_BOOL_STR
+except:
+    logg.error('Import error upon trying to import scxkw.config.')
 
 
 class ROMODES:
@@ -66,12 +69,14 @@ class CRED1(EDTCamera):
 
     def __init__(self, name: str, stream_name: str,
                  mode_id: ModeIDType = 'full', unit: int = 1, channel: int = 0,
-                 taker_cset_prio: CsetPrioType = ('system', None),
+                 basefile=None, taker_cset_prio: CsetPrioType = ('system',
+                                                                 None),
                  dependent_processes: List[DependentProcess] = []) -> None:
 
         # Allocate and start right in the appropriate binning mode
         self.synchro: bool = False
-        basefile = os.environ['HOME'] + '/src/camstack/config/cred1_16bit.cfg'
+        if basefile is None:
+            basefile = os.environ['HOME'] + '/src/camstack/config/cred1_16bit.cfg'
         self.NDR: Op[int] = None  # Grabbed in prepare_camera_finalize
 
         # Call EDT camera init
@@ -202,6 +207,7 @@ class CRED1(EDTCamera):
         logg.debug('_get_cropping @ CRED1')
         _, xx, yy = self.send_command('cropping raw').split(
                 ':')  # return is "(on|off):x0-x1:y0-y1"
+        # The line below will crash if cropping is set to a single column such that xx, yy = 10, 1-256
         x0, x1 = [(int(xxx) - 1) for xxx in xx.split('-')]
         x0 = 32 * x0
         x1 = 32 * x1 + 31  # column blocks of 32
@@ -568,6 +574,34 @@ class Iiwi(CRED1):
 
         # Override detector name
         self._set_formatted_keyword('DETECTOR', 'CRED1 - IIWI')
+        self._set_formatted_keyword('GAIN', 1.98)
+
+
+class Ristretto(CRED1):
+
+    INTERACTIVE_SHELL_METHODS = [] + CRED1.INTERACTIVE_SHELL_METHODS
+
+    MODES = {
+            99: CameraMode(x0=0, x1=319, y0=0, y1=255, fps=100.),
+    }
+
+    MODES.update(CRED1.MODES)
+
+    KEYWORDS = {}
+    KEYWORDS.update(CRED1.KEYWORDS)
+
+    REDIS_PUSH_ENABLED = True
+    REDIS_PREFIX = 'x_I'  # LOWERCASE x to not get mixed with the SCExAO keys
+
+    def _constructor_finalize(self) -> None:
+        self.send_command('set imagetags off')
+        self.send_command('set rawimages off')
+
+    def _fill_keywords(self):
+        CRED1._fill_keywords(self)
+
+        # Override detector name
+        self._set_formatted_keyword('DETECTOR', 'CRED1-RISTRETTO')
         self._set_formatted_keyword('GAIN', 1.98)
 
 
