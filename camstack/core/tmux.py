@@ -7,7 +7,7 @@ import subprocess
 TMUX_SERVER = tmux.Server()  # Singleton
 
 
-def find_or_create(session_name: str):
+def find_or_create_(session_name: str):
     '''
         Return a handle to the active_pane in the "session_name" tmux session
         Create it if necessary.
@@ -21,6 +21,32 @@ def find_or_create(session_name: str):
     pane = session.attached_pane
 
     return pane
+
+
+def find_or_create_deprecated(session_name: str):
+    '''
+        Mimic of find_or_create, but on a deprecated (tmux < 2.0) machine.
+        Will return a DeprecatedPanePatch object
+    '''
+    cmd = "tmux new-session -d -s " + session_name
+    subprocess.run(cmd.split(' '), stdout=subprocess.PIPE)
+    return DeprecatedPanePatch(session_name)
+
+
+if os.environ.get('WHICHCOMP', default=None) == '2':
+    find_or_create = find_or_create_deprecated
+else:
+    find_or_create = find_or_create_
+
+
+def find_or_create_remote(session_name: str, host: str):
+    '''
+        Mimic of find_or_create, but on a remote machine.
+        Will return a RemotePanPatch object
+    '''
+    subprocess.run(['ssh', host, "tmux new-session -d -s " + session_name],
+                   stdout=subprocess.PIPE)
+    return RemotePanePatch(session_name, host)
 
 
 def send_keys(pane, keys, enter=True):
@@ -65,6 +91,30 @@ def find_pane_running_pid(pane):
         return None
 
 
+class DeprecatedPanePatch:
+
+    def __init__(self, session_name: str):
+        self.session_name = session_name
+
+    def send_keys(self, keys: str, enter: bool = True,
+                  suppress_history: bool = False):
+        if suppress_history:
+            keys = " " + keys
+        cmdstring = ['tmux', 'send-keys', '-t', self.session_name, keys]
+        if enter:
+            cmdstring += ["Enter"]
+
+        # Use check call to return a CalledProcessError
+        subprocess.check_call(cmdstring, stdout=subprocess.PIPE)
+
+    def cmd(self, command: str, args: str = ''):
+        '''
+            Carefully mind the single and double quotes
+        '''
+        cmdstring = ['tmux', command, '-t', self.session_name, args]
+        return subprocess.run(cmdstring, stdout=subprocess.PIPE)
+
+
 class RemotePanePatch:
     '''
         Provide a virtual handle to a tmux pane on a remote server
@@ -101,13 +151,3 @@ class RemotePanePatch:
         cmdstring = ['tmux', command, '-t', self.session_name, args]
         return subprocess.run(['ssh', self.host] + cmdstring,
                               stdout=subprocess.PIPE)
-
-
-def find_or_create_remote(session_name: str, host: str):
-    '''
-        Mimic of find_or_create, but on a remote machine.
-        Will return a RemotePanPatch object
-    '''
-    subprocess.run(['ssh', host, "tmux new-session -d -s " + session_name],
-                   stdout=subprocess.PIPE)
-    return RemotePanePatch(session_name, host)
