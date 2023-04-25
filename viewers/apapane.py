@@ -419,7 +419,6 @@ if len(args) >= 2:
 #                access to shared memory structures
 # ------------------------------------------------------------------
 cam = SHM("/milk/shm/apapane.im.shm", verbose=False)
-cam_rawdata = SHM("/milk/shm/apapane_raw.im.shm", verbose=False)
 xsizeim, ysizeim = cam.shape_c
 
 (xsize, ysize) = (320, 256)  #Force size of apapane for the display
@@ -475,8 +474,12 @@ XW, YW = xsize * z1, (ysize + 100) * z1
 screen = pygame.display.set_mode((XW, YW), 0, 32)
 pygame.display.set_caption('APAPANE camera display!')
 
-tmux_apapane_ctrl = tmuxlib.find_or_create_remote(
-        'apapane_ctrl', 'scexao@10.20.30.5')  # Control shell
+from swmain.network.pyroclient import connect
+import camstack.pyro_keys
+
+apapane_pyro = connect(
+        camstack.pyro_keys.APAPANE)  # Remote control handle to camera.
+
 tmux_apapane = tmuxlib.find_or_create(
         'apapane_misc')  # start a tmux session for messsages
 tmux_ircam_synchro = tmuxlib.find_or_create(
@@ -536,14 +539,10 @@ ndrs = np.array([1, 2, 4, 8, 16, 32, 64, 128, 255])
 nndr = np.size(ndrs)
 
 # get initial values for expt, fps and ndr
-tmux_apapane_ctrl.send_keys("get_tint()")
-time.sleep(1)
-tmux_apapane_ctrl.send_keys("get_NDR()")
-time.sleep(1)
-tmux_apapane_ctrl.send_keys("get_fps()")
-time.sleep(1)
-tmux_apapane_ctrl.send_keys("get_gain()")
-time.sleep(1)
+apapane_pyro.get_tint()
+apapane_pyro.get_NDR()
+apapane_pyro.get_fps()
+apapane_pyro.get_gain()
 sync_param = ircam_synchro.get_data().astype(np.int)
 lag = 7
 cam_ro = 22 - lag
@@ -862,7 +861,6 @@ while True:  # the main game loop
     if shmreload:
         print("reloading SHM")
         cam = SHM("/milk/shm/apapane.im.shm", verbose=False)
-        cam_rawdata = SHM("/milk/shm/apapane_raw.im.shm", verbose=False)
         xsizeim, ysizeim = cam.shape_c
         print("image xsize=%d, ysize=%d" % (xsizeim, ysizeim))
         time.sleep(1)
@@ -870,16 +868,10 @@ while True:  # the main game loop
                                 check=True)
         cam_badpixmap = cvc.open_shm("apapane_badpixmap",
                                      dims=(xsizeim, ysizeim), check=True)
-
-        time.sleep(1)
-        tmux_apapane_ctrl.send_keys("get_tint()")
-        time.sleep(1)
-        tmux_apapane_ctrl.send_keys("get_NDR()")
-        time.sleep(1)
-        tmux_apapane_ctrl.send_keys("get_fps()")
-        time.sleep(1)
-        tmux_apapane_ctrl.send_keys("get_gain()")
-        time.sleep(1)
+        apapane_pyro.get_tint()
+        apapane_pyro.get_NDR()
+        apapane_pyro.get_fps()
+        apapane_pyro.get_gain()
         shmreload = False
     else:
         # ------------------------------------------------------------------
@@ -1369,7 +1361,7 @@ while True:  # the main game loop
                     if (nindex < nndr - 1):
                         nindex += 1
                         ndrc = ndrs[nindex]
-                        tmux_apapane_ctrl.send_keys("set_NDR(%d)" % (ndrc, ))
+                        apapane_pyro.set_NDR__oneway(ndrc)
                         time.sleep(1)
                         ndr = cam.get_ndr()
                         etimet = etime * ndr
@@ -1412,7 +1404,7 @@ while True:  # the main game loop
                     if (nindex > 0):
                         nindex -= 1
                         ndrc = ndrs[nindex]
-                        tmux_apapane_ctrl.send_keys("set_NDR(%d)" % (ndrc, ))
+                        apapane_pyro.set_NDR__oneway(ndrc)
                         time.sleep(1)
                         ndr = cam.get_ndr()
                         etimet = etime * ndr
@@ -1434,8 +1426,7 @@ while True:  # the main game loop
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
                         else:
-                            tmux_apapane_ctrl.send_keys("set_tint(%f)" %
-                                                        (etimec * 1.e-6, ))
+                            apapane_pyro.set_tint__oneway(etimec * 1.e-6, )
                             time.sleep(1)
                             etime = cam.get_expt() * 1e6
                             delay = 0
@@ -1451,8 +1442,7 @@ while True:  # the main game loop
                 what_key = DIRECT_NDR_KEYLIST.index(event.key)
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL) and (mmods & KMOD_LSHIFT):
-                    tmux_apapane_ctrl.send_keys("set_NDR(%d)" %
-                                                min(255, 2**what_key))
+                    apapane_pyro.set_NDR__oneway(min(255, 2**what_key))
                     time.sleep(1)
                     ndr = cam.get_ndr()
                     etimet = etime * ndr
@@ -1480,11 +1470,10 @@ while True:  # the main game loop
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
                         else:
-                            tmux_apapane_ctrl.send_keys("set_fps(%f)" %
-                                                        (fpsc, ))
+                            apapane_pyro.set_fps__oneway(fpsc)
                             time.sleep(1)
                             fps = cam.get_fps()
-                            tmux_apapane_ctrl.send_keys("get_tint()")
+                            apapane_pyro.get_tint()
                             time.sleep(1)
                             etime = cam.get_expt() * 1e6
                             delay = 0
@@ -1517,11 +1506,10 @@ while True:  # the main game loop
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
                         else:
-                            tmux_apapane_ctrl.send_keys("set_fps(%f)" %
-                                                        (fpsc, ))
+                            apapane_pyro.set_fps__oneway(fpsc)
                             time.sleep(1)
                             fps = cam.get_fps()
-                            tmux_apapane_ctrl.send_keys("get_tint()")
+                            apapane_pyro.get_tint()
                             time.sleep(1)
                             etime = cam.get_expt() * 1e6
                             delay = 0
@@ -1628,8 +1616,7 @@ while True:  # the main game loop
                                         np.int)
                                 tint = sync_param[2]
                             else:
-                                tmux_apapane_ctrl.send_keys("set_tint(%f)" %
-                                                            (tint * 1.e-6, ))
+                                apapane_pyro.set_tint__oneway(tint * 1.e-6)
                                 time.sleep(1)
                                 tint = cam.get_expt() * 1e3
                             ndark = int(1 * fps /
@@ -1662,8 +1649,7 @@ while True:  # the main game loop
                             ircam_synchro.set_data(sync_param.astype(
                                     np.float32))
                         else:
-                            tmux_apapane_ctrl.send_keys("set_tint(%f)" %
-                                                        (tint * 1.e-6, ))
+                            apapane_pyro.set_tint__oneway(tint * 1.e-6)
                         biashere = True
                         bpmhere = True
 
@@ -1927,9 +1913,9 @@ while True:  # the main game loop
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LALT):
                         # Ctrl+Alt+n -> enable exttrig
-                        tmux_apapane_ctrl.send_keys("set_synchro(1)")
+                        apapane_pyro.set_synchro(1)
                     else:  # Ctrl+n -> disable exttrig
-                        tmux_apapane_ctrl.send_keys("set_synchro(0)")
+                        apapane_pyro.set_synchro(0)
 
             # Crop modes and full frame
             #---------------------
@@ -1942,23 +1928,22 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL) and (mmods & KMOD_LALT):
                     # Index 12 == Ctrl+alt+f == full
-                    mode_id = (str(what_key), "FULL")[event.key == K_f]
+                    mode_id = (what_key, "FULL")[event.key == K_f]
                     if event.key == K_f and xsizeim == 320 and ysizeim == 256:
                         # Skip full frame if full frame already
                         print('Camera already in full frame - skipping set_camera_mode()'
                               )
                     else:
                         cam_paused.set_data(ONES_NODIM)
-                        tmux_apapane_ctrl.send_keys("set_camera_mode(%s)" %
-                                                    mode_id)
+                        apapane_pyro.set_camera_mode__oneway(mode_id)
                         # Wait until we're confident the edttake has stopped
                         time.sleep(5.0)
                         # This will return once the SHM has been overwritten...
                         # and hopefully recreated near-immediately after
-                        print('Hi')
+                        print('Hi! Waiting on semaphore til SHM is recreated.')
                         ret = cam.non_block_wait_semaphore()
                         time.sleep(0.1)  # Safe
-                        print('Hi again')
+                        print('Got it.')
                         time.sleep(3.0)  # Safe
                         cam_paused.set_data(ZERO_NODIM)
                         shmreload = True
@@ -2023,15 +2008,13 @@ while True:  # the main game loop
             if event.key in [K_w, K_s, K_e]:
                 # No modifiers to avoid conflict with ctrl+S
                 mmods = pygame.key.get_mods()
-                #tmux_apapane_ctrl.send_keys("get_gain()")
                 #sleep(.5)
                 gain = float(cam.get_keywords()['DETGAIN'])
                 if not (mmods & KMOD_LSHIFT) and not (mmods & KMOD_LCTRL):
                     if event.key == K_w:
                         tar_gain = min(2 * gain, 121)
                         print(f"set_gain({int(tar_gain)})")
-                        tmux_apapane_ctrl.send_keys(
-                                f"set_gain({int(tar_gain)})")
+                        apapane_pyro.set_gain__oneway(int(tar_gain))
                         time.sleep(.5)
                     elif event.key == K_s:
                         if gain == 121:
@@ -2039,8 +2022,7 @@ while True:  # the main game loop
                         else:
                             tar_gain = max(1, gain // 2)
                         print(f"set_gain({int(tar_gain)})")
-                        tmux_apapane_ctrl.send_keys(
-                                f"set_gain({int(tar_gain)})")
+                        apapane_pyro.set_gain__oneway(int(tar_gain))
                         time.sleep(.5)
 
                     # All cases, K_w, K_s, K_e
@@ -2051,7 +2033,7 @@ while True:  # the main game loop
                         mmods & KMOD_LCTRL) and event.key == K_e:
                     # Shortcut to 121
                     print("set_gain(121)")
-                    tmux_apapane_ctrl.send_keys("set_gain(121)")
+                    apapane_pyro.set_gain(121)
                     time.sleep(.5)
 
     pygame.display.update(rects)

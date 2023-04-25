@@ -426,7 +426,6 @@ if len(args) >= 2:
 #                access to shared memory structures
 # ------------------------------------------------------------------
 cam = SHM("/milk/shm/palila.im.shm", verbose=False)
-cam_rawdata = SHM("/milk/shm/palila_raw.im.shm", verbose=False)
 xsizeim, ysizeim = cam.shape_c
 
 (xsize, ysize) = (320, 256)  #Force size of old palila for the display
@@ -883,7 +882,6 @@ while True:  # the main game loop
     if shmreload:
         print("reloading SHM")
         cam = SHM("/milk/shm/palila.im.shm", verbose=False)
-        cam_rawdata = SHM("/milk/shm/palila_raw.im.shm", verbose=False)
         xsizeim, ysizeim = cam.shape_c
         #(xsizeim, ysizeim) = cam.mtdata['size'][:2]#size[:cam.naxis]
         print("image xsize=%d, ysize=%d" % (xsizeim, ysizeim))
