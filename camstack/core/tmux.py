@@ -1,19 +1,30 @@
-import libtmux as tmux
+from __future__ import annotations
 
 import os
+
+import libtmux as tmux
+
+from typing import TYPE_CHECKING, Union, Optional as Op
+if TYPE_CHECKING:
+    Pane_T = Union[tmux.Pane, 'RemotePanePatch', 'DeprecatedPanePatch']
+
 import time
 import subprocess
 
-TMUX_SERVER = tmux.Server()  # Singleton
+TMUX_SERVER = tmux.Server()  # No arguments: defaut server
+
+if not TMUX_SERVER.is_alive():
+    # There's probably better...
+    import os
+    os.system('tmux new -d -s startup')
 
 
-def find_or_create_(session_name: str):
+def find_or_create_(session_name: str) -> Pane_T:
     '''
         Return a handle to the active_pane in the "session_name" tmux session
         Create it if necessary.
         This relies on our extensive use of single-pane sessions.
     '''
-
     session = TMUX_SERVER.windows.get(session_name=session_name, default=None)
     if session is None:
         session = TMUX_SERVER.new_session(session_name)
@@ -49,34 +60,35 @@ def find_or_create_remote(session_name: str, host: str):
     return RemotePanePatch(session_name, host)
 
 
-def send_keys(pane, keys, enter=True):
+def send_keys(pane: Pane_T, keys: str, enter: bool = True) -> None:
     # This does NOT error if the tmux was destroyed !
     # Mind the different behavior with RemotePanePatch
     pane.send_keys(keys, enter=enter, suppress_history=False)
 
 
-def kill_running_Cc(pane):
+def kill_running_Cc(pane: Pane_T) -> None:
     pane.send_keys('C-c', enter=False, suppress_history=False)
     pane.send_keys('C-c', enter=False, suppress_history=False)
 
 
-def kill_running_Cz(pane):
+def kill_running_Cz(pane: Pane_T) -> None:
     pane.send_keys('C-z', enter=False, suppress_history=False)
     pane.send_keys('kill %')
 
 
-def kill_running(pane):
+def kill_running(pane: Pane_T) -> None:
     kill_running_Cc(pane)
     time.sleep(2.0)  # We need longer time for dcamusbtake to clear
     kill_running_Cz(pane)
 
 
-def find_pane_running_pid(pane):
+def find_pane_running_pid(pane: Pane_T) -> Op[int]:
     # Identify the PIDs running in a pane.
     # Generally, we expect to find nothing, or only one front-end job.
 
     # This is the PID of the pane's shell
-    p = pane.cmd('list-panes', '-F#{pane_pid}').stdout[0].strip()
+    p = pane.cmd('list-panes',
+                 '-F#{pane_pid}').stdout[0].strip()  # type: ignore
     # For which we identify children
     if type(pane) is RemotePanePatch:
         res = subprocess.run(['ssh', pane.host, "pgrep", "-P", p],
@@ -121,12 +133,12 @@ class RemotePanePatch:
         It's only based on system tmux commands over ssh
     '''
 
-    def __init__(self, session_name: str, host: str):
+    def __init__(self, session_name: str, host: str) -> None:
         self.session_name = session_name
         self.host = host
 
     def send_keys(self, keys: str, enter: bool = True,
-                  suppress_history: bool = False):
+                  suppress_history: bool = False) -> None:
         # Mind the quotes - we're gonna put keys between double quotes,
         # so we need to escape double quotes inside of keys
         # and we need to escape the backslash so that python knows it's a backslash
@@ -144,7 +156,8 @@ class RemotePanePatch:
         subprocess.check_call(['ssh', self.host] + cmdstring,
                               stdout=subprocess.PIPE)
 
-    def cmd(self, command: str, args: str = ''):
+    def cmd(self, command: str,
+            args: str = '') -> subprocess.CompletedProcess[bytes]:
         '''
             Carefully mind the single and double quotes
         '''
