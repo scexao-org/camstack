@@ -89,6 +89,8 @@ class BaseCamera:
     }
     # yapf: enable
 
+    N_WCS: int = 0  # Number of WCS keyword sets to allocate on top of the dictionary above.
+
     def __init__(self, name: str, stream_name: str,
                  mode_id_or_hw: util.ModeIDorHWType, no_start: bool = False,
                  taker_cset_prio: util.CsetPrioType = ('system', None),
@@ -430,6 +432,10 @@ class BaseCamera:
         # basic abstract camera
         preex_keywords = self.camera_shm.get_keywords(True)
         preex_keywords.update(self.KEYWORDS)
+        for nn in range(self.N_WCS):
+            preex_keywords.update(
+                    wcs_dict_init(nn, pix=(1.0, 1.0), delt_val=1.0,
+                                  cd_rot_rad=0.0))
 
         self.camera_shm.set_keywords(preex_keywords)  # Initialize comments
         # Second pass to enforce formatting...
