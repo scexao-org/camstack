@@ -36,7 +36,7 @@ class DCAMCamera(BaseCamera):
         self.control_shm: Op[SHM] = None
         self.control_shm_lock = threading.Lock()
 
-        BaseCamera.__init__(self, name, stream_name, mode_id, no_start=no_start,
+        super().__init__(name, stream_name, mode_id, no_start=no_start,
                             taker_cset_prio=taker_cset_prio,
                             dependent_processes=dependent_processes)
 
@@ -64,7 +64,7 @@ class DCAMCamera(BaseCamera):
 
         logg.debug('prepare_camera_for_size @ DCAMCamera')
 
-        BaseCamera.prepare_camera_for_size(self, mode_id=None)
+        super().prepare_camera_for_size(mode_id=None)
 
         x0, x1 = self.current_mode.x0, self.current_mode.x1
         y0, y1 = self.current_mode.y0, self.current_mode.y1
@@ -236,15 +236,17 @@ class OrcaQuest(DCAMCamera):
                  taker_cset_prio: util.CsetPrioType = ('system', None),
                  dependent_processes: List[util.DependentProcess] = []) -> None:
 
-        DCAMCamera.__init__(self, name, stream_name, mode_id, dcam_number,
+        super().__init__(name, stream_name, mode_id, dcam_number,
                             no_start=no_start, taker_cset_prio=taker_cset_prio,
                             dependent_processes=dependent_processes)
 
     def _fill_keywords(self) -> None:
-        DCAMCamera._fill_keywords(self)
+        super()._fill_keywords()
 
         # Override detector name
         self._set_formatted_keyword('DETECTOR', 'Orca Quest')
+        # Detector specs from instruction manual
+        self._set_formatted_keyword('GAIN', 0.107)
 
     def poll_camera_for_keywords(self) -> None:
         self.get_temperature()
@@ -298,29 +300,89 @@ class OrcaQuest(DCAMCamera):
         self.grab_shm_fill_keywords()
         self.prepare_camera_finalize()
 
+    def set_external_trigger(self, enable: bool, **kwargs):
+        if enable:
+            self._enable_external_trigger(**kwargs)
+        else:
+            self._disable_external_trigger(**kwargs)
+
+
+    def _enable_external_trigger(self, return_port: int=1, **kwargs):
+        logg.debug(f"Enabling external trigger. Trigger ready output on channel {return_port}")
+        # Enable the external trigger edge mode high
+        # enable the trigger-ready output on return port
+        values = [
+            dcamprop.ETriggerSource.EXTERNAL,
+            dcamprop.ETriggerActive.EDGE,
+            dcamprop.ETriggerPolarity.POSITIVE,
+            dcamprop.EOutputTriggerActive.EDGE,
+            dcamprop.EOutputTriggerKind.TRIGGERREADY,
+            dcamprop.EOutputTriggerPolarity.POSITIVE
+        ]
+        fits_keys = ["EXTTRIG", None, None, None, None, None]
+        dcam_keys = [
+            dcamprop.EProp.TRIGGERSOURCE,
+            dcamprop.EProp.TRIGGERACTIVE,
+            dcamprop.EProp.TRIGGERPOLARITY,
+            dcamprop.EProp.OUTPUTTRIGGER_ACTIVE,
+            dcamprop.EProp.OUTPUTTRIGGER_KIND,
+            dcamprop.EProp.OUTPUTTRIGGER_POLARITY,
+        ]
+        result = self._dcam_prm_setmultivalue(values, fits_keys, dcam_keys)
+        self._set_formatted_keyword('EXTTRIG', True)
+        return result
+
+    def _disable_external_trigger(self, **kwargs):
+        logg.debug("Disabling external trigger.")
+        # Enable the internal trigger
+        result = self._dcam_prm_setvalue(
+            dcamprop.ETriggerSource.INTERNAL,
+            None,
+            dcamprop.EProp.TRIGGERSOURCE
+        )
+        self._set_formatted_keyword('EXTTRIG', False)
+        return result
 
 class FIRSTOrcam(OrcaQuest):
 
     def _fill_keywords(self) -> None:
-        OrcaQuest._fill_keywords(self)
+        super()._fill_keywords()
 
         # Override detector name
-        self._set_formatted_keyword('DETECTOR', 'FIRST OrcaQ')
+        self._set_formatted_keyword('DETECTOR', 'FIRST - OrcaQ')
 
 
 class AlalaOrcam(OrcaQuest):
 
     def _fill_keywords(self) -> None:
-        OrcaQuest._fill_keywords(self)
+        super()._fill_keywords()
 
         # Override detector name
-        self._set_formatted_keyword('DETECTOR', 'ALALA OrcaQ')
+        self._set_formatted_keyword('DETECTOR', 'ALALA - OrcaQ')
 
 
-class MilesOrcam(OrcaQuest):
+class BaseVCAM(OrcaQuest):
+    
+    def set_readout_ultraquiet(self, ultraquiet: bool) -> None:
+        result = super().set_readout_ultraquiet(ultraquiet)
+        readmode = "SLOW" if ultraquiet else "FAST"
+        self._set_formatted_keyword("U_DETMOD", readmode)
+
+class VCAM1(BaseVCAM):
 
     def _fill_keywords(self) -> None:
-        OrcaQuest._fill_keywords(self)
+        super()._fill_keywords()
 
         # Override detector name
-        self._set_formatted_keyword('DETECTOR', 'Miles OrcaQ')
+        self._set_formatted_keyword('DETECTOR', 'VCAM1 - OrcaQ')
+        self._set_formatted_keyword('U_CAMERA', 1)
+        
+
+class VCAM2(BaseVCAM):
+    
+    def _fill_keywords(self) -> None:
+        super()._fill_keywords()
+
+        # Override detector name
+        self._set_formatted_keyword('DETECTOR', 'VCAM2 - OrcaQ')
+        self._set_formatted_keyword('U_CAMERA', 2)

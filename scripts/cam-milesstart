@@ -21,6 +21,6 @@ $tsend $tname "kill %" Enter
 echo ""
 #read -p "Everything killed, proceed to startup ? Press enter to continue, Ctrl+C to abort."
 
-$tsend $tname "python -im camstack.cam_mains.miles_orcam" Enter
+$tsend $tname "ipython -i -m camstack.cam_mains.miles_orcam" Enter
 
 echo "startOrcam completed (but actually not yet, just wait a bit)."

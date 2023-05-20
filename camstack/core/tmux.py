@@ -12,7 +12,6 @@ import time
 import subprocess
 
 TMUX_SERVER = tmux.Server()  # No arguments: defaut server
-
 if not TMUX_SERVER.is_alive():
     # There's probably better...
     import os
