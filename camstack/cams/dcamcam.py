@@ -246,7 +246,7 @@ class OrcaQuest(DCAMCamera):
         # Override detector name
         self._set_formatted_keyword('DETECTOR', 'Orca Quest')
         # Detector specs from instruction manual
-        self._set_formatted_keyword('GAIN', 0.107)
+        self._dcam_prm_getvalue('GAIN', dcamprop.EProp.CONVERSIONFACTOR_COEFF)
 
     def poll_camera_for_keywords(self) -> None:
         self.get_temperature()
@@ -311,7 +311,7 @@ class OrcaQuest(DCAMCamera):
         logg.debug(f"Enabling external trigger. Trigger ready output on channel {return_port}")
         # Enable the external trigger edge mode high
         # enable the trigger-ready output on return port
-        offset = return_port * dcamprop.EProp._OUTPUTTRIGGER
+        offset = (return_port - 1) * dcamprop.EProp._OUTPUTTRIGGER
         values = map(float, (
             dcamprop.ETriggerSource.EXTERNAL,
             dcamprop.ETriggerActive.EDGE,
