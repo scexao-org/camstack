@@ -1,29 +1,3 @@
 #!/bin/bash
-
-tnew="tmux new-session -d -s"
-tsend="tmux send-keys -t"
-
-tname="orcam_ctrl"
-
-# Create tmuxes and issue kills
-$tnew $tname
-sleep 3.0 # MUST NOT SEND the C-c to interrupt the bashrc !
-$tsend $tname C-c
-sleep 0.1
-$tsend $tname "close()" Enter
-sleep 3
-$tsend $tname C-c
-sleep 0.3
-$tsend $tname C-z
-sleep 0.3
-$tsend $tname "kill %" Enter
-
-echo ""
-echo "Remember check if 'cset set' is enabled"
-echo "If not sets, run:"
-echo "    sudo cset shield -c 12-15,28-31"
-
-
-$tsend $tname "ipython -i -m camstack.cam_mains.alala_orcam" Enter
-
-echo "alalacamstart completed (but actually not yet, just wait a bit)."
+echo "DEPRECATED use 'camstart alala' instead"
+python -m camstack.cam_mains.main ALALA

@@ -137,8 +137,7 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
         except PySpin.SpinnakerException as ex:
             print('Error D: %s' % ex)
 
-
-if __name__ == "__main__":
+def main():
     import docopt
 
     args = docopt.docopt(__doc__)
@@ -155,3 +154,6 @@ if __name__ == "__main__":
 
     main_acquire_spinnaker(arg_cam_number, arg_stream_name, arg_n_loops,
                            arg_attempt_reuse)
+
+if __name__ == "__main__":
+    main()

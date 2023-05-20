@@ -1,12 +1,28 @@
 from argparse import ArgumentParser
 
-from camstack.cam_mains import CAM_METHODS
 from camstack.core.tmux import find_or_create, send_keys, kill_running
 
+# This is the main data structure for 
+# which cameras map to which python modules/files
+CAM_METHODS = {
+    "ALALA": "camstack.cam_mains.alala_orcam",
+    "APAPANE": "camstack.cam_mains.apapane",
+    "FIRST": "camstack.cam_mains.first_orcam",
+    "FIRST_PUPIL": "camstack.cam_mains.first_pupil",
+    "GLINTCAM": "camstack.cam_mains.glintcam",
+    "KALAOCAM": "camstack.cam_mains.kalaocam",
+    "KIWIKIU": "camstack.cam_mains.kiwikiu",
+    "MILES": "camstack.cam_mains.miles_orcam",
+    "PALILA": "camstack.cam_mains.palila",
+    "PUEO": "camstack.cam_mains.pueo",
+    "SIMUCAM": "camstack.cam_mains.simucam",
+    "VAMPIRES": "camstack.cam_mains.vampires",
+    "VPUPCAM": "camstack.cam_mains.vpupcam",
+}
+
 CAM_NAMES = [str(k) for k in CAM_METHODS.keys()]
-parser = ArgumentParser(prog="camstart", description="Spin up or restart a camera tmux daemon", 
-                        epilog=f"Cameras: {' '.join(CAM_NAMES)}")
-parser.add_argument("camera", help="Name of camera to start")
+parser = ArgumentParser(prog="camstart", description="Spin up or restart a camera tmux daemon")
+parser.add_argument("camera", choices=CAM_NAMES, type=str.upper, help="Name of camera to start")
 
 """
 tnew="tmux new-session -d -s"
@@ -41,7 +57,7 @@ echo "alalacamstart completed (but actually not yet, just wait a bit)."
 def main():
     args = parser.parse_args()
     ## Step 1. Create tmux and issue kills
-    cam_name = args.camera.upper()
+    cam_name = args.camera
     if cam_name not in CAM_NAMES:
         raise ValueError(f"{cam_name} not recognized.")
     # default came name e.g. palila_ctrl
@@ -52,7 +68,7 @@ def main():
     # initiating this camera's main method
     cam_method = CAM_METHODS[cam_name]
     print(f"DEBUG: using {cam_method}")
-    send_keys(tmux, f"python -im {cam_method}")
+    send_keys(tmux, f"ipython -i -m {cam_method}")
     # all done. no cleanup
     print(f"Finished initiating camera. Inspect {tmux_name} for further debug information (some cameras take a little longer to start).")
 

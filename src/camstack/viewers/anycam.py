@@ -14,8 +14,7 @@
 import docopt
 import os
 
-if __name__ == '__main__':
-
+def main():
     args = docopt.docopt(__doc__)
 
     if args['--hack']:
@@ -45,3 +44,6 @@ if __name__ == '__main__':
                                      fonts_zoom=fonts_zoom)
     frontend.register_backend(backend)
     frontend.run()
+
+if __name__ == '__main__':
+    main()

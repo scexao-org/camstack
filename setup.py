@@ -1,64 +1,67 @@
-'''
-camstack setup.py
+# '''
+# camstack setup.py
 
-deps:
-    libtmux
-    pyMilk
-    docopt
-'''
+# deps:
+#     libtmux
+#     pyMilk
+#     docopt
+# '''
 
 from setuptools import setup
-from setuptools.command.install import install
-from setuptools.command.develop import develop
-from subprocess import check_call
 
-import os
+setup()
+# from setuptools.command.install import install
+# from setuptools.command.develop import develop
+# from subprocess import check_call
 
-
-class PreInstallCommand(develop):
-
-    def run(self):
-        # Add custom make commands here !
-        # Migration of compiled grabbers to hardwaresecrets repo.
-        #os.system('cd src; ./compile_edt; cd ..')
-        #os.system('cd src; ./compile_dcamusb; cd ..')
-        develop.run(self)
+# import os
 
 
-with open("README.md", 'r') as f:
-    long_description = f.read()
+# class PreInstallCommand(develop):
 
-scripts = [
-        './viewers/anycam.py',
-        './viewers/pueo.py',
-        './viewers/apapane.py',
-        './viewers/palila.py',
-        './viewers/firstcam.py',
-        './viewers/vpupcam.py',
-        './scripts/cam-restartdeps',
-        './scripts/cam-apapanestart',
-        './scripts/cam-palilastart',
-        './scripts/cam-glintstart',
-        './scripts/cam-ocamstart',
-        './scripts/cam-milesstart',
-        './scripts/cam-kiwikiustart',
-        './scripts/cam-fircamstart',
-        './scripts/cam-firstpupstart',
-        './scripts/cam-alalacamstart',
-        './scripts/cam-vpupcamstart',
-        './scripts/cam-vcamautostart',
-]
+#     def run(self):
+#         # Add custom make commands here !
+#         # Migration of compiled grabbers to hardwaresecrets repo.
+#         #os.system('cd src; ./compile_edt; cd ..')
+#         #os.system('cd src; ./compile_dcamusb; cd ..')
+#         develop.run(self)
 
-setup(
-        name='camstack',
-        version='0.01',
-        description='SCExAO unified EDT cameras to streams',
-        long_description=long_description,
-        author='Vincent Deo',
-        author_email='vdeo@naoj.org',
-        url="http://www.github.com/scexao-org/camstack",
-        packages=['camstack'],  # same as name
-        install_requires=['docopt', 'libtmux', 'pygame'],
-        scripts=scripts,
-        cmdclass={'develop': PreInstallCommand},
-)
+
+# with open("README.md", 'r') as f:
+#     long_description = f.read()
+
+# scripts = [
+#         './viewers/anycam.py',
+#         './viewers/pueo.py',
+#         './viewers/apapane.py',
+#         './viewers/palila.py',
+#         './viewers/firstcam.py',
+#         './viewers/vpupcam.py',
+#         './scripts/cam-restartdeps',
+#         './scripts/cam-apapanestart',
+#         './scripts/cam-palilastart',
+#         './scripts/cam-glintstart',
+#         './scripts/cam-ocamstart',
+#         './scripts/cam-milesstart',
+#         './scripts/cam-kiwikiustart',
+#         './scripts/cam-fircamstart',
+#         './scripts/cam-firstpupstart',
+#         './scripts/cam-alalacamstart',
+#         './scripts/cam-vpupcamstart',
+#         './scripts/cam-vcamautostart',
+#         'camstackcam_mains/main.py'
+# ]
+
+# setup(
+#         name='camstack',
+#         version='0.01',
+#         description='SCExAO unified EDT cameras to streams',
+#         long_description=long_description,
+#         author='Vincent Deo',
+#         author_email='vdeo@naoj.org',
+#         url="http://www.github.com/scexao-org/camstack",
+#         packages=['camstack'],  # same as name
+#         install_requires=['docopt', 'libtmux', 'pygame'],
+#         scripts=scripts,
+#         cmdclass={'develop': PreInstallCommand},
+# )

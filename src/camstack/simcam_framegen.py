@@ -50,8 +50,7 @@ def make_data_circ_buff(r: int, c: int, type: np.dtype) -> np.ndarray:
 
     return ((buffer_float + 1.) * 63.5).astype(type)
 
-
-if __name__ == '__main__':
+def main():
     import docopt
 
     args = docopt.docopt(__doc__)
@@ -117,3 +116,6 @@ if __name__ == '__main__':
                                     arg_size_y])
 
         count += 1
+
+if __name__ == '__main__':
+    main()
