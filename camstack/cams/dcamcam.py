@@ -302,33 +302,34 @@ class OrcaQuest(DCAMCamera):
 
     def set_external_trigger(self, enable: bool, **kwargs):
         if enable:
-            self._enable_external_trigger(**kwargs)
+            return self._enable_external_trigger(**kwargs)
         else:
-            self._disable_external_trigger(**kwargs)
+            return self._disable_external_trigger(**kwargs)
 
 
     def _enable_external_trigger(self, return_port: int=1, **kwargs):
         logg.debug(f"Enabling external trigger. Trigger ready output on channel {return_port}")
         # Enable the external trigger edge mode high
         # enable the trigger-ready output on return port
-        values = [
+        offset = return_port * dcamprop.EProp._OUTPUTTRIGGER
+        values = map(float, (
             dcamprop.ETriggerSource.EXTERNAL,
             dcamprop.ETriggerActive.EDGE,
             dcamprop.ETriggerPolarity.POSITIVE,
             dcamprop.EOutputTriggerActive.EDGE,
             dcamprop.EOutputTriggerKind.TRIGGERREADY,
             dcamprop.EOutputTriggerPolarity.POSITIVE
-        ]
-        fits_keys = ["EXTTRIG", None, None, None, None, None]
+        ))
+        fits_keys = [None, None, None, None, None, None]
         dcam_keys = [
             dcamprop.EProp.TRIGGERSOURCE,
             dcamprop.EProp.TRIGGERACTIVE,
             dcamprop.EProp.TRIGGERPOLARITY,
-            dcamprop.EProp.OUTPUTTRIGGER_ACTIVE,
-            dcamprop.EProp.OUTPUTTRIGGER_KIND,
-            dcamprop.EProp.OUTPUTTRIGGER_POLARITY,
+            dcamprop.EProp.OUTPUTTRIGGER_ACTIVE + offset,
+            dcamprop.EProp.OUTPUTTRIGGER_KIND + offset,
+            dcamprop.EProp.OUTPUTTRIGGER_POLARITY + offset,
         ]
-        result = self._dcam_prm_setmultivalue(values, fits_keys, dcam_keys)
+        result = self._dcam_prm_setmultivalue(list(values), fits_keys, dcam_keys)
         self._set_formatted_keyword('EXTTRIG', True)
         return result
 
@@ -336,7 +337,7 @@ class OrcaQuest(DCAMCamera):
         logg.debug("Disabling external trigger.")
         # Enable the internal trigger
         result = self._dcam_prm_setvalue(
-            dcamprop.ETriggerSource.INTERNAL,
+            float(dcamprop.ETriggerSource.INTERNAL),
             None,
             dcamprop.EProp.TRIGGERSOURCE
         )
