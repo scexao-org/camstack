@@ -364,7 +364,7 @@ class AlalaOrcam(OrcaQuest):
 class BaseVCAM(OrcaQuest):
     
     def set_readout_ultraquiet(self, ultraquiet: bool) -> None:
-        result = super().set_readout_ultraquiet(ultraquiet)
+        super().set_readout_ultraquiet(ultraquiet)
         readmode = "SLOW" if ultraquiet else "FAST"
         self._set_formatted_keyword("U_DETMOD", readmode)
 
