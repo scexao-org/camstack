@@ -13,6 +13,10 @@
 
 import docopt
 import os
+# We use the environment to manipulate the libGL hack that's happening
+# At the top of the import of generic_viewer_frontend
+from camstack.viewers.generic_viewer_frontend import GenericViewerFrontend
+from camstack.viewers.generic_viewer_backend import GenericViewerBackend
 
 def main():
     args = docopt.docopt(__doc__)
@@ -21,10 +25,7 @@ def main():
         os.environ["GLHACK_FORCE"] = "1"
     if args['--nohack']:
         os.environ["GLHACK_FORCENOT"] = "1"
-    # We use the environment to manipulate the libGL hack that's happening
-    # At the top of the import of generic_viewer_frontend
-    from camstack.viewers.generic_viewer_frontend import GenericViewerFrontend
-    from camstack.viewers.generic_viewer_backend import GenericViewerBackend
+
 
     zoom = int(args['-z'])
     binn = int(args['-b'])
