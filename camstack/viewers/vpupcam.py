@@ -9,6 +9,7 @@ import pygame.constants as pgmc
 from functools import partial
 import pygame
 import logging
+from swmain.redis import RDB
 
 logger = logging.getLogger("vpupcam")
 
@@ -107,7 +108,9 @@ class VAMPIRESPupilCamViewerBackend(GenericViewerBackend):
         else:
             nudge_value = sign * 1
         print(f"Moving {substage} by {nudge_value} mm")
-        self.wheel.move_relative__oneway(substage, nudge_value)
+        self.wheel.move_relative(substage, nudge_value)
+        self.wheel.update_keys()
+
 
     def rotate_wheel(self, key, fine=True):
         # CCW
@@ -122,15 +125,18 @@ class VAMPIRESPupilCamViewerBackend(GenericViewerBackend):
         else:
             nudge_value = sign * 1
         print(f"Rotating theta by {nudge_value} deg")
-        self.wheel.move_relative__oneway("theta", nudge_value)
+        self.wheel.move_relative("theta", nudge_value)
+        self.wheel.update_keys()
 
     def change_wheel(self, index: int):
         print(f"Moving wheel to configuration {index}")
-        self.wheel.move_configuration_idx__oneway(index)
+        self.wheel.move_configuration_idx(index)
+        self.wheel.update_keys()
 
     def save_config(self, index: int):
         print(f"Saving position for configuration {index}")
-        self.wheel.save_configuration__oneway(index=index)
+        self.wheel.save_configuration(index=index)
+        self.wheel.update_keys()
 
 
 class MaskStatusPlugin(BasePlugin):
@@ -150,7 +156,7 @@ class MaskStatusPlugin(BasePlugin):
         # self.frontend_obj.pg_updated_rects.append(self.label.rectangle)
 
     def backend_action(self) -> None:
-        _, name = self.backend_obj.wheel.get_configuration()
+        name = RDB.hget("U_MASK", "value")
         self.status = name
 
 class VAMPIRESPupilCamViewerFrontend(GenericViewerFrontend):
