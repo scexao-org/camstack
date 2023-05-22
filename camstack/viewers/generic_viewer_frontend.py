@@ -204,7 +204,7 @@ class GenericViewerFrontend:
         tint = self.backend_obj.input_shm.get_expt()
         ndr = self.backend_obj.input_shm.get_ndr()
 
-        self.lbl_cropzone.render(self.backend_obj.input_shm.get_crop(),
+        self.lbl_cropzone.render(tuple(self.backend_obj.input_shm.get_crop()),
                                  blit_onto=self.pg_screen)
         self.lbl_times.render((tint, fps, ndr), blit_onto=self.pg_screen)
         self.lbl_t_minmax.render((tint * ndr, self.backend_obj.data_min,
