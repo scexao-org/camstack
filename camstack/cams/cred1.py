@@ -95,7 +95,7 @@ class CRED1(EDTCamera):
         self.send_command('set led off')
         self.send_command('set events off')
 
-        self.set_gain(self.get_maxpossiblegain())
+        self.set_gain(1)
 
         self._constructor_finalize()
 
@@ -514,6 +514,7 @@ class Apapane(CRED1):
     def _constructor_finalize(self) -> None:
         self.send_command('set imagetags on')
         self.send_command('set rawimages on')
+        self.set_gain(self.get_maxpossiblegain())
 
     def _fill_keywords(self) -> None:
         # First, determine how many WCS we need.
@@ -589,6 +590,7 @@ class Iiwi(CRED1):
     def _constructor_finalize(self) -> None:
         self.send_command('set imagetags off')
         self.send_command('set rawimages off')
+        self.set_gain(self.get_maxpossiblegain())
 
     def _fill_keywords(self) -> None:
         CRED1._fill_keywords(self)
