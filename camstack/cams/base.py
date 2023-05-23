@@ -79,6 +79,7 @@ class BaseCamera:
             'DET-NSMP': (1, 'Number of non-destructive reads', '%20d', 'NDR'),
             'DET-SMPL': ('base', 'Sampling method', '%-16.16s', 'SAMPL'),
             'DET-TMP': (0.0, 'Detector temperature (K)', '%20.2f', 'TEMP'),
+            'OBS-MOD': ('UNKN', '', '%-16f', 'OBMOD'),
             'DETECTOR': ('DET', 'Name of the detector', '%-16s', 'NAME'),
             'DETGAIN': (1, 'Detector multiplication factor', '%16d', 'GAIN'),
             'EXPTIME': (0.001, 'Total integration time of the frame (sec)', '%20.8f', 'EXPO'),
@@ -88,6 +89,8 @@ class BaseCamera:
             'DATA-TYP': ('TEST', 'Subaru-style exp. type', '%-16s', 'DATA'),
     }
     # yapf: enable
+
+    N_WCS: int = 0  # Number of WCS keyword sets to allocate on top of the dictionary above.
 
     def __init__(self, name: str, stream_name: str,
                  mode_id_or_hw: util.ModeIDorHWType, no_start: bool = False,
@@ -426,10 +429,14 @@ class BaseCamera:
 
         assert self.camera_shm is not None  # mypy happy assert
 
+        from camstack.core.wcs import wcs_dummy_dict
+
         # These are pretty much defaults - we don't know anything about this
         # basic abstract camera
         preex_keywords = self.camera_shm.get_keywords(True)
         preex_keywords.update(self.KEYWORDS)
+        for nn in range(self.N_WCS):
+            preex_keywords.update(wcs_dummy_dict(nn))
 
         self.camera_shm.set_keywords(preex_keywords)  # Initialize comments
         # Second pass to enforce formatting...

@@ -11,6 +11,7 @@ from camstack.cams.edtcam import EDTCamera
 
 from camstack.core.utilities import (CameraMode, ModeIDType, CsetPrioType,
                                      DependentProcess)
+from camstack.core.wcs import wcs_dict_init
 
 try:
     from scxkw.config import MAGIC_BOOL_STR
@@ -95,7 +96,7 @@ class CRED1(EDTCamera):
         self.send_command('set led off')
         self.send_command('set events off')
 
-        self.set_gain(self.get_maxpossiblegain())
+        self.set_gain(1)
 
         self._constructor_finalize()
 
@@ -169,7 +170,6 @@ class CRED1(EDTCamera):
     def _fill_keywords(self) -> None:
         # Do a little more filling than the subclass after changing a mode
         # And call the thread-polling function
-        #TODO: thread temp polling
 
         EDTCamera._fill_keywords(self)
 
@@ -472,84 +472,131 @@ class Apapane(CRED1):
         # CANNOT be set anymore by gen2/auxfitsheader
         # Because the stream keywords WILL supersede.
 
-        'FILTER01': ('UNKNOWN', 'IRCAMs filter state', '%-16s', 'FILTR'),
+        'FILTER01': ('UNKNOWN', 'IRCAMs filter state', '%-16s', 'FILT1'),
         'RET-ANG1': (0.0, 'Position angle of first retarder plate (deg)', '%20.2f', 'HWPAG'),
-
+    }
+    # WIP: migrating WCS to a more automated approach.
+    '''
         'CDELT1': (4.5e-6, 'X Scale projected on detector (#/pix)', '%20.8f', 'CDEL1'),
         'CDELT2': (4.5e-6, 'Y Scale projected on detector (#/pix)', '%20.8f', 'CDEL2'),
-        'C2ELT1': (4.5e-6, 'X Scale projected on detector (#/pix)', '%20.8f', 'C2EL1'),
-        'C2ELT2': (4.5e-6, 'Y Scale projected on detector (#/pix)', '%20.8f', 'C2EL2'),
-        'CTYPE1': ('RA--TAN   ', 'Pixel coordinate system', '%-10s', 'CTYP1'),
-        'CTYPE2': ('DEC--TAN  ', 'Pixel coordinate system', '%-10s', 'CTYP2'),
-        'C2YPE1': ('RA--TAN   ', 'Pixel coordinate system', '%-10s', 'C2YP1'),
-        'C2YPE2': ('DEC--TAN  ', 'Pixel coordinate system', '%-10s', 'C2YP2'),
         'CUNIT1': ('DEGREE    ', 'Units used in both CRVAL1 and CDELT1', '%-10s', 'CUNI1'),
         'CUNIT2': ('DEGREE    ', 'Units used in both CRVAL2 and CDELT2', '%-10s', 'CUNI2'),
+        'CTYPE1': ('RA---TAN  ', 'Pixel coordinate system', '%-10s', 'CTYP1'),
+        'CTYPE2': ('DEC--TAN  ', 'Pixel coordinate system', '%-10s', 'CTYP2'),
+
+        'C2ELT1': (4.5e-6, 'X Scale projected on detector (#/pix)', '%20.8f', 'C2EL1'),
+        'C2ELT2': (4.5e-6, 'Y Scale projected on detector (#/pix)', '%20.8f', 'C2EL2'),
+        'C2YPE1': ('RA---TAN  ', 'Pixel coordinate system', '%-10s', 'C2YP1'),
+        'C2YPE2': ('DEC--TAN  ', 'Pixel coordinate system', '%-10s', 'C2YP2'),
         'C2NIT1': ('DEGREE    ', 'Units used in both C2VAL1 and C2ELT1', '%-10s', 'C2NI1'),
         'C2NIT2': ('DEGREE    ', 'Units used in both C2VAL2 and C2ELT2', '%-10s', 'C2NI2'),
 
         # Those will change with cropmode
         'CRPIX1': ( 40., 'Reference pixel in X (pixel)', '%20.1f', 'CRPX1'),
         'CRPIX2': ( 80., 'Reference pixel in Y (pixel)', '%20.1f', 'CRPX2'),
-        'C2PIX1': (120., 'Reference pixel in X (pixel)', '%20.1f', 'C2PX1'),
-        'C2PIX2': ( 80., 'Reference pixel in Y (pixel)', '%20.1f', 'C2PX2'),
-
         'CD1_1': (4.5e-6, 'Pixel coordinate translation matrix', '%20.8f', 'CD1_1'),
         'CD1_2': (    0., 'Pixel coordinate translation matrix', '%20.8f', 'CD1_2'),
         'CD2_1': (    0., 'Pixel coordinate translation matrix', '%20.8f', 'CD2_1'),
         'CD2_2': (4.5e-6, 'Pixel coordinate translation matrix', '%20.8f', 'CD2_2'),
-    }
+
+        'C2PIX1': (120., 'Reference pixel in X (pixel)', '%20.1f', 'C2PX1'),
+        'C2PIX2': ( 80., 'Reference pixel in Y (pixel)', '%20.1f', 'C2PX2'),
+        'C21_1': (4.5e-6, 'Pixel coordinate translation matrix', '%20.8f', 'CD1_1'),
+        'C21_2': (    0., 'Pixel coordinate translation matrix', '%20.8f', 'CD1_2'),
+        'C22_1': (    0., 'Pixel coordinate translation matrix', '%20.8f', 'CD2_1'),
+        'C22_2': (4.5e-6, 'Pixel coordinate translation matrix', '%20.8f', 'CD2_2'),
+    '''
     # yapf: enable
     KEYWORDS.update(CRED1.KEYWORDS)
 
     REDIS_PUSH_ENABLED = True
-    REDIS_PREFIX = 'x_B'  # LOWERCASE x to not get mixed with the SCExAO keys
+    REDIS_PREFIX = 'x_A'  # LOWERCASE x to not get mixed with the SCExAO keys
+
+    N_WCS = 2  # For Apapane, the number of WCS cannot be determined beforehand
+
+    # Because we may use mode 3 (160x160) both with and without the wollaston
+    # Hence both with 1 and 2 WCS.
 
     def _constructor_finalize(self) -> None:
         self.send_command('set imagetags on')
         self.send_command('set rawimages on')
+        self.set_gain(self.get_maxpossiblegain())
 
-    def _fill_keywords(self) -> None:
-        CRED1._fill_keywords(self)
+    def poll_camera_for_keywords(self, shm_write: bool = True) -> None:
+        CRED1.poll_camera_for_keywords(self, shm_write)
 
-        doing_pdi = True
+        # Defaults
+        filter01 = 'H Band'
+        wollaston = 'OUT'
+        flc_on = 'OFF'
+        flc_in = 'OUT'
 
         if self.HAS_REDIS:
             try:
-                self._set_formatted_keyword('FILTER01',
-                                            self.RDB.hget('X_IRCFLT', 'value'))
-                doing_pdi = self.RDB.hget('OBS-MOD', 'value') == 'IMAG-PDI'
+                with self.RDB.pipeline() as pipe:
+                    pipe.hget('X_IRCFLT', 'value')
+                    pipe.hget('X_IRCWOL', 'value')
+                    pipe.hget('X_IFLCST', 'value')
+                    pipe.hget('X_IRCFLC', 'value')
+                    filter01, wollaston, flc_on, flc_in = pipe.execute()
             except:
-                logg.warning(
-                        'REDIS unavailable @ poll_camera_for_keywords @ CRED1')
-                pass
+                logg.error('REDIS unavailable @ _fill_keywords @ Apapane')
+
+        self._set_formatted_keyword('FILTER01', filter01)
+        # FIXME decision clause for the spectro???
+        if ('IN' in wollaston) and ('ON' in flc_on) and ('IN' in flc_in):
+            obs_mod = 'IPOL_FPDI'
+        elif wollaston:
+            obs_mod = 'IPOL_SLOW'
+        else:
+            obs_mod = 'IMAG'
+
+        self._set_formatted_keyword('OBS-MOD', obs_mod)
 
         # Hotspot of physical detector in the current crop coordinates.
         # Could be beyond the sensor if the crop does not include the detector center.
         # Warning: in CRED1, hotspot is 16 pixel off-center along the rows!
+
+        # All of that almost never changes, but since there is a possibility that we move the
+        # Wollaston in and out without re-firing a set_camera_mode, we don't have a choice but to
+        # do it every single time in the polling thread.
         xfull2 = (self.MODES[self.FULL].x1 - self.MODES[self.FULL].x0 +
                   1) / 2. - 16.
         yfull2 = (self.MODES[self.FULL].y1 - self.MODES[self.FULL].y0 + 1) / 2.
 
-        self._set_formatted_keyword('CRPIX2', yfull2 - self.current_mode.y0)
-        self._set_formatted_keyword('C2PIX2', yfull2 - self.current_mode.y0)
-        if doing_pdi:
-            # +/- 40 off of the central column
-            self._set_formatted_keyword('CRPIX1',
-                                        xfull2 - 40. - self.current_mode.x0)
-            self._set_formatted_keyword('C2PIX1',
-                                        xfull2 + 40. - self.current_mode.x0)
+        # Create and update WCS keywords
+        cm = self.current_mode
+        if 'IPOL' in obs_mod:
+            # 2 WCSs, +/- 40 off of the central column
+            wcs_dict_1 = wcs_dict_init(
+                    0, pix=(xfull2 - 40. - cm.x0, yfull2 - cm.y0),
+                    delt_val=4.5e-6, cd_rot_rad=0.0)
+            wcs_dict_2 = wcs_dict_init(
+                    1, pix=(xfull2 + 40. - cm.x0, yfull2 - cm.y0),
+                    delt_val=4.5e-6, cd_rot_rad=0.0)
         else:
-            # Central column
-            self._set_formatted_keyword('CRPIX2', xfull2 - self.current_mode.x0)
-            self._set_formatted_keyword('C2PIX2', xfull2 - self.current_mode.x0)
+            # 1 WCS, Central column
+            wcs_dict_1 = wcs_dict_init(0, pix=(xfull2 - cm.x0, yfull2 - cm.y0),
+                                       delt_val=4.5e-6, cd_rot_rad=0.0)
+            wcs_dict_2 = wcs_dict_init(0, pix=(xfull2 - cm.x0, yfull2 - cm.y0),
+                                       delt_val=4.5e-6, cd_rot_rad=0.0)
+
+        for wcs_dict in [wcs_dict_1, wcs_dict_2]:
+            for key in wcs_dict:
+                self._set_formatted_keyword(key, wcs_dict[key][0])
+
+    def _fill_keywords(self) -> None:
+
+        # Call superclass - in BaseCamera, this will allocate the WCS dictionary
+        # With kw spots, comments, etc, but default values.
+        CRED1._fill_keywords(self)
 
         # Override detector name
         self._set_formatted_keyword('DETECTOR', 'CRED1 - APAPANE')
         self._set_formatted_keyword('GAIN', 0.45)
 
         # Note: RET-ANG1 is set externally by a call to "updatekw apapane RET-ANG1" from HWP scripts.
-        # This avoids latency in reporty HWP states.
+        # This avoids latency in reporting HWP states.
 
 
 class Iiwi(CRED1):
@@ -568,6 +615,7 @@ class Iiwi(CRED1):
     def _constructor_finalize(self) -> None:
         self.send_command('set imagetags off')
         self.send_command('set rawimages off')
+        self.set_gain(self.get_maxpossiblegain())
 
     def _fill_keywords(self) -> None:
         CRED1._fill_keywords(self)

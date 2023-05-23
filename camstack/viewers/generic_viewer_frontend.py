@@ -1,9 +1,10 @@
-from __future__ import annotations  # For type hints that would otherwise induce circular imports.
+from __future__ import annotations  # For TYPE_CHECKING
 
 import os, sys
-from typing import Tuple, Any, TYPE_CHECKING
+from typing import List, Tuple, Any, Dict, TYPE_CHECKING, Optional as Op
 if TYPE_CHECKING:  # this type hint would cause an unecessary import.
-    from camstack.viewers.generic_viewer_backend import GenericViewerBackend
+    from .generic_viewer_backend import GenericViewerBackend
+    from .plugin_arch import BasePlugin
 
 # X forwarding hijack of libGL.so
 # Goal is to supersede the system's libGL.so by a Mesa libGL and avoid
@@ -20,11 +21,12 @@ if (('localhost:' in os.environ.get('DISPLAY', '') or
 # Affinity fix for pygame messing up
 _CORES = os.sched_getaffinity(0)
 import pygame
-import pygame.constants as pgm_ct
+import pygame.constants as pgmc
 
 os.sched_setaffinity(0, _CORES)
 
-from camstack.viewers import frontend_utils as futs
+from . import frontend_utils as futs
+from . import plugins, image_stacking_plugins
 
 import numpy as np
 from PIL import Image
@@ -33,20 +35,23 @@ from PIL import Image
 class GenericViewerFrontend:
 
     # A couple numeric constants, can be overriden by subclasses
-    BOTTOM_PX_PAD = 120
+    BOTTOM_PX_PAD = 140
 
     WINDOW_NAME = 'Generic viewer'
 
-    CARTOON_FILE = None
+    CARTOON_FILE: Op[str] = None
 
-    def __init__(self, system_zoom: int, fps: float,
-                 display_base_size: Tuple[int, int]) -> None:
+    def __init__(self, system_zoom: int, fps: int,
+                 display_base_size: Tuple[int, int],
+                 fonts_zoom: Op[int] = None) -> None:
 
         self.has_backend = False
-        self.backend_obj: GenericViewerBackend = None
+        self.backend_obj: Op[GenericViewerBackend] = None
 
         self.fps_val = fps
         self.system_zoom = system_zoom  # Former z1
+        self.fonts_zoom = self.system_zoom if fonts_zoom is None else fonts_zoom
+
         # Data area width x height, before window scale
         self.data_disp_basesize = display_base_size
         self.data_blit_base_staging = np.zeros((*self.data_disp_basesize, 3),
@@ -65,6 +70,12 @@ class GenericViewerFrontend:
                                 self.BOTTOM_PX_PAD * self.system_zoom)
 
         #####
+        # Prep plugins
+        #####
+        # Probs don't do this? Cuz inheritance problems?
+        self.plugins: List[BasePlugin] = []
+
+        #####
         # Prepare the pygame stuff (prefix pygame objects with "pg_")
         #####
         self.pg_clock = pygame.time.Clock()
@@ -73,13 +84,13 @@ class GenericViewerFrontend:
         pygame.font.init()
 
         # Prep the fonts.
-        futs.Fonts.init_zoomed_fonts(self.system_zoom)
+        futs.Fonts.init_zoomed_fonts(self.fonts_zoom)
 
         self.pg_screen = pygame.display.set_mode(self.pygame_win_size,
                                                  flags=0x0, depth=16)
         pygame.display.set_caption(self.WINDOW_NAME)
 
-        self.pg_background = pygame.Surface(self.pg_screen.get_size())
+        self.pg_background = pygame.surface.Surface(self.pg_screen.get_size())
         # Good to "convert" once-per-surface: converts data type to final one
         self.pg_background = self.pg_background.convert()
 
@@ -89,7 +100,8 @@ class GenericViewerFrontend:
         self.pg_data_rect = self.pg_datasurface.get_rect()
         self.pg_data_rect.topleft = (0, 0)
 
-        self.pg_updated_rects = []  # For processing in the loop
+        self.pg_updated_rects: List[pygame.rect.Rect] = [
+        ]  # For processing in the loop
 
         #####
         # Labels
@@ -98,12 +110,19 @@ class GenericViewerFrontend:
 
         self._init_cartoon()
 
+        #####
+        # OnOff states
+        #####
+        # Generic syntax?
+        # {Attribute: callback} dictionary?
+        self._init_onoff_modes()
+
         # TODO class variable
 
-        pygame.mouse.set_cursor(*pygame.cursors.broken_x)
+        pygame.mouse.set_cursor(pygame.cursors.broken_x)
         pygame.display.update()
 
-    def _init_labels(self):
+    def _init_labels(self) -> None:
 
         sz = self.system_zoom  # Shorthandy
         r = self.data_disp_size[1] + 3 * self.system_zoom
@@ -142,8 +161,13 @@ class GenericViewerFrontend:
         # {scaling type} - {has bias sub}
 
         # {Status message [sat, acquiring dark, acquiring ref...]}
+        # At the bottom right.
+        self.lbl_ref_dark = futs.LabelMessage(
+                '%s', futs.Fonts.DEFAULT_16,
+                topleft=(8 * self.system_zoom,
+                         self.pygame_win_size[1] - 20 * self.system_zoom))
 
-    def _init_cartoon(self):
+    def _init_cartoon(self) -> None:
         if self.CARTOON_FILE is None:
             return
 
@@ -158,17 +182,29 @@ class GenericViewerFrontend:
                                                      h * self.system_zoom))
 
         # Move to bottom right, blit once.
-        rect = cartoon_img_scaled.get_rect()
-        rect.bottomright = self.pygame_win_size
+        self.pg_cartoon_rect = cartoon_img_scaled.get_rect()
+        self.pg_cartoon_rect.bottomright = self.pygame_win_size
 
-        self.pg_screen.blit(cartoon_img_scaled, rect)
+        self.pg_screen.blit(cartoon_img_scaled, self.pg_cartoon_rect)
 
-    def _inloop_update_labels(self):
+    def _init_onoff_modes(self) -> None:
+        # That, or an inherited class variable dict?
+        # Why a dict actually?
+        self.plugins = [
+                plugins.CrossHairPlugin(self, pgmc.K_c),
+                image_stacking_plugins.RefImageAcquirePlugin(
+                        self, pgmc.K_r, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT,
+                        textbox=self.lbl_ref_dark)
+        ]
+
+    def _inloop_update_labels(self) -> None:
+        assert self.backend_obj
+
         fps = self.backend_obj.input_shm.get_fps()
         tint = self.backend_obj.input_shm.get_expt()
         ndr = self.backend_obj.input_shm.get_ndr()
 
-        self.lbl_cropzone.render(self.backend_obj.input_shm.get_crop(),
+        self.lbl_cropzone.render(tuple(self.backend_obj.input_shm.get_crop()),
                                  blit_onto=self.pg_screen)
         self.lbl_times.render((tint, fps, ndr), blit_onto=self.pg_screen)
         self.lbl_t_minmax.render((tint * ndr, self.backend_obj.data_min,
@@ -181,10 +217,16 @@ class GenericViewerFrontend:
                 self.lbl_t_minmax.rectangle,
         ]
 
+    def _inloop_plugin_modes(self) -> None:
+        for plugin in self.plugins:
+            plugin.frontend_action()
+
     def register_backend(self, backend: GenericViewerBackend) -> None:
 
         self.backend_obj = backend
         self.has_backend = True
+
+        self.backend_obj.cross_register_plugins(self.plugins)
 
     def run(self) -> None:
         '''
@@ -198,7 +240,7 @@ class GenericViewerFrontend:
         try:
             while True:
                 self.loop_iter()
-                pygame.display.update(self.pg_updated_rects)
+                pygame.display.update(self.pg_updated_rects)  # type: ignore
                 if self.process_pygame_events():
                     break
                 self.pg_clock.tick(self.fps_val)
@@ -206,35 +248,38 @@ class GenericViewerFrontend:
             pygame.quit()
             print('Abort loop on KeyboardInterrupt')
 
-    def process_pygame_events(self) -> None:
+    def process_pygame_events(self) -> bool:
         '''
         Process pygame events (mostly keyboard shortcuts)
 
         Returns True if and only if quitting
         '''
+        assert self.backend_obj
+
         for event in pygame.event.get():
             modifiers = pygame.key.get_mods()
 
-            if (event.type == pgm_ct.QUIT or
-                (event.type == pgm_ct.KEYDOWN and
-                 event.key in [pgm_ct.K_ESCAPE, pgm_ct.K_x])):
+            if (event.type == pgmc.QUIT or
+                (event.type == pgmc.KEYDOWN and
+                 event.key in [pgmc.K_ESCAPE, pgmc.K_x])):
                 pygame.quit()
                 return True
 
-            elif event.type == pgm_ct.KEYDOWN:
+            elif event.type == pgmc.KEYDOWN:
                 self.backend_obj.process_shortcut(modifiers, event.key)
 
         return False
 
     def loop_iter(self) -> None:
+        assert self.backend_obj
 
         self.pg_updated_rects = []
-
-        import numpy as np
 
         self.backend_obj.data_iter()
 
         data_output = self.backend_obj.data_rgbimg
+        assert data_output is not None  # backend is init, data_output is not None
+
         img = Image.fromarray(data_output)
 
         # Rescale and pad if necessary - using PIL is much faster than scipy.ndimage
@@ -279,6 +324,8 @@ class GenericViewerFrontend:
 
         pygame.surfarray.blit_array(self.pg_datasurface, self.data_blit_staging)
 
+        # Drawing for toggled modes
+        self._inloop_plugin_modes()
         # Manage labels
         self._inloop_update_labels()
 
@@ -293,7 +340,8 @@ class FirstViewerFrontend(GenericViewerFrontend):
 
     CARTOON_FILE = 'io.png'
 
-    def __init__(self, system_zoom, fps, display_base_size):
+    def __init__(self, system_zoom: int, fps: int,
+                 display_base_size: Tuple[int, int]) -> None:
 
         # Hack the arguments BEFORE
         GenericViewerFrontend.__init__(self, system_zoom, fps,
