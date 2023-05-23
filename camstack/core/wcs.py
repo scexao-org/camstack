@@ -3,6 +3,8 @@ from math import cos, sin
 
 from camstack.core.utilities import KWType
 
+WCSDictType = t.Dict[str, t.Tuple[KWType, str, str, str]]
+
 
 def wcs_dict_init(
         wcs_num: int,
@@ -10,7 +12,7 @@ def wcs_dict_init(
         delt_val: float,
         cd_rot_rad: float = 0.0,
         double_with_subaru_fake_standard: bool = True,
-) -> t.Dict[str, t.Tuple[KWType, str, str, str]]:
+) -> WCSDictType:
 
     assert wcs_num < 10 and wcs_num >= 0
 
@@ -60,3 +62,13 @@ def wcs_dict_init(
             wcs_kw_final_dict[subaru_key] = (val, comment, fmt, subaru_subkey)
 
     return wcs_kw_final_dict
+
+
+def wcs_dummy_dict(
+        wcs_num: int,
+        double_with_subaru_fake_standard: bool = True,
+) -> WCSDictType:
+
+    return wcs_dict_init(
+            wcs_num, (12345.6, 12345.6), -0.654321,
+            double_with_subaru_fake_standard=double_with_subaru_fake_standard)
