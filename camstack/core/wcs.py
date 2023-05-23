@@ -31,7 +31,7 @@ def wcs_dict_init(
         'CDELT2': (delt_val, 'Y Scale projected on detector (#/pix)', '%20.8f', 'CDE2'),
         'CUNIT1': ('DEGREE    ', 'Units used in both CRVAL1 and CDELT1', '%-10s', 'CUN1'),
         'CUNIT2': ('DEGREE    ', 'Units used in both CRVAL2 and CDELT2', '%-10s', 'CUN2'),
-        'CTYPE1': ('RA--TAN   ', 'Pixel coordinate system', '%-10s', 'CTP1'),
+        'CTYPE1': ('RA---TAN  ', 'Pixel coordinate system', '%-10s', 'CTP1'),
         'CTYPE2': ('DEC--TAN  ', 'Pixel coordinate system', '%-10s', 'CTP2'),
         'CRPIX1': ( pix[0], 'Reference pixel in X (pixel)', '%20.1f', 'CPX1'),
         'CRPIX2': ( pix[1], 'Reference pixel in Y (pixel)', '%20.1f', 'CPX2'),
