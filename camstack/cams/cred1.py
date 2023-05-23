@@ -611,8 +611,9 @@ class Ristretto(CRED1):
     KEYWORDS = {}
     KEYWORDS.update(CRED1.KEYWORDS)
 
-    REDIS_PUSH_ENABLED = True
-    REDIS_PREFIX = 'x_I'  # LOWERCASE x to not get mixed with the SCExAO keys
+    REDIS_PUSH_ENABLED = False
+
+    #REDIS_PREFIX = 'x_I'  # LOWERCASE x to not get mixed with the SCExAO keys
 
     def _constructor_finalize(self) -> None:
         self.send_command('set imagetags off')
@@ -623,7 +624,7 @@ class Ristretto(CRED1):
 
         # Override detector name
         self._set_formatted_keyword('DETECTOR', 'CRED1-RISTRETTO')
-        self._set_formatted_keyword('GAIN', 1.98)
+        #self._set_formatted_keyword('GAIN', 1.98)
 
 
 # Quick shorthand for testing
