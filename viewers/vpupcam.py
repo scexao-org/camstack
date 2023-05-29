@@ -19,7 +19,7 @@ __doc__ = f"""
         -b <binn>           SHM binning factor [default: 1]
         -p, --preset <file> Preset file used for pupil wheel positions [default: {DEFAULT_PUPIL_CONFIG}]
 """
-from camstack.viewers.vpupcam import VAMPIRESPupilCamViewerBackend, VAMPIRESPupilCamViewerFrontend, MaskStatusPlugin
+from camstack.viewers.vampires import VAMPIRESPupilCamViewerBackend, VAMPIRESPupilCamViewerFrontend, MaskStatusPlugin
 import docopt
 
 def main():
