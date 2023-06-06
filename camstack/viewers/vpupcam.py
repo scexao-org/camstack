@@ -1,7 +1,7 @@
 from typing import Optional as Op, Tuple
 from camstack.viewers.generic_viewer_frontend import GenericViewerFrontend
 from swmain.network.pyroclient import connect
-from camstack.viewers import GenericViewerBackend, GenericViewerFrontend
+from camstack.viewers.generic_viewer_backend import GenericViewerBackend
 from camstack.viewers import backend_utils as buts
 from camstack.viewers import frontend_utils as futs
 from camstack.viewers.plugin_arch import BasePlugin
@@ -13,8 +13,13 @@ from swmain.redis import RDB
 
 logger = logging.getLogger("vpupcam")
 
+
+class VAMPIRESPupilCamViewerFrontend(GenericViewerFrontend):
+    WINDOW_NAME = "VPUPCAM"
+
+
 class VAMPIRESPupilCamViewerBackend(GenericViewerBackend):
-    help_msg = """VPUPCAM controls
+    HELP_MSG = """VPUPCAM controls
     ---------------
     h           : display this message
     x, ESC      : quit vpupcam
@@ -48,14 +53,35 @@ class VAMPIRESPupilCamViewerBackend(GenericViewerBackend):
     CTRL+[]    :  Nudge wheel 0.1 deg in theta (ccw/cw)
     SHIFT+[]   :  Nudge wheel 1 deg in theta (ccw/cw)
     """
+
     # CTRL+S:  Save current position to preset
     # CTRL+F:  Change preset file
     # add additional shortcuts
+
     def __init__(self, name_shm=None):
         if name_shm is None:
             name_shm = "vpupcam"
-        self.SHORTCUTS = {
-            buts.Shortcut(pgmc.K_h, 0x0): self.print_help,
+        self.wheel = connect("VAMPIRES_MASK")
+        return super().__init__(name_shm=name_shm)
+
+
+class MaskStatusPlugin(BasePlugin):
+
+    def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
+        super().__init__(frontend_obj)
+        zoom = self.frontend_obj.system_zoom
+        font = pygame.font.SysFont("default", 50 * zoom)
+        self.enabled = True
+        # Ideally you'd instantiate the label in the frontend, cuz different viewers could be wanting the same info
+        # displayed at different locations.
+        self.label = futs.LabelMessage(
+                "%s", font, fg_col="#4AC985", bg_col=None,
+                topright=(self.frontend_obj.data_disp_size[0] - 200 * zoom,
+                          self.frontend_obj.data_disp_size[1] - 50 * zoom))
+        self.label.blit(self.frontend_obj.pg_datasurface)
+
+        # yapf: disable
+        self.shortcut_map = {
             buts.Shortcut(pgmc.K_LEFT, pgmc.KMOD_LCTRL): partial(self.nudge_wheel, pgmc.K_LEFT, fine=True),
             buts.Shortcut(pgmc.K_LEFT, pgmc.KMOD_LSHIFT): partial(self.nudge_wheel, pgmc.K_LEFT, fine=False),
             buts.Shortcut(pgmc.K_RIGHT, pgmc.KMOD_LCTRL): partial(self.nudge_wheel, pgmc.K_RIGHT, fine=True),
@@ -80,13 +106,8 @@ class VAMPIRESPupilCamViewerBackend(GenericViewerBackend):
             buts.Shortcut(pgmc.K_0, pgmc.KMOD_LCTRL): partial(self.change_wheel, 10),
             buts.Shortcut(pgmc.K_MINUS, pgmc.KMOD_LCTRL): partial(self.change_wheel, 11),
             buts.Shortcut(pgmc.K_EQUALS, pgmc.KMOD_LCTRL): partial(self.change_wheel, 12),
-        }
-        self.wheel = connect("VAMPIRES_MASK")
-        return super().__init__(name_shm=name_shm)
-
-    def print_help(self):
-        print(VAMPIRESPupilCamViewerBackend.help_msg)
-
+            }
+        # yapf: enable
 
     def nudge_wheel(self, key, fine=True):
         sign = 1
@@ -110,7 +131,6 @@ class VAMPIRESPupilCamViewerBackend(GenericViewerBackend):
         print(f"Moving {substage} by {nudge_value} mm")
         self.wheel.move_relative(substage, nudge_value)
         self.wheel.update_keys()
-
 
     def rotate_wheel(self, key, fine=True):
         # CCW
@@ -138,26 +158,12 @@ class VAMPIRESPupilCamViewerBackend(GenericViewerBackend):
         self.wheel.save_configuration(index=index)
         self.wheel.update_keys()
 
-
-class MaskStatusPlugin(BasePlugin):
-
-    def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
-        super().__init__(frontend_obj)
-        zoom = self.frontend_obj.system_zoom
-        font = pygame.font.SysFont("default", 50 * zoom)
-        self.enabled = True
-        self.label = futs.LabelMessage("%s", font,fg_col="#4AC985", bg_col=None,
-                                       topright=(self.frontend_obj.data_disp_size[0] - 200 * zoom,
-                                                 self.frontend_obj.data_disp_size[1] - 50 * zoom))
-        self.label.blit(self.frontend_obj.pg_datasurface)
-
     def frontend_action(self) -> None:
-        self.label.render(self.status, blit_onto=self.frontend_obj.pg_datasurface)
+        self.label.render(self.status,
+                          blit_onto=self.frontend_obj.pg_datasurface)
         # self.frontend_obj.pg_updated_rects.append(self.label.rectangle)
 
     def backend_action(self) -> None:
+        # Warning: this is called every time the window refreshes, i.e. ~20Hz.
         name = RDB.hget("U_MASK", "value")
         self.status = name
-
-class VAMPIRESPupilCamViewerFrontend(GenericViewerFrontend):
-    WINDOW_NAME = "VPUPCAM"
