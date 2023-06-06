@@ -3,7 +3,7 @@
 tnew="tmux new-session -d -s"
 tsend="tmux send-keys -t"
 
-tname="miles_ctrl"
+tname="vcam2_ctrl"
 
 # Create tmuxes and issue kills
 $tnew $tname
@@ -21,6 +21,6 @@ $tsend $tname "kill %" Enter
 echo ""
 #read -p "Everything killed, proceed to startup ? Press enter to continue, Ctrl+C to abort."
 
-$tsend $tname "ipython -i -m camstack.cam_mains.miles_orcam" Enter
+$tsend $tname "python -i -m camstack.cam_mains.vcam2_test" Enter
 
 echo "startOrcam completed (but actually not yet, just wait a bit)."
