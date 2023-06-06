@@ -39,6 +39,9 @@ class GenericViewerFrontend:
 
     WINDOW_NAME = 'Generic viewer'
 
+    HELP_MSG = """
+    """
+
     CARTOON_FILE: Op[str] = None
 
     def __init__(self, system_zoom: int, fps: int,

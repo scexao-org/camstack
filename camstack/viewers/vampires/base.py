@@ -78,7 +78,7 @@ class VAMPIRESPupilMode(PupilMode):
 
 
 class VAMPIRESBaseViewerBackend(GenericViewerBackend):
-    help_msg = Panel(
+    HELP_MSG = Panel(
             """
 h           : display this message
 x, ESC      : quit vcam viewer
@@ -144,10 +144,6 @@ SHIFT + ARROW:  Move FPM 0.5 mm in x (left/right) and y (up/down)""",
         if name_shm is None:
             name_shm = f"vcamim{cam:d}"
         self.SHORTCUTS = {
-                buts.Shortcut(pgmc.K_h, 0x0):
-                        self.print_help,
-                buts.Shortcut(pgmc.K_p, pgmc.KMOD_LCTRL):
-                        self.
                 buts.Shortcut(pgmc.K_LEFT, pgmc.KMOD_LCTRL):
                         partial(self.nudge_fieldstop, pgmc.K_LEFT, fine=True),
                 buts.Shortcut(pgmc.K_LEFT, pgmc.KMOD_LSHIFT):

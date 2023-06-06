@@ -1,7 +1,7 @@
 from typing import Optional as Op, Tuple
 from camstack.viewers.generic_viewer_frontend import GenericViewerFrontend
 from swmain.network.pyroclient import connect
-from camstack.viewers import GenericViewerBackend, GenericViewerFrontend
+from camstack.viewers.generic_viewer_backend import GenericViewerBackend
 from camstack.viewers import backend_utils as buts
 from camstack.viewers import frontend_utils as futs
 from camstack.viewers.plugin_arch import BasePlugin
@@ -14,7 +14,18 @@ from rich.panel import Panel
 from rich.live import Live
 from rich.logging import RichHandler
 
-# set up logging
+logger = logging.getLogger("vpupcam")
+
+
+class VAMPIRESPupilCamViewerFrontend(GenericViewerFrontend):
+    WINDOW_NAME = "VPUPCAM"
+
+
+class VAMPIRESPupilCamViewerBackend(GenericViewerBackend):
+    HELP_MSG = """VPUPCAM controls
+    ---------------
+    h           : display this message
+    x, ESC      : quit vpupcam
 
 logger = logging.getLogger("vpupcam")
 logger.setLevel(logging.INFO)
@@ -24,87 +35,67 @@ stream_handler = RichHandler(
 logger.addHandler(stream_handler)
 
 
-class VAMPIRESPupilCamViewerBackend(GenericViewerBackend):
-    help_msg = Panel(
-        """
-h           : display this message
-x, ESC      : quit vpupcam
+    pupil wheel controls:
+    ---------------------
+    CTRL+ -- :  change filter wheel slot
+            1:  Open (0 deg)
+            2:  SAM-7
+            3:  SAM-9
+            4:  SAM-18
+            5:  SAM-18-Nudged
+            6:  SAM-Ann-Nudged
+            7:  Mirror
+            8:  SAM-Ann
+            9:  LyotStop
+            0:  Open (218 deg)
+            -:  ND10
+            =:  ND25
+    CTRL+ARROW :  Nudge wheel 0.01 mm in x (left/right) and y (up/down)
+    SHIFT+ARROW:  Move wheel 1 mm in x (left/right) and y (up/down)
+    CTRL+[]    :  Nudge wheel 0.1 deg in theta (ccw/cw)
+    SHIFT+[]   :  Nudge wheel 1 deg in theta (ccw/cw)
+    """
 
-camera controls:
-----------------
-
-desplay controls:
------------------
-l           : toggle non-linear displays
-v           : toggle coadd frames
-c           : toggle cross
-
-pupil wheel controls:
----------------------
-CTRL+ -- :  change filter wheel slot
-        1:  Open (0 deg)
-        2:  SAM-7
-        3:  SAM-9
-        4:  SAM-18
-        5:  SAM-18-Nudged
-        6:  SAM-Ann-Nudged
-        7:  Mirror
-        8:  SAM-Ann
-        9:  LyotStop
-        0:  Open (218 deg)
-        -:  ND10
-        =:  ND25
-CTRL+ARROW :  Nudge wheel 0.01 mm in x (left/right) and y (up/down)
-SHIFT+ARROW:  Move wheel 1 mm in x (left/right) and y (up/down)
-CTRL+[]    :  Nudge wheel 0.1 deg in theta (ccw/cw)
-SHIFT+[]   :  Nudge wheel 1 deg in theta (ccw/cw)""",
-        title="VPUPCAM",
-        subtitle="Help menu",
-    )
     # CTRL+S:  Save current position to preset
     # CTRL+F:  Change preset file
     # add additional shortcuts
+
     def __init__(self, name_shm=None):
         if name_shm is None:
             name_shm = "vpupcam"
-        self.SHORTCUTS = {
-            buts.Shortcut(pgmc.K_h, 0x0): self.print_help,
-            buts.Shortcut(pgmc.K_LEFT, pgmc.KMOD_LCTRL): partial(
-                self.nudge_wheel, pgmc.K_LEFT, fine=True
-            ),
-            buts.Shortcut(pgmc.K_LEFT, pgmc.KMOD_LSHIFT): partial(
-                self.nudge_wheel, pgmc.K_LEFT, fine=False
-            ),
-            buts.Shortcut(pgmc.K_RIGHT, pgmc.KMOD_LCTRL): partial(
-                self.nudge_wheel, pgmc.K_RIGHT, fine=True
-            ),
-            buts.Shortcut(pgmc.K_RIGHT, pgmc.KMOD_LSHIFT): partial(
-                self.nudge_wheel, pgmc.K_RIGHT, fine=False
-            ),
-            buts.Shortcut(pgmc.K_UP, pgmc.KMOD_LCTRL): partial(
-                self.nudge_wheel, pgmc.K_UP, fine=True
-            ),
-            buts.Shortcut(pgmc.K_UP, pgmc.KMOD_LSHIFT): partial(
-                self.nudge_wheel, pgmc.K_UP, fine=False
-            ),
-            buts.Shortcut(pgmc.K_DOWN, pgmc.KMOD_LCTRL): partial(
-                self.nudge_wheel, pgmc.K_DOWN, fine=True
-            ),
-            buts.Shortcut(pgmc.K_DOWN, pgmc.KMOD_LSHIFT): partial(
-                self.nudge_wheel, pgmc.K_DOWN, fine=False
-            ),
-            buts.Shortcut(pgmc.K_LEFTBRACKET, pgmc.KMOD_LCTRL): partial(
-                self.rotate_wheel, pgmc.K_LEFTBRACKET, fine=True
-            ),
-            buts.Shortcut(pgmc.K_LEFTBRACKET, pgmc.KMOD_LSHIFT): partial(
-                self.rotate_wheel, pgmc.K_LEFTBRACKET, fine=False
-            ),
-            buts.Shortcut(pgmc.K_RIGHTBRACKET, pgmc.KMOD_LCTRL): partial(
-                self.rotate_wheel, pgmc.K_RIGHTBRACKET, fine=True
-            ),
-            buts.Shortcut(pgmc.K_RIGHTBRACKET, pgmc.KMOD_LSHIFT): partial(
-                self.rotate_wheel, pgmc.K_RIGHTBRACKET, fine=False
-            ),
+        self.wheel = connect("VAMPIRES_MASK")
+        return super().__init__(name_shm=name_shm)
+
+
+class MaskStatusPlugin(BasePlugin):
+
+    def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
+        super().__init__(frontend_obj)
+        zoom = self.frontend_obj.system_zoom
+        font = pygame.font.SysFont("default", 50 * zoom)
+        self.enabled = True
+        # Ideally you'd instantiate the label in the frontend, cuz different viewers could be wanting the same info
+        # displayed at different locations.
+        self.label = futs.LabelMessage(
+                "%s", font, fg_col="#4AC985", bg_col=None,
+                topright=(self.frontend_obj.data_disp_size[0] - 200 * zoom,
+                          self.frontend_obj.data_disp_size[1] - 50 * zoom))
+        self.label.blit(self.frontend_obj.pg_datasurface)
+
+        # yapf: disable
+        self.shortcut_map = {
+            buts.Shortcut(pgmc.K_LEFT, pgmc.KMOD_LCTRL): partial(self.nudge_wheel, pgmc.K_LEFT, fine=True),
+            buts.Shortcut(pgmc.K_LEFT, pgmc.KMOD_LSHIFT): partial(self.nudge_wheel, pgmc.K_LEFT, fine=False),
+            buts.Shortcut(pgmc.K_RIGHT, pgmc.KMOD_LCTRL): partial(self.nudge_wheel, pgmc.K_RIGHT, fine=True),
+            buts.Shortcut(pgmc.K_RIGHT, pgmc.KMOD_LSHIFT): partial(self.nudge_wheel, pgmc.K_RIGHT, fine=False),
+            buts.Shortcut(pgmc.K_UP, pgmc.KMOD_LCTRL): partial(self.nudge_wheel, pgmc.K_UP, fine=True),
+            buts.Shortcut(pgmc.K_UP, pgmc.KMOD_LSHIFT): partial(self.nudge_wheel, pgmc.K_UP, fine=False),
+            buts.Shortcut(pgmc.K_DOWN, pgmc.KMOD_LCTRL): partial(self.nudge_wheel, pgmc.K_DOWN, fine=True),
+            buts.Shortcut(pgmc.K_DOWN, pgmc.KMOD_LSHIFT): partial(self.nudge_wheel, pgmc.K_DOWN, fine=False),
+            buts.Shortcut(pgmc.K_LEFTBRACKET, pgmc.KMOD_LCTRL): partial(self.rotate_wheel, pgmc.K_LEFTBRACKET, fine=True),
+            buts.Shortcut(pgmc.K_LEFTBRACKET, pgmc.KMOD_LSHIFT): partial(self.rotate_wheel, pgmc.K_LEFTBRACKET, fine=False),
+            buts.Shortcut(pgmc.K_RIGHTBRACKET, pgmc.KMOD_LCTRL): partial(self.rotate_wheel, pgmc.K_RIGHTBRACKET, fine=True),
+            buts.Shortcut(pgmc.K_RIGHTBRACKET, pgmc.KMOD_LSHIFT): partial(self.rotate_wheel, pgmc.K_RIGHTBRACKET, fine=False),
             buts.Shortcut(pgmc.K_1, pgmc.KMOD_LCTRL): partial(self.change_wheel, 1),
             buts.Shortcut(pgmc.K_2, pgmc.KMOD_LCTRL): partial(self.change_wheel, 2),
             buts.Shortcut(pgmc.K_3, pgmc.KMOD_LCTRL): partial(self.change_wheel, 3),
@@ -115,20 +106,10 @@ SHIFT+[]   :  Nudge wheel 1 deg in theta (ccw/cw)""",
             buts.Shortcut(pgmc.K_8, pgmc.KMOD_LCTRL): partial(self.change_wheel, 8),
             buts.Shortcut(pgmc.K_9, pgmc.KMOD_LCTRL): partial(self.change_wheel, 9),
             buts.Shortcut(pgmc.K_0, pgmc.KMOD_LCTRL): partial(self.change_wheel, 10),
-            buts.Shortcut(pgmc.K_MINUS, pgmc.KMOD_LCTRL): partial(
-                self.change_wheel, 11
-            ),
-            buts.Shortcut(pgmc.K_EQUALS, pgmc.KMOD_LCTRL): partial(
-                self.change_wheel, 12
-            ),
-        }
-        self.wheel = connect("VAMPIRES_MASK")
-        self.live = Live()
-        return super().__init__(name_shm=name_shm)
-
-    def print_help(self):
-        with self.live as live:
-            live.console.print(VAMPIRESPupilCamViewerBackend.help_msg)
+            buts.Shortcut(pgmc.K_MINUS, pgmc.KMOD_LCTRL): partial(self.change_wheel, 11),
+            buts.Shortcut(pgmc.K_EQUALS, pgmc.KMOD_LCTRL): partial(self.change_wheel, 12),
+            }
+        # yapf: enable
 
     def nudge_wheel(self, key, fine=True):
         sign = 1
@@ -174,7 +155,14 @@ SHIFT+[]   :  Nudge wheel 1 deg in theta (ccw/cw)""",
     def save_config(self, index: int):
         logger.info(f"Saving position for configuration {index}")
         self.wheel.save_configuration(index=index)
+        self.wheel.update_keys()
 
+    def frontend_action(self) -> None:
+        self.label.render(self.status,
+                          blit_onto=self.frontend_obj.pg_datasurface)
+        # self.frontend_obj.pg_updated_rects.append(self.label.rectangle)
 
-class VAMPIRESPupilCamViewerFrontend(GenericViewerFrontend):
-    WINDOW_NAME = "VPUPCAM"
+    def backend_action(self) -> None:
+        # Warning: this is called every time the window refreshes, i.e. ~20Hz.
+        name = RDB.hget("U_MASK", "value")
+        self.status = name

@@ -33,6 +33,8 @@ from functools import partial
 
 
 class GenericViewerBackend:
+    HELP_MSG = """
+    """
 
     COLORMAPS_A = [cm.gray, cm.inferno, cm.magma, cm.viridis]
     COLORMAPS_B = [cm.gray, cm.seismic, cm.Spectral]
@@ -89,32 +91,29 @@ class GenericViewerBackend:
 
         ### Colors
 
-        # WIP: find a way to process modifiers.
+        # yapf: disable
         this_shortcuts: Dict[buts.Shortcut, Callable] = {
-                buts.Shortcut(pgmc.K_m, 0x0):
-                        self.toggle_cmap,
-                buts.Shortcut(pgmc.K_l, 0x0):
-                        self.toggle_scaling,
-                buts.Shortcut(pgmc.K_z, 0x0):
-                        self.toggle_crop,
-                buts.Shortcut(pgmc.K_v, 0x0):
-                        self.toggle_averaging,
-                buts.Shortcut(pgmc.K_UP, 0x0):
-                        partial(self.steer_crop, pgmc.K_UP),
-                buts.Shortcut(pgmc.K_DOWN, 0x0):
-                        partial(self.steer_crop, pgmc.K_DOWN),
-                buts.Shortcut(pgmc.K_LEFT, 0x0):
-                        partial(self.steer_crop, pgmc.K_LEFT),
-                buts.Shortcut(pgmc.K_RIGHT, 0x0):
-                        partial(self.steer_crop, pgmc.K_RIGHT),
-                buts.Shortcut(pgmc.K_d, 0x0):
-                        self.toggle_sub_dark,
-                buts.Shortcut(pgmc.K_r, 0x0):
-                        self.toggle_sub_ref,
+                buts.Shortcut(pgmc.K_h, 0x0): self.print_help,
+                buts.Shortcut(pgmc.K_m, 0x0): self.toggle_cmap,
+                buts.Shortcut(pgmc.K_l, 0x0): self.toggle_scaling,
+                buts.Shortcut(pgmc.K_z, 0x0): self.toggle_crop,
+                buts.Shortcut(pgmc.K_v, 0x0): self.toggle_averaging,
+                buts.Shortcut(pgmc.K_UP, 0x0): partial(self.steer_crop, pgmc.K_UP),
+                buts.Shortcut(pgmc.K_DOWN, 0x0): partial(self.steer_crop, pgmc.K_DOWN),
+                buts.Shortcut(pgmc.K_LEFT, 0x0): partial(self.steer_crop, pgmc.K_LEFT),
+                buts.Shortcut(pgmc.K_RIGHT, 0x0): partial(self.steer_crop, pgmc.K_RIGHT),
+                buts.Shortcut(pgmc.K_d, 0x0): self.toggle_sub_dark,
+                buts.Shortcut(pgmc.K_r, 0x0): self.toggle_sub_ref,
         }
+        # yapf: enable
         # Note escape and X are reserved for quitting
 
         self.SHORTCUTS.update(this_shortcuts)
+
+    def print_help(self):
+        if self.frontend_obj:
+            print(self.frontend_obj.HELP_MSG)
+        print(self.HELP_MSG)
 
     def register_frontend(self, frontend: GenericViewerFrontend) -> None:
 
