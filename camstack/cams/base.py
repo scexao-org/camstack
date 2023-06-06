@@ -79,7 +79,7 @@ class BaseCamera:
             'DET-NSMP': (1, 'Number of non-destructive reads', '%20d', 'NDR'),
             'DET-SMPL': ('base', 'Sampling method', '%-16.16s', 'SAMPL'),
             'DET-TMP': (0.0, 'Detector temperature (K)', '%20.2f', 'TEMP'),
-            'OBS-MOD': ('UNKN', '', '%-16f', 'OBMOD'),
+            'OBS-MOD': ('UNKN', '', '%-16s', 'OBMOD'),
             'DETECTOR': ('DET', 'Name of the detector', '%-16s', 'NAME'),
             'DETGAIN': (1, 'Detector multiplication factor', '%16d', 'GAIN'),
             'EXPTIME': (0.001, 'Total integration time of the frame (sec)', '%20.8f', 'EXPO'),
