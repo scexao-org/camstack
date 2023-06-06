@@ -353,7 +353,7 @@ class GenericViewerBackend:
         '''
 
         # Willfully ignore numlock
-        mods = mods & (~0x1000)
+        mods = mods & (~pgmc.KMOD_NUM)
 
         this_shortcut = buts.Shortcut(key=key, modifier_mask=mods)
 
