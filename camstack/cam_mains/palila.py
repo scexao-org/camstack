@@ -78,7 +78,7 @@ if __name__ == "__main__":
     zmq_send.kill_order = 4
 
     cam = Palila(
-            'palila', 'palila_raw', unit=4, channel=0, mode_id=mode,
+            'palila', 'palila_raw', unit=3, channel=0, mode_id=mode,
             taker_cset_prio=('p_edt', 48), dependent_processes=[
                     tcp_recv, tcp_send, utr_red, zmq_recv, zmq_send
             ])

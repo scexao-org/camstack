@@ -41,7 +41,7 @@ if __name__ == "__main__":
     tcp_send.start_order = 1
     tcp_send.kill_order = 0
 
-    cam = Kiwikiu('kiwikiu', 'kiwikiu', unit=3, channel=0, mode_id=mode,
+    cam = Kiwikiu('kiwikiu', 'kiwikiu', unit=2, channel=0, mode_id=mode,
                   taker_cset_prio=('k_work', 45),
                   dependent_processes=[tcp_recv, tcp_send])
 
