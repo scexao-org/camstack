@@ -125,7 +125,7 @@ class GenericViewerFrontend:
         pygame.mouse.set_cursor(pygame.cursors.broken_x)
         pygame.display.update()
 
-    def _init_labels(self) -> None:
+    def _init_labels(self) -> int:
 
         sz = self.system_zoom  # Shorthandy
         r = self.data_disp_size[1] + 3 * self.system_zoom
@@ -169,6 +169,8 @@ class GenericViewerFrontend:
                 '%s', futs.Fonts.DEFAULT_16,
                 topleft=(8 * self.system_zoom,
                          self.pygame_win_size[1] - 20 * self.system_zoom))
+
+        return r
 
     def _init_cartoon(self) -> None:
         if self.CARTOON_FILE is None:

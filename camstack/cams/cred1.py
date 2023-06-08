@@ -5,6 +5,7 @@ from typing import Union, Optional as Op, Tuple, List
 
 import os
 import time
+
 import logging as logg
 
 from camstack.cams.edtcam import EDTCamera

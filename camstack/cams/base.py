@@ -79,7 +79,7 @@ class BaseCamera:
             'DET-NSMP': (1, 'Number of non-destructive reads', '%20d', 'NDR'),
             'DET-SMPL': ('base', 'Sampling method', '%-16.16s', 'SAMPL'),
             'DET-TMP': (0.0, 'Detector temperature (K)', '%20.2f', 'TEMP'),
-            'OBS-MOD': ('UNKN', '', '%-16s', 'OBMOD'),
+            'OBS-MOD': ('UNDEFINED', '', '%-16s', 'OBMOD'),
             'DETECTOR': ('DET', 'Name of the detector', '%-16s', 'NAME'),
             'DETGAIN': (1, 'Detector multiplication factor', '%16d', 'GAIN'),
             'EXPTIME': (0.001, 'Total integration time of the frame (sec)', '%20.8f', 'EXPO'),
@@ -87,6 +87,10 @@ class BaseCamera:
             'GAIN': (-1., 'AD conversion factor (electron/ADU)', '%20.3f', 'GAIN'),
             'EXTTRIG': (False, 'Exposure of detector by an external trigger', 'BOOLEAN', 'TRIG'),
             'DATA-TYP': ('TEST', 'Subaru-style exp. type', '%-16s', 'DATA'),
+
+            # Technical keywords (that don't need to be allocated in RT framegrabber)
+            '_LGSHSTP': (-1, 'N > 0 blocks logshim after N frames, -1 is go', '%16d', 'LGSTP'),
+            '_LGSHKIL': (0, ' =/= 0 kills logshim', '%16d', 'LGKIL'),
     }
     # yapf: enable
 
