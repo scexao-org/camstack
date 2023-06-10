@@ -40,13 +40,13 @@ scripts = [
         './scripts/cam-palilastart',
         './scripts/cam-glintstart',
         './scripts/cam-ocamstart',
-        './scripts/cam-milesstart',
         './scripts/cam-kiwikiustart',
         './scripts/cam-fircamstart',
         './scripts/cam-firstpupstart',
         './scripts/cam-alalacamstart',
         './scripts/cam-vpupcamstart',
-        './scripts/cam-vcamautostart',
+        './scripts/cam-vcam1start',
+        './scripts/cam-vcam2start',
 ]
 
 setup(
