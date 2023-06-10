@@ -294,6 +294,7 @@ class OrcaQuest(DCAMCamera):
         self._set_formatted_keyword("DETECTOR", "Orca Quest")
         # Detector specs from instruction manual
         self._dcam_prm_getvalue("GAIN", dcamprop.EProp.CONVERSIONFACTOR_COEFF)
+        self._dcam_prm_getvalue("BIAS", dcamprop.EProp.CONVERSIONFACTOR_OFFSET)
 
     def poll_camera_for_keywords(self) -> None:
         self.get_temperature()

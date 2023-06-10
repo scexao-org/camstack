@@ -11,7 +11,7 @@ from camstack import pyro_keys as pk
 from swmain.network.pyroserver_registerable import PyroServer
 from camstack.core.utilities import shellify_methods
 
-from argparser import ArgumentParser
+from argparse import ArgumentParser
 
 parser = ArgumentParser()
 parser.add_argument("cam", type=int, choices=(1, 2))
@@ -59,12 +59,12 @@ def main():
         raise ValueError(message)
 
     # start pyro server
-    server = PyroServer(bindTo=(IP_SC5, 0),
-                        nsAddress=(PYRONS3_HOST, PYRONS3_PORT))
-    key = pk.VCAM1 if args.cam == 1 else pk.VCAM2
-    server.add_device(cam, key, add_oneway_callables=True)
-    server.start()
-
+    # server = PyroServer(bindTo=(IP_SC5, 0),
+    #                     nsAddress=(PYRONS3_HOST, PYRONS3_PORT))
+    # key = pk.VCAM1 if args.cam == 1 else pk.VCAM2
+    # server.add_device(cam, key, add_oneway_callables=True)
+    # server.start()
+    server = None
     return cam, server
 
 
