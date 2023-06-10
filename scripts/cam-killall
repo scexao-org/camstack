@@ -4,7 +4,8 @@
 
 tmux send-keys -t apapane_ctrl "release(); quit()" Enter
 tmux send-keys -t palila_ctrl "release(); quit()" Enter
-tmux send-keys -t vcam_ctrl "release(); quit()" Enter
+tmux send-keys -t vcam1_ctrl "release(); quit()" Enter
+tmux send-keys -t vcam2_ctrl "release(); quit()" Enter
 tmux send-keys -t ocam_ctrl "release(); quit()" Enter
 tmux send-keys -t kiwikiu_ctrl "release(); quit()" Enter
 tmux send-keys -t glint_ctrl "release(); quit()" Enter
