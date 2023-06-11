@@ -39,7 +39,6 @@ class DCAMCamera(BaseCamera):
         self.dcam_number = dcam_number
         self.control_shm: Op[SHM] = None
         self.control_shm_lock = threading.Lock()
-
         super().__init__(
                 name,
                 stream_name,
@@ -243,7 +242,8 @@ class OrcaQuest(DCAMCamera):
             "set_tint",
             "get_tint",
             "get_temperature",
-            "set_readout_ultraquiet",
+            "set_readout_mode",
+            "set_external_trigger",
     ] + DCAMCamera.INTERACTIVE_SHELL_METHODS
 
     FIRST, FULL, DICHROIC = "FIRST", "FULL", "DICHROIC"
@@ -277,6 +277,7 @@ class OrcaQuest(DCAMCamera):
             dependent_processes: List[util.DependentProcess] = [],
     ) -> None:
 
+        self.readout_mode = "FAST"
         super().__init__(
                 name,
                 stream_name,
@@ -337,13 +338,23 @@ class OrcaQuest(DCAMCamera):
         logg.info(f"get_fps {fps}")
         return fps
 
-    def set_readout_ultraquiet(self, ultraquiet: bool) -> None:
-        logg.debug("set_readout_ultraquiet @ OrcaQuest")
+    def set_readout_mode(self, mode: str) -> None:
+        logg.debug("set_readout_mode @ OrcaQuest")
 
-        readmode = (
-                dcamprop.EReadoutSpeed.READOUT_FAST,
-                dcamprop.EReadoutSpeed.READOUT_ULTRAQUIET,
-        )[ultraquiet]
+        mode = mode.upper()
+        # if we're already in that read mode, don't do anything!
+        if mode == self.readout_mode:
+            logg.debug(f"Already using readout mode {mode}; doing nothing")
+            return
+
+        if mode == "SLOW":
+            readmode = dcamprop.EReadoutSpeed.READOUT_ULTRAQUIET
+        elif mode == "FAST":
+            readmode = dcamprop.EReadoutSpeed.READOUT_FAST
+        else:
+            raise ValueError(f"Unrecognized readout mode: {mode}")
+
+        self.readout_mode = mode
 
         self._kill_taker_no_dependents()
         self.prepare_camera_for_size(
@@ -404,7 +415,7 @@ class OrcaQuest(DCAMCamera):
             raise ValueError("Output trigger polarity not recognized.")
 
         return self._dcam_prm_setmultivalue(
-                map(float, (kind_val, pol_val)),
+                list(map(float, (kind_val, pol_val))),
                 [None, None],
                 [
                         dcamprop.EProp.OUTPUTTRIGGER_KIND + key_offset,
@@ -432,14 +443,75 @@ class AlalaOrcam(OrcaQuest):
 
 
 class BaseVCAM(OrcaQuest):
+    ## camera keywords
+    KEYWORDS: Dict[str, Tuple[util.KWType, str, str, str]] = {
+            # Format is name:
+            #   (value,
+            #    description,
+            #    formatter,
+            #    redis partial push key [5 chars] for per-camera KW)
+            # ALSO SHM caps at 16 chars for strings. The %s formats here are (some) shorter than official ones.
+            ## camera info and modes
+            "U_CAMERA": (-1, "VAMPIRES camera number (1 or 2)", "%1d", "CAM"),
+            "U_DETMOD": ("", "VAMPIRES detector readout mode (FAST/SLOW)",
+                         "%-16s", "DETMD"),
+            ## Filters
+            "U_DIFFLT": ("", "VAMPIRES differential filter", "%-16s", "DFFLT"),
+            "FILTER01": ("", "Primary filter name", "%-16s", "FILT01"),
+            "FILTER02": ("", "Secondary filter name", "%-16s", "FILT02"),
+            ## QWP terms managed by QWP daemon
+            "U_QWP1": (-1, "[deg] VAMPIRES QWP 1 polarization angle", "%16.3f",
+                       "QWP1"),
+            "U_QWP1TH":
+                    (-1, "[deg] VAMPIRES QWP 1 wheel theta", "%16.3f", "QWP1T"),
+            "U_QWP2": (-1, "[deg] VAMPIRES QWP 1 polarization angle", "%16.3f",
+                       "QWP2"),
+            "U_QWP2TH":
+                    (-1, "[deg] VAMPIRES QWP 2 wheel theta", "%16.3f", "QWP2T"),
+            "U_QWPMOD": ("", "VAMPIRES QWP tracking mode", "%-16s", "QWPMD"),
+            ## polarzation terms managed by HWP daemon
+            "RET-ANG1": (-1, "[deg] Polarization angle of first retarder plate",
+                         "%20.2f", "RTAN1"),
+            "RET-ANG2":
+                    (-1, "[deg] Polarization angle of second retarder plate",
+                     "%20.2f", "RTAN2"),
+            "RET-MOD1": ("", "First retarder plate mode", "%-16s", "RTMD1"),
+            "RET-MOD2": ("", "Second retarder plate mode", "%-16s", "RTMD2"),
+            "RET-POS1": (-1, "[deg] Stage angle of first retarder plate",
+                         "%20.2f", "RTPS1"),
+            "RET-POS2": (-1, "[deg] Stage angle of second retarder plate",
+                         "%20.2f", "RTPS2"),
+    }
+    KEYWORDS.update(OrcaQuest.KEYWORDS)
+    N_WCS = 4
+    ## camera modes
+    FULL = "FULL"
+    STANDARD = "STANDARD"
+    MBI = "MBI"
+    MBI_REDUCED = "MBI_REDUCED"
+    MODES = {
+            FULL:
+                    util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
+            STANDARD:
+                    util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
+            MBI:
+                    util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
+            MBI_REDUCED:
+                    util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
+    }
 
-    def set_readout_ultraquiet(self, ultraquiet: bool) -> None:
-        super().set_readout_ultraquiet(ultraquiet)
-        readmode = "SLOW" if ultraquiet else "FAST"
-        self._set_formatted_keyword("U_DETMOD", readmode)
+    def set_readout_mode(self, mode: str) -> None:
+        super().set_readout_mode(mode)
+        self._set_formatted_keyword("U_DETMOD", mode.upper())
+
+    def _fill_keywords(self) -> None:
+        super()._fill_keywords()
+        self._set_formatted_keyword("U_DETMOD", self.readout_mode.upper())
 
 
 class VCAM1(BaseVCAM):
+    KEYWORDS = {"U_VLOG1": ("", "Logging VAMPIRES cam 1", "BOOLEAN", "VLOG1")}
+    KEYWORDS.update(BaseVCAM.KEYWORDS)
 
     def _fill_keywords(self) -> None:
         super()._fill_keywords()
@@ -450,6 +522,8 @@ class VCAM1(BaseVCAM):
 
 
 class VCAM2(BaseVCAM):
+    KEYWORDS = {"U_VLOG2": ("", "Logging VAMPIRES cam 2", "BOOLEAN", "VLOG1")}
+    KEYWORDS.update(BaseVCAM.KEYWORDS)
 
     def _fill_keywords(self) -> None:
         super()._fill_keywords()

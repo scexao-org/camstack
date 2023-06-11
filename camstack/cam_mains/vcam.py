@@ -23,7 +23,7 @@ def launch_vcam1():
             "vcam1",
             dcam_number=0,
             mode_id=0,
-            taker_cset_prio=("v0_asl", 42),
+            taker_cset_prio=("v1_asl", 42),
             dependent_processes=[],
     )
     shellify_methods(vcam1, globals())
@@ -37,10 +37,12 @@ def launch_vcam2():
             "vcam2",
             dcam_number=1,
             mode_id=0,
-            taker_cset_prio=("v1_asl", 42),
+            taker_cset_prio=("v2_asl", 42),
             dependent_processes=[],
     )
     shellify_methods(vcam2, globals())
+
+    return vcam2
 
 
 def main():
