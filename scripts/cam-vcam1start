@@ -10,7 +10,7 @@ $tnew $tname
 sleep 3.0 # MUST NOT SEND the C-c to interrupt the bashrc !
 $tsend $tname C-c
 sleep 0.1
-$tsend $tname "close()" Enter
+$tsend $tname "quit()" Enter
 sleep 3
 $tsend $tname C-c
 sleep 0.3
