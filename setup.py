@@ -60,5 +60,11 @@ setup(
         packages=['camstack'],  # same as name
         install_requires=['docopt', 'libtmux', 'pygame', "rich"],
         scripts=scripts,
+        entry_points={
+                "console_scripts": [
+                        "vcam1.py = camstack.viewers.vampires.vcam:launch_vcam1",
+                        "vcam2.py = camstack.viewers.vampires.vcam:launch_vcam2",
+                ]
+        },
         cmdclass={'develop': PreInstallCommand},
 )

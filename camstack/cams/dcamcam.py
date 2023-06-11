@@ -483,21 +483,21 @@ class BaseVCAM(OrcaQuest):
                          "%20.2f", "RTPS2"),
     }
     KEYWORDS.update(OrcaQuest.KEYWORDS)
-    N_WCS = 4
+    # N_WCS = 4
     ## camera modes
-    FULL = "FULL"
-    STANDARD = "STANDARD"
-    MBI = "MBI"
-    MBI_REDUCED = "MBI_REDUCED"
+    FULL, STANDARD, MBI, MBI_REDUCED = "FULL", "STANDARD", "MBI", "MBI_REDUCED"
     MODES = {
             FULL:
                     util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
             STANDARD:
-                    util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
+                    util.CameraMode(x0=1768, x1=2327, y0=872, y1=1431,
+                                    tint=0.001),
             MBI:
-                    util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
+                    util.CameraMode(x0=928, x1=3167, y0=592, y1=1711,
+                                    tint=0.001),
             MBI_REDUCED:
-                    util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
+                    util.CameraMode(x0=928, x1=3167, y0=592, y1=1151,
+                                    tint=0.001),
     }
 
     def set_readout_mode(self, mode: str) -> None:
@@ -510,7 +510,9 @@ class BaseVCAM(OrcaQuest):
 
 
 class VCAM1(BaseVCAM):
-    KEYWORDS = {"U_VLOG1": ("", "Logging VAMPIRES cam 1", "BOOLEAN", "VLOG1")}
+    KEYWORDS = {
+            "U_VLOG1": (False, "Logging VAMPIRES cam 1", "BOOLEAN", "VLOG1")
+    }
     KEYWORDS.update(BaseVCAM.KEYWORDS)
 
     def _fill_keywords(self) -> None:
@@ -522,7 +524,9 @@ class VCAM1(BaseVCAM):
 
 
 class VCAM2(BaseVCAM):
-    KEYWORDS = {"U_VLOG2": ("", "Logging VAMPIRES cam 2", "BOOLEAN", "VLOG1")}
+    KEYWORDS = {
+            "U_VLOG2": (False, "Logging VAMPIRES cam 2", "BOOLEAN", "VLOG1")
+    }
     KEYWORDS.update(BaseVCAM.KEYWORDS)
 
     def _fill_keywords(self) -> None:

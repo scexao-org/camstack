@@ -1,7 +1,7 @@
 from typing import Optional as Op, Optional, Tuple
+from camstack.viewers.generic_viewer_backend import GenericViewerBackend
 from camstack.viewers.generic_viewer_frontend import GenericViewerFrontend
 from swmain.network.pyroclient import connect
-from camstack.viewers import GenericViewerBackend, GenericViewerFrontend
 from camstack.viewers import backend_utils as buts
 from camstack.viewers import frontend_utils as futs
 from camstack.viewers.plugin_arch import BasePlugin
@@ -139,10 +139,7 @@ SHIFT + ARROW:  Move FPM 0.5 mm in x (left/right) and y (up/down)""",
     # CTRL+S:  Save current position to preset
     # CTRL+F:  Change preset file
     # add additional shortcuts
-    def __init__(self, cam: int, name_shm=None):
-        self.cam = cam
-        if name_shm is None:
-            name_shm = f"vcamim{cam:d}"
+    def __init__(self, name_shm=None):
         self.SHORTCUTS = {
                 buts.Shortcut(pgmc.K_LEFT, pgmc.KMOD_LCTRL):
                         partial(self.nudge_fieldstop, pgmc.K_LEFT, fine=True),
@@ -180,13 +177,13 @@ SHIFT + ARROW:  Move FPM 0.5 mm in x (left/right) and y (up/down)""",
                         partial(self.change_fieldstop, 3),
                 buts.Shortcut(pgmc.K_MINUS, pgmc.KMOD_LCTRL):
                         partial(self.change_fieldstop, 4),
-                buts.Shortcut(pgmc.K_EQ, pgmc.KMOD_LCTRL):
+                buts.Shortcut(pgmc.K_EQUALS, pgmc.KMOD_LCTRL):
                         partial(self.change_fieldstop, 5),
         }
-        self.filt = connect("VAMPIRES_FILTER")
+        # self.filt = connect("VAMPIRES_FILTER")
         # self.fieldstop = connect("VAMPIRES_FIELDSTOP")
         self.live = Live()
-        self.logger = logging.getLogger(f"vcam{self.cam}")
+        self.logger = logging.getLogger(name_shm)
         self.logger.setLevel(logging.INFO)
         self.logger.addHandler(stream_handler)
         return super().__init__(name_shm=name_shm)
