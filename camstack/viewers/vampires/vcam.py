@@ -266,7 +266,7 @@ class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):
                                            futs.Fonts.MONO, topleft=(c, r))
         r += int(self.lbl_times.em_size)
 
-        self.lbl_data_val = futs.LabelMessage("m,M=(%5d,%5d) mu=%7.01f",
+        self.lbl_data_val = futs.LabelMessage("m,M=(%5d, %5d) mu=%5d",
                                               futs.Fonts.MONO, topleft=(c, r))
         r += int(1.5 * self.lbl_data_val.em_size)
 
