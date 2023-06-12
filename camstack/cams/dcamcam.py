@@ -475,8 +475,6 @@ class BaseVCAM(OrcaQuest):
             "RET-ANG2":
                     (-1, "[deg] Polarization angle of second retarder plate",
                      "%20.2f", "RTAN2"),
-            "RET-MOD1": ("", "First retarder plate mode", "%-16s", "RTMD1"),
-            "RET-MOD2": ("", "Second retarder plate mode", "%-16s", "RTMD2"),
             "RET-POS1": (-1, "[deg] Stage angle of first retarder plate",
                          "%20.2f", "RTPS1"),
             "RET-POS2": (-1, "[deg] Stage angle of second retarder plate",
