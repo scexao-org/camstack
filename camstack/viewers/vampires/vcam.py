@@ -24,7 +24,7 @@ class VAMPIRESCam2ViewerBackend(VAMPIRESBaseViewerBackend):
 @click.option("-b", "--bin", "binn", type=int, default=1,
               help="SHM binning factor", show_default=True)
 def launch_vcam1(zoom, binn):
-    backend = VAMPIRESCam1ViewerBackend("vcam1")
+    backend = VAMPIRESCam1ViewerBackend(1, "vcam1")
     binned_backend_shape = (backend.shm_shape[0] // binn,
                             backend.shm_shape[1] // binn)
 
@@ -41,7 +41,7 @@ def launch_vcam1(zoom, binn):
 @click.option("-b", "--bin", "binn", type=int, default=1,
               help="SHM binning factor", show_default=True)
 def launch_vcam2(zoom, binn):
-    backend = VAMPIRESCam2ViewerBackend("vcam2")
+    backend = VAMPIRESCam2ViewerBackend(2, "vcam2")
     binned_backend_shape = (backend.shm_shape[0] // binn,
                             backend.shm_shape[1] // binn)
 

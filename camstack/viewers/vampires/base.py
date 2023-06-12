@@ -19,86 +19,29 @@ stream_handler = RichHandler(level=logging.INFO, show_level=False,
                              show_path=False, log_time_format="%H:%M:%S")
 
 
-class FilterStatusPlugin(BasePlugin):
-
-    def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
-        super().__init__(frontend_obj)
-        zoom = self.frontend_obj.system_zoom
-        font = pygame.font.SysFont("default", 30 * zoom)
-        self.enabled = True
-        self.label = futs.LabelMessage(
-                "%s",
-                font,
-                fg_col="#4AC985",
-                bg_col=None,
-                topleft=(
-                        20 * zoom,
-                        20 * zoom,
-                ),
-        )
-        self.label.blit(self.frontend_obj.pg_datasurface)
-
-    def frontend_action(self) -> None:
-        self.label.render(self.status,
-                          blit_onto=self.frontend_obj.pg_datasurface)
-
-    def backend_action(self) -> None:
-        name = RDB.hget("U_FILTER", "value")
-        self.status = name
-
-
-class VAMPIRESPupilMode(PupilMode):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.pupil_lens = connect("VAMPIRES_PUPIL")
-
-    def backend_action(self) -> None:
-        self.pupil_lens
-
-    def enable(self) -> None:  # Override
-
-        # SEND COMMAND TO SWITCH TO PUPIL MODE
-        # Can be async, we don't care. Or do we?
-        # Could be pyro, could be os.system...
-        self.backend_obj.logger.info("Inserting pupil lens")
-
-        if self.textbox:
-            self.textbox.render(('PUPIL', ), fg_col=futs.Colors.BLACK)
-
-        super().enable()
-
-    def disable(self) -> None:  # Override
-
-        # SEND COMMAND TO SWITCH OUT OF PUPIL MODE
-        # Could be pyro, could be os.system...
-
-        self.backend_obj.logger.info("Removing pupil lens")
-        super().disable()
-
-
 class VAMPIRESBaseViewerBackend(GenericViewerBackend):
-    HELP_MSG = Panel(
-            """
+    HELP_MSG = """
 h           : display this message
 x, ESC      : quit vcam viewer
 
 camera controls:
 ----------------
+CTRL + e  : Enable external trigger
+SHIFT + e : Disable external trigger
 CTRL + r  : Switch to FAST readout mode
 SHIFT + r : Switch to SLOW readout mode
-CTRL + m  : Switch to STANDARD mode (will move MBI wheel)
-SHIFT + m : Switch to MBI mode (will move MBI wheel)
-ALT + m   : Switch to MBI-REDUCED mode (will move MBI wheel)
+CTRL + m  : TODO Switch to STANDARD mode (will move MBI wheel)
+SHIFT + m : TODO Switch to MBI mode (will move MBI wheel)
+ALT + m   : TODO Switch to MBI-REDUCED mode (will move MBI wheel)
 
 
 display controls:
 -----------------
 c         : display crosses
-p         : display compass
+p         : TODO display compass
 l         : linear/non-linear display
 m         : cycle colormaps
-o         : bullseye on the PSF
+o         : TODO bullseye on the PSF
 v         : start/stop accumulating and averaging frames
 z         : zoom/unzoom on the center of the image
 
@@ -131,16 +74,27 @@ CTRL + 0     : CLC-3
 CTRL + -     : CLC-5
 CTRL + =     : CLC-7
 CTRL + ARROW : Nudge FPM 0.01 mm in x (left/right) and y (up/down)
-SHIFT + ARROW:  Move FPM 0.5 mm in x (left/right) and y (up/down)""",
-            title="VCAM",
-            subtitle="Help menu",
-    )
+SHIFT + ARROW:  Move FPM 0.5 mm in x (left/right) and y (up/down)"""
 
     # CTRL+S:  Save current position to preset
     # CTRL+F:  Change preset file
     # add additional shortcuts
-    def __init__(self, name_shm=None):
+    def __init__(self, cam_num, name_shm=None, cam_name=None):
+        if cam_name is None:
+            cam_name = f"VCAM{cam_num}"
+        self.cam_name = cam_name
+        self.cam_num = cam_num
+        self.cam = connect(cam_name)
+
         self.SHORTCUTS = {
+                buts.Shortcut(pgmc.K_e, pgmc.KMOD_LCTRL):
+                        partial(self.set_external_trigger, enable=True),
+                buts.Shortcut(pgmc.K_e, pgmc.KMOD_LSHIFT):
+                        partial(self.set_external_trigger, enable=False),
+                buts.Shortcut(pgmc.K_r, pgmc.KMOD_LCTRL):
+                        partial(self.set_readout_mode, mode="FAST"),
+                buts.Shortcut(pgmc.K_r, pgmc.KMOD_LSHIFT):
+                        partial(self.set_readout_mode, mode="SLOW"),
                 buts.Shortcut(pgmc.K_LEFT, pgmc.KMOD_LCTRL):
                         partial(self.nudge_fieldstop, pgmc.K_LEFT, fine=True),
                 buts.Shortcut(pgmc.K_LEFT, pgmc.KMOD_LSHIFT):
@@ -157,18 +111,6 @@ SHIFT + ARROW:  Move FPM 0.5 mm in x (left/right) and y (up/down)""",
                         partial(self.nudge_fieldstop, pgmc.K_DOWN, fine=True),
                 buts.Shortcut(pgmc.K_DOWN, pgmc.KMOD_LSHIFT):
                         partial(self.nudge_fieldstop, pgmc.K_DOWN, fine=False),
-                buts.Shortcut(pgmc.K_1, pgmc.KMOD_LCTRL):
-                        partial(self.change_filter, 1),
-                buts.Shortcut(pgmc.K_2, pgmc.KMOD_LCTRL):
-                        partial(self.change_filter, 2),
-                buts.Shortcut(pgmc.K_3, pgmc.KMOD_LCTRL):
-                        partial(self.change_filter, 3),
-                buts.Shortcut(pgmc.K_4, pgmc.KMOD_LCTRL):
-                        partial(self.change_filter, 4),
-                buts.Shortcut(pgmc.K_5, pgmc.KMOD_LCTRL):
-                        partial(self.change_filter, 5),
-                buts.Shortcut(pgmc.K_6, pgmc.KMOD_LCTRL):
-                        partial(self.change_filter, 6),
                 buts.Shortcut(pgmc.K_8, pgmc.KMOD_LCTRL):
                         partial(self.change_fieldstop, 1),
                 buts.Shortcut(pgmc.K_9, pgmc.KMOD_LCTRL):
@@ -180,17 +122,23 @@ SHIFT + ARROW:  Move FPM 0.5 mm in x (left/right) and y (up/down)""",
                 buts.Shortcut(pgmc.K_EQUALS, pgmc.KMOD_LCTRL):
                         partial(self.change_fieldstop, 5),
         }
-        # self.filt = connect("VAMPIRES_FILTER")
-        # self.fieldstop = connect("VAMPIRES_FIELDSTOP")
         self.live = Live()
         self.logger = logging.getLogger(name_shm)
         self.logger.setLevel(logging.INFO)
         self.logger.addHandler(stream_handler)
         return super().__init__(name_shm=name_shm)
 
-    def print_help(self):
-        with self.live as live:
-            live.console.print(VAMPIRESBaseViewerBackend.help_msg)
+    def set_external_trigger(self, enable: bool):
+        word = "Enabling" if enable else "Disabling"
+        self.logger.info(f"{word} external trigger for {self.cam_name}.")
+        self.cam.set_external_trigger(enable)
+        word = "enabled" if enable else "disabled"
+        self.logger.info(f"External trigger has been {word}.")
+
+    def set_readout_mode(self, mode: str):
+        self.logger.info(f"Changing to {mode.upper()} readout mode.")
+        self.cam.set_readout_mode(mode)
+        self.logger.info(f"Now using {mode.upper()} readout mode.")
 
     def nudge_fieldstop(self, key, fine=True):
         sign = 1
@@ -213,10 +161,6 @@ SHIFT + ARROW:  Move FPM 0.5 mm in x (left/right) and y (up/down)""",
             nudge_value = sign * 0.5
         self.logger.info(f"Moving {substage} by {nudge_value} mm")
         self.fieldstop.move_relative__oneway(substage, nudge_value)
-
-    def change_filter(self, index: int):
-        self.logger.info(f"Moving filter to configuration {index}")
-        self.filt.move_configuration_idx__oneway(index)
 
     def change_fieldstop(self, index: int):
         self.logger.info(f"Moving fieldstop to configuration {index}")
