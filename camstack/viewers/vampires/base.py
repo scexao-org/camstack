@@ -26,10 +26,14 @@ x, ESC      : quit vcam viewer
 
 camera controls:
 ----------------
+(Note: if you press ALT, will apply to both cameras)
 CTRL + e  : Enable external trigger
 SHIFT + e : Disable external trigger
 CTRL + r  : Switch to FAST readout mode
 SHIFT + r : Switch to SLOW readout mode
+
+camera modes:
+-------------
 CTRL + m  : TODO Switch to STANDARD mode (will move MBI wheel)
 SHIFT + m : TODO Switch to MBI mode (will move MBI wheel)
 ALT + m   : TODO Switch to MBI-REDUCED mode (will move MBI wheel)
@@ -84,43 +88,30 @@ SHIFT + ARROW:  Move FPM 0.5 mm in x (left/right) and y (up/down)"""
             cam_name = f"VCAM{cam_num}"
         self.cam_name = cam_name
         self.cam_num = cam_num
-        self.cam = connect(cam_name)
+        self.other_cam_num = (cam_num % 2) + 1
+        self.other_cam_name = f"VCAM{self.other_cam_num}"
+        self.cam = connect(self.cam_name)
+        self.other_cam = connect(self.other_cam_name)
 
         self.SHORTCUTS = {
                 buts.Shortcut(pgmc.K_e, pgmc.KMOD_LCTRL):
                         partial(self.set_external_trigger, enable=True),
+                buts.Shortcut(pgmc.K_e, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
+                        partial(self.set_external_trigger, enable=True,
+                                both=True),
                 buts.Shortcut(pgmc.K_e, pgmc.KMOD_LSHIFT):
                         partial(self.set_external_trigger, enable=False),
+                buts.Shortcut(pgmc.K_e, pgmc.KMOD_LSHIFT | pgmc.KMOD_LALT):
+                        partial(self.set_external_trigger, enable=False,
+                                both=True),
                 buts.Shortcut(pgmc.K_r, pgmc.KMOD_LCTRL):
                         partial(self.set_readout_mode, mode="FAST"),
+                buts.Shortcut(pgmc.K_r, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
+                        partial(self.set_readout_mode, mode="FAST", both=True),
                 buts.Shortcut(pgmc.K_r, pgmc.KMOD_LSHIFT):
                         partial(self.set_readout_mode, mode="SLOW"),
-                buts.Shortcut(pgmc.K_LEFT, pgmc.KMOD_LCTRL):
-                        partial(self.nudge_fieldstop, pgmc.K_LEFT, fine=True),
-                buts.Shortcut(pgmc.K_LEFT, pgmc.KMOD_LSHIFT):
-                        partial(self.nudge_fieldstop, pgmc.K_LEFT, fine=False),
-                buts.Shortcut(pgmc.K_RIGHT, pgmc.KMOD_LCTRL):
-                        partial(self.nudge_fieldstop, pgmc.K_RIGHT, fine=True),
-                buts.Shortcut(pgmc.K_RIGHT, pgmc.KMOD_LSHIFT):
-                        partial(self.nudge_fieldstop, pgmc.K_RIGHT, fine=False),
-                buts.Shortcut(pgmc.K_UP, pgmc.KMOD_LCTRL):
-                        partial(self.nudge_fieldstop, pgmc.K_UP, fine=True),
-                buts.Shortcut(pgmc.K_UP, pgmc.KMOD_LSHIFT):
-                        partial(self.nudge_fieldstop, pgmc.K_UP, fine=False),
-                buts.Shortcut(pgmc.K_DOWN, pgmc.KMOD_LCTRL):
-                        partial(self.nudge_fieldstop, pgmc.K_DOWN, fine=True),
-                buts.Shortcut(pgmc.K_DOWN, pgmc.KMOD_LSHIFT):
-                        partial(self.nudge_fieldstop, pgmc.K_DOWN, fine=False),
-                buts.Shortcut(pgmc.K_8, pgmc.KMOD_LCTRL):
-                        partial(self.change_fieldstop, 1),
-                buts.Shortcut(pgmc.K_9, pgmc.KMOD_LCTRL):
-                        partial(self.change_fieldstop, 2),
-                buts.Shortcut(pgmc.K_0, pgmc.KMOD_LCTRL):
-                        partial(self.change_fieldstop, 3),
-                buts.Shortcut(pgmc.K_MINUS, pgmc.KMOD_LCTRL):
-                        partial(self.change_fieldstop, 4),
-                buts.Shortcut(pgmc.K_EQUALS, pgmc.KMOD_LCTRL):
-                        partial(self.change_fieldstop, 5),
+                buts.Shortcut(pgmc.K_r, pgmc.KMOD_LSHIFT | pgmc.KMOD_LALT):
+                        partial(self.set_readout_mode, mode="SLOW", both=True),
         }
         self.live = Live()
         self.logger = logging.getLogger(name_shm)
@@ -128,43 +119,31 @@ SHIFT + ARROW:  Move FPM 0.5 mm in x (left/right) and y (up/down)"""
         self.logger.addHandler(stream_handler)
         return super().__init__(name_shm=name_shm)
 
-    def set_external_trigger(self, enable: bool):
+    def set_external_trigger(self, enable: bool, both: bool = False):
         word = "Enabling" if enable else "Disabling"
         self.logger.info(f"{word} external trigger for {self.cam_name}.")
         self.cam.set_external_trigger(enable)
         word = "enabled" if enable else "disabled"
         self.logger.info(f"External trigger has been {word}.")
+        if both:
+            word = "Enabling" if enable else "Disabling"
+            self.logger.info(
+                    f"{word} external trigger for {self.other_cam_name}.")
+            self.other_cam.set_external_trigger(enable)
+            word = "enabled" if enable else "disabled"
+            self.logger.info(f"External trigger has been {word}.")
 
-    def set_readout_mode(self, mode: str):
-        self.logger.info(f"Changing to {mode.upper()} readout mode.")
+    def set_readout_mode(self, mode: str, both: bool = False):
+        self.logger.info(
+                f"Changing to {mode.upper()} readout mode for {self.cam_name}.")
         self.cam.set_readout_mode(mode)
         self.logger.info(f"Now using {mode.upper()} readout mode.")
-
-    def nudge_fieldstop(self, key, fine=True):
-        sign = 1
-        if key == pgmc.K_LEFT:
-            substage = "x"
-            sign = 1
-        elif key == pgmc.K_RIGHT:
-            substage = "x"
-            sign = -1
-        elif key == pgmc.K_UP:
-            substage = "y"
-            sign = 1
-        elif key == pgmc.K_DOWN:
-            substage = "y"
-            sign = -1
-
-        if fine:
-            nudge_value = sign * 0.01
-        else:
-            nudge_value = sign * 0.5
-        self.logger.info(f"Moving {substage} by {nudge_value} mm")
-        self.fieldstop.move_relative__oneway(substage, nudge_value)
-
-    def change_fieldstop(self, index: int):
-        self.logger.info(f"Moving fieldstop to configuration {index}")
-        # self.fieldstop.move_configuration_idx__oneway(index)
+        if both:
+            self.logger.info(
+                    f"Changing to {mode.upper()} readout mode for {self.other_cam_name}."
+            )
+            self.other_cam.set_readout_mode(mode)
+            self.logger.info(f"Now using {mode.upper()} readout mode.")
 
 
 class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):

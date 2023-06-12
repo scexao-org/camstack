@@ -18,7 +18,18 @@ from rich.logging import RichHandler
 logger = logging.getLogger()
 
 
-class MaskWheelPlugin(BasePlugin):
+class DeviceMixin:
+    """
+    Simply connects to a pyro device using a class property
+    """
+    DEVICE_NAME = ""
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.device = connect(self.DEVICE_NAME)
+
+
+class MaskWheelPlugin(BasePlugin, DeviceMixin):
 
     DEVICE_NAME = "VAMPIRES_MASK"
 
@@ -35,7 +46,6 @@ class MaskWheelPlugin(BasePlugin):
                          self.frontend_obj.data_disp_size[1] - 40 * zoom))
         self.label.blit(self.frontend_obj.pg_datasurface)
         self.current_index = None
-        self.wheel = connect(self.DEVICE_NAME)
         # yapf: disable
         self.shortcut_map = {
             buts.Shortcut(pgmc.K_LEFT, pgmc.KMOD_LCTRL): partial(self.nudge_wheel, pgmc.K_LEFT, fine=True),
@@ -86,7 +96,7 @@ class MaskWheelPlugin(BasePlugin):
         else:
             nudge_value = sign * 1
         self.backend_obj.logger.info(f"Moving {substage} by {nudge_value} mm")
-        self.wheel.move_relative__oneway(substage, nudge_value)
+        self.device.move_relative__oneway(substage, nudge_value)
 
     def rotate_wheel(self, key, fine=True):
         # CCW
@@ -101,11 +111,11 @@ class MaskWheelPlugin(BasePlugin):
         else:
             nudge_value = sign * 1
         self.backend_obj.logger.info(f"Rotating theta by {nudge_value} deg")
-        self.wheel.move_relative__oneway("theta", nudge_value)
+        self.device.move_relative__oneway("theta", nudge_value)
 
     def change_wheel(self, index: int):
         self.backend_obj.logger.info(f"Moving wheel to configuration {index}")
-        self.wheel.move_configuration_idx__oneway(index)
+        self.device.move_configuration_idx__oneway(index)
         self.current_index = index
 
     def save_config(self):
@@ -117,8 +127,8 @@ class MaskWheelPlugin(BasePlugin):
             index = self.current_index
         self.backend_obj.logger.info(
                 f"Saving position for configuration {index}")
-        self.wheel.save_configuration(index=index)
-        self.wheel.update_keys()
+        self.device.save_configuration(index=index)
+        self.device.update_keys()
 
     def frontend_action(self) -> None:
         self.label.render(self.status,
@@ -131,7 +141,7 @@ class MaskWheelPlugin(BasePlugin):
         self.status = name
 
 
-class FilterWheelPlugin(BasePlugin):
+class FilterWheelPlugin(BasePlugin, DeviceMixin):
 
     DEVICE_NAME = "VAMPIRES_FILT"
 
@@ -147,7 +157,6 @@ class FilterWheelPlugin(BasePlugin):
                 topleft=(20 * zoom,
                          self.frontend_obj.data_disp_size[1] - 40 * zoom))
         self.label.blit(self.frontend_obj.pg_datasurface)
-        self.filt = connect(self.DEVICE_NAME)
 
         # yapf: disable
         self.shortcut_map = {
@@ -167,10 +176,10 @@ class FilterWheelPlugin(BasePlugin):
         # yapf: enable
 
     def change_filter(self, index: int):
-        _, filt = self.filt.get_configuration(index)
+        _, filt = self.device.get_configuration(index)
         self.self.backend_obj.logger.info(
                 f"Moving filter to position {index}: {filt}")
-        self.filt.move_configuration_idx__oneway(index)
+        self.device.move_configuration_idx__oneway(index)
 
     def frontend_action(self) -> None:
         self.label.render(self.status,
@@ -182,7 +191,7 @@ class FilterWheelPlugin(BasePlugin):
         self.status = name
 
 
-class FieldstopPlugin(BasePlugin):
+class FieldstopPlugin(BasePlugin, DeviceMixin):
 
     DEVICE_NAME = "VAMPIRES_FIELDSTOP"
 
@@ -199,7 +208,6 @@ class FieldstopPlugin(BasePlugin):
                          self.frontend_obj.data_disp_size[1] - 40 * zoom))
         self.label.blit(self.frontend_obj.pg_datasurface)
         self.current_index = None
-        self.fieldstop = connect(self.DEVICE_NAME)
 
         # yapf: disable
         self.shortcut_map = {
@@ -253,12 +261,12 @@ class FieldstopPlugin(BasePlugin):
         else:
             nudge_value = sign * 1
         self.backend_obj.logger.info(f"Moving {substage} by {nudge_value} mm")
-        self.fieldstop.move_relative__oneway(substage, nudge_value)
+        self.device.move_relative__oneway(substage, nudge_value)
 
     def change_fieldstop(self, index: int):
         self.backend_obj.logger.info(
                 f"Moving fieldstop to configuration {index}")
-        self.fieldstop.move_configuration_idx__oneway(index)
+        self.device.move_configuration_idx__oneway(index)
         self.current_index = index
 
     def save_config(self):
@@ -270,13 +278,12 @@ class FieldstopPlugin(BasePlugin):
             index = self.current_index
         self.backend_obj.logger.info(
                 f"Saving position for configuration {index}")
-        self.fieldstop.save_configuration(index=index)
-        self.fieldstop.update_keys()
+        self.device.save_configuration(index=index)
+        self.device.update_keys()
 
     def frontend_action(self) -> None:
         self.label.render(self.status,
                           blit_onto=self.frontend_obj.pg_datasurface)
-        # self.frontend_obj.pg_updated_rects.append(self.label.rectangle)
 
     def backend_action(self) -> None:
         # Warning: this is called every time the window refreshes, i.e. ~20Hz.
@@ -284,24 +291,15 @@ class FieldstopPlugin(BasePlugin):
         self.status = name
 
 
-class MBIWheelPlugin(BasePlugin):
+class MBIWheelPlugin(BasePlugin, DeviceMixin):
 
     DEVICE_NAME = "VAMPIRES_MBI"
 
     def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
         super().__init__(frontend_obj)
-        zoom = self.frontend_obj.system_zoom
-        font = pygame.font.SysFont("default", 40 * zoom)
         self.enabled = True
         # Ideally you'd instantiate the label in the frontend, cuz different viewers could be wanting the same info
         # displayed at different locations.
-        self.label = futs.LabelMessage(
-                "%s", font, fg_col="#4AC985", bg_col=None,
-                topleft=(20 * zoom,
-                         self.frontend_obj.data_disp_size[1] - 40 * zoom))
-        self.label.blit(self.frontend_obj.pg_datasurface)
-        self.current_index = None
-        self.wheel = connect(self.DEVICE_NAME)
 
         # yapf: disable
         self.shortcut_map = {
@@ -325,25 +323,12 @@ class MBIWheelPlugin(BasePlugin):
         else:
             nudge_value = sign * 1
         self.backend_obj.logger.info(f"Rotating MBI wheel by {nudge_value} deg")
-        self.wheel.move_relative__oneway("theta", nudge_value)
-
-    def frontend_action(self) -> None:
-        self.label.render(self.status,
-                          blit_onto=self.frontend_obj.pg_datasurface)
-
-    def backend_action(self) -> None:
-        # Warning: this is called every time the window refreshes, i.e. ~20Hz.
-        name = RDB.hget("U_MBI", "value")
-        self.status = name
+        self.device.move_relative__oneway("theta", nudge_value)
 
 
-class VAMPIRESPupilMode(PupilMode):
+class VAMPIRESPupilMode(PupilMode, DeviceMixin):
 
     DEVICE_NAME = "VAMPIRES_PUPIL"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.pupil_lens = connect(self.DEVICE_NAME)
 
     def backend_action(self) -> None:
         name = RDB.hget("U_PUPIL", "value")
@@ -358,7 +343,7 @@ class VAMPIRESPupilMode(PupilMode):
 
         if self.textbox:
             self.textbox.render(('PUPIL', ), fg_col=futs.Colors.BLACK)
-        self.pupil_lens.move_configuration_name__oneway("IN")
+        self.device.move_configuration_name__oneway("IN")
 
     def disable(self) -> None:  # Override
 
@@ -366,4 +351,4 @@ class VAMPIRESPupilMode(PupilMode):
         # Could be pyro, could be os.system...
 
         self.backend_obj.logger.info("Removing pupil lens")
-        self.pupil_lens.move_configuration_name__oneway("OUT")
+        self.device.move_configuration_name__oneway("OUT")
