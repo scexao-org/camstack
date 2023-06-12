@@ -60,9 +60,11 @@ def main():
 
     if cam == 1:
         vcam = launch_vcam1(mode=mode)
+        globals()["cam"] = vcam
         key = pk.VCAM1
     elif cam == 2:
         vcam = launch_vcam2(mode=mode)
+        globals()["cam"] = vcam
         key = pk.VCAM2
 
     # start pyro server

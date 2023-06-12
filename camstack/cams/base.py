@@ -405,10 +405,9 @@ class BaseCamera:
         return shm
 
     def set_keyword(self, key: str, value: Union[str, int, float]) -> None:
-        return self._set_formatted_keyword(
-                key,
-                value,
-        )
+        # yapf: disable
+        return self._set_formatted_keyword(key, value)
+        # yapf: enable
 
     def _set_formatted_keyword(self, key: str, value: Union[str, int,
                                                             float]) -> None:

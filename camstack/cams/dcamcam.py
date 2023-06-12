@@ -316,8 +316,9 @@ class OrcaQuest(DCAMCamera):
         return val
 
     def set_tint(self, tint: float) -> float:
-        return self._dcam_prm_setvalue(float(tint), "EXPTIME",
-                                       dcamprop.EProp.EXPOSURETIME)
+        self._dcam_prm_setvalue(float(tint), "EXPTIME",
+                                dcamprop.EProp.EXPOSURETIME)
+        self.get_fps()
 
     def get_fps(self) -> float:
         exp_time, read_time = self._dcam_prm_getmultivalue(
@@ -468,7 +469,6 @@ class BaseVCAM(OrcaQuest):
                        "QWP2"),
             "U_QWP2TH":
                     (-1, "[deg] VAMPIRES QWP 2 wheel theta", "%16.3f", "QWP2T"),
-            "U_QWPMOD": ("", "VAMPIRES QWP tracking mode", "%-16s", "QWPMD"),
             ## polarzation terms managed by HWP daemon
             "RET-ANG1": (-1, "[deg] Polarization angle of first retarder plate",
                          "%20.2f", "RTAN1"),

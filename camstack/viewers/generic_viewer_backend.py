@@ -180,24 +180,27 @@ class GenericViewerBackend:
         else:
             self.crop_lvl_id = which
 
-        halfside = (self.shm_shape[0] / 2**(self.crop_lvl_id + 1),
-                    self.shm_shape[1] / 2**(self.crop_lvl_id + 1))
         # Could define explicit slices using a self.CROPSLICE. Could be great for apapane PDI.
         assert self.CROP_CENTER_SPOT
-        cr, cc = self.CROP_CENTER_SPOT
-
-        # Adjust, in case we've just zoomed-out from a crop spot that's too close to the edge!
-        cr_temp = min(max(cr, halfside[0]), self.shm_shape[0] - halfside[0])
-        cc_temp = min(max(cc, halfside[1]), self.shm_shape[1] - halfside[1])
-
         if self.crop_lvl_id > 0:
-            self.crop_slice = np.s_[
-                    int(round(cr_temp -
-                              halfside[0])):int(round(cr_temp + halfside[0])),
-                    int(round(cc_temp -
-                              halfside[1])):int(round(cc_temp + halfside[1]))]
+            self.crop_slice = self._get_crop_slice(self.CROP_CENTER_SPOT,
+                                                   self.shm_shape)
         else:
             self.crop_slice = np.s_[:, :]
+
+    def _get_crop_slice(self, center, shape):
+        cr, cc = center
+        halfside = (shape[0] / 2**(self.crop_lvl_id + 1),
+                    shape[1] / 2**(self.crop_lvl_id + 1))
+        # Adjust, in case we've just zoomed-out from a crop spot that's too close to the edge!
+        cr_temp = min(max(cr, halfside[0]), shape[0] - halfside[0])
+        cc_temp = min(max(cc, halfside[1]), shape[1] - halfside[1])
+        crop_slice = np.s_[
+                int(round(cr_temp -
+                          halfside[0])):int(round(cr_temp + halfside[0])),
+                int(round(cc_temp -
+                          halfside[1])):int(round(cc_temp + halfside[1]))]
+        return crop_slice
 
     def steer_crop(self, direction: int) -> None:
         assert self.CROP_CENTER_SPOT
@@ -296,8 +299,8 @@ class GenericViewerBackend:
         '''
         assert self.data_debias is not None
 
-        self.data_plot_min = self.data_debias[1:, 1:].min()
-        self.data_plot_max = self.data_debias[1:, 1:].max()
+        self.data_plot_min = np.nanmin(self.data_debias[1:, 1:])
+        self.data_plot_max = np.nanmax(self.data_debias[1:, 1:])
 
         # Temp variables to distinguish per-frame autoclip (nonlinear modes)
         # Against persistent, user-set clipping
@@ -305,7 +308,7 @@ class GenericViewerBackend:
 
         if low_clip is None and self.flag_non_linear != buts.ZScaleEnum.LIN:
             # Clip to the 80-th percentile (for log modes by default
-            low_clip = np.percentile(self.data_debias[1:, 1:], 0.8)
+            low_clip = np.nanpercentile(self.data_debias[1:, 1:], 0.8)
 
         if low_clip:
             m = low_clip

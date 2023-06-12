@@ -371,6 +371,5 @@ class VAMPIRESPupilMode(PupilMode, DeviceMixin):
 
         # SEND COMMAND TO SWITCH OUT OF PUPIL MODE
         # Could be pyro, could be os.system...
-
         self.backend_obj.logger.info("Removing pupil lens")
         self.device.move_configuration_name__oneway("OUT")

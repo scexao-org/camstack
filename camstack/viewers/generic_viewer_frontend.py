@@ -139,8 +139,8 @@ class GenericViewerFrontend:
         r += int(self.lbl_title.em_size)
 
         # For help press [h]
-        self.lbl_help = futs.LabelMessage("For help press [h]", futs.Fonts.MONO,
-                                          topleft=(c, r))
+        self.lbl_help = futs.LabelMessage("for help press [h], quit [x]",
+                                          futs.Fonts.MONO, topleft=(c, r))
         self.lbl_help.blit(self.pg_screen)
         r += int(self.lbl_help.em_size)
 
@@ -165,7 +165,7 @@ class GenericViewerFrontend:
 
         # {Status message [sat, acquiring dark, acquiring ref...]}
         # At the bottom right.
-        self.lbl_ref_dark = futs.LabelMessage(
+        self.lbl_status = futs.LabelMessage(
                 '%s', futs.Fonts.DEFAULT_16,
                 topleft=(8 * self.system_zoom,
                          self.pygame_win_size[1] - 20 * self.system_zoom))
@@ -177,7 +177,8 @@ class GenericViewerFrontend:
             return
 
         # FIXME $CAMSTACK_ROOT instead of $HOME/src/camstack
-        path_cartoon = os.environ['HOME'] + "/src/camstack/conf/io.png"
+        path_cartoon = os.environ[
+                'HOME'] + f"/src/camstack/conf/{self.CARTOON_FILE}"
         cartoon_img = pygame.image.load(path_cartoon).convert_alpha()
 
         w, h = cartoon_img.get_size()
@@ -199,20 +200,22 @@ class GenericViewerFrontend:
                 plugins.CrossHairPlugin(self, pgmc.K_c),
                 image_stacking_plugins.RefImageAcquirePlugin(
                         self, pgmc.K_r, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT,
-                        textbox=self.lbl_ref_dark)
+                        textbox=self.lbl_status)
         ]
 
     def _inloop_update_labels(self) -> None:
         assert self.backend_obj
 
         fps = self.backend_obj.input_shm.get_fps()
-        tint = self.backend_obj.input_shm.get_expt()
+        tint = self.backend_obj.input_shm.get_expt()  # seconds
+        tint_us = tint * 1e6
+        tint_ms = tint * 1e3
         ndr = self.backend_obj.input_shm.get_ndr()
 
         self.lbl_cropzone.render(tuple(self.backend_obj.input_shm.get_crop()),
                                  blit_onto=self.pg_screen)
-        self.lbl_times.render((tint, fps, ndr), blit_onto=self.pg_screen)
-        self.lbl_t_minmax.render((tint * ndr, self.backend_obj.data_min,
+        self.lbl_times.render((tint_us, fps, ndr), blit_onto=self.pg_screen)
+        self.lbl_t_minmax.render((tint_ms * ndr, self.backend_obj.data_min,
                                   self.backend_obj.data_max),
                                  blit_onto=self.pg_screen)
 

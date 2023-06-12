@@ -32,7 +32,7 @@ if __name__ == "__main__":
     tcp_send = DependentProcess(
             tmux_name='palila_tcp',
             cli_cmd='sleep 3; OMP_NUM_THREADS=1 shmimTCPtransmit %s %s %u',
-            cli_args=('palila', scxconf.IPLAN_SC6, scxconf.TCPPORT_PALILA),
+            cli_args=('palila', scxconf.IPP2P_SC6FROM5, scxconf.TCPPORT_PALILA),
             # Sender is kill_upon_create - rather than when starting. that ensures it dies well before the receiver
             # Which is better for flushing TCP sockets
             kill_upon_create=True,

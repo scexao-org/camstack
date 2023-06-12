@@ -7,6 +7,7 @@ if TYPE_CHECKING:
 
 from abc import abstractmethod
 import os, time
+import re
 
 _CORES = os.sched_getaffinity(0)  # AMD fix
 import pygame.constants as pgmc
@@ -31,7 +32,7 @@ class RefImageAcquirePlugin(OneShotActionPlugin):
         super().__init__(frontend_obj, key_onoff, modifier_and)
 
         if textbox:
-            assert textbox.template_str == '%s'
+            assert re.match('%.+s', textbox.template_str)
         self.textbox = textbox
 
         self.start_time = 0.0

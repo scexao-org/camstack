@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Dict, Callable, Optional, TYPE_CHECKING
+
 if TYPE_CHECKING:
     from .generic_viewer_frontend import GenericViewerFrontend
     from .generic_viewer_backend import GenericViewerBackend
@@ -16,7 +17,7 @@ os.sched_setaffinity(0, _CORES)  # AMD fix
 from . import backend_utils as buts
 from . import frontend_utils as futs
 
-from .plugin_arch import OnOffPlugin
+from .plugin_arch import BasePlugin, OnOffPlugin
 
 
 # Dummy template
@@ -59,6 +60,44 @@ class PupilMode(OnOffPlugin):  # Fuck I desire double inheritance now.
         # Could be pyro, could be os.system...
 
         super().disable()
+
+
+class SaturationPlugin(BasePlugin):
+
+    def __init__(self, frontend_obj: GenericViewerFrontend, sat_value,
+                 nonlin_value=None) -> None:
+        super().__init__(frontend_obj)
+        self.sat_value = sat_value
+        if nonlin_value is None:
+            nonlin_value = self.sat_value
+        self.nonlin_value = nonlin_value
+        self.enabled = True
+
+    def backend_action(self) -> None:
+        if not self.enabled:
+            return
+        self.max = self.backend_obj.data_max
+
+    def frontend_action(self) -> None:
+        assert self.backend_obj  # mypy happy
+        if not self.enabled:  # OK maybe this responsibility could be handled to the caller.
+            return
+        if self.max >= self.sat_value:
+            self.frontend_obj.lbl_status.render(
+                    f"{'!!! SATURATING !!!':^28s}",
+                    bg_col=futs.COLOR_SATURATION, fg_col=futs.Colors.WHITE,
+                    blit_onto=self.frontend_obj.pg_screen)
+        elif self.max >= self.nonlin_value:
+            self.frontend_obj.lbl_status.render(
+                    f"{'!!! NON-LINEAR !!!':^28s}", bg_col=futs.Colors.BLUE,
+                    fg_col=futs.Colors.WHITE,
+                    blit_onto=self.frontend_obj.pg_screen)
+        else:
+            self.frontend_obj.lbl_status.render(
+                    "", blit_onto=self.frontend_obj.pg_screen)
+
+        self.frontend_obj.pg_updated_rects.append(
+                self.frontend_obj.lbl_status.rectangle)
 
 
 class CrossHairPlugin(OnOffPlugin):

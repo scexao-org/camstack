@@ -34,6 +34,8 @@ scripts = [
         './viewers/apapane.py',
         './viewers/palila.py',
         './viewers/firstcam.py',
+        './viewers/vcam1.py',
+        './viewers/vcam2.py',
         './viewers/vpupcam.py',
         './scripts/cam-restartdeps',
         './scripts/cam-apapanestart',
@@ -60,11 +62,5 @@ setup(
         packages=['camstack'],  # same as name
         install_requires=['docopt', 'libtmux', 'pygame', "rich"],
         scripts=scripts,
-        entry_points={
-                "console_scripts": [
-                        "vcam1.py = camstack.viewers.vampires.vcam:launch_vcam1",
-                        "vcam2.py = camstack.viewers.vampires.vcam:launch_vcam2",
-                ]
-        },
         cmdclass={'develop': PreInstallCommand},
 )
