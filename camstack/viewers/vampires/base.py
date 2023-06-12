@@ -22,63 +22,62 @@ stream_handler = RichHandler(level=logging.INFO, show_level=False,
 class VAMPIRESBaseViewerBackend(GenericViewerBackend):
     HELP_MSG = """
 h           : display this message
-x, ESC      : quit vcam viewer
+x, ESC      : quit viewer
 
-camera controls:
-----------------
-(Note: if you press ALT, will apply to both cameras)
-CTRL + e  : Enable external trigger
-SHIFT + e : Disable external trigger
-CTRL + r  : Switch to FAST readout mode
-SHIFT + r : Switch to SLOW readout mode
+Camera controls:
+(Note: these get applied to both cameras.
+ if you press ALT, will only apply to one camera)
+--------------------------------------------------
+CTRL  + e        : Enable external trigger
+SHIFT + e        : Disable external trigger
+CTRL  + r        : Switch to FAST readout mode
+SHIFT + r        : Switch to SLOW readout mode
+CTRL  + m        : TODO Switch to STANDARD mode
+SHIFT + m        : TODO Switch to MBI mode
+CTRL + SHIFT + m : TODO Switch to MBI-REDUCED mode
 
-camera modes:
--------------
-CTRL + m  : TODO Switch to STANDARD mode (will move MBI wheel)
-SHIFT + m : TODO Switch to MBI mode (will move MBI wheel)
-ALT + m   : TODO Switch to MBI-REDUCED mode (will move MBI wheel)
+Display controls:
+--------------------------------------------------
+c : display crosses
+p : TODO display compass
+l : linear/non-linear display
+m : cycle colormaps
+o : TODO bullseye on the PSF
+v : start/stop accumulating and averaging frames
+z : zoom/unzoom on the center of the image
 
-
-display controls:
------------------
-c         : display crosses
-p         : TODO display compass
-l         : linear/non-linear display
-m         : cycle colormaps
-o         : TODO bullseye on the PSF
-v         : start/stop accumulating and averaging frames
-z         : zoom/unzoom on the center of the image
-
-
-pupil mode:
------------
-CTRL + p: enable pupil lens
-SHIFT + p: disable pupil lens
+Pupil mode:
+--------------------------------------------------
+CTRL  + p : enable pupil lens
+SHIFT + p : disable pupil lens
 
 MBI wheel controls:
--------------------
-CTRL + [    : Move wheel 0.1 deg CCW
-CTRL + ]    : Move wheel 0.1 deg CW
+--------------------------------------------------
+CTRL  + []         : Nudge wheel 0.1 deg CCW / CW
+CTRL  + SHIFT + [] : Nudge wheel 1 deg CCW / CW
+CTRL  + b          : Insert MBI dichroics
+SHIFT + b          : Remove MBI dichroics
+ALT   + b          : Save current angle to last configuration
 
-filter controls:
-----------------
-CTRL+ -- :  change filter wheel slot
-       1 :  Open
-       2 :  625-50
-       3 :  675-60
-       4 :  725-50
-       5 :  750-50
-       6 :  775-50
+Filter controls:
+--------------------------------------------------
+CTRL + 1 : Open
+CTRL + 2 : 625-50
+CTRL + 3 : 675-60
+CTRL + 4 : 725-50
+CTRL + 5 : 750-50
+CTRL + 6 : 775-50
 
-field stop controls:
----------------------
-CTRL + 8     : Field stop
-CTRL + 9     : CLC-2
-CTRL + 0     : CLC-3
-CTRL + -     : CLC-5
-CTRL + =     : CLC-7
-CTRL + ARROW : Nudge FPM 0.01 mm in x (left/right) and y (up/down)
-SHIFT + ARROW:  Move FPM 0.5 mm in x (left/right) and y (up/down)"""
+Field stop controls:
+--------------------------------------------------
+CTRL  + 8     : Field stop
+CTRL  + 9     : CLC-2
+CTRL  + 0     : CLC-3
+CTRL  + -     : CLC-5
+CTRL  + =     : CLC-7
+CTRL  + ARROW : Nudge 0.01 mm in x (left/right) and y (up/down)
+SHIFT + ARROW : Nudge 0.1 mm in x (left/right) and y (up/down)
+CTRL  + s     : Save current position to last configuration"""
 
     # CTRL+S:  Save current position to preset
     # CTRL+F:  Change preset file
@@ -95,23 +94,39 @@ SHIFT + ARROW:  Move FPM 0.5 mm in x (left/right) and y (up/down)"""
 
         self.SHORTCUTS = {
                 buts.Shortcut(pgmc.K_e, pgmc.KMOD_LCTRL):
-                        partial(self.set_external_trigger, enable=True),
-                buts.Shortcut(pgmc.K_e, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
                         partial(self.set_external_trigger, enable=True,
                                 both=True),
+                buts.Shortcut(pgmc.K_e, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
+                        partial(self.set_external_trigger, enable=True),
                 buts.Shortcut(pgmc.K_e, pgmc.KMOD_LSHIFT):
-                        partial(self.set_external_trigger, enable=False),
-                buts.Shortcut(pgmc.K_e, pgmc.KMOD_LSHIFT | pgmc.KMOD_LALT):
                         partial(self.set_external_trigger, enable=False,
                                 both=True),
+                buts.Shortcut(pgmc.K_e, pgmc.KMOD_LSHIFT | pgmc.KMOD_LALT):
+                        partial(self.set_external_trigger, enable=False),
                 buts.Shortcut(pgmc.K_r, pgmc.KMOD_LCTRL):
-                        partial(self.set_readout_mode, mode="FAST"),
-                buts.Shortcut(pgmc.K_r, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
                         partial(self.set_readout_mode, mode="FAST", both=True),
+                buts.Shortcut(pgmc.K_r, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
+                        partial(self.set_readout_mode, mode="FAST"),
                 buts.Shortcut(pgmc.K_r, pgmc.KMOD_LSHIFT):
-                        partial(self.set_readout_mode, mode="SLOW"),
-                buts.Shortcut(pgmc.K_r, pgmc.KMOD_LSHIFT | pgmc.KMOD_LALT):
                         partial(self.set_readout_mode, mode="SLOW", both=True),
+                buts.Shortcut(pgmc.K_r, pgmc.KMOD_LSHIFT | pgmc.KMOD_LALT):
+                        partial(self.set_readout_mode, mode="SLOW"),
+                buts.Shortcut(pgmc.K_m, pgmc.KMOD_LCTRL):
+                        partial(self.set_camera_mode, mode="STANDARD",
+                                both=True),
+                buts.Shortcut(pgmc.K_m, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
+                        partial(self.set_camera_mode, mode="STANDARD"),
+                buts.Shortcut(pgmc.K_m, pgmc.KMOD_LSHIFT):
+                        partial(self.set_camera_mode, mode="MBI", both=True),
+                buts.Shortcut(pgmc.K_m, pgmc.KMOD_LSHIFT | pgmc.KMOD_LALT):
+                        partial(self.set_camera_mode, mode="MBI"),
+                buts.Shortcut(pgmc.K_m, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT):
+                        partial(self.set_camera_mode, mode="MBI_REDUCED",
+                                both=True),
+                buts.Shortcut(
+                        pgmc.K_m,
+                        pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT | pgmc.KMOD_LALT):
+                        partial(self.set_camera_mode, mode="MBI_REDUCED"),
         }
         self.live = Live()
         self.logger = logging.getLogger(name_shm)
@@ -144,6 +159,18 @@ SHIFT + ARROW:  Move FPM 0.5 mm in x (left/right) and y (up/down)"""
             )
             self.other_cam.set_readout_mode(mode)
             self.logger.info(f"Now using {mode.upper()} readout mode.")
+
+    def set_camera_mode(self, mode: str, both: bool = False):
+        self.logger.info(
+                f"Changing to {mode.upper()} camera mode for {self.cam_name}.")
+        self.cam.set_camera_mode(mode)
+        self.logger.info(f"Now using {mode.upper()} camera mode.")
+        if both:
+            self.logger.info(
+                    f"Changing to {mode.upper()} camera mode for {self.other_cam_name}."
+            )
+            self.other_cam.set_camera_mode(mode)
+            self.logger.info(f"Now using {mode.upper()} camera mode.")
 
 
 class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):

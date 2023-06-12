@@ -257,9 +257,9 @@ class FieldstopPlugin(BasePlugin, DeviceMixin):
             sign = -1
 
         if fine:
-            nudge_value = sign * 0.02
+            nudge_value = sign * 0.01
         else:
-            nudge_value = sign * 1
+            nudge_value = sign * 0.1
         self.backend_obj.logger.info(f"Moving {substage} by {nudge_value} mm")
         self.device.move_relative__oneway(substage, nudge_value)
 
@@ -298,15 +298,17 @@ class MBIWheelPlugin(BasePlugin, DeviceMixin):
     def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
         super().__init__(frontend_obj)
         self.enabled = True
-        # Ideally you'd instantiate the label in the frontend, cuz different viewers could be wanting the same info
-        # displayed at different locations.
-
+        self.status = None
+        self.current_index = None
         # yapf: disable
         self.shortcut_map = {
             buts.Shortcut(pgmc.K_LEFTBRACKET, pgmc.KMOD_LCTRL): partial(self.rotate_wheel, pgmc.K_LEFTBRACKET, fine=True),
             buts.Shortcut(pgmc.K_LEFTBRACKET, pgmc.KMOD_LSHIFT): partial(self.rotate_wheel, pgmc.K_LEFTBRACKET, fine=False),
             buts.Shortcut(pgmc.K_RIGHTBRACKET, pgmc.KMOD_LCTRL): partial(self.rotate_wheel, pgmc.K_RIGHTBRACKET, fine=True),
             buts.Shortcut(pgmc.K_RIGHTBRACKET, pgmc.KMOD_LSHIFT): partial(self.rotate_wheel, pgmc.K_RIGHTBRACKET, fine=False),
+            buts.Shortcut(pgmc.K_b, pgmc.KMOD_LCTRL): self.enable,
+            buts.Shortcut(pgmc.K_b, pgmc.KMOD_LSHIFT): self.disable,
+            buts.Shortcut(pgmc.K_b, pgmc.KMOD_LALT): self.save_configuration,
         }
         # yapf: enable
 
@@ -324,6 +326,26 @@ class MBIWheelPlugin(BasePlugin, DeviceMixin):
             nudge_value = sign * 1
         self.backend_obj.logger.info(f"Rotating MBI wheel by {nudge_value} deg")
         self.device.move_relative__oneway("theta", nudge_value)
+
+    def enable(self):
+        self.backend_obj.logger.info(f"Inserting MBI dichroics")
+        self.device.move_configuration_name__oneway("IN")
+        self.current_index, _ = self.device.get_configuration()
+
+    def disable(self):
+        self.backend_obj.logger.info(f"Removing MBI dichroics")
+        self.device.move_configuration_name__oneway("OUT")
+        self.current_index, _ = self.device.get_configuration()
+
+    def save_configuration(self):
+        if self.current_index is None:
+            self.backend_obj.logger.warn(
+                    "Cannot save until a configuration has been selected")
+        self.device.save_configuration(index=self.current_index)
+
+    def backend_action(self) -> None:
+        name = RDB.hget("U_MBI", "value")
+        self.status = name
 
 
 class VAMPIRESPupilMode(PupilMode, DeviceMixin):
