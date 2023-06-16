@@ -13,6 +13,7 @@ import numpy as np
 
 import time
 import threading
+from camstack.core.wcs import wcs_dict_init
 
 
 class DCAMCamera(BaseCamera):
@@ -444,6 +445,19 @@ class AlalaOrcam(OrcaQuest):
 
 
 class BaseVCAM(OrcaQuest):
+    PLATE_SCALE = 1.5583e-6  # deg / px
+    PA_OFFSET = 0  # deg
+    HOTSPOTS = {  # x, y
+            "STANDARD": None,
+            "MBI": {
+                    "775": (0, 0),
+                    "725": (0, 0),
+                    "675": (0, 0),
+                    "625": (0, 0),
+                    "625": (0, 0),
+            }
+    }
+
     ## camera keywords
     KEYWORDS: Dict[str, Tuple[util.KWType, str, str, str]] = {
             # Format is name:
@@ -457,7 +471,6 @@ class BaseVCAM(OrcaQuest):
             "U_DETMOD": ("", "VAMPIRES detector readout mode (FAST/SLOW)",
                          "%-16s", "DETMD"),
             ## Filters
-            "U_DIFFLT": ("", "VAMPIRES differential filter", "%-16s", "DFFLT"),
             "FILTER01": ("", "Primary filter name", "%-16s", "FILT01"),
             "FILTER02": ("", "Secondary filter name", "%-16s", "FILT02"),
             ## QWP terms managed by QWP daemon
@@ -495,7 +508,7 @@ class BaseVCAM(OrcaQuest):
                                     tint=0.001),
             MBI_REDUCED:
                     util.CameraMode(x0=928, x1=3167, y0=592, y1=1151,
-                                    tint=0.001),
+                                    tint=0.001)
     }
 
     def set_readout_mode(self, mode: str) -> None:
@@ -505,6 +518,86 @@ class BaseVCAM(OrcaQuest):
     def _fill_keywords(self) -> None:
         super()._fill_keywords()
         self._set_formatted_keyword("U_DETMOD", self.readout_mode.upper())
+        cropped = self.current_mode_id != self.FULL
+        self._set_formatted_keyword("CROPPED", cropped)
+        self.get_fps()
+        self.get_tint()
+
+    def poll_camera_for_keywords(self) -> None:
+        super().poll_camera_for_keywords()
+
+        # Defaults
+        filter01 = bs = "UNKNOWN"
+        dfl1 = dfl2 = "Open"
+        hwp_stage = 0
+        try:
+            with self.RDB.pipeline() as pipe:
+                pipe.hget('U_FILTER', 'value')
+                pipe.hget('U_BS', 'value')
+                pipe.hget('P_STGPS2', 'value')
+                pipe.hget('U_DIFFL1', 'value')
+                pipe.hget('U_DIFFL2', 'value')
+                filter01, bs, hwp_stage, dfl1, dfl2 = pipe.execute()
+        except:
+            logg.error('REDIS unavailable @ _fill_keywords @ VCAM')
+
+        self._set_formatted_keyword('FILTER01', filter01)
+
+        ## determine observing mode from the following logic
+        # if the PBS is in and the HWP is running, we're doing polarimetry
+        polarimetry = bs.upper() == "PBS" and np.abs(hwp_stage - 56) < 1
+        base_mode = "IPOL" if polarimetry else "IMAG"
+        # Determine whether in standard mode, SDI mode, or MBI/r mode
+        nonsdi_flts = ("UNKNOWN", "OPEN")
+        sdi = dfl1.upper() not in nonsdi_flts and dfl2.upper() not in nonsdi_flts
+        if sdi:
+            obs_mod = f"{base_mode}_SDI"
+        elif self.current_mode_id == "MBI":
+            obs_mod = f"{base_mode}_MBI"
+        elif self.current_mode_id == "MBI_REDUCED":
+            obs_mod = f"{base_mode}_MBIR"
+        else:
+            obs_mod = base_mode
+
+        self._set_formatted_keyword('OBS-MOD', obs_mod)
+        # self._prepare_wcs_keywords(obs_mod)
+
+    def _prepare_wcs_keywords(self, obs_mod):
+        # Hotspot of physical detector in the current crop coordinates.
+        # Could be beyond the sensor if the crop does not include the detector center.
+
+        # All of that almost never changes, but since there is a possibility that we move the
+        # Wollaston in and out without re-firing a set_camera_mode, we don't have a choice but to
+        # do it every single time in the polling thread.
+        xfull2 = (self.MODES[self.FULL].x1 - self.MODES[self.FULL].x0 + 1) / 2.
+        yfull2 = (self.MODES[self.FULL].y1 - self.MODES[self.FULL].y0 + 1) / 2.
+
+        # Create and update WCS keywords
+        cm = self.current_mode
+        # 1 WCS, Central column
+        wcs_dicts = (wcs_dict_init(0, pix=(xfull2 - cm.x0, yfull2 - cm.y0),
+                                   delt_val=self.PLATE_SCALE,
+                                   cd_rot_rad=self.PA_OFFSET), )
+        if obs_mod.endswith("MBIR"):
+            # 3 WCS
+            wcs_dicts = []
+            for i, ctr in enumerate(("775", "725", "675")):
+                wcs_dict = wcs_dict_init(i, pix=ctr, delt_val=self.PLATE_SCALE,
+                                         cd_rot_rad=self.PA_OFFSET)
+                wcs_dicts.append(wcs_dict)
+
+        elif obs_mod.endswith("MBI"):
+            # 4 WCS
+            wcs_dicts = []
+            for i, ctr in enumerate(("775", "725", "675", "625")):
+                wcs_dict = wcs_dict_init(i, pix=ctr, delt_val=self.PLATE_SCALE,
+                                         cd_rot_rad=self.PA_OFFSET)
+                wcs_dicts.append(wcs_dict)
+
+        # update WCS keys
+        for wcs_dict in wcs_dicts:
+            for key in wcs_dict:
+                self._set_formatted_keyword(key, wcs_dict[key][0])
 
 
 class VCAM1(BaseVCAM):
@@ -520,6 +613,18 @@ class VCAM1(BaseVCAM):
         self._set_formatted_keyword("DETECTOR", "VCAM1 - OrcaQ")
         self._set_formatted_keyword("U_CAMERA", 1)
 
+    def poll_camera_for_keywords(self) -> None:
+        super().poll_camera_for_keywords()
+
+        # Defaults
+        filter02 = "UNKNOWN"
+        try:
+            filter02 = self.RDB.hget('U_DIFFL1', 'value')
+        except:
+            logg.error('REDIS unavailable @ _fill_keywords @ VCAM1')
+
+        self._set_formatted_keyword("FILTER02", filter02)
+
 
 class VCAM2(BaseVCAM):
     KEYWORDS = {
@@ -533,3 +638,15 @@ class VCAM2(BaseVCAM):
         # Override detector name
         self._set_formatted_keyword("DETECTOR", "VCAM2 - OrcaQ")
         self._set_formatted_keyword("U_CAMERA", 2)
+
+    def poll_camera_for_keywords(self) -> None:
+        super().poll_camera_for_keywords()
+
+        # Defaults
+        filter02 = "UNKNOWN"
+        try:
+            filter02 = self.RDB.hget('U_DIFFL2', 'value')
+        except:
+            logg.error('REDIS unavailable @ _fill_keywords @ VCAM2')
+
+        self._set_formatted_keyword("FILTER02", filter02)

@@ -3,6 +3,7 @@ from camstack.viewers.generic_viewer_backend import GenericViewerBackend
 from camstack.viewers.generic_viewer_frontend import GenericViewerFrontend
 from swmain.network.pyroclient import connect
 from camstack.viewers import backend_utils as buts
+import camstack.viewers.frontend_utils as futs
 import pygame.constants as pgmc
 from functools import partial
 import logging
@@ -168,6 +169,19 @@ CTRL  + s     : Save current position to last configuration"""
             self.other_cam.set_camera_mode(mode)
             self.logger.info(f"Now using {mode.upper()} camera mode.")
 
+    def _get_crop_slice(self, center, shape):
+        cr, cc = center
+        halfside = (shape[0] / 2**(self.crop_lvl_id + 1),
+                    shape[1] / 2**(self.crop_lvl_id + 1))
+        # Adjust, in case we've just zoomed-out from a crop spot that's too close to the edge!
+        # cr_temp = min(max(cr, halfside[0]), shape[0] - halfside[0])
+        # cc_temp = min(max(cc, halfside[1]), shape[1] - halfside[1])
+        crop_slice = np.s_[int(round(cr -
+                                     halfside[0])):int(round(cr + halfside[0])),
+                           int(round(cc -
+                                     halfside[1])):int(round(cc + halfside[1]))]
+        return crop_slice
+
     def toggle_crop(self, *args, **kwargs) -> None:
         super().toggle_crop(*args, **kwargs)
 
@@ -225,9 +239,6 @@ CTRL  + s     : Save current position to last configuration"""
                                          [field_725, field_775]])
         else:
             self.data_debias = self.data_debias_uncrop[self.crop_slice]
-
-
-import camstack.viewers.frontend_utils as futs
 
 
 class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):

@@ -14,7 +14,7 @@ def main(zoom, binn):
 
     frontend = VAMPIRESBaseViewerFrontend(1, zoom, 20, binned_backend_shape,
                                           fonts_zoom=2 * zoom)
-    satplug = SaturationPlugin(frontend, sat_value=2**16, nonlin_value=6e4)
+    satplug = SaturationPlugin(frontend, sat_value=65535, nonlin_value=6e4)
     frontend.plugins.append(satplug)
     frontend.register_backend(backend)
     backend.register_frontend(frontend)

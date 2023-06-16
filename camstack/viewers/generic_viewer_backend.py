@@ -363,7 +363,3 @@ class GenericViewerBackend:
         if this_shortcut in self.SHORTCUTS:
             # Call the mapped callable
             self.SHORTCUTS[this_shortcut]()
-
-
-class FirstViewerBackend(GenericViewerBackend):
-    pass
