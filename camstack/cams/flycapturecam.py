@@ -57,9 +57,8 @@ def pretty_print_prop(cam: PC2.Camera, property_type: PC2.PROPERTY_TYPE):
           f'min: {info.min}\n', f'can onepush: {info.onePushSupported}\n',
           f'can onoff:   {info.onOffSupported}\n',
           f'present:     {info.present}\n',
-          f'can readout: {info.readOutSupported}\n',
-          f'type:     {info.type}\n', f'unitabbr: {info.unitAbbr}\n',
-          f'unit:     {info.units}')
+          f'can readout: {info.readOutSupported}\n', f'type:     {info.type}\n',
+          f'unitabbr: {info.unitAbbr}\n', f'unit:     {info.units}')
 
 
 class FlyCaptureUSBCamera(BaseCamera):
@@ -93,8 +92,8 @@ class FlyCaptureUSBCamera(BaseCamera):
         self.fly_bus = None
         self.fly_cam = None
 
-        BaseCamera.__init__(self, name, stream_name, mode_id,
-                            no_start=no_start, taker_cset_prio=taker_cset_prio,
+        BaseCamera.__init__(self, name, stream_name, mode_id, no_start=no_start,
+                            taker_cset_prio=taker_cset_prio,
                             dependent_processes=dependent_processes)
 
         # Constructor finalizers were put init init_framegrab_backend
@@ -132,8 +131,8 @@ class FlyCaptureUSBCamera(BaseCamera):
 
         self.fly_cam.setProperty(type=PROPS.BRIGHTNESS, autoManualMode=False,
                                  onOff=True, absValue=0.0)
-        self.fly_cam.setProperty(type=PROPS.AUTO_EXPOSURE,
-                                 autoManualMode=False, onOff=False)
+        self.fly_cam.setProperty(type=PROPS.AUTO_EXPOSURE, autoManualMode=False,
+                                 onOff=False)
         self.fly_cam.setProperty(type=PROPS.SHARPNESS, autoManualMode=False,
                                  onOff=False)
         self.fly_cam.setProperty(type=PROPS.FRAME_RATE, autoManualMode=False,
@@ -332,8 +331,11 @@ class Flea3(FlyCaptureUSBCamera):
 class VampiresPupilFlea(Flea3):
 
     MODES = {
-        'CROP_VPUP': CameraMode(x0=256, x1=1327-256, y0=524, y1=1047, fps=30, tint=0.03),
+            'CROP_VPUP':
+                    CameraMode(x0=256, x1=1327 - 256, y0=524, y1=1047, fps=30,
+                               tint=0.03),
     }
+    MODES.update(Flea3.MODES)
 
     def _fill_keywords(self):
         Flea3._fill_keywords(self)
