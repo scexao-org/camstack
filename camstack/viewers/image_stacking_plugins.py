@@ -32,7 +32,7 @@ class RefImageAcquirePlugin(OneShotActionPlugin):
         super().__init__(frontend_obj, key_onoff, modifier_and)
 
         if textbox:
-            assert re.match('%.+s', textbox.template_str)
+            assert re.match('%.*s', textbox.template_str)
         self.textbox = textbox
 
         self.start_time = 0.0
