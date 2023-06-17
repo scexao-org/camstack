@@ -294,6 +294,8 @@ class OrcaQuest(DCAMCamera):
 
         # Override detector name
         self._set_formatted_keyword("DETECTOR", "Orca Quest")
+        self._set_formatted_keyword("CROPPED",
+                                    self.current_mode_id != self.FULL)
         # Detector specs from instruction manual
         self._dcam_prm_getvalue("GAIN", dcamprop.EProp.CONVERSIONFACTOR_COEFF)
         self._dcam_prm_getvalue("BIAS", dcamprop.EProp.CONVERSIONFACTOR_OFFSET)

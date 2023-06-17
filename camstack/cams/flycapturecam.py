@@ -332,7 +332,7 @@ class VampiresPupilFlea(Flea3):
 
     MODES = {
             'CROP_VPUP':
-                    CameraMode(x0=256, x1=1327 - 256, y0=524, y1=1047, fps=30,
+                    CameraMode(x0=256, x1=1327 - 256, y0=0, y1=1047, fps=30,
                                tint=0.03),
     }
     MODES.update(Flea3.MODES)
