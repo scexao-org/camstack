@@ -1,4 +1,4 @@
-from typing import Tuple, List, TypeVar, Optional as Op, Any, Union
+import typing as typ
 
 import os
 import time
@@ -11,27 +11,33 @@ class CamstackStateException(Exception):
     pass
 
 
-T = TypeVar('T')
+T = typ.TypeVar('T')
 
 
-def enforce_optional(anything: Op[T]) -> T:
+def enforce_optional(anything: typ.Optional[T]) -> T:
+    '''
+    This functions goal is to make mypy happy.
+    And to test that an Optional is not None
+    If just mypy -> can use an assert.
+    '''
     if anything is None:
         raise CamstackStateException('None shall not pass.')
     return anything
 
 
-ModeIDType = Union[str, int]
-ModeIDorHWType = Union[ModeIDType, Tuple[int, int]]
-CsetPrioType = Tuple[str, Op[int]]
-KWType = Union[bool, int, float, str]
-KWTypeNoBool = Union[int, float, str]
+ModeIDType = typ.Union[str, int]
+ModeIDorHWType = typ.Union[ModeIDType, typ.Tuple[int, int]]
+CsetPrioType = typ.Tuple[str, typ.Optional[int]]
+KWType = typ.Union[bool, int, float, str]
+KWTypeNoBool = typ.Union[int, float, str]
 
 
 class CameraMode:
 
     def __init__(self, *, x0: int, x1: int, y0: int, y1: int,
-                 fps: Op[float] = None, tint: Op[float] = None, binx: int = 1,
-                 biny: int = 1, fgsize: Op[Tuple[int, int]] = None):
+                 fps: typ.Optional[float] = None,
+                 tint: typ.Optional[float] = None, binx: int = 1, biny: int = 1,
+                 fgsize: typ.Optional[typ.Tuple[int, int]] = None):
 
         self.x0 = x0  # First COLUMN
         self.x1 = x1  # Last COLUMN (inclusive)
@@ -68,8 +74,9 @@ class DependentProcess:
         This typically will include ocamdecode, and the TCP transfer.
     '''
 
-    def __init__(self, tmux_name: str, cli_cmd: str, cli_args: List[str],
-                 cset: str = 'system', rtprio: Op[int] = None,
+    def __init__(self, tmux_name: str, cli_cmd: str,
+                 cli_args: typ.Iterable[typ.Any], cset: str = 'system',
+                 rtprio: typ.Optional[int] = None,
                  kill_upon_create: bool = True):
 
         self.enabled = True  # Is this registered to run ? #TODO UNUSED
@@ -77,7 +84,7 @@ class DependentProcess:
         self.tmux_name = tmux_name
         self.cli_cmd = cli_cmd
         self.cli_original_args = cli_args  # Can hold magic replace-me placeholders, e.g. #HEIGHT#
-        self.cli_args: List[KWType] = [t for t in cli_args]  # Deepcopy
+        self.cli_args: typ.List[KWType] = [t for t in cli_args]  # Deepcopy
 
         self.start_order = 0
         self.kill_order = 0
@@ -146,7 +153,7 @@ class DependentProcess:
 class RemoteDependentProcess(DependentProcess):
 
     def __init__(self, tmux_name, cli_cmd, cli_args, remote_host,
-                 cset: str = 'system', rtprio: Op[int] = None,
+                 cset: str = 'system', rtprio: typ.Optional[int] = None,
                  kill_upon_create: bool = True):
 
         self.remote_host = remote_host
@@ -175,7 +182,7 @@ class RemoteDependentProcess(DependentProcess):
 class DependentMultiManager:
     # The only point is to batch all the sleeping... that piles up quite a bit with lots of dependents.
 
-    def __init__(self, dependents: List[DependentProcess]) -> None:
+    def __init__(self, dependents: typ.List[DependentProcess]) -> None:
         self.dependent_list = dependents
 
     def initialize_tmux(self):
