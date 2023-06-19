@@ -86,7 +86,7 @@ def main():
     vcam = Klass(
             stream_name,
             stream_name,
-            dcam_number=cam,
+            dcam_number=cam - 1,
             mode_id=mode,
             taker_cset_prio=(cpuset_acquisition, 42),
             dependent_processes=[tcp_recv, tcp_send, zmq_recv, zmq_send],
