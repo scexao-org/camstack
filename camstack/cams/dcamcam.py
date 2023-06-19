@@ -427,6 +427,29 @@ class OrcaQuest(DCAMCamera):
                 ],
         )
 
+    def get_cooler_mode(self):
+        value = self._dcam_prm_getvalue(None, dcamprop.EProp.SENSORCOOLER)
+        if value == 1:
+            return "OFF"
+        elif value == 2:
+            return "ON"
+        elif value == 4:
+            return "MAX"
+        else:
+            return "UNKNOWN"
+
+    def set_cooler_mode(self, mode: str):
+        mode = mode.upper()
+        if mode == "OFF":
+            prop = dcamprop.ESensorCooler.OFF
+        elif mode == "ON":
+            prop = dcamprop.ESensorCooler.ON
+        elif mode == "MAX":
+            prop = dcamprop.ESensorCooler.MAX
+
+        logg.debug(f"Setting cooling mode to {mode}")
+        self._dcam_prm_setvalue(float(prop), None, dcamprop.EProp.SENSORCOOLER)
+
 
 class FIRSTOrcam(OrcaQuest):
 
