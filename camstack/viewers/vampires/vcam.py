@@ -188,13 +188,13 @@ CTRL  + s     : Save current position to last configuration"""
         # calculate crops for each window
         _mbi_shape = 560, 560
         self.mbi_slices = (
-                self._get_crop_slice(center=(279.5, 279.5),
+                self._get_crop_slice(center=(1959.5, 279.5),
                                      shape=_mbi_shape),  # 775
                 self._get_crop_slice(center=(1395.5, 279.5),
                                      shape=_mbi_shape),  # 725
-                self._get_crop_slice(center=(1959.5, 279.5),
+                self._get_crop_slice(center=(279.5, 279.5),
                                      shape=_mbi_shape),  # 675
-                self._get_crop_slice(center=(1959.5, 839.5),
+                self._get_crop_slice(center=(279.5, 839.5),
                                      shape=_mbi_shape),  # 625
         )
 

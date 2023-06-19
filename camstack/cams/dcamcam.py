@@ -449,16 +449,6 @@ class AlalaOrcam(OrcaQuest):
 class BaseVCAM(OrcaQuest):
     PLATE_SCALE = 1.5583e-6  # deg / px
     PA_OFFSET = 0  # deg
-    HOTSPOTS = {  # x, y
-            "STANDARD": None,
-            "MBI": {
-                    "775": (0, 0),
-                    "725": (0, 0),
-                    "675": (0, 0),
-                    "625": (0, 0),
-                    "625": (0, 0),
-            }
-    }
 
     ## camera keywords
     KEYWORDS: Dict[str, Tuple[util.KWType, str, str, str]] = {

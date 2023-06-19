@@ -1,5 +1,6 @@
 import click
 from camstack.viewers.vampires.vcam import VAMPIRESBaseViewerBackend, VAMPIRESBaseViewerFrontend
+from camstack.viewers.vampires.plugins import FilterWheelPlugin, MBIWheelPlugin, VAMPIRESPupilMode, FieldstopPlugin
 from camstack.viewers.plugins import SaturationPlugin
 
 
@@ -14,8 +15,11 @@ def main(zoom, binn):
 
     frontend = VAMPIRESBaseViewerFrontend(1, zoom, 20, binned_backend_shape,
                                           fonts_zoom=2 * zoom)
-    satplug = SaturationPlugin(frontend, sat_value=65535, nonlin_value=6e4)
-    frontend.plugins.append(satplug)
+    plugins = (SaturationPlugin(frontend, sat_value=65535),
+               FieldstopPlugin(frontend), FilterWheelPlugin(frontend),
+               MBIWheelPlugin(frontend), VAMPIRESPupilMode(frontend))
+
+    frontend.plugins.extend(plugins)
     frontend.register_backend(backend)
     backend.register_frontend(frontend)
     frontend.run()

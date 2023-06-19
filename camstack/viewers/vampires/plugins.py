@@ -1,4 +1,4 @@
-from typing import Optional as Op, Tuple
+from typing import Optional as Op, Optional, Tuple
 from camstack.viewers.generic_viewer_frontend import GenericViewerFrontend
 from swmain.network.pyroclient import connect
 from camstack.viewers.generic_viewer_backend import GenericViewerBackend
@@ -29,7 +29,7 @@ class DeviceMixin:
         self.device = connect(self.DEVICE_NAME)
 
 
-class MaskWheelPlugin(BasePlugin, DeviceMixin):
+class MaskWheelPlugin(DeviceMixin, BasePlugin):
 
     DEVICE_NAME = "VAMPIRES_MASK"
 
@@ -141,21 +141,21 @@ class MaskWheelPlugin(BasePlugin, DeviceMixin):
         self.status = name
 
 
-class FilterWheelPlugin(BasePlugin, DeviceMixin):
+class FilterWheelPlugin(DeviceMixin, BasePlugin):
 
     DEVICE_NAME = "VAMPIRES_FILT"
 
     def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
         super().__init__(frontend_obj)
         zoom = self.frontend_obj.system_zoom
-        font = pygame.font.SysFont("default", 40 * zoom)
+        font = pygame.font.SysFont("default", 30 * zoom)
         self.enabled = True
         # Ideally you'd instantiate the label in the frontend, cuz different viewers could be wanting the same info
         # displayed at different locations.
         self.label = futs.LabelMessage(
                 "%s", font, fg_col="#4AC985", bg_col=None,
-                topleft=(20 * zoom,
-                         self.frontend_obj.data_disp_size[1] - 40 * zoom))
+                topright=(self.frontend_obj.data_disp_size[0] - 100 * zoom,
+                          20 * zoom))
         self.label.blit(self.frontend_obj.pg_datasurface)
 
         # yapf: disable
@@ -177,7 +177,7 @@ class FilterWheelPlugin(BasePlugin, DeviceMixin):
 
     def change_filter(self, index: int):
         _, filt = self.device.get_configuration(index)
-        self.self.backend_obj.logger.info(
+        self.backend_obj.logger.info(
                 f"Moving filter to position {index}: {filt}")
         self.device.move_configuration_idx__oneway(index)
 
@@ -188,24 +188,24 @@ class FilterWheelPlugin(BasePlugin, DeviceMixin):
     def backend_action(self) -> None:
         # Warning: this is called every time the window refreshes, i.e. ~20Hz.
         name = RDB.hget("U_FILTER", "value")
-        self.status = name
+        self.status = f"{name.upper():>9s}"
 
 
-class FieldstopPlugin(BasePlugin, DeviceMixin):
+class FieldstopPlugin(DeviceMixin, BasePlugin):
 
     DEVICE_NAME = "VAMPIRES_FIELDSTOP"
 
     def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
         super().__init__(frontend_obj)
         zoom = self.frontend_obj.system_zoom
-        font = pygame.font.SysFont("default", 40 * zoom)
+        font = pygame.font.SysFont("default", 30 * zoom)
         self.enabled = True
         # Ideally you'd instantiate the label in the frontend, cuz different viewers could be wanting the same info
         # displayed at different locations.
         self.label = futs.LabelMessage(
                 "%s", font, fg_col="#4AC985", bg_col=None,
-                topleft=(20 * zoom,
-                         self.frontend_obj.data_disp_size[1] - 40 * zoom))
+                topright=(self.frontend_obj.data_disp_size[0] - 120 * zoom,
+                          self.frontend_obj.data_disp_size[1] - 30 * zoom))
         self.label.blit(self.frontend_obj.pg_datasurface)
         self.current_index = None
 
@@ -288,10 +288,10 @@ class FieldstopPlugin(BasePlugin, DeviceMixin):
     def backend_action(self) -> None:
         # Warning: this is called every time the window refreshes, i.e. ~20Hz.
         name = RDB.hget("U_FLDSTP", "value")
-        self.status = name
+        self.status = f"{name.upper():>9s}"
 
 
-class MBIWheelPlugin(BasePlugin, DeviceMixin):
+class MBIWheelPlugin(DeviceMixin, BasePlugin):
 
     DEVICE_NAME = "VAMPIRES_MBI"
 
@@ -329,12 +329,12 @@ class MBIWheelPlugin(BasePlugin, DeviceMixin):
 
     def enable(self):
         self.backend_obj.logger.info(f"Inserting MBI dichroics")
-        self.device.move_configuration_name__oneway("IN")
+        self.device.move_configuration_name__oneway("dichroics")
         self.current_index, _ = self.device.get_configuration()
 
     def disable(self):
         self.backend_obj.logger.info(f"Removing MBI dichroics")
-        self.device.move_configuration_name__oneway("OUT")
+        self.device.move_configuration_name__oneway("mirror")
         self.current_index, _ = self.device.get_configuration()
 
     def save_configuration(self):
@@ -343,33 +343,55 @@ class MBIWheelPlugin(BasePlugin, DeviceMixin):
                     "Cannot save until a configuration has been selected")
         self.device.save_configuration(index=self.current_index)
 
+    def frontend_action(self) -> None:
+        pass
+
     def backend_action(self) -> None:
         name = RDB.hget("U_MBI", "value")
-        self.status = name
+        self.status = name.upper()
 
 
-class VAMPIRESPupilMode(PupilMode, DeviceMixin):
+class VAMPIRESPupilMode(DeviceMixin, PupilMode):
 
     DEVICE_NAME = "VAMPIRES_PUPIL"
 
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        zoom = self.frontend_obj.system_zoom
+        font = pygame.font.SysFont("default", 30 * zoom)
+        self.label = futs.LabelMessage("%s", font, fg_col="#4AC985",
+                                       bg_col=None, topleft=(20 * zoom,
+                                                             20 * zoom))
+        self.status_label = futs.LabelMessage(
+                "%s", font, fg_col="#4AC985", bg_col=None,
+                topleft=(20 * zoom,
+                         self.frontend_obj.data_disp_size[1] - 30 * zoom))
+        self.label.blit(self.frontend_obj.pg_datasurface)
+
+    def frontend_action(self) -> None:
+        if self.enabled:
+            self.label.render("PUPIL",
+                              blit_onto=self.frontend_obj.pg_datasurface)
+            self.status_label.render(self.status,
+                                     blit_onto=self.frontend_obj.pg_datasurface)
+
     def backend_action(self) -> None:
-        name = RDB.hget("U_PUPIL", "value")
-        self.status = name
+        name = RDB.hget("U_MASK", "value")
+        self.status = name.upper()
 
     def enable(self) -> None:  # Override
+        super().enable()
 
         # SEND COMMAND TO SWITCH TO PUPIL MODE
         # Can be async, we don't care. Or do we?
         # Could be pyro, could be os.system...
         self.backend_obj.logger.info("Inserting pupil lens")
-
-        if self.textbox:
-            self.textbox.render(('PUPIL', ), fg_col=futs.Colors.BLACK)
-        self.device.move_configuration_name__oneway("IN")
+        self.device.move_configuration_name__oneway("in")
 
     def disable(self) -> None:  # Override
+        super().disable()
 
         # SEND COMMAND TO SWITCH OUT OF PUPIL MODE
         # Could be pyro, could be os.system...
         self.backend_obj.logger.info("Removing pupil lens")
-        self.device.move_configuration_name__oneway("OUT")
+        self.device.move_configuration_name__oneway("out")
