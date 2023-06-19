@@ -294,12 +294,13 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
 class MBIWheelPlugin(DeviceMixin, BasePlugin):
 
     DEVICE_NAME = "VAMPIRES_MBI"
+    FIELDS = "F620", "F670", "F720", "F770"
 
     def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
         super().__init__(frontend_obj)
-        self.enabled = True
         self.status = None
         self.current_index = None
+        self.enabled = True
         # yapf: disable
         self.shortcut_map = {
             buts.Shortcut(pgmc.K_LEFTBRACKET, pgmc.KMOD_LCTRL): partial(self.rotate_wheel, pgmc.K_LEFTBRACKET, fine=True),
@@ -311,6 +312,29 @@ class MBIWheelPlugin(DeviceMixin, BasePlugin):
             buts.Shortcut(pgmc.K_b, pgmc.KMOD_LALT): self.save_configuration,
         }
         # yapf: enable
+        zoom = self.frontend_obj.system_zoom
+        font = pygame.font.SysFont("monospace", 15 * zoom)
+        # Ideally you'd instantiate the label in the frontend, cuz different viewers could be wanting the same info
+        # displayed at different locations.
+        self.field_labels = (
+                futs.LabelMessage("%s", font, fg_col=futs.Colors.WHITE,
+                                  bg_col=futs.Colors.BLACK, topleft=(5, 5)),
+                futs.LabelMessage(
+                        "%s", font, fg_col=futs.Colors.WHITE,
+                        bg_col=futs.Colors.BLACK,
+                        topleft=(5,
+                                 self.frontend_obj.data_disp_size[1] / 2 + 5)),
+                futs.LabelMessage(
+                        "%s", font, fg_col=futs.Colors.WHITE,
+                        bg_col=futs.Colors.BLACK,
+                        topleft=(self.frontend_obj.data_disp_size[0] / 2 + 5,
+                                 5)),
+                futs.LabelMessage(
+                        "%s", font, fg_col=futs.Colors.WHITE,
+                        bg_col=futs.Colors.BLACK,
+                        topleft=(self.frontend_obj.data_disp_size[0] / 2 + 5,
+                                 self.frontend_obj.data_disp_size[1] / 2 + 5)),
+        )
 
     def rotate_wheel(self, key, fine=True):
         # CCW
@@ -325,14 +349,16 @@ class MBIWheelPlugin(DeviceMixin, BasePlugin):
         else:
             nudge_value = sign * 1
         self.backend_obj.logger.info(f"Rotating MBI wheel by {nudge_value} deg")
-        self.device.move_relative__oneway("theta", nudge_value)
+        self.device.move_relative__oneway(nudge_value)
 
     def enable(self):
+        self.enabled = True
         self.backend_obj.logger.info(f"Inserting MBI dichroics")
         self.device.move_configuration_name__oneway("dichroics")
         self.current_index, _ = self.device.get_configuration()
 
     def disable(self):
+        self.enabled = False
         self.backend_obj.logger.info(f"Removing MBI dichroics")
         self.device.move_configuration_name__oneway("mirror")
         self.current_index, _ = self.device.get_configuration()
@@ -344,7 +370,21 @@ class MBIWheelPlugin(DeviceMixin, BasePlugin):
         self.device.save_configuration(index=self.current_index)
 
     def frontend_action(self) -> None:
-        pass
+        # we know that if the backend is in MBI mode that we need to label
+        # the four frames
+        if self.backend_obj.mode.startswith("MBI"):
+            for name, label in zip(self.FIELDS[1:], self.field_labels[1:]):
+                label.render(f"{name:^6s}",
+                             blit_onto=self.frontend_obj.pg_datasurface)
+
+            if self.backend_obj.mode.endswith("REDUCED"):
+                self.field_labels[0].render(
+                        f"{'NA':^6s}",
+                        blit_onto=self.frontend_obj.pg_datasurface)
+            else:
+                self.field_labels[0].render(
+                        f"{self.FIELDS[0]:^6s}",
+                        blit_onto=self.frontend_obj.pg_datasurface)
 
     def backend_action(self) -> None:
         name = RDB.hget("U_MBI", "value")
