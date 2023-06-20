@@ -71,7 +71,7 @@ class DCAMCamera(BaseCamera):
             params_injection: Op[Dict[dcamprop.EProp, Union[int,
                                                             float]]] = None,
     ) -> None:
-        assert self.control_shm
+        assert self.control_shm is not None
 
         logg.debug("prepare_camera_for_size @ DCAMCamera")
 
@@ -149,8 +149,19 @@ class DCAMCamera(BaseCamera):
         # The sleep(1.0) used elsewhere, TOO FAST FOR DCAM!
         # so dcamusbtake.c implements a forced feedback
         assert self.control_shm  # mypy happyness check.
+
+        # This should work, unless the grabber crashes during restart.
         self.control_shm.get_data(check=True, checkSemAndFlush=True,
-                                  timeout=None)
+                                  timeout=15.0)
+
+        from camstack.core.tmux import find_pane_running_pid
+        pid = find_pane_running_pid(self.take_tmux_pane)
+        assert pid is not None
+        try:
+            os.kill(pid, 0)
+        except OSError:
+            logg.error('dcam grabber crashed during restart.')
+            raise RuntimeError('dcam grabber crashed during restard.')
 
     def _dcam_prm_setvalue(self, value: Any, fits_key: Op[str],
                            dcam_key: int) -> float:
