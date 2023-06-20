@@ -101,6 +101,9 @@ class DCAMCamera(BaseCamera):
                         dcamprop.EOutputTriggerKind.TRIGGERREADY,
                 dcamprop.EProp.OUTPUTTRIGGER_POLARITY:
                         dcamprop.EOutputTriggerPolarity.POSITIVE,
+                # liquid cooling (has no effect if air cooling is on)
+                dcamprop.EProp.SENSORCOOLER:
+                        dcamprop.ESensorCooler.MAX
         }
 
         # Additional parameters for custom calls
@@ -554,7 +557,7 @@ class BaseVCAM(OrcaQuest):
 
         # Defaults
         filter01 = bs = "UNKNOWN"
-        dfl1 = dfl2 = "Open"
+        dfl1 = dfl2 = "OPEN"
         hwp_stage = 0
         try:
             with self.RDB.pipeline() as pipe:
