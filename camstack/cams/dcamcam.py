@@ -332,7 +332,7 @@ class OrcaQuest(DCAMCamera):
     def set_tint(self, tint: float) -> float:
         self._dcam_prm_setvalue(float(tint), "EXPTIME",
                                 dcamprop.EProp.EXPOSURETIME)
-        self.get_fps()
+        return self.get_tint()
 
     def get_fps(self) -> float:
         exp_time, read_time = self._dcam_prm_getmultivalue(
