@@ -51,3 +51,4 @@ SHIFT+[]   :  Nudge wheel 1 deg in theta (ccw/cw)
             name_shm = "vpupcam"
         super().__init__(name_shm=name_shm)
         self.wheel = connect("VAMPIRES_MASK")
+        self.logger = logger
