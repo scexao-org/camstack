@@ -248,6 +248,8 @@ class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):
     def __init__(self, cam_num, *args, **kwargs) -> None:
         self.cam_num = cam_num
         self.WINDOW_NAME = f"VCAM{self.cam_num}"
+        if self.cam_num == 2:
+            self.CARTOON_FILE = "opeapea1-flipped.png"
         super().__init__(*args, **kwargs)
 
     def _init_labels(self) -> int:
