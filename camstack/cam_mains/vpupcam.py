@@ -8,7 +8,7 @@ from swmain.network.pyroserver_registerable import PyroServer
 DEFAULT_SHM_NAME = "vpupcam"
 
 if __name__ == "__main__":
-    cam = VampiresPupilFlea("vpup", DEFAULT_SHM_NAME, "FULL", 0)
+    cam = VampiresPupilFlea("vpup", DEFAULT_SHM_NAME, "CROP_VPUP", 0)
     shellify_methods(cam, globals())
     server = PyroServer(bindTo=(IP_VAMPIRES, 0),
                         nsAddress=(PYRONS3_HOST, PYRONS3_PORT))
