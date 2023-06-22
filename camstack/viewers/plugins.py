@@ -164,3 +164,36 @@ class CrossHairPlugin(OnOffPlugin):
 
         if not self.enabled:
             return
+
+
+class CenteredCrossHairPlugin(OnOffPlugin):
+
+    def __init__(self, frontend_obj: GenericViewerFrontend,
+                 key_onoff: int = pgmc.K_c,
+                 modifier_and: int = pgmc.KMOD_LSHIFT,
+                 color: str = '#00FFFF') -> None:
+        super().__init__(frontend_obj, key_onoff, modifier_and)
+
+        self.color = color
+
+    def frontend_action(self) -> None:
+
+        assert self.backend_obj  # mypy happy
+
+        if not self.enabled:  # OK maybe this responsibility could be handled to the caller.
+            return
+
+        xtot_fe, ytot_fe = self.frontend_obj.data_disp_size
+        xc = xtot_fe / 2
+        yc = ytot_fe / 2
+
+        pygame.draw.line(self.frontend_obj.pg_datasurface, self.color, (0, yc),
+                         (xtot_fe, yc), 1)
+
+        pygame.draw.line(self.frontend_obj.pg_datasurface, self.color, (xc, 0),
+                         (xc, ytot_fe), 1)
+
+    def backend_action(self) -> None:
+
+        if not self.enabled:
+            return
