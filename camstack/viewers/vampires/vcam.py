@@ -243,7 +243,7 @@ CTRL  + s     : Save current position to last configuration"""
 
 class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):
     WINDOW_NAME = "VCAM"
-    CARTOON_FILE = "bat.png"
+    CARTOON_FILE = "opeapea1.png"
 
     def __init__(self, cam_num, *args, **kwargs) -> None:
         self.cam_num = cam_num

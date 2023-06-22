@@ -12,7 +12,7 @@ logger.addHandler(stream_handler)
 
 class VAMPIRESPupilCamViewerFrontend(GenericViewerFrontend):
     WINDOW_NAME = "VPUPCAM"
-    CARTOON_FILE = "bat.png"
+    CARTOON_FILE = "opeapea2.png"
 
 
 class VAMPIRESPupilCamViewerBackend(GenericViewerBackend):
