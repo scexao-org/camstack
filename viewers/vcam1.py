@@ -17,8 +17,7 @@ def main(zoom, binn):
                                           fonts_zoom=2 * zoom)
     plugins = (SaturationPlugin(frontend, sat_value=65535),
                FieldstopPlugin(frontend), FilterWheelPlugin(frontend),
-               MBIWheelPlugin(frontend), VAMPIRESPupilMode(frontend),
-               CenteredCrossHairPlugin(frontend))
+               MBIWheelPlugin(frontend), VAMPIRESPupilMode(frontend))
 
     frontend.plugins.extend(plugins)
     frontend.register_backend(backend)
