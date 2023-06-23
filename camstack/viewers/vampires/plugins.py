@@ -294,7 +294,7 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
 class MBIWheelPlugin(DeviceMixin, BasePlugin):
 
     DEVICE_NAME = "VAMPIRES_MBI"
-    FIELDS = "F620", "F670", "F720", "F770"
+    FIELDS = "F620", "F720", "F670", "F770"
 
     def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
         super().__init__(frontend_obj)
@@ -340,14 +340,14 @@ class MBIWheelPlugin(DeviceMixin, BasePlugin):
         # CCW
         sign = 1
         if key == pgmc.K_LEFTBRACKET:
-            sign = -1
+            sign = 1
         # CW
         elif key == pgmc.K_RIGHTBRACKET:
-            sign = 1
+            sign = -1
         if fine:
-            nudge_value = sign * 0.1
+            nudge_value = sign * 0.005
         else:
-            nudge_value = sign * 1
+            nudge_value = sign * 0.2
         self.backend_obj.logger.info(f"Rotating MBI wheel by {nudge_value} deg")
         self.device.move_relative__oneway(nudge_value)
 

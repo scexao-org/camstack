@@ -9,7 +9,7 @@ from functools import partial
 import logging
 from rich.live import Live
 from rich.logging import RichHandler
-from skimage.transform import downscale_local_mean
+from skimage.transform import rescale
 import numpy as np
 
 stream_handler = RichHandler(level=logging.INFO, show_level=False,
@@ -176,9 +176,8 @@ CTRL  + s     : Save current position to last configuration"""
         # Adjust, in case we've just zoomed-out from a crop spot that's too close to the edge!
         # cr_temp = min(max(cr, halfside[0]), shape[0] - halfside[0])
         # cc_temp = min(max(cc, halfside[1]), shape[1] - halfside[1])
-        crop_slice = np.s_[
-                int(np.round(cr - halfside[0])):int(np.round(cr + halfside[0])),
-                int(np.round(cc - halfside[1])):int(np.round(cc + halfside[1]))]
+        crop_slice = np.s_[int(cr - halfside[0]):int(cr + halfside[0]),
+                           int(cc - halfside[1]):int(cc + halfside[1])]
         return crop_slice
 
     def toggle_crop(self, *args, **kwargs) -> None:
@@ -214,7 +213,7 @@ CTRL  + s     : Save current position to last configuration"""
 
         ## flip camera 2 on y-axis
         if self.cam_num == 2:
-            self.data_debias_uncrop = np.flipud(self.data_debias_uncrop)
+            self.data_debias_uncrop = np.fliplr(self.data_debias_uncrop)
 
         ## determine our camera mode from the data size
         Nx, Ny = self.data_debias_uncrop.shape
@@ -226,21 +225,18 @@ CTRL  + s     : Save current position to last configuration"""
             self.mode = "STANDARD"
 
         if self.mode.startswith("MBI"):
-            field_775 = downscale_local_mean(
-                    self.data_debias_uncrop[self.mbi_slices[0]], (2, 2))
-            field_725 = downscale_local_mean(
-                    self.data_debias_uncrop[self.mbi_slices[1]], (2, 2))
-            field_675 = downscale_local_mean(
-                    self.data_debias_uncrop[self.mbi_slices[2]], (2, 2))
+            field_775 = self.data_debias_uncrop[self.mbi_slices[0]]
+            field_725 = self.data_debias_uncrop[self.mbi_slices[1]]
+            field_675 = self.data_debias_uncrop[self.mbi_slices[2]]
             # MBI-reduced mode
             if self.mode.endswith("REDUCED"):
                 field_625 = np.full_like(field_675, np.nan)
             else:
-                field_625 = downscale_local_mean(
-                        self.data_debias_uncrop[self.mbi_slices[3]], (2, 2))
-            self.data_debias = np.block([[field_625, field_675],
-                                         [field_725, field_775]])
+                field_625 = self.data_debias_uncrop[self.mbi_slices[3]]
+            self.data_debias = np.block([[field_625, field_725],
+                                         [field_675, field_775]])
         else:
+            #     self.data_debias = rescale(self.data_debias_uncrop[self.crop_slice], 2)
             self.data_debias = self.data_debias_uncrop[self.crop_slice]
 
 
