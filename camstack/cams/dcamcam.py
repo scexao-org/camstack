@@ -533,10 +533,10 @@ class BaseVCAM(OrcaQuest):
                     util.CameraMode(x0=1768, x1=2327, y0=872, y1=1431,
                                     tint=0.001),
             MBI:
-                    util.CameraMode(x0=928, x1=3167, y0=592, y1=1711,
+                    util.CameraMode(x0=620, x1=2899, y0=620, y1=1735,
                                     tint=0.001),
             MBI_REDUCED:
-                    util.CameraMode(x0=928, x1=3167, y0=592, y1=1151,
+                    util.CameraMode(x0=620, x1=2899, y0=620, y1=1179,
                                     tint=0.001)
     }
 

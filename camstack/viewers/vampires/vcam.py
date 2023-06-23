@@ -176,10 +176,9 @@ CTRL  + s     : Save current position to last configuration"""
         # Adjust, in case we've just zoomed-out from a crop spot that's too close to the edge!
         # cr_temp = min(max(cr, halfside[0]), shape[0] - halfside[0])
         # cc_temp = min(max(cc, halfside[1]), shape[1] - halfside[1])
-        crop_slice = np.s_[int(round(cr -
-                                     halfside[0])):int(round(cr + halfside[0])),
-                           int(round(cc -
-                                     halfside[1])):int(round(cc + halfside[1]))]
+        crop_slice = np.s_[
+                int(np.round(cr - halfside[0])):int(np.round(cr + halfside[0])),
+                int(np.round(cc - halfside[1])):int(np.round(cc + halfside[1]))]
         return crop_slice
 
     def toggle_crop(self, *args, **kwargs) -> None:
@@ -188,13 +187,13 @@ CTRL  + s     : Save current position to last configuration"""
         # calculate crops for each window
         _mbi_shape = 560, 560
         self.mbi_slices = (
-                self._get_crop_slice(center=(1959.5, 279.5),
+                self._get_crop_slice(center=(1998.5, 815.0),
                                      shape=_mbi_shape),  # 775
-                self._get_crop_slice(center=(1395.5, 279.5),
+                self._get_crop_slice(center=(876.4, 831.7),
                                      shape=_mbi_shape),  # 725
-                self._get_crop_slice(center=(279.5, 279.5),
+                self._get_crop_slice(center=(310.3, 836.7),
                                      shape=_mbi_shape),  # 675
-                self._get_crop_slice(center=(279.5, 839.5),
+                self._get_crop_slice(center=(300.6, 280.4),
                                      shape=_mbi_shape),  # 625
         )
 
@@ -212,6 +211,10 @@ CTRL  + s     : Save current position to last configuration"""
         self.data_min = np.min(self.data_raw_uncrop)
         self.data_max = np.max(self.data_raw_uncrop)
         self.data_mean = np.mean(self.data_raw_uncrop)
+
+        ## flip camera 2 on y-axis
+        if self.cam_num == 2:
+            self.data_debias_uncrop = np.flipud(self.data_debias_uncrop)
 
         ## determine our camera mode from the data size
         Nx, Ny = self.data_debias_uncrop.shape
