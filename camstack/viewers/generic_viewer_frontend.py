@@ -93,9 +93,11 @@ class GenericViewerFrontend:
                                                  flags=0x0, depth=16)
         pygame.display.set_caption(self.WINDOW_NAME)
 
-        self.pg_background = pygame.surface.Surface(self.pg_screen.get_size())
+        self.pg_background = pygame.surface.Surface(self.pg_screen.get_size(),
+                                                    pygame.SRCALPHA)
         # Good to "convert" once-per-surface: converts data type to final one
         self.pg_background = self.pg_background.convert()
+        self.pg_background_rect = self.pg_background.get_rect()
 
         self.pg_datasurface = pygame.surface.Surface(self.data_disp_size)
         self.pg_datasurface.convert()
@@ -183,15 +185,14 @@ class GenericViewerFrontend:
 
         w, h = cartoon_img.get_size()
 
-        cartoon_img_scaled = pygame.transform.scale(cartoon_img,
-                                                    (w * self.system_zoom,
-                                                     h * self.system_zoom))
+        self.cartoon_img_scaled = pygame.transform.scale(
+                cartoon_img, (w * self.system_zoom, h * self.system_zoom))
 
         # Move to bottom right, blit once.
-        self.pg_cartoon_rect = cartoon_img_scaled.get_rect()
+        self.pg_cartoon_rect = self.cartoon_img_scaled.get_rect()
         self.pg_cartoon_rect.bottomright = self.pygame_win_size
 
-        self.pg_screen.blit(cartoon_img_scaled, self.pg_cartoon_rect)
+        self.pg_screen.blit(self.cartoon_img_scaled, self.pg_cartoon_rect)
 
     def _init_onoff_modes(self) -> None:
         # That, or an inherited class variable dict?
@@ -334,11 +335,21 @@ class GenericViewerFrontend:
 
         pygame.surfarray.blit_array(self.pg_datasurface, self.data_blit_staging)
 
+        # blit background and png for viewer
+        self.pg_background.fill(futs.Colors.CLEAR)
+        self.pg_background.set_alpha(0)
+        self.pg_screen.blit(
+                self.pg_background,
+                self.pg_background_rect,
+                # special_flags=(pygame.BLEND_RGBA_ADD)
+        )
+        self.pg_updated_rects.append(self.pg_background_rect)
+        self.pg_screen.blit(self.cartoon_img_scaled, self.pg_cartoon_rect)
+        self.pg_updated_rects.append(self.pg_cartoon_rect)
         # Drawing for toggled modes
         self._inloop_plugin_modes()
         # Manage labels
         self._inloop_update_labels()
-
         # Finally
         self.pg_screen.blit(self.pg_datasurface, self.pg_data_rect)
         self.pg_updated_rects += [self.pg_data_rect]
