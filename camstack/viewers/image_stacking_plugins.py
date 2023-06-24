@@ -25,8 +25,7 @@ import numpy as np
 class RefImageAcquirePlugin(OneShotActionPlugin):
 
     def __init__(self, frontend_obj: GenericViewerFrontend,
-                 key_onoff: int = pgmc.K_r,
-                 modifier_and: int = pgmc.KMOD_LCTRL & pgmc.KMOD_LSHIFT,
+                 key_onoff: int = pgmc.K_r, modifier_and: int = pgmc.KMOD_LCTRL,
                  textbox: Op[futs.LabelMessage] = None):
 
         super().__init__(frontend_obj, key_onoff, modifier_and)
@@ -52,8 +51,9 @@ class RefImageAcquirePlugin(OneShotActionPlugin):
         assert self.averaged_data is not None
 
         if self.textbox:
-            self.textbox.render(('ACQUIRING REF IMG.', ),
-                                fg_col=futs.Colors.RED)
+            self.textbox.render(f"{'ACQUIRING REF IMG':^28s}",
+                                bg_col=futs.Colors.BLUE,
+                                fg_col=futs.Colors.WHITE)
 
         self.averaged_data *= 0
         self.averaging_counter = 0
@@ -66,7 +66,6 @@ class RefImageAcquirePlugin(OneShotActionPlugin):
     def _complete_action(self) -> None:
         assert self.backend_obj is not None
         assert self.averaged_data is not None
-
         self.backend_obj.data_for_sub_ref = self.averaged_data / self.averaging_counter
         self.averaging_counter = 0  # Mark for reset.
 
@@ -97,22 +96,37 @@ class RefImageAcquirePlugin(OneShotActionPlugin):
 # Warning - abstract
 class DarkAcquirePlugin(RefImageAcquirePlugin):
 
+    def __init__(self, frontend_obj: GenericViewerFrontend,
+                 key_onoff: int = pgmc.K_d, modifier_and: int = pgmc.KMOD_LCTRL,
+                 **kwargs):
+
+        super().__init__(frontend_obj, key_onoff, modifier_and, **kwargs)
+
     def do_action(self) -> None:  # abstract impl
         super().do_action()
 
         # Override the text box
         if self.textbox:
-            self.textbox.render(('ACQUIRING DARK.', ), fg_col=futs.Colors.RED)
+            self.textbox.render(f"{'ACQUIRING DARK':^28s}",
+                                bg_col=futs.Colors.BLUE,
+                                fg_col=futs.Colors.WHITE)
 
         self.move_appropriate_block(True)
 
     def _complete_action(
             self) -> None:  # Override because we want to write in bias_image
         assert self.backend_obj
-        assert self.averaged_data
+        assert self.averaged_data is not None
+
+        self.move_appropriate_block(False)
 
         self.backend_obj.data_for_sub_dark = self.averaged_data / self.averaging_counter  # FIXME reference_image exists?
         self.averaging_counter = 0  # Mark for reset.
+
+        if self.textbox:
+            self.textbox.render_whitespace()
+            self.textbox.blit(self.frontend_obj.pg_screen)
+            self.frontend_obj.pg_updated_rects.append(self.textbox.rectangle)
 
     @abstractmethod
     def move_appropriate_block(self, in_true: bool) -> None:

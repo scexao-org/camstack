@@ -5,7 +5,8 @@ from camstack.viewers.generic_viewer_backend import GenericViewerBackend
 from camstack.viewers import backend_utils as buts
 from camstack.viewers import frontend_utils as futs
 from camstack.viewers.plugin_arch import BasePlugin
-from camstack.viewers.plugins import PupilMode
+from camstack.viewers.image_stacking_plugins import DarkAcquirePlugin
+from camstack.viewers.plugins import PupilMode, CrossHairPlugin, BullseyePlugin
 import pygame.constants as pgmc
 from functools import partial
 import pygame
@@ -131,9 +132,11 @@ class MaskWheelPlugin(DeviceMixin, BasePlugin):
         self.device.update_keys()
 
     def frontend_action(self) -> None:
+        if not self.enabled:
+            return
         self.label.render(self.status,
                           blit_onto=self.frontend_obj.pg_datasurface)
-        # self.frontend_obj.pg_updated_rects.append(self.label.rectangle)
+        self.frontend_obj.pg_updated_rects.append(self.label.rectangle)
 
     def backend_action(self) -> None:
         # Warning: this is called every time the window refreshes, i.e. ~20Hz.
@@ -257,7 +260,7 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
             sign = -1
 
         if fine:
-            nudge_value = sign * 0.01
+            nudge_value = sign * 0.005
         else:
             nudge_value = sign * 0.1
         self.backend_obj.logger.info(f"Moving {substage} by {nudge_value} mm")
@@ -307,9 +310,9 @@ class MBIWheelPlugin(DeviceMixin, BasePlugin):
             buts.Shortcut(pgmc.K_LEFTBRACKET, pgmc.KMOD_LSHIFT): partial(self.rotate_wheel, pgmc.K_LEFTBRACKET, fine=False),
             buts.Shortcut(pgmc.K_RIGHTBRACKET, pgmc.KMOD_LCTRL): partial(self.rotate_wheel, pgmc.K_RIGHTBRACKET, fine=True),
             buts.Shortcut(pgmc.K_RIGHTBRACKET, pgmc.KMOD_LSHIFT): partial(self.rotate_wheel, pgmc.K_RIGHTBRACKET, fine=False),
-            buts.Shortcut(pgmc.K_b, pgmc.KMOD_LCTRL): self.enable,
-            buts.Shortcut(pgmc.K_b, pgmc.KMOD_LSHIFT): self.disable,
-            buts.Shortcut(pgmc.K_b, pgmc.KMOD_LALT): self.save_configuration,
+            buts.Shortcut(pgmc.K_m, pgmc.KMOD_LCTRL): self.enable,
+            buts.Shortcut(pgmc.K_m, pgmc.KMOD_LSHIFT): self.disable,
+            buts.Shortcut(pgmc.K_m, pgmc.KMOD_LALT): self.save_configuration,
         }
         # yapf: enable
         zoom = self.frontend_obj.system_zoom
@@ -435,3 +438,30 @@ class VAMPIRESPupilMode(DeviceMixin, PupilMode):
         # Could be pyro, could be os.system...
         self.backend_obj.logger.info("Removing pupil lens")
         self.device.move_configuration_name__oneway("out")
+
+
+class VCAMDarkAcquirePlugin(DeviceMixin, DarkAcquirePlugin):
+    DEVICE_NAME = "VAMPIRES_DIFF"
+
+    def move_appropriate_block(self, in_true: bool) -> None:
+        if in_true:
+            if self.textbox:
+                self.textbox.render("BLOCKING", bg_col=futs.Colors.VERY_RED,
+                                    fg_col=futs.Colors.WHITE)
+                self.textbox.blit(self.frontend_obj.pg_screen)
+                self.frontend_obj.pg_updated_rects.append(
+                        self.textbox.rectangle)
+            self.device.move_relative(30)
+        else:
+            if self.textbox:
+                self.textbox.render("UNBLOCKING", bg_col=futs.Colors.GREEN,
+                                    fg_col=futs.Colors.WHITE)
+            self.device.move_relative__oneway(-30)
+
+
+class MBICrosshairPlugin(CrossHairPlugin):
+    pass
+
+
+class MBIBullseyePlugin(BullseyePlugin):
+    pass
