@@ -261,8 +261,7 @@ class OrcaQuest(DCAMCamera):
             "set_external_trigger",
     ] + DCAMCamera.INTERACTIVE_SHELL_METHODS
 
-    FIRST, FULL, DICHROIC = "FIRST", "FULL", "DICHROIC"
-    MILES = "MILES"
+    FIRST, FULL = "FIRST", "FULL"
     # yapf: disable
     MODES = {
             FIRST: util.CameraMode(x0=1028, x1=2991, y0=492, y1=727, tint=0.001),
@@ -273,8 +272,6 @@ class OrcaQuest(DCAMCamera):
             2: util.CameraMode(x0=800, x1=3295, y0=876, y1=1531, tint=0.001),      # Kyohoon is Using for WFS align
             3: util.CameraMode(x0=1148, x1=2947, y0=696, y1=1807, tint=0.001),
             4: util.CameraMode(x0=2424, x1=2679, y0=1080, y1=1335, tint=0.000001),    # Jen is using for focal plane mode
-            MILES: util.CameraMode(x0=800, x1=1199, y0=800, y1=1199, tint=0.01),
-            DICHROIC: util.CameraMode(x0=2336, x1=3135, y0=0, y1=2303, tint=0.01), # Dichroic stack mode
     }
     # yapf: enable
 
@@ -335,7 +332,8 @@ class OrcaQuest(DCAMCamera):
     def set_tint(self, tint: float) -> float:
         self._dcam_prm_setvalue(float(tint), "EXPTIME",
                                 dcamprop.EProp.EXPOSURETIME)
-        return self.get_tint()
+        # update FRATE and EXPTIME
+        self.get_fps()
 
     def get_fps(self) -> float:
         exp_time, read_time = self._dcam_prm_getmultivalue(
@@ -527,17 +525,7 @@ class BaseVCAM(OrcaQuest):
     ## camera modes
     FULL, STANDARD, MBI, MBI_REDUCED = "FULL", "STANDARD", "MBI", "MBI_REDUCED"
     MODES = {
-            FULL:
-                    util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
-            STANDARD:
-                    util.CameraMode(x0=1768, x1=2327, y0=872, y1=1431,
-                                    tint=0.001),
-            MBI:
-                    util.CameraMode(x0=620, x1=2899, y0=620, y1=1735,
-                                    tint=0.001),
-            MBI_REDUCED:
-                    util.CameraMode(x0=620, x1=2899, y0=620, y1=1179,
-                                    tint=0.001)
+            FULL: util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
     }
 
     def set_readout_mode(self, mode: str) -> None:
@@ -585,6 +573,8 @@ class BaseVCAM(OrcaQuest):
             obs_mod = f"{base_mode}_MBI"
         elif self.current_mode_id == "MBI_REDUCED":
             obs_mod = f"{base_mode}_MBIR"
+        elif self.current_mode_id == "PUPIL":
+            obs_mod = f"{base_mode}_PUP"
         else:
             obs_mod = base_mode
 
@@ -635,6 +625,19 @@ class VCAM1(BaseVCAM):
     }
     KEYWORDS.update(BaseVCAM.KEYWORDS)
 
+    MODES = {
+            BaseVCAM.STANDARD:
+                    util.CameraMode(x0=1776, x1=2311, y0=888, y1=1423,
+                                    tint=1e-4),
+            BaseVCAM.MBI:
+                    util.CameraMode(x0=408, x1=2651, y0=636, y1=1735,
+                                    tint=1e-4),
+            BaseVCAM.MBI_REDUCED:
+                    util.CameraMode(x0=408, x1=2651, y0=1156, y1=1755,
+                                    tint=1e-4),
+    }
+    MODES.update(BaseVCAM.MODES)
+
     def _fill_keywords(self) -> None:
         super()._fill_keywords()
 
@@ -660,6 +663,19 @@ class VCAM2(BaseVCAM):
             "U_VLOG2": (False, "Logging VAMPIRES cam 2", "BOOLEAN", "VLOG1")
     }
     KEYWORDS.update(BaseVCAM.KEYWORDS)
+
+    MODES = {
+            BaseVCAM.STANDARD:
+                    util.CameraMode(x0=1780, x1=2315, y0=888, y1=1423,
+                                    tint=1e-4),
+            BaseVCAM.MBI:
+                    util.CameraMode(x0=408, x1=2651, y0=544, y1=1643,
+                                    tint=1e-4),
+            BaseVCAM.MBI_REDUCED:
+                    util.CameraMode(x0=408, x1=2651, y0=544, y1=1139,
+                                    tint=1e-4),
+    }
+    MODES.update(BaseVCAM.MODES)
 
     def _fill_keywords(self) -> None:
         super()._fill_keywords()

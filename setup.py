@@ -47,6 +47,7 @@ scripts = [
         './scripts/cam-firstpupstart',
         './scripts/cam-alalacamstart',
         './scripts/cam-vpupcamstart',
+        './scripts/cam-vcamstart',
         './scripts/cam-vcam1start',
         './scripts/cam-vcam2start',
 ]

@@ -41,8 +41,9 @@ def main():
     tcp_recv = RemoteDependentProcess(
             tmux_name=f'streamTCPreceive_{TCP_PORT}',
             # Urrrrrh this is getting messy
-            cli_cmd=f'creashmim %s %u %u; shmimTCPreceive -c ircam {TCP_PORT}',
-            cli_args=(stream_name, MAGIC_HW_STR.HEIGHT, MAGIC_HW_STR.WIDTH),
+            cli_cmd='creashmim %s %u %u --type=u16; shmimTCPreceive -c %s %s',
+            cli_args=(stream_name, MAGIC_HW_STR.HEIGHT, MAGIC_HW_STR.WIDTH,
+                      stream_name, TCP_PORT),
             remote_host='scexao@' + scxconf.IPLAN_SC6,
             kill_upon_create=False,
     )
@@ -66,7 +67,7 @@ def main():
     zmq_recv = RemoteDependentProcess(
             tmux_name=f'vcam{cam}_zmq',
             cli_cmd='zmq_recv.py %s:%u %s',
-            cli_args=(scxconf.IP_SC5, ZMQ_PORT, stream_name),
+            cli_args=(scxconf.IPLAN_SC5, ZMQ_PORT, stream_name),
             remote_host=f'lestat@{scxconf.IP_VAMPIRES}',
             kill_upon_create=False,
     )
@@ -82,6 +83,13 @@ def main():
     )
     zmq_send.start_order = 3
     zmq_send.kill_order = 2
+
+    # special hack- if we're in FULL mode, do NOT stream TCP over LAN
+    # because the orcas put out ~16 Gbps (this angers the LAN)
+    if mode == BaseVCAM.FULL:
+        # kill
+        for proc in (tcp_recv, tcp_send, zmq_recv, zmq_send):
+            proc.stop()
 
     vcam = Klass(
             stream_name,

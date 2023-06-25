@@ -82,6 +82,7 @@ class DependentProcess:
         self.enabled = True  # Is this registered to run ? #TODO UNUSED
 
         self.tmux_name = tmux_name
+        self.tmux_pane = None
         self.cli_cmd = cli_cmd
         self.cli_original_args = cli_args  # Can hold magic replace-me placeholders, e.g. #HEIGHT#
         self.cli_args: typ.List[KWType] = [t for t in cli_args]  # Deepcopy
@@ -138,6 +139,8 @@ class DependentProcess:
                 #print('PIDs: ', pids)
 
     def stop(self):
+        if self.tmux_pane is None:
+            self.assign_tmux_pane()
         tmux.kill_running_Cc(self.tmux_pane)
         time.sleep(2)
         tmux.kill_running_Cz(self.tmux_pane)

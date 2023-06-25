@@ -344,8 +344,9 @@ class GenericViewerFrontend:
                 # special_flags=(pygame.BLEND_RGBA_ADD)
         )
         self.pg_updated_rects.append(self.pg_background_rect)
-        self.pg_screen.blit(self.cartoon_img_scaled, self.pg_cartoon_rect)
-        self.pg_updated_rects.append(self.pg_cartoon_rect)
+        if self.CARTOON_FILE is not None:
+            self.pg_screen.blit(self.cartoon_img_scaled, self.pg_cartoon_rect)
+            self.pg_updated_rects.append(self.pg_cartoon_rect)
         # Drawing for toggled modes
         self._inloop_plugin_modes()
         # Manage labels

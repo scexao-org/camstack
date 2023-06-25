@@ -255,9 +255,18 @@ class BaseCamera:
 
     def set_mode(self, mode_id: util.ModeIDType) -> None:
         '''
-            Alias
+        Alias
         '''
         self.set_camera_mode(mode_id)
+
+    def get_camera_mode(self) -> util.ModeIDType:
+        return self.current_mode_id
+
+    def get_mode(self) -> util.ModeIDType:
+        '''
+        Alias
+        '''
+        return self.get_camera_mode()
 
     def set_camera_size(self, height: int, width: int, h_offset: int = 0,
                         w_offset: int = 0) -> None:

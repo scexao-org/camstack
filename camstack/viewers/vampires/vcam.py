@@ -177,24 +177,41 @@ CTRL  + s     : Save current position to last configuration"""
         # Adjust, in case we've just zoomed-out from a crop spot that's too close to the edge!
         # cr_temp = min(max(cr, halfside[0]), shape[0] - halfside[0])
         # cc_temp = min(max(cc, halfside[1]), shape[1] - halfside[1])
-        crop_slice = np.s_[int(cr - halfside[0]):int(cr + halfside[0]),
-                           int(cc - halfside[1]):int(cc + halfside[1])]
+
+        cr_low = int(cr - halfside[0])
+        cc_low = int(cc - halfside[1])
+        cr_high = cr_low + int(2 * halfside[0])
+        cc_high = cc_low + int(2 * halfside[1])
+        crop_slice = np.s_[cr_low:cr_high, cc_low:cc_high]
         return crop_slice
 
     def toggle_crop(self, *args, **kwargs) -> None:
         super().toggle_crop(*args, **kwargs)
 
+        hotspots_cam1 = {
+                "770": (1961.4, 812.2),  # x, y on detector
+                "720": (839.4, 829.7),
+                "670": (276.7, 832.6),
+                "620": (268.5, 273.4)
+        }
+        hotspots_cam2 = {
+                "770": (1970.0, 327.1),
+                "720": (849.7, 283.0),
+                "670": (287.1, 267.1),
+                "620": (268.5, 829.1)
+        }
+
         # calculate crops for each window
-        _mbi_shape = 560, 560
+        if self.cam_num == 1:
+            hotspots = hotspots_cam1
+        elif self.cam_num == 2:
+            hotspots = hotspots_cam2
+        _mbi_shape = 520, 520
         self.mbi_slices = (
-                self._get_crop_slice(center=(1998.5, 815.0),
-                                     shape=_mbi_shape),  # 775
-                self._get_crop_slice(center=(876.4, 831.7),
-                                     shape=_mbi_shape),  # 725
-                self._get_crop_slice(center=(310.3, 836.7),
-                                     shape=_mbi_shape),  # 675
-                self._get_crop_slice(center=(300.6, 280.4),
-                                     shape=_mbi_shape),  # 625
+                self._get_crop_slice(center=hotspots["770"], shape=_mbi_shape),
+                self._get_crop_slice(center=hotspots["720"], shape=_mbi_shape),
+                self._get_crop_slice(center=hotspots["670"], shape=_mbi_shape),
+                self._get_crop_slice(center=hotspots["620"], shape=_mbi_shape),
         )
 
     def _data_crop(self) -> None:
@@ -212,15 +229,11 @@ CTRL  + s     : Save current position to last configuration"""
         self.data_max = np.max(self.data_raw_uncrop)
         self.data_mean = np.mean(self.data_raw_uncrop)
 
-        ## flip camera 2 on y-axis
-        if self.cam_num == 2:
-            self.data_debias_uncrop = np.fliplr(self.data_debias_uncrop)
-
         ## determine our camera mode from the data size
         Nx, Ny = self.data_debias_uncrop.shape
-        if Nx > 560 and Ny > 560:
+        if Nx > 536 and Ny > 536:
             self.mode = "MBI"
-        elif Nx > 560:
+        elif Nx > 536:
             self.mode = "MBI_REDUCED"
         else:
             self.mode = "STANDARD"
@@ -234,16 +247,25 @@ CTRL  + s     : Save current position to last configuration"""
                 field_625 = np.full_like(field_675, np.nan)
             else:
                 field_625 = self.data_debias_uncrop[self.mbi_slices[3]]
-            self.data_debias = np.block([[field_625, field_725],
-                                         [field_675, field_775]])
+            fields = [[field_625, field_725], [field_675, field_775]]
+            if self.cam_num == 2:
+                fields = [[np.fliplr(field_625),
+                           np.fliplr(field_725)],
+                          [np.fliplr(field_675),
+                           np.fliplr(field_775)]]
+            self.data_debias = np.block(fields)
         else:
             self.data_debias = self.data_debias_uncrop[self.crop_slice]
+
+            ## flip camera 2 on y-axis
+            if self.cam_num == 2:
+                self.data_debias = np.fliplr(self.data_debias)
 
 
 class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):
     WINDOW_NAME = "VCAM"
     CARTOON_FILE = "opeapea1.png"
-    BOTTOM_PX_PAD = 150
+    BOTTOM_PX_PAD = 155
 
     def __init__(self, cam_num, *args, **kwargs) -> None:
         self.cam_num = cam_num
@@ -275,10 +297,12 @@ class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):
 
         self.lbl_times = futs.LabelMessage("t=%10.3f ms - fps= %4.0f",
                                            futs.Fonts.MONO, topleft=(c, r))
+        self.lbl_times.blit(self.pg_screen)
         r += int(self.lbl_times.em_size)
 
         self.lbl_data_val = futs.LabelMessage("m,M=(%5.0f, %5.0f) mu=%5.0f",
                                               futs.Fonts.MONO, topleft=(c, r))
+        self.lbl_data_val.blit(self.pg_screen)
         r += int(1.2 * self.lbl_data_val.em_size)
 
         # {Status message [sat, acquiring dark, acquiring ref...]}
@@ -295,7 +319,7 @@ class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):
         assert self.backend_obj
 
         tint = self.backend_obj.input_shm.get_expt()  # seconds
-        fps = min(self.backend_obj.input_shm.get_fps(), 1 / tint)
+        fps = self.backend_obj.input_shm.get_fps()
         tint_ms = tint * 1e3
 
         self.lbl_cropzone.render(tuple(self.backend_obj.input_shm.get_crop()),

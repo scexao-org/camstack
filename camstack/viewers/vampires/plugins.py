@@ -11,7 +11,7 @@ import pygame.constants as pgmc
 from functools import partial
 import pygame
 import logging
-from swmain.redis import RDB
+from swmain.redis import get_values, RDB
 from rich.panel import Panel
 from rich.live import Live
 from rich.logging import RichHandler
@@ -155,10 +155,14 @@ class FilterWheelPlugin(DeviceMixin, BasePlugin):
         self.enabled = True
         # Ideally you'd instantiate the label in the frontend, cuz different viewers could be wanting the same info
         # displayed at different locations.
+        r = 20 * zoom
         self.label = futs.LabelMessage(
-                "%s", font, fg_col="#4AC985", bg_col=None,
-                topright=(self.frontend_obj.data_disp_size[0] - 100 * zoom,
-                          20 * zoom))
+                "%7s", font, fg_col="#4AC985", bg_col=None,
+                topright=(self.frontend_obj.data_disp_size[0] - 100 * zoom, r))
+        r += int(1.5 * self.label.em_size)
+        self.diff_label = futs.LabelMessage(
+                "%7s", font, fg_col="#4AC985", bg_col=None,
+                topright=(self.frontend_obj.data_disp_size[0] - 100 * zoom, r))
         self.label.blit(self.frontend_obj.pg_datasurface)
 
         # yapf: disable
@@ -185,13 +189,29 @@ class FilterWheelPlugin(DeviceMixin, BasePlugin):
         self.device.move_configuration_idx__oneway(index)
 
     def frontend_action(self) -> None:
-        self.label.render(self.status,
-                          blit_onto=self.frontend_obj.pg_datasurface)
+        if not self.enabled:
+            return
+        if self.label:
+            self.label.blit(self.frontend_obj.pg_datasurface)
+            self.frontend_obj.pg_updated_rects.append(self.label.rectangle)
+
+        if self.diff_label:
+            self.diff_label.blit(self.frontend_obj.pg_datasurface)
+            self.frontend_obj.pg_updated_rects.append(self.diff_label.rectangle)
 
     def backend_action(self) -> None:
+        if not self.enabled:
+            return
         # Warning: this is called every time the window refreshes, i.e. ~20Hz.
-        name = RDB.hget("U_FILTER", "value")
-        self.status = f"{name.upper():>9s}"
+        diff_key = f"U_DIFFL{self.backend_obj.cam_num}"
+        filter_dict = get_values(("U_FILTER", diff_key))
+        if self.label:
+            self.label.render(f"{filter_dict['U_FILTER'].upper():>7s}")
+        if self.diff_label:
+            if filter_dict[diff_key].upper() == "OPEN":
+                self.diff_label.render_whitespace()
+            else:
+                self.diff_label.render(f"{filter_dict[diff_key].upper():>7s}")
 
 
 class FieldstopPlugin(DeviceMixin, BasePlugin):
@@ -373,6 +393,8 @@ class MBIWheelPlugin(DeviceMixin, BasePlugin):
         self.device.save_configuration(index=self.current_index)
 
     def frontend_action(self) -> None:
+        if not self.enabled:
+            return
         # we know that if the backend is in MBI mode that we need to label
         # the four frames
         if self.backend_obj.mode.startswith("MBI"):
@@ -390,6 +412,8 @@ class MBIWheelPlugin(DeviceMixin, BasePlugin):
                         blit_onto=self.frontend_obj.pg_datasurface)
 
     def backend_action(self) -> None:
+        if not self.enabled:
+            return
         name = RDB.hget("U_MBI", "value")
         self.status = name.upper()
 
@@ -445,17 +469,10 @@ class VCAMDarkAcquirePlugin(DeviceMixin, DarkAcquirePlugin):
 
     def move_appropriate_block(self, in_true: bool) -> None:
         if in_true:
-            if self.textbox:
-                self.textbox.render("BLOCKING", bg_col=futs.Colors.VERY_RED,
-                                    fg_col=futs.Colors.WHITE)
-                self.textbox.blit(self.frontend_obj.pg_screen)
-                self.frontend_obj.pg_updated_rects.append(
-                        self.textbox.rectangle)
+            # don't use __oneway because we don't want to start taking darks
+            # until block is fully in
             self.device.move_relative(30)
         else:
-            if self.textbox:
-                self.textbox.render("UNBLOCKING", bg_col=futs.Colors.GREEN,
-                                    fg_col=futs.Colors.WHITE)
             self.device.move_relative__oneway(-30)
 
 
