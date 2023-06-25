@@ -77,7 +77,7 @@ class SaturationPlugin(BasePlugin):
         self.textbox = textbox
 
     def backend_action(self) -> None:
-        if not self.enabled:
+        if not self.enabled or self.textbox is None:
             return
         self.max = self.backend_obj.data_max
         if self.max >= self.sat_value:
