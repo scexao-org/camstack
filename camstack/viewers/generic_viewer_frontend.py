@@ -337,12 +337,9 @@ class GenericViewerFrontend:
 
         # blit background and png for viewer
         self.pg_background.fill(futs.Colors.CLEAR)
-        self.pg_background.set_alpha(0)
-        self.pg_screen.blit(
-                self.pg_background,
-                self.pg_background_rect,
-                # special_flags=(pygame.BLEND_RGBA_ADD)
-        )
+        self.pg_background.set_alpha(255)
+        self.pg_screen.blit(self.pg_background, self.pg_background_rect,
+                            special_flags=(pygame.BLEND_RGBA_ADD))
         self.pg_updated_rects.append(self.pg_background_rect)
         if self.CARTOON_FILE is not None:
             self.pg_screen.blit(self.cartoon_img_scaled, self.pg_cartoon_rect)
