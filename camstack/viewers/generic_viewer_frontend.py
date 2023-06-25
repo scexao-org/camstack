@@ -202,7 +202,7 @@ class GenericViewerFrontend:
                 plugins.CenteredCrossHairPlugin(self, pgmc.K_c,
                                                 pgmc.KMOD_LSHIFT),
                 image_stacking_plugins.RefImageAcquirePlugin(
-                        self, pgmc.K_r, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT,
+                        self, pgmc.K_r, pgmc.KMOD_LCTRL,
                         textbox=self.lbl_status)
         ]
 

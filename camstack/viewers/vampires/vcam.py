@@ -25,10 +25,10 @@ Camera controls:
 (Note: these get applied to both cameras.
  if you press ALT, will only apply to one camera)
 --------------------------------------------------
-CTRL  + e         : Enable external trigger
-SHIFT + e         : Disable external trigger
+CTRL  + e         : Enable hardware trigger
+SHIFT + e         : Disable hardware trigger
 CTRL  + f         : Switch to FAST readout mode
-CTRL  + SHIFT + f : Switch to SLOW readout mode
+SHIFT + f         : Switch to SLOW readout mode
 
 Display controls:
 --------------------------------------------------
