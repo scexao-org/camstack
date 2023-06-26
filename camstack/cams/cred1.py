@@ -148,6 +148,10 @@ class CRED1(EDTCamera):
             self.set_readout_mode(ROMODES.cds)
             self.set_NDR(2)
 
+        elif 'global' in self.get_readout_mode():
+            self.set_readout_mode(ROMODES.cds)
+            self.set_NDR(2)
+
         if cm.fps is not None:
             self.set_fps(cm.fps)
         if cm.tint is not None:
