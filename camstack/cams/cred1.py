@@ -148,7 +148,7 @@ class CRED1(EDTCamera):
             self.set_readout_mode(ROMODES.cds)
             self.set_NDR(2)
 
-        elif 'global' in self.get_readout_mode():
+        elif not 'global' in self.get_readout_mode():
             self.set_readout_mode(ROMODES.cds)
             self.set_NDR(2)
 
