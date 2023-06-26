@@ -272,7 +272,7 @@ class CRED2(EDTCamera):
         return float(self.send_command('maxtint raw'))
 
     def get_temperature(self) -> float:
-        temp = float(self.send_command('temp raw')[3]) + 273.15
+        temp = float(self.send_command('temp raw').split(':')[3]) + 273.15
 
         self._set_formatted_keyword('DET-TMP', temp)
         logg.info(f'get_temp: {temp}')

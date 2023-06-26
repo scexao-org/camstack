@@ -39,6 +39,9 @@ class GenericViewerFrontend:
 
     WINDOW_NAME = 'Generic viewer'
 
+    HELP_MSG = """
+    """
+
     CARTOON_FILE: Op[str] = None
 
     def __init__(self, system_zoom: int, fps: int,
@@ -90,9 +93,11 @@ class GenericViewerFrontend:
                                                  flags=0x0, depth=16)
         pygame.display.set_caption(self.WINDOW_NAME)
 
-        self.pg_background = pygame.surface.Surface(self.pg_screen.get_size())
+        self.pg_background = pygame.surface.Surface(self.pg_screen.get_size(),
+                                                    pygame.SRCALPHA)
         # Good to "convert" once-per-surface: converts data type to final one
         self.pg_background = self.pg_background.convert()
+        self.pg_background_rect = self.pg_background.get_rect()
 
         self.pg_datasurface = pygame.surface.Surface(self.data_disp_size)
         self.pg_datasurface.convert()
@@ -122,7 +127,7 @@ class GenericViewerFrontend:
         pygame.mouse.set_cursor(pygame.cursors.broken_x)
         pygame.display.update()
 
-    def _init_labels(self) -> None:
+    def _init_labels(self) -> int:
 
         sz = self.system_zoom  # Shorthandy
         r = self.data_disp_size[1] + 3 * self.system_zoom
@@ -136,8 +141,8 @@ class GenericViewerFrontend:
         r += int(self.lbl_title.em_size)
 
         # For help press [h]
-        self.lbl_help = futs.LabelMessage("For help press [h]", futs.Fonts.MONO,
-                                          topleft=(c, r))
+        self.lbl_help = futs.LabelMessage("For help press [h], quit [x]",
+                                          futs.Fonts.MONO, topleft=(c, r))
         self.lbl_help.blit(self.pg_screen)
         r += int(self.lbl_help.em_size)
 
@@ -147,12 +152,12 @@ class GenericViewerFrontend:
         r += int(self.lbl_cropzone.em_size)
 
         # t = {t} us - FPS = {fps} - NDR = {NDR}
-        self.lbl_times = futs.LabelMessage("t=%6dus - fps %4d - NDR=%3d",
+        self.lbl_times = futs.LabelMessage("t=%6dus - fps %4.0f - NDR=%3d",
                                            futs.Fonts.MONO, topleft=(c, r))
         r += int(self.lbl_times.em_size)
 
         # T = {t*NDR} ms - min, max = {} {}
-        self.lbl_t_minmax = futs.LabelMessage("T=%3.1fms - m,M=%5d,%8d",
+        self.lbl_t_minmax = futs.LabelMessage("T=%3.1fms - m,M=%5.0f,%8.0f",
                                               futs.Fonts.MONO, topleft=(c, r))
         r += int(self.lbl_times.em_size)
 
@@ -162,52 +167,58 @@ class GenericViewerFrontend:
 
         # {Status message [sat, acquiring dark, acquiring ref...]}
         # At the bottom right.
-        self.lbl_ref_dark = futs.LabelMessage(
+        self.lbl_status = futs.LabelMessage(
                 '%s', futs.Fonts.DEFAULT_16,
                 topleft=(8 * self.system_zoom,
                          self.pygame_win_size[1] - 20 * self.system_zoom))
+
+        return r
 
     def _init_cartoon(self) -> None:
         if self.CARTOON_FILE is None:
             return
 
         # FIXME $CAMSTACK_ROOT instead of $HOME/src/camstack
-        path_cartoon = os.environ['HOME'] + "/src/camstack/conf/io.png"
+        path_cartoon = os.environ[
+                'HOME'] + f"/src/camstack/conf/{self.CARTOON_FILE}"
         cartoon_img = pygame.image.load(path_cartoon).convert_alpha()
 
         w, h = cartoon_img.get_size()
 
-        cartoon_img_scaled = pygame.transform.scale(cartoon_img,
-                                                    (w * self.system_zoom,
-                                                     h * self.system_zoom))
+        self.cartoon_img_scaled = pygame.transform.scale(
+                cartoon_img, (w * self.system_zoom, h * self.system_zoom))
 
         # Move to bottom right, blit once.
-        self.pg_cartoon_rect = cartoon_img_scaled.get_rect()
+        self.pg_cartoon_rect = self.cartoon_img_scaled.get_rect()
         self.pg_cartoon_rect.bottomright = self.pygame_win_size
 
-        self.pg_screen.blit(cartoon_img_scaled, self.pg_cartoon_rect)
+        self.pg_screen.blit(self.cartoon_img_scaled, self.pg_cartoon_rect)
 
     def _init_onoff_modes(self) -> None:
         # That, or an inherited class variable dict?
         # Why a dict actually?
         self.plugins = [
                 plugins.CrossHairPlugin(self, pgmc.K_c),
+                plugins.CenteredCrossHairPlugin(self, pgmc.K_c,
+                                                pgmc.KMOD_LSHIFT),
                 image_stacking_plugins.RefImageAcquirePlugin(
-                        self, pgmc.K_r, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT,
-                        textbox=self.lbl_ref_dark)
+                        self, pgmc.K_r, pgmc.KMOD_LCTRL,
+                        textbox=self.lbl_status)
         ]
 
     def _inloop_update_labels(self) -> None:
         assert self.backend_obj
 
         fps = self.backend_obj.input_shm.get_fps()
-        tint = self.backend_obj.input_shm.get_expt()
+        tint = self.backend_obj.input_shm.get_expt()  # seconds
+        tint_us = tint * 1e6
+        tint_ms = tint * 1e3
         ndr = self.backend_obj.input_shm.get_ndr()
 
         self.lbl_cropzone.render(tuple(self.backend_obj.input_shm.get_crop()),
                                  blit_onto=self.pg_screen)
-        self.lbl_times.render((tint, fps, ndr), blit_onto=self.pg_screen)
-        self.lbl_t_minmax.render((tint * ndr, self.backend_obj.data_min,
+        self.lbl_times.render((tint_us, fps, ndr), blit_onto=self.pg_screen)
+        self.lbl_t_minmax.render((tint_ms * ndr, self.backend_obj.data_min,
                                   self.backend_obj.data_max),
                                  blit_onto=self.pg_screen)
 
@@ -324,30 +335,22 @@ class GenericViewerFrontend:
 
         pygame.surfarray.blit_array(self.pg_datasurface, self.data_blit_staging)
 
+        # blit background and png for viewer
+        self.pg_background.fill(futs.Colors.CLEAR)
+        self.pg_background.set_alpha(255)
+        self.pg_screen.blit(self.pg_background, self.pg_background_rect,
+                            special_flags=(pygame.BLEND_RGBA_ADD))
+        self.pg_updated_rects.append(self.pg_background_rect)
+        if self.CARTOON_FILE is not None:
+            self.pg_screen.blit(self.cartoon_img_scaled, self.pg_cartoon_rect)
+            self.pg_updated_rects.append(self.pg_cartoon_rect)
         # Drawing for toggled modes
         self._inloop_plugin_modes()
         # Manage labels
         self._inloop_update_labels()
-
         # Finally
         self.pg_screen.blit(self.pg_datasurface, self.pg_data_rect)
         self.pg_updated_rects += [self.pg_data_rect]
-
-
-class FirstViewerFrontend(GenericViewerFrontend):
-
-    WINDOW_NAME = 'FIRST camera'
-
-    CARTOON_FILE = 'io.png'
-
-    def __init__(self, system_zoom: int, fps: int,
-                 display_base_size: Tuple[int, int]) -> None:
-
-        # Hack the arguments BEFORE
-        GenericViewerFrontend.__init__(self, system_zoom, fps,
-                                       display_base_size)
-
-        # Finalize some specifics AFTER
 
 
 if __name__ == "__main__":

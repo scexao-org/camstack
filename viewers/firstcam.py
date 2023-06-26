@@ -20,11 +20,11 @@ __doc__ = f'''
 
 import docopt
 
-from camstack.viewers.generic_viewer_frontend import FirstViewerFrontend
-from camstack.viewers.generic_viewer_backend import FirstViewerBackend
+from camstack.viewers.first import FirstViewerFrontend
+from camstack.viewers.first import FirstViewerBackend
 
-if __name__ == '__main__':
 
+def main():
     args = docopt.docopt(__doc__)
     zoom = int(args['-z'])
     shm_name = args['<shm_name>']
@@ -36,3 +36,7 @@ if __name__ == '__main__':
     frontend = FirstViewerFrontend(zoom, 20, backend.shm_shape)
     frontend.register_backend(backend)
     frontend.run()
+
+
+if __name__ == '__main__':
+    main()

@@ -66,27 +66,31 @@ class BaseCamera:
             # this list CAN be figured out from a redis query.
             # but I don't want to add the dependency at this point
             # ALSO SHM caps at 16 chars for strings. The %s formats here are (some) shorter than official ones.
-            'BIN-FCT1': (1, 'Binning factor of the X axis (pixel)', '%20d', 'BIN1'),
-            'BIN-FCT2': (1, 'Binning factor of the Y axis (pixel)', '%20d', 'BIN2'),
+            'BIAS': (0, '[adu] Bias offset', '%20.3f', 'BIAS'),
+            'BIN-FCT1': (1, '[pixel] Binning factor of X axis', '%20d', 'BIN1'),
+            'BIN-FCT2': (1, '[pixel] Binning factor of Y axis', '%20d', 'BIN2'),
             'BSCALE': (1.0, 'Real=fits-value*BSCALE+BZERO', '%20.8f', 'BSCAL'),
             'BUNIT': ('ADU', 'Unit of original values', '%-10s', 'BUNIT'),
             'BZERO': (0.0, 'Real=fits-value*BSCALE+BZERO', '%20.8f', 'BZERO'),
-            'PRD-MIN1': (0, 'Origin in X of the cropped window (pixel)', '%16d', 'MIN1'),
-            'PRD-MIN2': (0, 'Origin in Y of the cropped window (pixel)', '%16d', 'MIN2'),
-            'PRD-RNG1': (1, 'Range in X of the cropped window (pixel)', '%16d', 'RNG1'),
-            'PRD-RNG2': (1, 'Range in Y of the cropped window (pixel)', '%16d', 'RNG2'),
             'CROPPED': (False, 'Partial Readout or cropped', 'BOOLEAN', 'CROPD'),
+            'DATA-TYP': ('TEST', 'Subaru-style exp. type', '%-16s', 'DATA'),
             'DET-NSMP': (1, 'Number of non-destructive reads', '%20d', 'NDR'),
             'DET-SMPL': ('base', 'Sampling method', '%-16.16s', 'SAMPL'),
-            'DET-TMP': (0.0, 'Detector temperature (K)', '%20.2f', 'TEMP'),
-            'OBS-MOD': ('UNKN', '', '%-16f', 'OBMOD'),
+            'DET-TMP': (0.0, '[K] Detector temperature', '%20.2f', 'TEMP'),
             'DETECTOR': ('DET', 'Name of the detector', '%-16s', 'NAME'),
             'DETGAIN': (1, 'Detector multiplication factor', '%16d', 'GAIN'),
-            'EXPTIME': (0.001, 'Total integration time of the frame (sec)', '%20.8f', 'EXPO'),
-            'FRATE': (100., 'Frame rate of the acquisition (Hz)', '%16.3f', 'FRATE'),
-            'GAIN': (-1., 'AD conversion factor (electron/ADU)', '%20.3f', 'GAIN'),
+            'EXPTIME': (0.001, '[s] Total integration time of the frame', '%20.8f', 'EXPO'),
             'EXTTRIG': (False, 'Exposure of detector by an external trigger', 'BOOLEAN', 'TRIG'),
-            'DATA-TYP': ('TEST', 'Subaru-style exp. type', '%-16s', 'DATA'),
+            'FRATE': (100., '[Hz] Frame rate of the acquisition', '%16.3f', 'FRATE'),
+            'GAIN': (-1., '[e/adu] AD conversion factor', '%20.3f', 'GAIN'),
+            'OBS-MOD': ('UNDEFINED', '', '%-16s', 'OBMOD'),
+            'PRD-MIN1': (0, '[pixel] Origin in X of the cropped window', '%16d', 'MIN1'),
+            'PRD-MIN2': (0, '[pixel] Origin in Y of the cropped window', '%16d', 'MIN2'),
+            'PRD-RNG1': (1, '[pixel] Range in X of the cropped window', '%16d', 'RNG1'),
+            'PRD-RNG2': (1, '[pixel] Range in Y of the cropped window', '%16d', 'RNG2'),
+            # Technical keywords (that don't need to be allocated in RT framegrabber)
+            '_LGSHSTP': (-1, 'N > 0 blocks logshim after N frames, -1 is go', '%16d', 'LGSTP'),
+            '_LGSHKIL': (0, ' =/= 0 kills logshim', '%16d', 'LGKIL'),
     }
     # yapf: enable
 
@@ -251,9 +255,18 @@ class BaseCamera:
 
     def set_mode(self, mode_id: util.ModeIDType) -> None:
         '''
-            Alias
+        Alias
         '''
         self.set_camera_mode(mode_id)
+
+    def get_camera_mode(self) -> util.ModeIDType:
+        return self.current_mode_id
+
+    def get_mode(self) -> util.ModeIDType:
+        '''
+        Alias
+        '''
+        return self.get_camera_mode()
 
     def set_camera_size(self, height: int, width: int, h_offset: int = 0,
                         w_offset: int = 0) -> None:
@@ -399,6 +412,11 @@ class BaseCamera:
             time.sleep(0.1)
 
         return shm
+
+    def set_keyword(self, key: str, value: Union[str, int, float]) -> None:
+        # yapf: disable
+        return self._set_formatted_keyword(key, value)
+        # yapf: enable
 
     def _set_formatted_keyword(self, key: str, value: Union[str, int,
                                                             float]) -> None:

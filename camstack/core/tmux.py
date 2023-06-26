@@ -52,7 +52,7 @@ else:
 def find_or_create_remote(session_name: str, host: str):
     '''
         Mimic of find_or_create, but on a remote machine.
-        Will return a RemotePanPatch object
+        Will return a RemotePanePatch object
     '''
     subprocess.run(['ssh', host, "tmux new-session -d -s " + session_name],
                    stdout=subprocess.PIPE)

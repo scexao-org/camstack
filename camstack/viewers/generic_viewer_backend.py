@@ -33,6 +33,8 @@ from functools import partial
 
 
 class GenericViewerBackend:
+    HELP_MSG = """
+    """
 
     COLORMAPS_A = [cm.gray, cm.inferno, cm.magma, cm.viridis]
     COLORMAPS_B = [cm.gray, cm.seismic, cm.Spectral]
@@ -89,32 +91,29 @@ class GenericViewerBackend:
 
         ### Colors
 
-        # WIP: find a way to process modifiers.
+        # yapf: disable
         this_shortcuts: Dict[buts.Shortcut, Callable] = {
-                buts.Shortcut(pgmc.K_m, 0x0):
-                        self.toggle_cmap,
-                buts.Shortcut(pgmc.K_l, 0x0):
-                        self.toggle_scaling,
-                buts.Shortcut(pgmc.K_z, 0x0):
-                        self.toggle_crop,
-                buts.Shortcut(pgmc.K_v, 0x0):
-                        self.toggle_averaging,
-                buts.Shortcut(pgmc.K_UP, 0x0):
-                        partial(self.steer_crop, pgmc.K_UP),
-                buts.Shortcut(pgmc.K_DOWN, 0x0):
-                        partial(self.steer_crop, pgmc.K_DOWN),
-                buts.Shortcut(pgmc.K_LEFT, 0x0):
-                        partial(self.steer_crop, pgmc.K_LEFT),
-                buts.Shortcut(pgmc.K_RIGHT, 0x0):
-                        partial(self.steer_crop, pgmc.K_RIGHT),
-                buts.Shortcut(pgmc.K_d, 0x0):
-                        self.toggle_sub_dark,
-                buts.Shortcut(pgmc.K_r, 0x0):
-                        self.toggle_sub_ref,
+                buts.Shortcut(pgmc.K_h, 0x0): self.print_help,
+                buts.Shortcut(pgmc.K_m, 0x0): self.toggle_cmap,
+                buts.Shortcut(pgmc.K_l, 0x0): self.toggle_scaling,
+                buts.Shortcut(pgmc.K_z, 0x0): self.toggle_crop,
+                buts.Shortcut(pgmc.K_v, 0x0): self.toggle_averaging,
+                buts.Shortcut(pgmc.K_UP, 0x0): partial(self.steer_crop, pgmc.K_UP),
+                buts.Shortcut(pgmc.K_DOWN, 0x0): partial(self.steer_crop, pgmc.K_DOWN),
+                buts.Shortcut(pgmc.K_LEFT, 0x0): partial(self.steer_crop, pgmc.K_LEFT),
+                buts.Shortcut(pgmc.K_RIGHT, 0x0): partial(self.steer_crop, pgmc.K_RIGHT),
+                buts.Shortcut(pgmc.K_d, 0x0): self.toggle_sub_dark,
+                buts.Shortcut(pgmc.K_r, 0x0): self.toggle_sub_ref,
         }
+        # yapf: enable
         # Note escape and X are reserved for quitting
 
         self.SHORTCUTS.update(this_shortcuts)
+
+    def print_help(self):
+        if self.frontend_obj:
+            print(self.frontend_obj.HELP_MSG)
+        print(self.HELP_MSG)
 
     def register_frontend(self, frontend: GenericViewerFrontend) -> None:
 
@@ -181,24 +180,27 @@ class GenericViewerBackend:
         else:
             self.crop_lvl_id = which
 
-        halfside = (self.shm_shape[0] / 2**(self.crop_lvl_id + 1),
-                    self.shm_shape[1] / 2**(self.crop_lvl_id + 1))
         # Could define explicit slices using a self.CROPSLICE. Could be great for apapane PDI.
         assert self.CROP_CENTER_SPOT
-        cr, cc = self.CROP_CENTER_SPOT
-
-        # Adjust, in case we've just zoomed-out from a crop spot that's too close to the edge!
-        cr_temp = min(max(cr, halfside[0]), self.shm_shape[0] - halfside[0])
-        cc_temp = min(max(cc, halfside[1]), self.shm_shape[1] - halfside[1])
-
         if self.crop_lvl_id > 0:
-            self.crop_slice = np.s_[
-                    int(round(cr_temp -
-                              halfside[0])):int(round(cr_temp + halfside[0])),
-                    int(round(cc_temp -
-                              halfside[1])):int(round(cc_temp + halfside[1]))]
+            self.crop_slice = self._get_crop_slice(self.CROP_CENTER_SPOT,
+                                                   self.shm_shape)
         else:
             self.crop_slice = np.s_[:, :]
+
+    def _get_crop_slice(self, center, shape):
+        cr, cc = center
+        halfside = (shape[0] / 2**(self.crop_lvl_id + 1),
+                    shape[1] / 2**(self.crop_lvl_id + 1))
+        # Adjust, in case we've just zoomed-out from a crop spot that's too close to the edge!
+        cr_temp = min(max(cr, halfside[0]), shape[0] - halfside[0])
+        cc_temp = min(max(cc, halfside[1]), shape[1] - halfside[1])
+        crop_slice = np.s_[
+                int(round(cr_temp -
+                          halfside[0])):int(round(cr_temp + halfside[0])),
+                int(round(cc_temp -
+                          halfside[1])):int(round(cc_temp + halfside[1]))]
+        return crop_slice
 
     def steer_crop(self, direction: int) -> None:
         assert self.CROP_CENTER_SPOT
@@ -297,8 +299,8 @@ class GenericViewerBackend:
         '''
         assert self.data_debias is not None
 
-        self.data_plot_min = self.data_debias[1:, 1:].min()
-        self.data_plot_max = self.data_debias[1:, 1:].max()
+        self.data_plot_min = np.nanmin(self.data_debias[1:, 1:])
+        self.data_plot_max = np.nanmax(self.data_debias[1:, 1:])
 
         # Temp variables to distinguish per-frame autoclip (nonlinear modes)
         # Against persistent, user-set clipping
@@ -306,7 +308,7 @@ class GenericViewerBackend:
 
         if low_clip is None and self.flag_non_linear != buts.ZScaleEnum.LIN:
             # Clip to the 80-th percentile (for log modes by default
-            low_clip = np.percentile(self.data_debias[1:, 1:], 0.8)
+            low_clip = np.nanpercentile(self.data_debias[1:, 1:], 0.8)
 
         if low_clip:
             m = low_clip
@@ -354,14 +356,10 @@ class GenericViewerBackend:
         '''
 
         # Willfully ignore numlock
-        mods = mods & (~0x1000)
+        mods = mods & (~pgmc.KMOD_NUM)
 
         this_shortcut = buts.Shortcut(key=key, modifier_mask=mods)
 
         if this_shortcut in self.SHORTCUTS:
             # Call the mapped callable
             self.SHORTCUTS[this_shortcut]()
-
-
-class FirstViewerBackend(GenericViewerBackend):
-    pass

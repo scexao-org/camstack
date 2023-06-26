@@ -19,8 +19,11 @@ __doc__ = f"""
         -b <binn>           SHM binning factor [default: 1]
         -p, --preset <file> Preset file used for pupil wheel positions [default: {DEFAULT_PUPIL_CONFIG}]
 """
-from camstack.viewers.vpupcam import VAMPIRESPupilCamViewerBackend, VAMPIRESPupilCamViewerFrontend, MaskStatusPlugin
+from camstack.viewers.vampires.vpupcam import VAMPIRESPupilCamViewerBackend, VAMPIRESPupilCamViewerFrontend
+from camstack.viewers.vampires.plugins import MaskWheelPlugin
+from camstack.viewers.plugins import SaturationPlugin
 import docopt
+
 
 def main():
     args = docopt.docopt(__doc__)
@@ -31,13 +34,16 @@ def main():
     else:
         shm_name = DEFAULT_SHM_NAME
 
-
     backend = VAMPIRESPupilCamViewerBackend(shm_name)
-    binned_backend_shape = (backend.shm_shape[0] // binn, backend.shm_shape[1] // binn)
+    binned_backend_shape = (backend.shm_shape[0] // binn,
+                            backend.shm_shape[1] // binn)
 
-    frontend = VAMPIRESPupilCamViewerFrontend(zoom, 20, binned_backend_shape, fonts_zoom=2 * zoom)
-    frontend.plugins.append(MaskStatusPlugin(frontend))
+    frontend = VAMPIRESPupilCamViewerFrontend(zoom, 20, binned_backend_shape,
+                                              fonts_zoom=2 * zoom)
+    frontend.plugins.extend((MaskWheelPlugin(frontend),
+                             SaturationPlugin(frontend, sat_value=65520)))
     frontend.register_backend(backend)
+    backend.register_frontend(frontend)
     frontend.run()
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Dict, Callable, Optional, TYPE_CHECKING
+
 if TYPE_CHECKING:
     from .generic_viewer_frontend import GenericViewerFrontend
     from .generic_viewer_backend import GenericViewerBackend
@@ -12,11 +13,12 @@ import pygame
 import pygame.constants as pgmc
 
 os.sched_setaffinity(0, _CORES)  # AMD fix
-
+from skimage.measure import centroid
 from . import backend_utils as buts
 from . import frontend_utils as futs
 
-from .plugin_arch import OnOffPlugin
+from .plugin_arch import BasePlugin, OnOffPlugin
+import re
 
 
 # Dummy template
@@ -29,7 +31,7 @@ class PupilMode(OnOffPlugin):  # Fuck I desire double inheritance now.
         super().__init__(frontend_obj, key_onoff, modifier_and)
 
         if textbox:
-            assert textbox.template_str == '%s'  # We'll take it from there
+            assert re.match('%.*s', textbox.template_str)
 
         self.textbox = textbox
 
@@ -59,6 +61,43 @@ class PupilMode(OnOffPlugin):  # Fuck I desire double inheritance now.
         # Could be pyro, could be os.system...
 
         super().disable()
+
+
+class SaturationPlugin(BasePlugin):
+
+    def __init__(self, frontend_obj: GenericViewerFrontend, sat_value,
+                 nonlin_value=None,
+                 textbox: Optional[futs.LabelMessage] = None) -> None:
+        super().__init__(frontend_obj)
+        self.sat_value = sat_value
+        if nonlin_value is None:
+            nonlin_value = self.sat_value
+        self.nonlin_value = nonlin_value
+        self.enabled = True
+        self.textbox = textbox
+
+    def backend_action(self) -> None:
+        if not self.enabled or self.textbox is None:
+            return
+        self.max = self.backend_obj.data_max
+        if self.max >= self.sat_value:
+            self.textbox.render(f"{'!!! SATURATING !!!':^28s}",
+                                bg_col=futs.COLOR_SATURATION,
+                                fg_col=futs.Colors.WHITE)
+        elif self.max >= self.nonlin_value:
+            self.textbox.render(f"{'!!! NON-LINEAR !!!':^28s}",
+                                bg_col=futs.COLOR_SATURATION,
+                                fg_col=futs.Colors.WHITE)
+        else:
+            self.textbox.render_whitespace()
+
+    def frontend_action(self) -> None:
+        assert self.backend_obj  # mypy happy
+        if not self.enabled or self.textbox is None:  # OK maybe this responsibility could be handled to the caller.
+            return
+
+        self.textbox.blit(self.frontend_obj.pg_screen)
+        self.frontend_obj.pg_updated_rects.append(self.textbox.rectangle)
 
 
 class CrossHairPlugin(OnOffPlugin):
@@ -125,3 +164,69 @@ class CrossHairPlugin(OnOffPlugin):
 
         if not self.enabled:
             return
+
+
+class CenteredCrossHairPlugin(OnOffPlugin):
+
+    def __init__(self, frontend_obj: GenericViewerFrontend,
+                 key_onoff: int = pgmc.K_c,
+                 modifier_and: int = pgmc.KMOD_LSHIFT,
+                 color: str = '#00FFFF') -> None:
+        super().__init__(frontend_obj, key_onoff, modifier_and)
+
+        self.color = color
+
+    def frontend_action(self) -> None:
+
+        assert self.backend_obj  # mypy happy
+
+        if not self.enabled:  # OK maybe this responsibility could be handled to the caller.
+            return
+
+        xtot_fe, ytot_fe = self.frontend_obj.data_disp_size
+        xc = xtot_fe / 2
+        yc = ytot_fe / 2
+
+        pygame.draw.line(self.frontend_obj.pg_datasurface, self.color, (0, yc),
+                         (xtot_fe, yc), 1)
+
+        pygame.draw.line(self.frontend_obj.pg_datasurface, self.color, (xc, 0),
+                         (xc, ytot_fe), 1)
+
+    def backend_action(self) -> None:
+
+        if not self.enabled:
+            return
+
+
+class BullseyePlugin(OnOffPlugin):
+
+    def __init__(self, frontend_obj: GenericViewerFrontend,
+                 key_onoff: int = pgmc.K_o, modifier_and: int = 0x0,
+                 color: str = '#4AC985') -> None:
+        super().__init__(frontend_obj, key_onoff, modifier_and)
+
+        self.color = color
+        self.hotspot = None
+
+    def get_centroid(self):
+        # using the debiased data, get hotspot
+        ctr = centroid(self.backend_obj.data_debias_uncrop)
+        # convert to screen coordinates
+
+        return ctr
+
+    def frontend_action(self) -> None:
+
+        assert self.backend_obj  # mypy happy
+
+        if not self.enabled:  # OK maybe this responsibility could be handled to the caller.
+            return
+
+        # plot bullseye around hotspot
+
+    def backend_action(self) -> None:
+        if not self.enabled:
+            return
+
+        self.hotspot = self.get_centroid()

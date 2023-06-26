@@ -24,6 +24,7 @@ class Colors:
     VERY_RED = (255, 0, 0)
     BLACK = (0, 0, 0)
     CYAN = (0, 255, 255)
+    CLEAR = (0, 0, 0, 0)
 
 
 COLOR_FOREGROUND = Colors.WHITE  # foreground color (text)

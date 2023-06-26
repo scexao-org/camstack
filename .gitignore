@@ -20,6 +20,7 @@ config/first_tmp.cfg
 config/vampires_tmp.cfg
 
 __*
+!__init__.py
 
 dump/
 build/

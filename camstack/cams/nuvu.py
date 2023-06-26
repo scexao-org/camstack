@@ -237,8 +237,7 @@ class NUVU(EDTCamera):
     def SetReadoutModeInt(self, romode: int):
         if 0 > romode and romode > len(self.RO_MODES):
             return False
-        (success, resdict) = self.send_command("ld %d" % (romode),
-                                               timeout=400.)
+        (success, resdict) = self.send_command("ld %d" % (romode), timeout=400.)
         if success:
             self.camera_shm.update_keyword('DETMODE', self.RO_MODES['romode'])
             self.cfgdict.update(resdict)
@@ -469,16 +468,12 @@ class NUVU(EDTCamera):
                     'fpga': float(answer['T'].split(',')[3]),
                     'heatsink': float(answer['T'].split(',')[4])
             }
-            self.camera_shm.update_keyword('T_CCD',
-                                           float(answer['T'].split(',')[0]))
-            self.camera_shm.update_keyword('T_CNTRLR',
-                                           float(answer['T'].split(',')[1]))
-            self.camera_shm.update_keyword('T_PSU',
-                                           float(answer['T'].split(',')[2]))
-            self.camera_shm.update_keyword('T_FPGA',
-                                           float(answer['T'].split(',')[3]))
-            self.camera_shm.update_keyword('T_HSINK',
-                                           float(answer['T'].split(',')[4]))
+            self._set_formatted_keyword('T_CCD', temperatures['ccd'])
+            self._set_formatted_keyword('T_CNTRLR', temperatures['controller'])
+            self._set_formatted_keyword('T_PSU', temperatures['power_supply'])
+            self._set_formatted_keyword('T_FPGA', temperatures['fpga'])
+            self._set_formatted_keyword('T_HSINK', temperatures['heatsink'])
+
             return temperatures
         return 'failed'
 
@@ -588,10 +583,10 @@ class NUVU(EDTCamera):
         minv = 1.0
         maxv = 5000.0
         ccdtemp = self.GetCCDTemperature()
-        mint = float(self.cfgdict['EmGainCalibrationTemperatureRange'].split(
-                ',')[0])
-        maxt = float(self.cfgdict['EmGainCalibrationTemperatureRange'].split(
-                ',')[1])
+        mint = float(
+                self.cfgdict['EmGainCalibrationTemperatureRange'].split(',')[0])
+        maxt = float(
+                self.cfgdict['EmGainCalibrationTemperatureRange'].split(',')[1])
         logging.debug(f'SetEMCalibratedGain({mint} <= {ccdtemp} <= {maxt})')
         if maxt < ccdtemp and ccdtemp < mint:
             return (self.GetEMCalibratedGain())

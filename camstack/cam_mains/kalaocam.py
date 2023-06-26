@@ -1,6 +1,6 @@
 # Quick shorthand for testing
 
-import sys
+import os, sys
 
 from camstack.core.logger import init_camstack_logger
 

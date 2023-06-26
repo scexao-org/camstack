@@ -13,6 +13,7 @@ import numpy as np
 
 import time
 import threading
+from camstack.core.wcs import wcs_dict_init
 
 
 class DCAMCamera(BaseCamera):
@@ -39,7 +40,6 @@ class DCAMCamera(BaseCamera):
         self.dcam_number = dcam_number
         self.control_shm: Op[SHM] = None
         self.control_shm_lock = threading.Lock()
-
         super().__init__(
                 name,
                 stream_name,
@@ -71,7 +71,7 @@ class DCAMCamera(BaseCamera):
             params_injection: Op[Dict[dcamprop.EProp, Union[int,
                                                             float]]] = None,
     ) -> None:
-        assert self.control_shm
+        assert self.control_shm is not None
 
         logg.debug("prepare_camera_for_size @ DCAMCamera")
 
@@ -101,6 +101,9 @@ class DCAMCamera(BaseCamera):
                         dcamprop.EOutputTriggerKind.TRIGGERREADY,
                 dcamprop.EProp.OUTPUTTRIGGER_POLARITY:
                         dcamprop.EOutputTriggerPolarity.POSITIVE,
+                # liquid cooling (has no effect if air cooling is on)
+                dcamprop.EProp.SENSORCOOLER:
+                        dcamprop.ESensorCooler.MAX
         }
 
         # Additional parameters for custom calls
@@ -149,8 +152,19 @@ class DCAMCamera(BaseCamera):
         # The sleep(1.0) used elsewhere, TOO FAST FOR DCAM!
         # so dcamusbtake.c implements a forced feedback
         assert self.control_shm  # mypy happyness check.
+
+        # This should work, unless the grabber crashes during restart.
         self.control_shm.get_data(check=True, checkSemAndFlush=True,
-                                  timeout=None)
+                                  timeout=15.0)
+
+        from camstack.core.tmux import find_pane_running_pid
+        pid = find_pane_running_pid(self.take_tmux_pane)
+        assert pid is not None
+        try:
+            os.kill(pid, 0)
+        except OSError:
+            logg.error('dcam grabber crashed during restart.')
+            raise RuntimeError('dcam grabber crashed during restard.')
 
     def _dcam_prm_setvalue(self, value: Any, fits_key: Op[str],
                            dcam_key: int) -> float:
@@ -243,11 +257,11 @@ class OrcaQuest(DCAMCamera):
             "set_tint",
             "get_tint",
             "get_temperature",
-            "set_readout_ultraquiet",
+            "set_readout_mode",
+            "set_external_trigger",
     ] + DCAMCamera.INTERACTIVE_SHELL_METHODS
 
-    FIRST, FULL, DICHROIC = "FIRST", "FULL", "DICHROIC"
-    MILES = "MILES"
+    FIRST, FULL = "FIRST", "FULL"
     # yapf: disable
     MODES = {
             FIRST: util.CameraMode(x0=1028, x1=2991, y0=492, y1=727, tint=0.001),
@@ -258,8 +272,6 @@ class OrcaQuest(DCAMCamera):
             2: util.CameraMode(x0=800, x1=3295, y0=876, y1=1531, tint=0.001),      # Kyohoon is Using for WFS align
             3: util.CameraMode(x0=1148, x1=2947, y0=696, y1=1807, tint=0.001),
             4: util.CameraMode(x0=2424, x1=2679, y0=1080, y1=1335, tint=0.000001),    # Jen is using for focal plane mode
-            MILES: util.CameraMode(x0=800, x1=1199, y0=800, y1=1199, tint=0.01),
-            DICHROIC: util.CameraMode(x0=2336, x1=3135, y0=0, y1=2303, tint=0.01), # Dichroic stack mode
     }
     # yapf: enable
 
@@ -277,6 +289,7 @@ class OrcaQuest(DCAMCamera):
             dependent_processes: List[util.DependentProcess] = [],
     ) -> None:
 
+        self.readout_mode = "FAST"
         super().__init__(
                 name,
                 stream_name,
@@ -292,8 +305,11 @@ class OrcaQuest(DCAMCamera):
 
         # Override detector name
         self._set_formatted_keyword("DETECTOR", "Orca Quest")
+        self._set_formatted_keyword("CROPPED",
+                                    self.current_mode_id != self.FULL)
         # Detector specs from instruction manual
         self._dcam_prm_getvalue("GAIN", dcamprop.EProp.CONVERSIONFACTOR_COEFF)
+        self._dcam_prm_getvalue("BIAS", dcamprop.EProp.CONVERSIONFACTOR_OFFSET)
 
     def poll_camera_for_keywords(self) -> None:
         self.get_temperature()
@@ -314,8 +330,10 @@ class OrcaQuest(DCAMCamera):
         return val
 
     def set_tint(self, tint: float) -> float:
-        return self._dcam_prm_setvalue(float(tint), "EXPTIME",
-                                       dcamprop.EProp.EXPOSURETIME)
+        self._dcam_prm_setvalue(float(tint), "EXPTIME",
+                                dcamprop.EProp.EXPOSURETIME)
+        # update FRATE and EXPTIME
+        self.get_fps()
 
     def get_fps(self) -> float:
         exp_time, read_time = self._dcam_prm_getmultivalue(
@@ -336,13 +354,23 @@ class OrcaQuest(DCAMCamera):
         logg.info(f"get_fps {fps}")
         return fps
 
-    def set_readout_ultraquiet(self, ultraquiet: bool) -> None:
-        logg.debug("set_readout_ultraquiet @ OrcaQuest")
+    def set_readout_mode(self, mode: str) -> None:
+        logg.debug("set_readout_mode @ OrcaQuest")
 
-        readmode = (
-                dcamprop.EReadoutSpeed.READOUT_FAST,
-                dcamprop.EReadoutSpeed.READOUT_ULTRAQUIET,
-        )[ultraquiet]
+        mode = mode.upper()
+        # if we're already in that read mode, don't do anything!
+        if mode == self.readout_mode:
+            logg.debug(f"Already using readout mode {mode}; doing nothing")
+            return
+
+        if mode == "SLOW":
+            readmode = dcamprop.EReadoutSpeed.READOUT_ULTRAQUIET
+        elif mode == "FAST":
+            readmode = dcamprop.EReadoutSpeed.READOUT_FAST
+        else:
+            raise ValueError(f"Unrecognized readout mode: {mode}")
+
+        self.readout_mode = mode
 
         self._kill_taker_no_dependents()
         self.prepare_camera_for_size(
@@ -403,13 +431,36 @@ class OrcaQuest(DCAMCamera):
             raise ValueError("Output trigger polarity not recognized.")
 
         return self._dcam_prm_setmultivalue(
-                map(float, (kind_val, pol_val)),
+                list(map(float, (kind_val, pol_val))),
                 [None, None],
                 [
                         dcamprop.EProp.OUTPUTTRIGGER_KIND + key_offset,
                         dcamprop.EProp.OUTPUTTRIGGER_POLARITY + key_offset,
                 ],
         )
+
+    def get_cooler_mode(self):
+        value = self._dcam_prm_getvalue(None, dcamprop.EProp.SENSORCOOLER)
+        if value == 1:
+            return "OFF"
+        elif value == 2:
+            return "ON"
+        elif value == 4:
+            return "MAX"
+        else:
+            return "UNKNOWN"
+
+    def set_cooler_mode(self, mode: str):
+        mode = mode.upper()
+        if mode == "OFF":
+            prop = dcamprop.ESensorCooler.OFF
+        elif mode == "ON":
+            prop = dcamprop.ESensorCooler.ON
+        elif mode == "MAX":
+            prop = dcamprop.ESensorCooler.MAX
+
+        logg.debug(f"Setting cooling mode to {mode}")
+        self._dcam_prm_setvalue(float(prop), None, dcamprop.EProp.SENSORCOOLER)
 
 
 class FIRSTOrcam(OrcaQuest):
@@ -431,14 +482,161 @@ class AlalaOrcam(OrcaQuest):
 
 
 class BaseVCAM(OrcaQuest):
+    PLATE_SCALE = 1.5583e-6  # deg / px
+    PA_OFFSET = 0  # deg
 
-    def set_readout_ultraquiet(self, ultraquiet: bool) -> None:
-        super().set_readout_ultraquiet(ultraquiet)
-        readmode = "SLOW" if ultraquiet else "FAST"
-        self._set_formatted_keyword("U_DETMOD", readmode)
+    ## camera keywords
+    KEYWORDS: Dict[str, Tuple[util.KWType, str, str, str]] = {
+            # Format is name:
+            #   (value,
+            #    description,
+            #    formatter,
+            #    redis partial push key [5 chars] for per-camera KW)
+            # ALSO SHM caps at 16 chars for strings. The %s formats here are (some) shorter than official ones.
+            ## camera info and modes
+            "U_CAMERA": (-1, "VAMPIRES camera number (1 or 2)", "%1d", "CAM"),
+            "U_DETMOD": ("", "VAMPIRES detector readout mode (FAST/SLOW)",
+                         "%-16s", "DETMD"),
+            ## Filters
+            "FILTER01": ("", "Primary filter name", "%-16s", "FILT01"),
+            "FILTER02": ("", "Secondary filter name", "%-16s", "FILT02"),
+            ## QWP terms managed by QWP daemon
+            "U_QWP1": (-1, "[deg] VAMPIRES QWP 1 polarization angle", "%16.3f",
+                       "QWP1"),
+            "U_QWP1TH":
+                    (-1, "[deg] VAMPIRES QWP 1 wheel theta", "%16.3f", "QWP1T"),
+            "U_QWP2": (-1, "[deg] VAMPIRES QWP 1 polarization angle", "%16.3f",
+                       "QWP2"),
+            "U_QWP2TH":
+                    (-1, "[deg] VAMPIRES QWP 2 wheel theta", "%16.3f", "QWP2T"),
+            ## polarzation terms managed by HWP daemon
+            "RET-ANG1": (-1, "[deg] Polarization angle of first retarder plate",
+                         "%20.2f", "RTAN1"),
+            "RET-ANG2":
+                    (-1, "[deg] Polarization angle of second retarder plate",
+                     "%20.2f", "RTAN2"),
+            "RET-POS1": (-1, "[deg] Stage angle of first retarder plate",
+                         "%20.2f", "RTPS1"),
+            "RET-POS2": (-1, "[deg] Stage angle of second retarder plate",
+                         "%20.2f", "RTPS2"),
+    }
+    KEYWORDS.update(OrcaQuest.KEYWORDS)
+    # N_WCS = 4
+    ## camera modes
+    FULL, STANDARD, MBI, MBI_REDUCED = "FULL", "STANDARD", "MBI", "MBI_REDUCED"
+    MODES = {
+            FULL: util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
+    }
+
+    def set_readout_mode(self, mode: str) -> None:
+        super().set_readout_mode(mode)
+        self._set_formatted_keyword("U_DETMOD", mode.upper())
+
+    def _fill_keywords(self) -> None:
+        super()._fill_keywords()
+        self._set_formatted_keyword("U_DETMOD", self.readout_mode.upper())
+        cropped = self.current_mode_id != self.FULL
+        self._set_formatted_keyword("CROPPED", cropped)
+        self.get_fps()
+        self.get_tint()
+
+    def poll_camera_for_keywords(self) -> None:
+        super().poll_camera_for_keywords()
+
+        # Defaults
+        filter01 = bs = "UNKNOWN"
+        dfl1 = dfl2 = "OPEN"
+        hwp_stage = 0
+        try:
+            with self.RDB.pipeline() as pipe:
+                pipe.hget('U_FILTER', 'value')
+                pipe.hget('U_BS', 'value')
+                pipe.hget('P_STGPS2', 'value')
+                pipe.hget('U_DIFFL1', 'value')
+                pipe.hget('U_DIFFL2', 'value')
+                filter01, bs, hwp_stage, dfl1, dfl2 = pipe.execute()
+        except:
+            logg.error('REDIS unavailable @ _fill_keywords @ VCAM')
+
+        self._set_formatted_keyword('FILTER01', filter01)
+
+        ## determine observing mode from the following logic
+        # if the PBS is in and the HWP is running, we're doing polarimetry
+        polarimetry = bs.upper() == "PBS" and np.abs(hwp_stage - 56) < 1
+        base_mode = "IPOL" if polarimetry else "IMAG"
+        # Determine whether in standard mode, SDI mode, or MBI/r mode
+        nonsdi_flts = ("UNKNOWN", "OPEN")
+        sdi = dfl1.upper() not in nonsdi_flts and dfl2.upper() not in nonsdi_flts
+        if sdi:
+            obs_mod = f"{base_mode}_SDI"
+        elif self.current_mode_id == "MBI":
+            obs_mod = f"{base_mode}_MBI"
+        elif self.current_mode_id == "MBI_REDUCED":
+            obs_mod = f"{base_mode}_MBIR"
+        elif self.current_mode_id == "PUPIL":
+            obs_mod = f"{base_mode}_PUP"
+        else:
+            obs_mod = base_mode
+
+        self._set_formatted_keyword('OBS-MOD', obs_mod)
+        # self._prepare_wcs_keywords(obs_mod)
+
+    def _prepare_wcs_keywords(self, obs_mod):
+        # Hotspot of physical detector in the current crop coordinates.
+        # Could be beyond the sensor if the crop does not include the detector center.
+
+        # All of that almost never changes, but since there is a possibility that we move the
+        # Wollaston in and out without re-firing a set_camera_mode, we don't have a choice but to
+        # do it every single time in the polling thread.
+        xfull2 = (self.MODES[self.FULL].x1 - self.MODES[self.FULL].x0 + 1) / 2.
+        yfull2 = (self.MODES[self.FULL].y1 - self.MODES[self.FULL].y0 + 1) / 2.
+
+        # Create and update WCS keywords
+        cm = self.current_mode
+        # 1 WCS, Central column
+        wcs_dicts = (wcs_dict_init(0, pix=(xfull2 - cm.x0, yfull2 - cm.y0),
+                                   delt_val=self.PLATE_SCALE,
+                                   cd_rot_rad=self.PA_OFFSET), )
+        if obs_mod.endswith("MBIR"):
+            # 3 WCS
+            wcs_dicts = []
+            for i, ctr in enumerate(("775", "725", "675")):
+                wcs_dict = wcs_dict_init(i, pix=ctr, delt_val=self.PLATE_SCALE,
+                                         cd_rot_rad=self.PA_OFFSET)
+                wcs_dicts.append(wcs_dict)
+
+        elif obs_mod.endswith("MBI"):
+            # 4 WCS
+            wcs_dicts = []
+            for i, ctr in enumerate(("775", "725", "675", "625")):
+                wcs_dict = wcs_dict_init(i, pix=ctr, delt_val=self.PLATE_SCALE,
+                                         cd_rot_rad=self.PA_OFFSET)
+                wcs_dicts.append(wcs_dict)
+
+        # update WCS keys
+        for wcs_dict in wcs_dicts:
+            for key in wcs_dict:
+                self._set_formatted_keyword(key, wcs_dict[key][0])
 
 
 class VCAM1(BaseVCAM):
+    KEYWORDS = {
+            "U_VLOG1": (False, "Logging VAMPIRES cam 1", "BOOLEAN", "VLOG1")
+    }
+    KEYWORDS.update(BaseVCAM.KEYWORDS)
+
+    MODES = {
+            BaseVCAM.STANDARD:
+                    util.CameraMode(x0=1776, x1=2311, y0=888, y1=1423,
+                                    tint=1e-4),
+            BaseVCAM.MBI:
+                    util.CameraMode(x0=408, x1=2651, y0=636, y1=1735,
+                                    tint=1e-4),
+            BaseVCAM.MBI_REDUCED:
+                    util.CameraMode(x0=408, x1=2651, y0=1156, y1=1755,
+                                    tint=1e-4),
+    }
+    MODES.update(BaseVCAM.MODES)
 
     def _fill_keywords(self) -> None:
         super()._fill_keywords()
@@ -447,8 +645,37 @@ class VCAM1(BaseVCAM):
         self._set_formatted_keyword("DETECTOR", "VCAM1 - OrcaQ")
         self._set_formatted_keyword("U_CAMERA", 1)
 
+    def poll_camera_for_keywords(self) -> None:
+        super().poll_camera_for_keywords()
+
+        # Defaults
+        filter02 = "UNKNOWN"
+        try:
+            filter02 = self.RDB.hget('U_DIFFL1', 'value')
+        except:
+            logg.error('REDIS unavailable @ _fill_keywords @ VCAM1')
+
+        self._set_formatted_keyword("FILTER02", filter02)
+
 
 class VCAM2(BaseVCAM):
+    KEYWORDS = {
+            "U_VLOG2": (False, "Logging VAMPIRES cam 2", "BOOLEAN", "VLOG1")
+    }
+    KEYWORDS.update(BaseVCAM.KEYWORDS)
+
+    MODES = {
+            BaseVCAM.STANDARD:
+                    util.CameraMode(x0=1780, x1=2315, y0=888, y1=1423,
+                                    tint=1e-4),
+            BaseVCAM.MBI:
+                    util.CameraMode(x0=408, x1=2651, y0=544, y1=1643,
+                                    tint=1e-4),
+            BaseVCAM.MBI_REDUCED:
+                    util.CameraMode(x0=408, x1=2651, y0=544, y1=1139,
+                                    tint=1e-4),
+    }
+    MODES.update(BaseVCAM.MODES)
 
     def _fill_keywords(self) -> None:
         super()._fill_keywords()
@@ -456,3 +683,15 @@ class VCAM2(BaseVCAM):
         # Override detector name
         self._set_formatted_keyword("DETECTOR", "VCAM2 - OrcaQ")
         self._set_formatted_keyword("U_CAMERA", 2)
+
+    def poll_camera_for_keywords(self) -> None:
+        super().poll_camera_for_keywords()
+
+        # Defaults
+        filter02 = "UNKNOWN"
+        try:
+            filter02 = self.RDB.hget('U_DIFFL2', 'value')
+        except:
+            logg.error('REDIS unavailable @ _fill_keywords @ VCAM2')
+
+        self._set_formatted_keyword("FILTER02", filter02)

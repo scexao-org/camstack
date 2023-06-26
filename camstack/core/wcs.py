@@ -66,7 +66,7 @@ def wcs_dict_init(
 
 def wcs_dummy_dict(
         wcs_num: int,
-        double_with_subaru_fake_standard: bool = True,
+        double_with_subaru_fake_standard: bool = False,
 ) -> WCSDictType:
 
     return wcs_dict_init(
