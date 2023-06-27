@@ -441,11 +441,11 @@ class OrcaQuest(DCAMCamera):
 
     def get_cooler_mode(self):
         value = self._dcam_prm_getvalue(None, dcamprop.EProp.SENSORCOOLER)
-        if value == 1:
+        if value == dcamprop.ESensorCooler.OFF:
             return "OFF"
-        elif value == 2:
+        elif value == dcamprop.ESensorCooler.ON:
             return "ON"
-        elif value == 4:
+        elif value == dcamprop.ESensorCooler.MAX:
             return "MAX"
         else:
             return "UNKNOWN"
