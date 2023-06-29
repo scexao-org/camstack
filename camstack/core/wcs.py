@@ -9,10 +9,14 @@ WCSDictType = t.Dict[str, t.Tuple[KWType, str, str, str]]
 def wcs_dict_init(
         wcs_num: int,
         pix: t.Tuple[float, float],
-        delt_val: float,
+        delt_val: t.Union[float, t.Tuple[float, float]],
         cd_rot_rad: float = 0.0,
+        name: str = '',
         double_with_subaru_fake_standard: bool = True,
 ) -> WCSDictType:
+
+    if not isinstance(delt_val, tuple):
+        delt_val = (delt_val, delt_val)
 
     assert wcs_num < 10 and wcs_num >= 0
 
@@ -29,22 +33,23 @@ def wcs_dict_init(
 
     # yapf: disable
     wcs_kw_basedict: t.Dict[str, t.Tuple[KWType, str, str, str]] = {
-        'CDELT1': (delt_val, 'X Scale projected on detector (#/pix)', '%20.8f', 'CDE1'),
-        'CDELT2': (delt_val, 'Y Scale projected on detector (#/pix)', '%20.8f', 'CDE2'),
+        'CDELT1': (delt_val[0], 'X Scale projected on detector (#/pix)', '%20.8f', 'CDE1'),
+        'CDELT2': (delt_val[1], 'Y Scale projected on detector (#/pix)', '%20.8f', 'CDE2'),
         'CUNIT1': ('DEGREE    ', 'Units used in both CRVAL1 and CDELT1', '%-10s', 'CUN1'),
         'CUNIT2': ('DEGREE    ', 'Units used in both CRVAL2 and CDELT2', '%-10s', 'CUN2'),
         'CTYPE1': ('RA---TAN  ', 'Pixel coordinate system', '%-10s', 'CTP1'),
         'CTYPE2': ('DEC--TAN  ', 'Pixel coordinate system', '%-10s', 'CTP2'),
-        'CRPIX1': ( pix[0], 'Reference pixel in X (pixel)', '%20.1f', 'CPX1'),
-        'CRPIX2': ( pix[1], 'Reference pixel in Y (pixel)', '%20.1f', 'CPX2'),
-        'CD1_1': (delt_val * cos(cd_rot_rad),
+        'CRPIX1': ( pix[0], '[pixel] Reference pixel in X', '%20.1f', 'CPX1'),
+        'CRPIX2': ( pix[1], '[pixel] Reference pixel in Y', '%20.1f', 'CPX2'),
+        'CD1_1': (delt_val[0] * cos(cd_rot_rad),
                   'Pixel coordinate translation matrix', '%20.8f', 'CD11'),
-        'CD1_2': (-delt_val * sin(cd_rot_rad),
+        'CD1_2': (-delt_val[1] * sin(cd_rot_rad),
                   'Pixel coordinate translation matrix', '%20.8f', 'CD12'),
-        'CD2_1': (delt_val * sin(cd_rot_rad),
+        'CD2_1': (delt_val[0] * sin(cd_rot_rad),
                   'Pixel coordinate translation matrix', '%20.8f', 'CD21'),
-        'CD2_2': (delt_val * cos(cd_rot_rad),
+        'CD2_2': (delt_val[1] * cos(cd_rot_rad),
                   'Pixel coordinate translation matrix', '%20.8f', 'CD22'),
+        "WCSNAME": (name, 'Description of coordinate system', '%-16s', 'WNM')
     }
     # yapf: enable
 

@@ -8,6 +8,7 @@ import logging as logg
 
 from camstack.core import utilities as util
 from camstack.core import tmux as tmux_util
+from camstack.core.wcs import wcs_dummy_dict
 
 try:
     from scxkw.config import MAGIC_BOOL_STR, MAGIC_HW_STR, redis_check_enabled
@@ -83,7 +84,7 @@ class BaseCamera:
             'EXTTRIG': (False, 'Exposure of detector by an external trigger', 'BOOLEAN', 'TRIG'),
             'FRATE': (100., '[Hz] Frame rate of the acquisition', '%16.3f', 'FRATE'),
             'GAIN': (-1., '[e/adu] AD conversion factor', '%20.3f', 'GAIN'),
-            'OBS-MOD': ('UNDEFINED', '', '%-16s', 'OBMOD'),
+            'OBS-MOD': ('UNDEFINED', 'Observation mode', '%-16s', 'OBMOD'),
             'PRD-MIN1': (0, '[pixel] Origin in X of the cropped window', '%16d', 'MIN1'),
             'PRD-MIN2': (0, '[pixel] Origin in Y of the cropped window', '%16d', 'MIN2'),
             'PRD-RNG1': (1, '[pixel] Range in X of the cropped window', '%16d', 'RNG1'),
@@ -414,9 +415,7 @@ class BaseCamera:
         return shm
 
     def set_keyword(self, key: str, value: Union[str, int, float]) -> None:
-        # yapf: disable
         return self._set_formatted_keyword(key, value)
-        # yapf: enable
 
     def _set_formatted_keyword(self, key: str, value: Union[str, int,
                                                             float]) -> None:
@@ -447,15 +446,14 @@ class BaseCamera:
 
         assert self.camera_shm is not None  # mypy happy assert
 
-        from camstack.core.wcs import wcs_dummy_dict
-
         # These are pretty much defaults - we don't know anything about this
         # basic abstract camera
         preex_keywords = self.camera_shm.get_keywords(True)
         preex_keywords.update(self.KEYWORDS)
-        for nn in range(self.N_WCS):
-            preex_keywords.update(wcs_dummy_dict(nn))
-
+        for i in range(self.N_WCS):
+            wcs_dict = wcs_dummy_dict(i)
+            preex_keywords.update(wcs_dict)
+            self.KEYWORDS.update(wcs_dict)
         self.camera_shm.set_keywords(preex_keywords)  # Initialize comments
         # Second pass to enforce formatting...
         # Don't do it on the preex from the framegrabber (MFRATE, _MACQTIME) cause they don't

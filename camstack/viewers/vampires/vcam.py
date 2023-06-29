@@ -27,6 +27,8 @@ Camera controls:
 --------------------------------------------------
 CTRL  + e         : Enable hardware trigger
 SHIFT + e         : Disable hardware trigger
+CTRL  + t         : Enable micro-controller trigger
+SHIFT + t         : Disable micro-controller trigger
 CTRL  + f         : Switch to FAST readout mode
 SHIFT + f         : Switch to SLOW readout mode
 
@@ -66,13 +68,22 @@ CTRL + 4 : 725-50
 CTRL + 5 : 750-50
 CTRL + 6 : 775-50
 
+Diff Filter controls:
+--------------------------------------------------
+CTRL + SHIFT + 7 : Open / Open
+CTRL + SHIFT + 8 : SII-Cont / SII
+CTRL + SHIFT + 9 : Ha-Cont / Halpha
+CTRL + SHIFT + 0 : Open / Open
+CTRL + SHIFT + - : SII / SII-Cont
+CTRL + SHIFT + = : Halpha / Ha-Cont
+
 Field stop controls:
 --------------------------------------------------
-CTRL  + 8     : Field stop
-CTRL  + 9     : CLC2
-CTRL  + 0     : CLC3
-CTRL  + -     : CLC5
-CTRL  + =     : CLC7
+CTRL  + 7     : Fieldstop
+CTRL  + 8     : CLC-2
+CTRL  + 9     : CLC-3
+CTRL  + 0     : CLC-5
+CTRL  + -     : CLC-7
 CTRL  + ARROW : Nudge 0.005 mm in x (left/right) and y (up/down)
 SHIFT + ARROW : Nudge 0.1 mm in x (left/right) and y (up/down)
 CTRL  + s     : Save current position to last configuration"""
@@ -91,16 +102,6 @@ CTRL  + s     : Save current position to last configuration"""
         self.other_cam = connect(self.other_cam_name)
 
         self.SHORTCUTS = {
-                buts.Shortcut(pgmc.K_e, pgmc.KMOD_LCTRL):
-                        partial(self.set_external_trigger, enable=True,
-                                both=True),
-                buts.Shortcut(pgmc.K_e, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
-                        partial(self.set_external_trigger, enable=True),
-                buts.Shortcut(pgmc.K_e, pgmc.KMOD_LSHIFT):
-                        partial(self.set_external_trigger, enable=False,
-                                both=True),
-                buts.Shortcut(pgmc.K_e, pgmc.KMOD_LSHIFT | pgmc.KMOD_LALT):
-                        partial(self.set_external_trigger, enable=False),
                 buts.Shortcut(pgmc.K_f, pgmc.KMOD_LCTRL):
                         partial(self.set_readout_mode, mode="FAST", both=True),
                 buts.Shortcut(pgmc.K_f, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
@@ -131,20 +132,6 @@ CTRL  + s     : Save current position to last configuration"""
         self.logger.setLevel(logging.INFO)
         self.logger.addHandler(stream_handler)
         return super().__init__(name_shm=name_shm)
-
-    def set_external_trigger(self, enable: bool, both: bool = False):
-        word = "Enabling" if enable else "Disabling"
-        self.logger.info(f"{word} external trigger for {self.cam_name}.")
-        self.cam.set_external_trigger(enable)
-        word = "enabled" if enable else "disabled"
-        self.logger.info(f"External trigger has been {word}.")
-        if both:
-            word = "Enabling" if enable else "Disabling"
-            self.logger.info(
-                    f"{word} external trigger for {self.other_cam_name}.")
-            self.other_cam.set_external_trigger(enable)
-            word = "enabled" if enable else "disabled"
-            self.logger.info(f"External trigger has been {word}.")
 
     def set_readout_mode(self, mode: str, both: bool = False):
         self.logger.info(

@@ -317,10 +317,12 @@ class OrcaQuest(DCAMCamera):
     def get_temperature(self) -> float:
         # Let's try and play: it's readonly
         # but should trigger the cam calling back home
-        val = self._dcam_prm_getvalue("DET-TMP",
-                                      dcamprop.EProp.SENSORTEMPERATURE)
-        logg.info(f"get_temperature {val}")
-        return val
+        temp_C = self._dcam_prm_getvalue(None, dcamprop.EProp.SENSORTEMPERATURE)
+        temp_K = temp_C + 273.15
+        # convert celsius to kelvin
+        self._set_formatted_keyword("DET-TMP", temp_K)
+        logg.info(f"get_temperature {temp_K} K")
+        return temp_K
 
     # And now we fill up... FAN, LIQUID
 
@@ -372,9 +374,11 @@ class OrcaQuest(DCAMCamera):
 
         self.readout_mode = mode
 
+        # preserve trigger mode
         self._kill_taker_no_dependents()
-        self.prepare_camera_for_size(
-                params_injection={dcamprop.EProp.READOUTSPEED: readmode})
+        self.prepare_camera_for_size(params_injection={
+                dcamprop.EProp.READOUTSPEED: readmode,
+        })
 
         self._start_taker_no_dependents(reuse_shm=True)
         # Are those two necessary in this context??? reuse_shm should cover.
@@ -482,8 +486,8 @@ class AlalaOrcam(OrcaQuest):
 
 
 class BaseVCAM(OrcaQuest):
-    PLATE_SCALE = 1.5583e-6  # deg / px
-    PA_OFFSET = 0  # deg
+    PLATE_SCALE = (1.5583e-6, 1.5583e-6)  # deg / px
+    PA_OFFSET = -78.6  # deg
 
     ## camera keywords
     KEYWORDS: Dict[str, Tuple[util.KWType, str, str, str]] = {
@@ -495,12 +499,14 @@ class BaseVCAM(OrcaQuest):
             # ALSO SHM caps at 16 chars for strings. The %s formats here are (some) shorter than official ones.
             ## camera info and modes
             "U_CAMERA": (-1, "VAMPIRES camera number (1 or 2)", "%1d", "CAM"),
-            "U_DETMOD": ("", "VAMPIRES detector readout mode (FAST/SLOW)",
+            "U_DETMOD": ("", "VAMPIRES detector readout mode (Fast/Slow)",
                          "%-16s", "DETMD"),
             ## Filters
             "FILTER01": ("", "Primary filter name", "%-16s", "FILT01"),
             "FILTER02": ("", "Secondary filter name", "%-16s", "FILT02"),
             ## QWP terms managed by QWP daemon
+            "U_QWP1": (-1, "[deg] VAMPIRES QWP 1 polarization angle", "%16.3f",
+                       "QWP1"),
             "U_QWP1": (-1, "[deg] VAMPIRES QWP 1 polarization angle", "%16.3f",
                        "QWP1"),
             "U_QWP1TH":
@@ -521,7 +527,7 @@ class BaseVCAM(OrcaQuest):
                          "%20.2f", "RTPS2"),
     }
     KEYWORDS.update(OrcaQuest.KEYWORDS)
-    # N_WCS = 4
+    N_WCS = 4
     ## camera modes
     FULL, STANDARD, MBI, MBI_REDUCED = "FULL", "STANDARD", "MBI", "MBI_REDUCED"
     MODES = {
@@ -530,11 +536,11 @@ class BaseVCAM(OrcaQuest):
 
     def set_readout_mode(self, mode: str) -> None:
         super().set_readout_mode(mode)
-        self._set_formatted_keyword("U_DETMOD", mode.upper())
+        self._set_formatted_keyword("U_DETMOD", mode.title())
 
     def _fill_keywords(self) -> None:
         super()._fill_keywords()
-        self._set_formatted_keyword("U_DETMOD", self.readout_mode.upper())
+        self._set_formatted_keyword("U_DETMOD", self.readout_mode.title())
         cropped = self.current_mode_id != self.FULL
         self._set_formatted_keyword("CROPPED", cropped)
         self.get_fps()
@@ -544,17 +550,20 @@ class BaseVCAM(OrcaQuest):
         super().poll_camera_for_keywords()
 
         # Defaults
-        filter01 = bs = "UNKNOWN"
-        dfl1 = dfl2 = "OPEN"
+        filter01 = bs = "Unknown"
+        dfl1 = dfl2 = "Open"
         hwp_stage = 0
         try:
             with self.RDB.pipeline() as pipe:
                 pipe.hget('U_FILTER', 'value')
                 pipe.hget('U_BS', 'value')
+                pipe.hget('P_STGPS1', 'value')
                 pipe.hget('P_STGPS2', 'value')
+                pipe.hget('X_POLAR', 'value')
                 pipe.hget('U_DIFFL1', 'value')
                 pipe.hget('U_DIFFL2', 'value')
-                filter01, bs, hwp_stage, dfl1, dfl2 = pipe.execute()
+                filter01, bs, lp_stage, hwp_stage, scex_lp, dfl1, dfl2 = pipe.execute(
+                )
         except:
             logg.error('REDIS unavailable @ _fill_keywords @ VCAM')
 
@@ -562,7 +571,11 @@ class BaseVCAM(OrcaQuest):
 
         ## determine observing mode from the following logic
         # if the PBS is in and the HWP is running, we're doing polarimetry
-        polarimetry = bs.upper() == "PBS" and np.abs(hwp_stage - 56) < 1
+        polarimetry = bs.upper() == "PBS" and \
+                      (np.abs(hwp_stage - 56) < 1 or \
+                       np.abs(lp_stage - 55.2) < 1 or \
+                       np.abs(lp_stage - 90) < 1 or
+                       scex_lp.strip().upper() == "IN")
         base_mode = "IPOL" if polarimetry else "IMAG"
         # Determine whether in standard mode, SDI mode, or MBI/r mode
         nonsdi_flts = ("UNKNOWN", "OPEN")
@@ -579,51 +592,57 @@ class BaseVCAM(OrcaQuest):
             obs_mod = base_mode
 
         self._set_formatted_keyword('OBS-MOD', obs_mod)
-        # self._prepare_wcs_keywords(obs_mod)
+        self._fill_wcs_keywords(obs_mod)
 
-    def _prepare_wcs_keywords(self, obs_mod):
+    def _fill_wcs_keywords(self, obs_mod):
         # Hotspot of physical detector in the current crop coordinates.
         # Could be beyond the sensor if the crop does not include the detector center.
 
         # All of that almost never changes, but since there is a possibility that we move the
         # Wollaston in and out without re-firing a set_camera_mode, we don't have a choice but to
         # do it every single time in the polling thread.
-        xfull2 = (self.MODES[self.FULL].x1 - self.MODES[self.FULL].x0 + 1) / 2.
-        yfull2 = (self.MODES[self.FULL].y1 - self.MODES[self.FULL].y0 + 1) / 2.
-
+        xfull2 = (self.current_mode.x1 - self.current_mode.x0 + 1) / 2.
+        yfull2 = (self.current_mode.y1 - self.current_mode.y0 + 1) / 2.
+        frame_center = xfull2, yfull2
         # Create and update WCS keywords
-        cm = self.current_mode
-        # 1 WCS, Central column
-        wcs_dicts = (wcs_dict_init(0, pix=(xfull2 - cm.x0, yfull2 - cm.y0),
-                                   delt_val=self.PLATE_SCALE,
-                                   cd_rot_rad=self.PA_OFFSET), )
-        if obs_mod.endswith("MBIR"):
-            # 3 WCS
-            wcs_dicts = []
-            for i, ctr in enumerate(("775", "725", "675")):
-                wcs_dict = wcs_dict_init(i, pix=ctr, delt_val=self.PLATE_SCALE,
-                                         cd_rot_rad=self.PA_OFFSET)
-                wcs_dicts.append(wcs_dict)
 
-        elif obs_mod.endswith("MBI"):
+        if "MBI" in obs_mod:
             # 4 WCS
             wcs_dicts = []
-            for i, ctr in enumerate(("775", "725", "675", "625")):
-                wcs_dict = wcs_dict_init(i, pix=ctr, delt_val=self.PLATE_SCALE,
-                                         cd_rot_rad=self.PA_OFFSET)
+            for i, field in enumerate(("770", "720", "670", "620")):
+                if field == "620" and obs_mod.endswith("MBIR"):
+                    name = "NA"
+                else:
+                    name = f"F{field}"
+                wcs_dict = wcs_dict_init(
+                        i, pix=np.array(self.HOTSPOTS[field]) + 0.5,
+                        delt_val=self.PLATE_SCALE, cd_rot_rad=self.PA_OFFSET,
+                        name=name, double_with_subaru_fake_standard=False)
                 wcs_dicts.append(wcs_dict)
+        else:
+            # 1 WCS, Central column
+            wcs_dicts = [
+                    wcs_dict_init(0, pix=frame_center,
+                                  delt_val=self.PLATE_SCALE,
+                                  cd_rot_rad=self.PA_OFFSET, name="PRIMARY",
+                                  double_with_subaru_fake_standard=False)
+            ]
+            for i in range(1, 4):
+                wcs_dicts.append(
+                        wcs_dict_init(i, pix=frame_center,
+                                      delt_val=self.PLATE_SCALE,
+                                      cd_rot_rad=self.PA_OFFSET,
+                                      double_with_subaru_fake_standard=False,
+                                      name="NA"))
 
-        # update WCS keys
+        # push keys to SHM
         for wcs_dict in wcs_dicts:
-            for key in wcs_dict:
-                self._set_formatted_keyword(key, wcs_dict[key][0])
+            for key, values in wcs_dict.items():
+                self._set_formatted_keyword(key, values[0])
 
 
 class VCAM1(BaseVCAM):
-    KEYWORDS = {
-            "U_VLOG1": (False, "Logging VAMPIRES cam 1", "BOOLEAN", "VLOG1")
-    }
-    KEYWORDS.update(BaseVCAM.KEYWORDS)
+    PLATE_SCALE = (-1.5583e-6, -1.5583e-6)  # deg / px
 
     MODES = {
             BaseVCAM.STANDARD:
@@ -637,6 +656,12 @@ class VCAM1(BaseVCAM):
                                     tint=1e-4),
     }
     MODES.update(BaseVCAM.MODES)
+    HOTSPOTS = {
+            "770": (1970.0, 327.1),
+            "720": (849.7, 283.0),
+            "670": (287.1, 267.1),
+            "620": (268.5, 829.1)
+    }
 
     def _fill_keywords(self) -> None:
         super()._fill_keywords()
@@ -649,7 +674,7 @@ class VCAM1(BaseVCAM):
         super().poll_camera_for_keywords()
 
         # Defaults
-        filter02 = "UNKNOWN"
+        filter02 = "Unknown"
         try:
             filter02 = self.RDB.hget('U_DIFFL1', 'value')
         except:
@@ -659,10 +684,7 @@ class VCAM1(BaseVCAM):
 
 
 class VCAM2(BaseVCAM):
-    KEYWORDS = {
-            "U_VLOG2": (False, "Logging VAMPIRES cam 2", "BOOLEAN", "VLOG1")
-    }
-    KEYWORDS.update(BaseVCAM.KEYWORDS)
+    PLATE_SCALE = (-1.5583e-6, 1.5583e-6)  # deg / px
 
     MODES = {
             BaseVCAM.STANDARD:
@@ -677,6 +699,13 @@ class VCAM2(BaseVCAM):
     }
     MODES.update(BaseVCAM.MODES)
 
+    HOTSPOTS = {
+            "770": (1970.0, 327.1),
+            "720": (849.7, 283.0),
+            "670": (287.1, 267.1),
+            "620": (268.5, 829.1)
+    }
+
     def _fill_keywords(self) -> None:
         super()._fill_keywords()
 
@@ -688,7 +717,7 @@ class VCAM2(BaseVCAM):
         super().poll_camera_for_keywords()
 
         # Defaults
-        filter02 = "UNKNOWN"
+        filter02 = "Unknown"
         try:
             filter02 = self.RDB.hget('U_DIFFL2', 'value')
         except:

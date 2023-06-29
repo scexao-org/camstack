@@ -74,7 +74,7 @@ class MaskWheelPlugin(DeviceMixin, BasePlugin):
             buts.Shortcut(pgmc.K_MINUS, pgmc.KMOD_LCTRL): partial(self.change_wheel, 11),
             buts.Shortcut(pgmc.K_EQUALS, pgmc.KMOD_LCTRL): partial(self.change_wheel, 12),
             buts.Shortcut(pgmc.K_s, pgmc.KMOD_LCTRL): self.save_config,
-            }
+        }
         # yapf: enable
 
     def nudge_wheel(self, key, fine=True):
@@ -159,10 +159,6 @@ class FilterWheelPlugin(DeviceMixin, BasePlugin):
         self.label = futs.LabelMessage(
                 "%7s", font, fg_col="#4AC985", bg_col=None,
                 topright=(self.frontend_obj.data_disp_size[0] - 100 * zoom, r))
-        r += int(1.5 * self.label.em_size)
-        self.diff_label = futs.LabelMessage(
-                "%7s", font, fg_col="#4AC985", bg_col=None,
-                topright=(self.frontend_obj.data_disp_size[0] - 100 * zoom, r))
         self.label.blit(self.frontend_obj.pg_datasurface)
 
         # yapf: disable
@@ -195,23 +191,78 @@ class FilterWheelPlugin(DeviceMixin, BasePlugin):
             self.label.blit(self.frontend_obj.pg_datasurface)
             self.frontend_obj.pg_updated_rects.append(self.label.rectangle)
 
-        if self.diff_label:
-            self.diff_label.blit(self.frontend_obj.pg_datasurface)
-            self.frontend_obj.pg_updated_rects.append(self.diff_label.rectangle)
+    def backend_action(self) -> None:
+        if not self.enabled:
+            return
+        # Warning: this is called every time the window refreshes, i.e. ~20Hz.
+        filter_dict = get_values(("U_FILTER", ))
+        if self.label:
+            self.label.render(f"{filter_dict['U_FILTER'].upper():>7s}")
+
+
+class DiffFilterWheelPlugin(DeviceMixin, BasePlugin):
+
+    DEVICE_NAME = "VAMPIRES_DIFF"
+
+    def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
+        super().__init__(frontend_obj)
+        zoom = self.frontend_obj.system_zoom
+        font = pygame.font.SysFont("default", 25 * zoom)
+        self.enabled = True
+        # Ideally you'd instantiate the label in the frontend, cuz different viewers could be wanting the same info
+        # displayed at different locations.
+        r = 50 * zoom
+        self.label = futs.LabelMessage(
+                "%7s", font, fg_col="#4AC985", bg_col=None,
+                topright=(self.frontend_obj.data_disp_size[0] - 100 * zoom, r))
+        self.label.blit(self.frontend_obj.pg_datasurface)
+
+        # yapf: disable
+        self.shortcut_map = {
+                buts.Shortcut(pgmc.K_7, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT):
+                        partial(self.change_diff_filter, 1),
+                buts.Shortcut(pgmc.K_8, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT):
+                        partial(self.change_diff_filter, 2),
+                buts.Shortcut(pgmc.K_9, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT):
+                        partial(self.change_diff_filter, 3),
+                buts.Shortcut(pgmc.K_0, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT):
+                        partial(self.change_diff_filter, 4),
+                buts.Shortcut(pgmc.K_MINUS, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT):
+                        partial(self.change_diff_filter, 5),
+                buts.Shortcut(pgmc.K_EQUALS, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT):
+                        partial(self.change_diff_filter, 6),
+            }
+        # yapf: enable
+
+    def change_diff_filter(self, index: int):
+        for config in self.device.get_configurations():
+            if config["idx"] == index:
+                name = config["name"]
+                break
+        else:
+            name = "Unknown"
+        self.backend_obj.logger.info(
+                f"Moving differential filter to position {index}: {name}")
+        self.device.move_configuration_idx__oneway(index)
+
+    def frontend_action(self) -> None:
+        if not self.enabled:
+            return
+        if self.label:
+            self.label.blit(self.frontend_obj.pg_datasurface)
+            self.frontend_obj.pg_updated_rects.append(self.label.rectangle)
 
     def backend_action(self) -> None:
         if not self.enabled:
             return
         # Warning: this is called every time the window refreshes, i.e. ~20Hz.
         diff_key = f"U_DIFFL{self.backend_obj.cam_num}"
-        filter_dict = get_values(("U_FILTER", diff_key))
+        diff_filt = RDB.hget(diff_key, "value")
         if self.label:
-            self.label.render(f"{filter_dict['U_FILTER'].upper():>7s}")
-        if self.diff_label:
-            if filter_dict[diff_key].upper() == "OPEN":
-                self.diff_label.render_whitespace()
+            if diff_filt.upper() == "OPEN":
+                self.label.render_whitespace()
             else:
-                self.diff_label.render(f"{filter_dict[diff_key].upper():>7s}")
+                self.label.render(f"{diff_filt.upper():>7s}")
 
 
 class FieldstopPlugin(DeviceMixin, BasePlugin):
@@ -250,15 +301,15 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
                     partial(self.nudge_fieldstop, pgmc.K_DOWN, fine=True),
             buts.Shortcut(pgmc.K_DOWN, pgmc.KMOD_LSHIFT):
                     partial(self.nudge_fieldstop, pgmc.K_DOWN, fine=False),
-            buts.Shortcut(pgmc.K_8, pgmc.KMOD_LCTRL):
+            buts.Shortcut(pgmc.K_7, pgmc.KMOD_LCTRL):
                     partial(self.change_fieldstop, 1),
-            buts.Shortcut(pgmc.K_9, pgmc.KMOD_LCTRL):
+            buts.Shortcut(pgmc.K_8, pgmc.KMOD_LCTRL):
                     partial(self.change_fieldstop, 2),
-            buts.Shortcut(pgmc.K_0, pgmc.KMOD_LCTRL):
+            buts.Shortcut(pgmc.K_9, pgmc.KMOD_LCTRL):
                     partial(self.change_fieldstop, 3),
-            buts.Shortcut(pgmc.K_MINUS, pgmc.KMOD_LCTRL):
+            buts.Shortcut(pgmc.K_0, pgmc.KMOD_LCTRL):
                     partial(self.change_fieldstop, 4),
-            buts.Shortcut(pgmc.K_EQUALS, pgmc.KMOD_LCTRL):
+            buts.Shortcut(pgmc.K_MINUS, pgmc.KMOD_LCTRL):
                     partial(self.change_fieldstop, 5),
             buts.Shortcut(pgmc.K_s, pgmc.KMOD_LCTRL): self.save_config,
         }
@@ -267,16 +318,16 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
     def nudge_fieldstop(self, key, fine=True):
         sign = 1
         if key == pgmc.K_LEFT:
-            substage = "x"
+            substage = "y"
             sign = 1
         elif key == pgmc.K_RIGHT:
-            substage = "x"
+            substage = "y"
             sign = -1
         elif key == pgmc.K_UP:
-            substage = "y"
+            substage = "x"
             sign = 1
         elif key == pgmc.K_DOWN:
-            substage = "y"
+            substage = "x"
             sign = -1
 
         if fine:
@@ -436,13 +487,15 @@ class VAMPIRESPupilMode(DeviceMixin, PupilMode):
         self.label.blit(self.frontend_obj.pg_datasurface)
 
     def frontend_action(self) -> None:
-        if self.enabled:
-            self.label.render("PUPIL",
-                              blit_onto=self.frontend_obj.pg_datasurface)
-            self.status_label.render(self.status,
-                                     blit_onto=self.frontend_obj.pg_datasurface)
+        if not self.enabled:
+            return
+        self.label.render("PUPIL", blit_onto=self.frontend_obj.pg_datasurface)
+        self.status_label.render(self.status,
+                                 blit_onto=self.frontend_obj.pg_datasurface)
 
     def backend_action(self) -> None:
+        if not self.enabled:
+            return
         name = RDB.hget("U_MASK", "value")
         self.status = name.upper()
 
@@ -474,6 +527,72 @@ class VCAMDarkAcquirePlugin(DeviceMixin, DarkAcquirePlugin):
             self.device.move_relative(30)
         else:
             self.device.move_relative__oneway(-30)
+
+
+class VCAMTriggerPlugin(DeviceMixin, BasePlugin):
+    DEVICE_NAME = "VAMPIRES_TRIG"
+
+    HELP_MSG = """trigger control
+    ---------------------
+    CTRL + e         : Enable external trigger for cameras
+    CTRL + ALT + e   : Enable external trigger for this camera only
+    SHIFT + e        : Disable external trigger for cameras
+    SHIFT + ALT + e  : Enable external trigger for this camera only
+    CTRL  + t        : Enable micro-controller trigger
+    SHIFT + t        : Disable micro-controller trigger"""
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.shortcut_map = {
+                buts.Shortcut(pgmc.K_e, pgmc.KMOD_LCTRL):
+                        partial(self.enable_external_trigger, both=True),
+                buts.Shortcut(pgmc.K_e, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
+                        partial(self.enable_external_trigger, both=False),
+                buts.Shortcut(pgmc.K_e, pgmc.KMOD_LSHIFT):
+                        partial(self.disable_external_trigger, both=True),
+                buts.Shortcut(pgmc.K_e, pgmc.KMOD_LSHIFT | pgmc.KMOD_LALT):
+                        partial(self.disable_external_trigger, both=False),
+                buts.Shortcut(pgmc.K_t, pgmc.KMOD_LCTRL):
+                        self.enable_trigger,
+                buts.Shortcut(pgmc.K_t, pgmc.KMOD_LSHIFT):
+                        self.disable_trigger,
+        }
+
+    def enable_external_trigger(self, both=False):
+        self.backend_obj.logger.info(
+                f"Enabling external trigger for {self.backend_obj.cam_name}.")
+        self.backend_obj.cam.set_external_trigger(True)
+        if both:
+            self.backend_obj.logger.info(
+                    f"Enabling external trigger for {self.backend_obj.other_cam_name}."
+            )
+            self.backend_obj.other_cam.set_external_trigger(True)
+
+    def disable_external_trigger(self, both=False):
+        self.backend_obj.logger.info(
+                f"Disabling external trigger for {self.backend_obj.cam_name}.")
+        self.backend_obj.cam.set_external_trigger(False)
+        if both:
+            self.backend_obj.logger.info(
+                    f"Disabling external trigger for {self.backend_obj.other_cam_name}."
+            )
+            self.backend_obj.other_cam.set_external_trigger(False)
+
+    def enable_trigger(self):
+        self.backend_obj.logger.info("Enabling hardware trigger")
+        self.device.enable()
+
+    def disable_trigger(self):
+        self.backend_obj.logger.info("Disabling hardware trigger")
+        self.device.disable()
+
+    def frontend_action(self) -> None:
+        if not self.enabled:
+            return
+
+    def backend_action(self) -> None:
+        if not self.enabled:
+            return
 
 
 class MBICrosshairPlugin(CrossHairPlugin):
