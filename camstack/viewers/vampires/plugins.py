@@ -142,6 +142,8 @@ class MaskWheelPlugin(DeviceMixin, BasePlugin):
         # Warning: this is called every time the window refreshes, i.e. ~20Hz.
         name = RDB.hget("U_MASK", "value")
         self.status = name
+        if not self.enabled:
+            return
 
 
 class FilterWheelPlugin(DeviceMixin, BasePlugin):
@@ -487,17 +489,19 @@ class VAMPIRESPupilMode(DeviceMixin, PupilMode):
         self.label.blit(self.frontend_obj.pg_datasurface)
 
     def frontend_action(self) -> None:
-        if not self.enabled:
+        if self.status == "OUT":
             return
         self.label.render("PUPIL", blit_onto=self.frontend_obj.pg_datasurface)
-        self.status_label.render(self.status,
+        self.status_label.render(self.mask_name,
                                  blit_onto=self.frontend_obj.pg_datasurface)
-
-    def backend_action(self) -> None:
         if not self.enabled:
             return
-        name = RDB.hget("U_MASK", "value")
-        self.status = name.upper()
+
+    def backend_action(self) -> None:
+        self.status = RDB.hget("U_PUPST", "value").upper()
+        self.mask_name = RDB.hget("U_MASK", "value")
+        if not self.enabled:
+            return
 
     def enable(self) -> None:  # Override
         super().enable()
