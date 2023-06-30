@@ -101,7 +101,13 @@ CTRL  + s     : Save current position to last configuration"""
         self.cam = connect(self.cam_name)
         self.other_cam = connect(self.other_cam_name)
 
-        self.SHORTCUTS = {
+        self.live = Live()
+        self.logger = logging.getLogger(name_shm)
+        self.logger.setLevel(logging.INFO)
+        self.logger.addHandler(stream_handler)
+        super().__init__(name_shm=name_shm)
+
+        self.SHORTCUTS.update({
                 buts.Shortcut(pgmc.K_f, pgmc.KMOD_LCTRL):
                         partial(self.set_readout_mode, mode="FAST", both=True),
                 buts.Shortcut(pgmc.K_f, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
@@ -126,12 +132,18 @@ CTRL  + s     : Save current position to last configuration"""
                 #         pgmc.K_m,
                 #         pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT | pgmc.KMOD_LALT):
                 #         partial(self.set_camera_mode, mode="MBI_REDUCED"),
-        }
-        self.live = Live()
-        self.logger = logging.getLogger(name_shm)
-        self.logger.setLevel(logging.INFO)
-        self.logger.addHandler(stream_handler)
-        return super().__init__(name_shm=name_shm)
+        })
+        if self.cam_num == 2:
+            self.SHORTCUTS.update({
+                    buts.Shortcut(pgmc.K_UP, 0x0):
+                            partial(self.steer_crop, pgmc.K_DOWN),
+                    buts.Shortcut(pgmc.K_DOWN, 0x0):
+                            partial(self.steer_crop, pgmc.K_UP),
+                    buts.Shortcut(pgmc.K_LEFT, 0x0):
+                            partial(self.steer_crop, pgmc.K_LEFT),
+                    buts.Shortcut(pgmc.K_RIGHT, 0x0):
+                            partial(self.steer_crop, pgmc.K_RIGHT),
+            })
 
     def set_readout_mode(self, mode: str, both: bool = False):
         self.logger.info(
