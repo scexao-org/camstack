@@ -499,7 +499,7 @@ class VAMPIRESPupilMode(DeviceMixin, PupilMode):
 
     def backend_action(self) -> None:
         self.status = RDB.hget("U_PUPST", "value").upper()
-        self.mask_name = RDB.hget("U_MASK", "value")
+        self.mask_name = RDB.hget("U_MASK", "value").upper()
         if not self.enabled:
             return
 

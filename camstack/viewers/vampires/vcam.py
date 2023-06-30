@@ -158,6 +158,8 @@ CTRL  + s     : Save current position to last configuration"""
             self.logger.info(f"Now using {mode.upper()} camera mode.")
 
     def _get_crop_slice(self, center, shape):
+        assert self.crop_offset
+
         cr, cc = center
         halfside = (shape[0] / 2**(self.crop_lvl_id + 1),
                     shape[1] / 2**(self.crop_lvl_id + 1))
@@ -194,11 +196,15 @@ CTRL  + s     : Save current position to last configuration"""
         elif self.cam_num == 2:
             hotspots = hotspots_cam2
         _mbi_shape = 520, 520
+        centers = {
+                k: (v[0] + self.crop_offset[0], v[1] + self.crop_offset[1])
+                for k, v in hotspots.items()
+        }
         self.mbi_slices = (
-                self._get_crop_slice(center=hotspots["770"], shape=_mbi_shape),
-                self._get_crop_slice(center=hotspots["720"], shape=_mbi_shape),
-                self._get_crop_slice(center=hotspots["670"], shape=_mbi_shape),
-                self._get_crop_slice(center=hotspots["620"], shape=_mbi_shape),
+                self._get_crop_slice(center=centers["770"], shape=_mbi_shape),
+                self._get_crop_slice(center=centers["720"], shape=_mbi_shape),
+                self._get_crop_slice(center=centers["670"], shape=_mbi_shape),
+                self._get_crop_slice(center=centers["620"], shape=_mbi_shape),
         )
 
     def _data_crop(self) -> None:

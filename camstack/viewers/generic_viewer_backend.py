@@ -87,6 +87,7 @@ class GenericViewerBackend:
         self.crop_lvl_id = 0
         if self.CROP_CENTER_SPOT is None:
             self.CROP_CENTER_SPOT = self.shm_shape[0] / 2., self.shm_shape[1] / 2.
+        self.crop_offset = 0, 0
         self.toggle_crop(self.crop_lvl_id)
 
         ### Colors
@@ -204,10 +205,11 @@ class GenericViewerBackend:
 
     def steer_crop(self, direction: int) -> None:
         assert self.CROP_CENTER_SPOT
+        assert self.crop_offset
 
         # Move by 1 pixel at max zoom
         move_how_much = 2**(self.MAX_ZOOM_LEVEL - self.crop_lvl_id)
-        cr, cc = self.CROP_CENTER_SPOT
+        old_cr, old_cc = cr, cc = self.CROP_CENTER_SPOT
         if direction == pgmc.K_UP:
             cc -= move_how_much
         elif direction == pgmc.K_DOWN:
@@ -223,10 +225,11 @@ class GenericViewerBackend:
         cr = min(max(cr, halfside[0]), self.shm_shape[0] - halfside[0])
         cc = min(max(cc, halfside[1]), self.shm_shape[1] - halfside[1])
 
-        #print(cr, cc, cr - halfside[0], cr + halfside[0], cc - halfside[1],
+        #logg.debugprint(cr, cc, cr - halfside[0], cr + halfside[0], cc - halfside[1],
         #      cc + halfside[1])
         self.CROP_CENTER_SPOT = cr, cc
-
+        og_ctr = self.shm_shape[0] / 2, self.shm_shape[1] / 2
+        self.crop_offset = cr - og_ctr[0], cc - og_ctr[1]
         self.toggle_crop(which=self.crop_lvl_id)
 
     def toggle_averaging(self) -> None:
