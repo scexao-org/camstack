@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Dict, Callable, Optional, TYPE_CHECKING
+from swmain.redis import RDB
 
 if TYPE_CHECKING:
     from .generic_viewer_frontend import GenericViewerFrontend

@@ -646,14 +646,14 @@ class VCAM1(BaseVCAM):
 
     MODES = {
             BaseVCAM.STANDARD:
-                    util.CameraMode(x0=1776, x1=2311, y0=888, y1=1423,
-                                    tint=1e-4),
+                    util.CameraMode(x0=1780, x1=2315, y0=884, y1=1419,
+                                    tint=1e-3),
             BaseVCAM.MBI:
                     util.CameraMode(x0=408, x1=2651, y0=636, y1=1735,
-                                    tint=1e-4),
+                                    tint=1e-3),
             BaseVCAM.MBI_REDUCED:
                     util.CameraMode(x0=408, x1=2651, y0=1156, y1=1755,
-                                    tint=1e-4),
+                                    tint=1e-3),
     }
     MODES.update(BaseVCAM.MODES)
     HOTSPOTS = {
@@ -688,14 +688,14 @@ class VCAM2(BaseVCAM):
 
     MODES = {
             BaseVCAM.STANDARD:
-                    util.CameraMode(x0=1780, x1=2315, y0=888, y1=1423,
-                                    tint=1e-4),
+                    util.CameraMode(x0=1780, x1=2315, y0=884, y1=1419,
+                                    tint=1e-3),
             BaseVCAM.MBI:
                     util.CameraMode(x0=408, x1=2651, y0=544, y1=1643,
-                                    tint=1e-4),
+                                    tint=1e-3),
             BaseVCAM.MBI_REDUCED:
                     util.CameraMode(x0=408, x1=2651, y0=544, y1=1139,
-                                    tint=1e-4),
+                                    tint=1e-3),
     }
     MODES.update(BaseVCAM.MODES)
 

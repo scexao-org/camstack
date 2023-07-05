@@ -40,12 +40,15 @@ d         : subtract dark frame
 CTRL + d  : take dark frame
 r         : subtract reference frame
 CTRL + r  : take reference frame
-p         : TODO display compass
+p         : display compass
+i         : display scale bar
 l         : linear/non-linear display
 m         : cycle colormaps
 o         : TODO bullseye on the PSF
 v         : start/stop accumulating and averaging frames
 z         : zoom/unzoom on the center of the image
+ARROW     : steer crop
+CTRL + z  : reset zoom and crop
 
 Pupil mode:
 --------------------------------------------------
@@ -54,7 +57,7 @@ CTRL  + p : toggle pupil lens
 MBI wheel controls:
 --------------------------------------------------
 CTRL  + []         : Nudge wheel 0.005 deg CCW / CW
-CTRL  + SHIFT + [] : Nudge wheel 0.2 deg CCW / CW
+SHIFT + []         : Nudge wheel 0.2 deg CCW / CW
 CTRL  + m          : Insert MBI dichroics
 SHIFT + m          : Remove MBI dichroics
 ALT   + m          : Save current angle to last configuration
@@ -84,8 +87,9 @@ CTRL  + 8     : CLC-2
 CTRL  + 9     : CLC-3
 CTRL  + 0     : CLC-5
 CTRL  + -     : CLC-7
-CTRL  + ARROW : Nudge 0.005 mm in x (left/right) and y (up/down)
-SHIFT + ARROW : Nudge 0.1 mm in x (left/right) and y (up/down)
+CTRL  + ARROW : Nudge 0.001 mm in x (left/right) and y (up/down)
+SHIFT + ARROW : Nudge 0.05 mm in x (left/right) and y (up/down)
+CTRL  + o     : Offset fieldstop 0.5 mm; press again to return
 CTRL  + s     : Save current position to last configuration"""
 
     # CTRL+S:  Save current position to preset
@@ -133,16 +137,13 @@ CTRL  + s     : Save current position to last configuration"""
                 #         pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT | pgmc.KMOD_LALT):
                 #         partial(self.set_camera_mode, mode="MBI_REDUCED"),
         })
+        # flip steering direction on cam2 to compensate
         if self.cam_num == 2:
             self.SHORTCUTS.update({
                     buts.Shortcut(pgmc.K_UP, 0x0):
                             partial(self.steer_crop, pgmc.K_DOWN),
                     buts.Shortcut(pgmc.K_DOWN, 0x0):
                             partial(self.steer_crop, pgmc.K_UP),
-                    buts.Shortcut(pgmc.K_LEFT, 0x0):
-                            partial(self.steer_crop, pgmc.K_LEFT),
-                    buts.Shortcut(pgmc.K_RIGHT, 0x0):
-                            partial(self.steer_crop, pgmc.K_RIGHT),
             })
 
     def set_readout_mode(self, mode: str, both: bool = False):
@@ -170,17 +171,15 @@ CTRL  + s     : Save current position to last configuration"""
             self.logger.info(f"Now using {mode.upper()} camera mode.")
 
     def _get_crop_slice(self, center, shape):
-        assert self.crop_offset
-
         cr, cc = center
         halfside = (shape[0] / 2**(self.crop_lvl_id + 1),
                     shape[1] / 2**(self.crop_lvl_id + 1))
         # Adjust, in case we've just zoomed-out from a crop spot that's too close to the edge!
-        # cr_temp = min(max(cr, halfside[0]), shape[0] - halfside[0])
-        # cc_temp = min(max(cc, halfside[1]), shape[1] - halfside[1])
+        cr_temp = min(max(cr, halfside[0]), self.shm_shape[0] - halfside[0])
+        cc_temp = min(max(cc, halfside[1]), self.shm_shape[1] - halfside[1])
 
-        cr_low = int(cr - halfside[0])
-        cc_low = int(cc - halfside[1])
+        cr_low = int(cr_temp - halfside[0])
+        cc_low = int(cc_temp - halfside[1])
         cr_high = cr_low + int(2 * halfside[0])
         cc_high = cc_low + int(2 * halfside[1])
         crop_slice = np.s_[cr_low:cr_high, cc_low:cc_high]

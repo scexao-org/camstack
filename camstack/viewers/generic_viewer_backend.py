@@ -98,6 +98,7 @@ class GenericViewerBackend:
                 buts.Shortcut(pgmc.K_m, 0x0): self.toggle_cmap,
                 buts.Shortcut(pgmc.K_l, 0x0): self.toggle_scaling,
                 buts.Shortcut(pgmc.K_z, 0x0): self.toggle_crop,
+                buts.Shortcut(pgmc.K_z, pgmc.KMOD_LCTRL): self.reset_crop,
                 buts.Shortcut(pgmc.K_v, 0x0): self.toggle_averaging,
                 buts.Shortcut(pgmc.K_UP, 0x0): partial(self.steer_crop, pgmc.K_UP),
                 buts.Shortcut(pgmc.K_DOWN, 0x0): partial(self.steer_crop, pgmc.K_DOWN),
@@ -189,6 +190,11 @@ class GenericViewerBackend:
         else:
             self.crop_slice = np.s_[:, :]
 
+    def reset_crop(self) -> None:
+        self.crop_lvl_id = -1
+        self.CROP_CENTER_SPOT = self.shm_shape[0] / 2, self.shm_shape[1] / 2
+        self.toggle_crop()
+
     def _get_crop_slice(self, center, shape):
         cr, cc = center
         halfside = (shape[0] / 2**(self.crop_lvl_id + 1),
@@ -209,7 +215,7 @@ class GenericViewerBackend:
 
         # Move by 1 pixel at max zoom
         move_how_much = 2**(self.MAX_ZOOM_LEVEL - self.crop_lvl_id)
-        old_cr, old_cc = cr, cc = self.CROP_CENTER_SPOT
+        cr, cc = self.CROP_CENTER_SPOT
         if direction == pgmc.K_UP:
             cc -= move_how_much
         elif direction == pgmc.K_DOWN:

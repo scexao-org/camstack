@@ -4,7 +4,7 @@ from swmain.network.pyroclient import connect
 from camstack.viewers.generic_viewer_backend import GenericViewerBackend
 from camstack.viewers import backend_utils as buts
 from camstack.viewers import frontend_utils as futs
-from camstack.viewers.plugin_arch import BasePlugin
+from camstack.viewers.plugin_arch import BasePlugin, OnOffPlugin
 from camstack.viewers.image_stacking_plugins import DarkAcquirePlugin
 from camstack.viewers.plugins import PupilMode, CrossHairPlugin, BullseyePlugin
 import pygame.constants as pgmc
@@ -15,6 +15,7 @@ from swmain.redis import get_values, RDB
 from rich.panel import Panel
 from rich.live import Live
 from rich.logging import RichHandler
+import numpy as np
 
 logger = logging.getLogger()
 
@@ -276,6 +277,7 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
         zoom = self.frontend_obj.system_zoom
         font = pygame.font.SysFont("default", 30 * zoom)
         self.enabled = True
+        self.is_offset = False
         # Ideally you'd instantiate the label in the frontend, cuz different viewers could be wanting the same info
         # displayed at different locations.
         self.label = futs.LabelMessage(
@@ -314,6 +316,7 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
             buts.Shortcut(pgmc.K_MINUS, pgmc.KMOD_LCTRL):
                     partial(self.change_fieldstop, 5),
             buts.Shortcut(pgmc.K_s, pgmc.KMOD_LCTRL): self.save_config,
+            buts.Shortcut(pgmc.K_o, pgmc.KMOD_LCTRL): self.offset_fieldstop
         }
         # yapf: enable
 
@@ -333,11 +336,22 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
             sign = -1
 
         if fine:
-            nudge_value = sign * 0.005
+            nudge_value = sign * 0.001
         else:
-            nudge_value = sign * 0.1
+            nudge_value = sign * 0.05
         self.backend_obj.logger.info(f"Moving {substage} by {nudge_value} mm")
         self.device.move_relative__oneway(substage, nudge_value)
+
+    def offset_fieldstop(self, move_out=None):
+        if move_out is None:
+            move_out = not self.is_offset
+        nudge_value = 0.5  # mm
+        if not move_out:
+            nudge_value *= -1
+        self.backend_obj.logger.info(f"Nudging x + y by {nudge_value} mm")
+        self.device.move_relative__oneway("x", nudge_value)
+        self.device.move_relative__oneway("y", nudge_value)
+        self.is_offset = move_out
 
     def change_fieldstop(self, index: int):
         self.backend_obj.logger.info(
@@ -365,6 +379,8 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
         # Warning: this is called every time the window refreshes, i.e. ~20Hz.
         name = RDB.hget("U_FLDSTP", "value")
         self.status = f"{name.upper():>9s}"
+        if self.is_offset:
+            self.status = "OFFSET"
 
 
 class MBIWheelPlugin(DeviceMixin, BasePlugin):
@@ -605,3 +621,179 @@ class MBICrosshairPlugin(CrossHairPlugin):
 
 class MBIBullseyePlugin(BullseyePlugin):
     pass
+
+
+class VCAMCompassPlugin(OnOffPlugin):
+
+    def __init__(self, frontend_obj: GenericViewerFrontend,
+                 key_onoff: int = pgmc.K_p, modifier_and: int = 0,
+                 color: str = "#4AC985", color2: str = futs.Colors.CYAN,
+                 imrpad_offset=None) -> None:
+        super().__init__(frontend_obj, key_onoff, modifier_and)
+        self.color = color
+        self.color2 = color2
+        self.imrpad_offset = imrpad_offset
+        self.enabled = False
+        self.imrpad = None
+        self.surface = self.frontend_obj.pg_datasurface
+        font = pygame.font.SysFont("monospace",
+                                   7 * (self.frontend_obj.system_zoom + 1))
+        self.text_X = font.render("X", True, self.color)
+        self.text_X_rect = self.text_X.get_rect()
+        self.text_Y = font.render("Y", True, self.color)
+        self.text_Y_rect = self.text_Y.get_rect()
+        self.text_N = font.render("N", True, self.color2)
+        self.text_N_rect = self.text_N.get_rect()
+        self.text_E = font.render("E", True, self.color2)
+        self.text_E_rect = self.text_E.get_rect()
+        self.text_El = font.render("El", True, futs.Colors.RED)
+        self.text_El_rect = self.text_El.get_rect()
+        self.text_Az = font.render("Az", True, futs.Colors.RED)
+        self.text_Az_rect = self.text_Az.get_rect()
+
+    def frontend_action(self) -> None:
+        assert self.backend_obj  # mypy happy
+
+        if not self.enabled:  # OK maybe this responsibility could be handled to the caller.
+            return
+
+        ## Plot X/Y arrows
+        xtot_fe, ytot_fe = self.frontend_obj.data_disp_size
+        xc = xtot_fe - 70 * self.frontend_obj.system_zoom
+        yc = ytot_fe - 80 * self.frontend_obj.system_zoom
+        ctr = np.array((xc, yc))
+        length = 25 * self.frontend_obj.system_zoom
+        lbl_length = 35 * self.frontend_obj.system_zoom
+
+        # X
+        if self.backend_obj.cam_num == 1:
+            pygame.draw.line(self.surface, self.color, ctr, (xc, yc - length),
+                             2)
+            self.text_X_rect.center = xc, yc - lbl_length
+        else:
+            pygame.draw.line(self.surface, self.color, ctr, (xc, yc + length),
+                             2)
+            self.text_X_rect.center = xc, yc + lbl_length
+        self.surface.blit(self.text_X, self.text_X_rect)
+        # Y
+        pygame.draw.line(self.surface, self.color, ctr, (xc + length, yc), 2)
+        self.text_Y_rect.center = xc + lbl_length, yc
+        self.surface.blit(self.text_Y, self.text_Y_rect)
+        self.frontend_obj.pg_updated_rects.extend(
+                (self.text_X_rect, self.text_Y_rect))
+
+        ## Plot El/Az arrows
+        rot_mat = rotation_matrix(self.imrpap)
+
+        # El
+        offset_El = rot_mat @ np.array((0, length)) + ctr
+        pygame.draw.line(self.surface, futs.Colors.RED, ctr, offset_El, 2)
+        self.text_El_rect.center = rot_mat @ np.array((0, lbl_length)) + ctr
+        self.surface.blit(self.text_El, self.text_El_rect)
+        # Az
+        offset_Az = rot_mat @ np.array((-length, 0)) + ctr
+        pygame.draw.line(self.surface, futs.Colors.RED, ctr, offset_Az, 2)
+        self.text_Az_rect.center = rot_mat @ np.array((-lbl_length, 0)) + ctr
+        self.surface.blit(self.text_Az, self.text_Az_rect)
+        self.frontend_obj.pg_updated_rects.extend(
+                (self.text_El_rect, self.text_Az_rect))
+
+        ## Plot N/E arrows
+        rot_mat = rotation_matrix(self.imrpad)
+
+        # N
+        offset_N = rot_mat @ np.array((0, length)) + ctr
+        pygame.draw.line(self.surface, self.color2, ctr, offset_N, 2)
+        self.text_N_rect.center = rot_mat @ np.array((0, lbl_length)) + ctr
+        self.surface.blit(self.text_N, self.text_N_rect)
+        # E
+        offset_E = rot_mat @ np.array((length, 0)) + ctr
+        pygame.draw.line(self.surface, self.color2, ctr, offset_E, 2)
+        self.text_E_rect.center = rot_mat @ np.array((lbl_length, 0)) + ctr
+        self.surface.blit(self.text_E, self.text_E_rect)
+        self.frontend_obj.pg_updated_rects.extend(
+                (self.text_N_rect, self.text_E_rect))
+
+    def backend_action(self) -> None:
+        if not self.enabled:
+            return
+        redis_values = get_values(
+                ("D_IMRPAD", "D_IMRPAP", "ALTITUDE", "AZIMUTH"))
+        self.imrpad = redis_values["D_IMRPAD"] + self.imrpad_offset
+        self.imrpap = redis_values["D_IMRPAP"] + self.imrpad_offset
+
+
+def rotation_matrix(angle: float):
+    "get 2x2 rotation matrix given angle in degrees"
+    theta = np.deg2rad(angle)
+    cost = np.cos(theta)
+    sint = np.sin(theta)
+    R = np.array(((cost, -sint), (sint, cost)))
+    # need to flip y because viewer coordinates are upside down
+    flipy = np.array(((-1, 0), (0, 1)))
+    return R @ flipy
+
+
+class VCAMScalePlugin(OnOffPlugin):
+
+    def __init__(self, frontend_obj: GenericViewerFrontend,
+                 key_onoff: int = pgmc.K_i, modifier_and: int = 0,
+                 color: str = "#4AC985", platescale=5.64) -> None:
+        super().__init__(frontend_obj, key_onoff, modifier_and)
+        self.color = color
+        self.surface = self.frontend_obj.pg_datasurface
+        font = pygame.font.SysFont("monospace",
+                                   7 * (self.frontend_obj.system_zoom + 1),
+                                   bold=True)
+        self.platescale = self.eff_plate_scale = platescale  # mas / px
+        xtot_fe, ytot_fe = self.frontend_obj.data_disp_size
+        self.length = 1.2e3 / self.platescale
+        self.xc = 15 * self.frontend_obj.system_zoom
+        self.yc = ytot_fe - 15 * self.frontend_obj.system_zoom
+        self.lbl_y = futs.LabelMessage(
+                "%3.01f\"", font, fg_col=self.color, bg_col=None,
+                center=(self.xc + 8, self.yc - self.length - 15))
+        self.lbl_x = futs.LabelMessage(
+                "%3.01f\"", font, fg_col=self.color, bg_col=None,
+                center=(self.xc + self.length + 30, self.yc - 5))
+
+    def frontend_action(self) -> None:
+        assert self.backend_obj  # mypy happy
+
+        if not self.enabled:  # OK maybe this responsibility could be handled to the caller.
+            return
+
+        self.lbl_y.render(self.eff_plate_scale * self.length / 1e3,
+                          blit_onto=self.surface)
+        self.lbl_x.render(self.eff_plate_scale * self.length / 1e3,
+                          blit_onto=self.surface)
+        self.frontend_obj.pg_updated_rects.extend(
+                (self.lbl_y.rectangle, self.lbl_x.rectangle))
+
+        # Main axis lines
+        pygame.draw.line(self.surface, self.color, (self.xc, self.yc),
+                         (self.xc, self.yc - self.length), 2)
+        pygame.draw.line(self.surface, self.color, (self.xc, self.yc),
+                         (self.xc + self.length, self.yc), 2)
+
+        # Tickpoints
+        N = 5
+        div = self.length / N
+        width = 7
+        for i in range(N):
+            offset = div * (i + 1)
+            # y axis
+            pygame.draw.line(self.surface, self.color,
+                             (self.xc, self.yc - offset),
+                             (self.xc + width, self.yc - offset), 2)
+            # x axis
+            pygame.draw.line(self.surface, self.color,
+                             (self.xc + offset, self.yc),
+                             (self.xc + offset, self.yc - width), 2)
+
+    def backend_action(self) -> None:
+        if not self.enabled:
+            return
+        self.eff_plate_scale = self.platescale / 2**self.backend_obj.crop_lvl_id
+        if "MBI" in self.backend_obj.mode:
+            self.eff_plate_scale *= 2
