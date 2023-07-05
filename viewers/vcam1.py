@@ -21,7 +21,7 @@ def main(zoom, binn):
                MBIWheelPlugin(frontend), VAMPIRESPupilMode(frontend),
                VCAMDarkAcquirePlugin(frontend, textbox=frontend.lbl_status),
                VCAMTriggerPlugin(frontend), DiffFilterWheelPlugin(frontend),
-               VCAMCompassPlugin(frontend, imrpad_offset=140.4),
+               VCAMCompassPlugin(frontend, imrpad_offset=50.6),
                VCAMScalePlugin(frontend))
 
     frontend.plugins.extend(plugins)

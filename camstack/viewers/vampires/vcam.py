@@ -25,6 +25,8 @@ Camera controls:
 (Note: these get applied to both cameras.
  if you press ALT, will only apply to one camera)
 --------------------------------------------------
+w                 : Increase exposure time
+s                 : Decrease exposure time
 CTRL  + e         : Enable hardware trigger
 SHIFT + e         : Disable hardware trigger
 CTRL  + t         : Enable micro-controller trigger
@@ -120,6 +122,14 @@ CTRL  + s     : Save current position to last configuration"""
                         partial(self.set_readout_mode, mode="SLOW", both=True),
                 buts.Shortcut(pgmc.K_f, pgmc.KMOD_LSHIFT | pgmc.KMOD_LALT):
                         partial(self.set_readout_mode, mode="SLOW"),
+                buts.Shortcut(pgmc.K_w, 0x0):
+                        partial(self.increase_exposure_time, both=True),
+                buts.Shortcut(pgmc.K_w, pgmc.KMOD_LALT):
+                        partial(self.increase_exposure_time, both=False),
+                buts.Shortcut(pgmc.K_s, 0x0):
+                        partial(self.decrease_exposure_time, both=True),
+                buts.Shortcut(pgmc.K_s, pgmc.KMOD_LALT):
+                        partial(self.decrease_exposure_time, both=False),
                 # buts.Shortcut(pgmc.K_m, pgmc.KMOD_LCTRL):
                 #         partial(self.set_camera_mode, mode="STANDARD",
                 #                 both=True),
@@ -169,6 +179,18 @@ CTRL  + s     : Save current position to last configuration"""
             )
             self.other_cam.set_camera_mode(mode)
             self.logger.info(f"Now using {mode.upper()} camera mode.")
+
+    def increase_exposure_time(self, both: bool = False):
+        tint = self.cam.get_tint() * 1.5
+        self.cam.set_tint(tint)
+        if both:
+            self.other_cam.set_tint(tint)
+
+    def decrease_exposure_time(self, both: bool = False):
+        tint = self.cam.get_tint() * 0.75
+        self.cam.set_tint(tint)
+        if both:
+            self.other_cam.set_tint(tint)
 
     def _get_crop_slice(self, center, shape):
         cr, cc = center

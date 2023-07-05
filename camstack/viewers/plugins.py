@@ -105,7 +105,7 @@ class CrossHairPlugin(OnOffPlugin):
 
     def __init__(self, frontend_obj: GenericViewerFrontend,
                  key_onoff: int = pgmc.K_c, modifier_and: int = 0x0,
-                 color: str = '#4AC985') -> None:
+                 color: str = futs.Colors.GREEN) -> None:
         super().__init__(frontend_obj, key_onoff, modifier_and)
 
         self.color = color
@@ -172,7 +172,7 @@ class CenteredCrossHairPlugin(OnOffPlugin):
     def __init__(self, frontend_obj: GenericViewerFrontend,
                  key_onoff: int = pgmc.K_c,
                  modifier_and: int = pgmc.KMOD_LSHIFT,
-                 color: str = '#00FFFF') -> None:
+                 color: str = futs.Colors.RED) -> None:
         super().__init__(frontend_obj, key_onoff, modifier_and)
 
         self.color = color
@@ -204,7 +204,7 @@ class BullseyePlugin(OnOffPlugin):
 
     def __init__(self, frontend_obj: GenericViewerFrontend,
                  key_onoff: int = pgmc.K_o, modifier_and: int = 0x0,
-                 color: str = '#4AC985') -> None:
+                 color: str = futs.Colors.GREEN) -> None:
         super().__init__(frontend_obj, key_onoff, modifier_and)
 
         self.color = color

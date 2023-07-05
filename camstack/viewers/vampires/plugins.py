@@ -43,7 +43,7 @@ class MaskWheelPlugin(DeviceMixin, BasePlugin):
         # Ideally you'd instantiate the label in the frontend, cuz different viewers could be wanting the same info
         # displayed at different locations.
         self.label = futs.LabelMessage(
-                "%s", font, fg_col="#4AC985", bg_col=None,
+                "%s", font, fg_col=futs.Colors.GREEN, bg_col=None,
                 topleft=(20 * zoom,
                          self.frontend_obj.data_disp_size[1] - 40 * zoom))
         self.label.blit(self.frontend_obj.pg_datasurface)
@@ -160,7 +160,7 @@ class FilterWheelPlugin(DeviceMixin, BasePlugin):
         # displayed at different locations.
         r = 20 * zoom
         self.label = futs.LabelMessage(
-                "%7s", font, fg_col="#4AC985", bg_col=None,
+                "%7s", font, fg_col=futs.Colors.GREEN, bg_col=None,
                 topright=(self.frontend_obj.data_disp_size[0] - 100 * zoom, r))
         self.label.blit(self.frontend_obj.pg_datasurface)
 
@@ -216,7 +216,7 @@ class DiffFilterWheelPlugin(DeviceMixin, BasePlugin):
         # displayed at different locations.
         r = 50 * zoom
         self.label = futs.LabelMessage(
-                "%7s", font, fg_col="#4AC985", bg_col=None,
+                "%7s", font, fg_col=futs.Colors.GREEN, bg_col=None,
                 topright=(self.frontend_obj.data_disp_size[0] - 100 * zoom, r))
         self.label.blit(self.frontend_obj.pg_datasurface)
 
@@ -281,7 +281,7 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
         # Ideally you'd instantiate the label in the frontend, cuz different viewers could be wanting the same info
         # displayed at different locations.
         self.label = futs.LabelMessage(
-                "%s", font, fg_col="#4AC985", bg_col=None,
+                "%s", font, fg_col=futs.Colors.GREEN, bg_col=None,
                 topright=(self.frontend_obj.data_disp_size[0] - 120 * zoom,
                           self.frontend_obj.data_disp_size[1] - 30 * zoom))
         self.label.blit(self.frontend_obj.pg_datasurface)
@@ -495,11 +495,11 @@ class VAMPIRESPupilMode(DeviceMixin, PupilMode):
         super().__init__(*args, **kwargs)
         zoom = self.frontend_obj.system_zoom
         font = pygame.font.SysFont("default", 30 * zoom)
-        self.label = futs.LabelMessage("%s", font, fg_col="#4AC985",
+        self.label = futs.LabelMessage("%s", font, fg_col=futs.Colors.GREEN,
                                        bg_col=None, topleft=(20 * zoom,
                                                              20 * zoom))
         self.status_label = futs.LabelMessage(
-                "%s", font, fg_col="#4AC985", bg_col=None,
+                "%s", font, fg_col=futs.Colors.GREEN, bg_col=None,
                 topleft=(20 * zoom,
                          self.frontend_obj.data_disp_size[1] - 30 * zoom))
         self.label.blit(self.frontend_obj.pg_datasurface)
@@ -627,7 +627,7 @@ class VCAMCompassPlugin(OnOffPlugin):
 
     def __init__(self, frontend_obj: GenericViewerFrontend,
                  key_onoff: int = pgmc.K_p, modifier_and: int = 0,
-                 color: str = "#4AC985", color2: str = futs.Colors.CYAN,
+                 color: str = futs.Colors.GREEN, color2: str = futs.Colors.CYAN,
                  imrpad_offset=None) -> None:
         super().__init__(frontend_obj, key_onoff, modifier_and)
         self.color = color
@@ -686,14 +686,14 @@ class VCAMCompassPlugin(OnOffPlugin):
         rot_mat = rotation_matrix(self.imrpap)
 
         # El
-        offset_El = rot_mat @ np.array((0, length)) + ctr
+        offset_El = rot_mat @ np.array((0, -length)) + ctr
         pygame.draw.line(self.surface, futs.Colors.RED, ctr, offset_El, 2)
-        self.text_El_rect.center = rot_mat @ np.array((0, lbl_length)) + ctr
+        self.text_El_rect.center = rot_mat @ np.array((0, -lbl_length)) + ctr
         self.surface.blit(self.text_El, self.text_El_rect)
         # Az
-        offset_Az = rot_mat @ np.array((-length, 0)) + ctr
+        offset_Az = rot_mat @ np.array((length, 0)) + ctr
         pygame.draw.line(self.surface, futs.Colors.RED, ctr, offset_Az, 2)
-        self.text_Az_rect.center = rot_mat @ np.array((-lbl_length, 0)) + ctr
+        self.text_Az_rect.center = rot_mat @ np.array((lbl_length, 0)) + ctr
         self.surface.blit(self.text_Az, self.text_Az_rect)
         self.frontend_obj.pg_updated_rects.extend(
                 (self.text_El_rect, self.text_Az_rect))
@@ -702,14 +702,14 @@ class VCAMCompassPlugin(OnOffPlugin):
         rot_mat = rotation_matrix(self.imrpad)
 
         # N
-        offset_N = rot_mat @ np.array((0, length)) + ctr
+        offset_N = rot_mat @ np.array((-length, 0)) + ctr
         pygame.draw.line(self.surface, self.color2, ctr, offset_N, 2)
-        self.text_N_rect.center = rot_mat @ np.array((0, lbl_length)) + ctr
+        self.text_N_rect.center = rot_mat @ np.array((-lbl_length, 0)) + ctr
         self.surface.blit(self.text_N, self.text_N_rect)
         # E
-        offset_E = rot_mat @ np.array((length, 0)) + ctr
+        offset_E = rot_mat @ np.array((0, length)) + ctr
         pygame.draw.line(self.surface, self.color2, ctr, offset_E, 2)
-        self.text_E_rect.center = rot_mat @ np.array((lbl_length, 0)) + ctr
+        self.text_E_rect.center = rot_mat @ np.array((0, lbl_length)) + ctr
         self.surface.blit(self.text_E, self.text_E_rect)
         self.frontend_obj.pg_updated_rects.extend(
                 (self.text_N_rect, self.text_E_rect))
@@ -729,16 +729,14 @@ def rotation_matrix(angle: float):
     cost = np.cos(theta)
     sint = np.sin(theta)
     R = np.array(((cost, -sint), (sint, cost)))
-    # need to flip y because viewer coordinates are upside down
-    flipy = np.array(((-1, 0), (0, 1)))
-    return R @ flipy
+    return R
 
 
 class VCAMScalePlugin(OnOffPlugin):
 
     def __init__(self, frontend_obj: GenericViewerFrontend,
                  key_onoff: int = pgmc.K_i, modifier_and: int = 0,
-                 color: str = "#4AC985", platescale=5.64) -> None:
+                 color: str = futs.Colors.GREEN, platescale=5.64) -> None:
         super().__init__(frontend_obj, key_onoff, modifier_and)
         self.color = color
         self.surface = self.frontend_obj.pg_datasurface
@@ -747,7 +745,7 @@ class VCAMScalePlugin(OnOffPlugin):
                                    bold=True)
         self.platescale = self.eff_plate_scale = platescale  # mas / px
         xtot_fe, ytot_fe = self.frontend_obj.data_disp_size
-        self.length = 1.2e3 / self.platescale
+        self.length = 0.38 * xtot_fe
         self.xc = 15 * self.frontend_obj.system_zoom
         self.yc = ytot_fe - 15 * self.frontend_obj.system_zoom
         self.lbl_y = futs.LabelMessage(

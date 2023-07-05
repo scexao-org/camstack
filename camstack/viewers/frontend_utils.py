@@ -18,7 +18,7 @@ RGBType = Tuple[int, int, int]
 
 class Colors:
     WHITE = (255, 255, 255)
-    GREEN = (147, 181, 44)
+    GREEN = (120, 188, 97)
     BLUE = (0, 0, 255)
     RED = (246, 133, 101)  #(185,  95, 196)
     VERY_RED = (255, 0, 0)
