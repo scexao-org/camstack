@@ -158,11 +158,10 @@ class FilterWheelPlugin(DeviceMixin, BasePlugin):
         self.enabled = True
         # Ideally you'd instantiate the label in the frontend, cuz different viewers could be wanting the same info
         # displayed at different locations.
-        r = 20 * zoom
+        r = 15 * zoom
         self.label = futs.LabelMessage(
-                "%7s", font, fg_col=futs.Colors.GREEN, bg_col=None,
-                topright=(self.frontend_obj.data_disp_size[0] - 100 * zoom, r))
-        self.label.blit(self.frontend_obj.pg_datasurface)
+                "%8s", font, fg_col=futs.Colors.GREEN, bg_col=None,
+                topright=(self.frontend_obj.data_disp_size[0] - 60 * zoom, r))
 
         # yapf: disable
         self.shortcut_map = {
@@ -214,10 +213,10 @@ class DiffFilterWheelPlugin(DeviceMixin, BasePlugin):
         self.enabled = True
         # Ideally you'd instantiate the label in the frontend, cuz different viewers could be wanting the same info
         # displayed at different locations.
-        r = 50 * zoom
+        r = 40 * zoom
         self.label = futs.LabelMessage(
-                "%7s", font, fg_col=futs.Colors.GREEN, bg_col=None,
-                topright=(self.frontend_obj.data_disp_size[0] - 100 * zoom, r))
+                "%8s", font, fg_col=futs.Colors.GREEN, bg_col=None,
+                topright=(self.frontend_obj.data_disp_size[0] - 70 * zoom, r))
         self.label.blit(self.frontend_obj.pg_datasurface)
 
         # yapf: disable
@@ -627,7 +626,7 @@ class VCAMCompassPlugin(OnOffPlugin):
 
     def __init__(self, frontend_obj: GenericViewerFrontend,
                  key_onoff: int = pgmc.K_p, modifier_and: int = 0,
-                 color: str = futs.Colors.GREEN, color2: str = futs.Colors.CYAN,
+                 color=futs.Colors.GREEN, color2=futs.Colors.CYAN,
                  imrpad_offset=None) -> None:
         super().__init__(frontend_obj, key_onoff, modifier_and)
         self.color = color
@@ -676,8 +675,8 @@ class VCAMCompassPlugin(OnOffPlugin):
             self.text_X_rect.center = xc, yc + lbl_length
         self.surface.blit(self.text_X, self.text_X_rect)
         # Y
-        pygame.draw.line(self.surface, self.color, ctr, (xc + length, yc), 2)
-        self.text_Y_rect.center = xc + lbl_length, yc
+        pygame.draw.line(self.surface, self.color, ctr, (xc - length, yc), 2)
+        self.text_Y_rect.center = xc - lbl_length, yc
         self.surface.blit(self.text_Y, self.text_Y_rect)
         self.frontend_obj.pg_updated_rects.extend(
                 (self.text_X_rect, self.text_Y_rect))

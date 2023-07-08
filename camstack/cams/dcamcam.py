@@ -529,7 +529,7 @@ class BaseVCAM(OrcaQuest):
     KEYWORDS.update(OrcaQuest.KEYWORDS)
     N_WCS = 4
     ## camera modes
-    FULL, STANDARD, MBI, MBI_REDUCED = "FULL", "STANDARD", "MBI", "MBI_REDUCED"
+    FULL, STANDARD, MBI, MBI_REDUCED, PUPIL = "FULL", "STANDARD", "MBI", "MBI_REDUCED", "PUPIL"
     MODES = {
             FULL: util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
     }
@@ -646,21 +646,23 @@ class VCAM1(BaseVCAM):
 
     MODES = {
             BaseVCAM.STANDARD:
-                    util.CameraMode(x0=1780, x1=2315, y0=884, y1=1419,
+                    util.CameraMode(x0=1764, x1=2299, y0=896, y1=1431,
                                     tint=1e-3),
             BaseVCAM.MBI:
-                    util.CameraMode(x0=408, x1=2651, y0=636, y1=1735,
+                    util.CameraMode(x0=612, x1=2855, y0=640, y1=1747,
                                     tint=1e-3),
             BaseVCAM.MBI_REDUCED:
-                    util.CameraMode(x0=408, x1=2651, y0=1156, y1=1755,
+                    util.CameraMode(x0=612, x1=2855, y0=1148, y1=1747,
                                     tint=1e-3),
+            BaseVCAM.PUPIL:
+                    util.CameraMode(x0=1644, x1=2403, y0=784, y1=1543, tint=0.1)
     }
     MODES.update(BaseVCAM.MODES)
     HOTSPOTS = {
-            "770": (1970.0, 327.1),
-            "720": (849.7, 283.0),
-            "670": (287.1, 267.1),
-            "620": (268.5, 829.1)
+            "770": (1983.5, 809.3),
+            "720": (861.8, 828.9),
+            "670": (297.5, 831.5),
+            "620": (285.7, 268.9)
     }
 
     def _fill_keywords(self) -> None:
@@ -688,22 +690,24 @@ class VCAM2(BaseVCAM):
 
     MODES = {
             BaseVCAM.STANDARD:
-                    util.CameraMode(x0=1780, x1=2315, y0=884, y1=1419,
+                    util.CameraMode(x0=1768, x1=2303, y0=892, y1=1427,
                                     tint=1e-3),
             BaseVCAM.MBI:
-                    util.CameraMode(x0=408, x1=2651, y0=544, y1=1643,
+                    util.CameraMode(x0=612, x1=2855, y0=564, y1=1671,
                                     tint=1e-3),
             BaseVCAM.MBI_REDUCED:
-                    util.CameraMode(x0=408, x1=2651, y0=544, y1=1139,
+                    util.CameraMode(x0=612, x1=2855, y0=564, y1=1155,
                                     tint=1e-3),
+            BaseVCAM.PUPIL:
+                    util.CameraMode(x0=1648, x1=2407, y0=772, y1=1531, tint=0.1)
     }
     MODES.update(BaseVCAM.MODES)
 
     HOTSPOTS = {
-            "770": (1970.0, 327.1),
-            "720": (849.7, 283.0),
-            "670": (287.1, 267.1),
-            "620": (268.5, 829.1)
+            "770": (1991.7, 321.4),
+            "720": (872.0, 283.6),
+            "670": (307.5, 271.5),
+            "620": (286.4, 836.6)
     }
 
     def _fill_keywords(self) -> None:

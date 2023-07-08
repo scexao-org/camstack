@@ -90,7 +90,7 @@ class BaseCamera:
             'PRD-RNG1': (1, '[pixel] Range in X of the cropped window', '%16d', 'RNG1'),
             'PRD-RNG2': (1, '[pixel] Range in Y of the cropped window', '%16d', 'RNG2'),
             # Technical keywords (that don't need to be allocated in RT framegrabber)
-            '_LGSHSTP': (-1, 'N > 0 blocks logshim after N frames, -1 is go', '%16d', 'LGSTP'),
+            '_LGSHSTP': (-1, 'N > 0 blocks logshim aft. N frs, -1 isgo', '%16d', 'LGSTP'),
             '_LGSHKIL': (0, ' =/= 0 kills logshim', '%16d', 'LGKIL'),
     }
     # yapf: enable

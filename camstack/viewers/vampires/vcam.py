@@ -11,6 +11,7 @@ from rich.live import Live
 from rich.logging import RichHandler
 from skimage.transform import rescale
 import numpy as np
+from camstack.cams.dcamcam import VCAM1, VCAM2
 
 stream_handler = RichHandler(level=logging.INFO, show_level=False,
                              show_path=False, log_time_format="%H:%M:%S")
@@ -25,8 +26,8 @@ Camera controls:
 (Note: these get applied to both cameras.
  if you press ALT, will only apply to one camera)
 --------------------------------------------------
-w                 : Increase exposure time
-s                 : Decrease exposure time
+CTRL  + j         : Increase exposure time
+CTRL  + k         : Decrease exposure time
 CTRL  + e         : Enable hardware trigger
 SHIFT + e         : Disable hardware trigger
 CTRL  + t         : Enable micro-controller trigger
@@ -122,13 +123,13 @@ CTRL  + s     : Save current position to last configuration"""
                         partial(self.set_readout_mode, mode="SLOW", both=True),
                 buts.Shortcut(pgmc.K_f, pgmc.KMOD_LSHIFT | pgmc.KMOD_LALT):
                         partial(self.set_readout_mode, mode="SLOW"),
-                buts.Shortcut(pgmc.K_w, 0x0):
+                buts.Shortcut(pgmc.K_j, pgmc.KMOD_LCTRL):
                         partial(self.increase_exposure_time, both=True),
-                buts.Shortcut(pgmc.K_w, pgmc.KMOD_LALT):
+                buts.Shortcut(pgmc.K_j, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
                         partial(self.increase_exposure_time, both=False),
-                buts.Shortcut(pgmc.K_s, 0x0):
+                buts.Shortcut(pgmc.K_k, pgmc.KMOD_LCTRL):
                         partial(self.decrease_exposure_time, both=True),
-                buts.Shortcut(pgmc.K_s, pgmc.KMOD_LALT):
+                buts.Shortcut(pgmc.K_k, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
                         partial(self.decrease_exposure_time, both=False),
                 # buts.Shortcut(pgmc.K_m, pgmc.KMOD_LCTRL):
                 #         partial(self.set_camera_mode, mode="STANDARD",
@@ -182,12 +183,14 @@ CTRL  + s     : Save current position to last configuration"""
 
     def increase_exposure_time(self, both: bool = False):
         tint = self.cam.get_tint() * 1.5
+        self.logger.info(f"Increasing exposure time to {tint:8.04f} s")
         self.cam.set_tint(tint)
         if both:
             self.other_cam.set_tint(tint)
 
     def decrease_exposure_time(self, both: bool = False):
         tint = self.cam.get_tint() * 0.75
+        self.logger.info(f"Decreasing exposure time to {tint:8.04f} s")
         self.cam.set_tint(tint)
         if both:
             self.other_cam.set_tint(tint)
@@ -210,24 +213,24 @@ CTRL  + s     : Save current position to last configuration"""
     def toggle_crop(self, *args, **kwargs) -> None:
         super().toggle_crop(*args, **kwargs)
 
-        hotspots_cam1 = {
-                "770": (1961.4, 812.2),  # x, y on detector
-                "720": (839.4, 829.7),
-                "670": (276.7, 832.6),
-                "620": (268.5, 273.4)
-        }
-        hotspots_cam2 = {
-                "770": (1970.0, 327.1),
-                "720": (849.7, 283.0),
-                "670": (287.1, 267.1),
-                "620": (268.5, 829.1)
-        }
+        # hotspots_cam1 = {
+        #         "770": (1961.4, 812.2),  # x, y on detector
+        #         "720": (839.4, 829.7),
+        #         "670": (276.7, 832.6),
+        #         "620": (268.5, 273.4)
+        # }
+        # hotspots_cam2 = {
+        #         "770": (1970.0, 327.1),
+        #         "720": (849.7, 283.0),
+        #         "670": (287.1, 267.1),
+        #         "620": (268.5, 829.1)
+        # }
 
         # calculate crops for each window
         if self.cam_num == 1:
-            hotspots = hotspots_cam1
+            hotspots = VCAM1.HOTSPOTS
         elif self.cam_num == 2:
-            hotspots = hotspots_cam2
+            hotspots = VCAM2.HOTSPOTS
         _mbi_shape = 520, 520
         centers = {
                 k: (v[0] + self.crop_offset[0], v[1] + self.crop_offset[1])
@@ -257,10 +260,12 @@ CTRL  + s     : Save current position to last configuration"""
 
         ## determine our camera mode from the data size
         Nx, Ny = self.data_debias_uncrop.shape
-        if Nx > 536 and Ny > 536:
+        if Nx > 800 and Ny > 800:
             self.mode = "MBI"
-        elif Nx > 536:
+        elif Nx > 800:
             self.mode = "MBI_REDUCED"
+        elif Nx > 536 and Ny > 536:
+            self.mode = "PUPIL"
         else:
             self.mode = "STANDARD"
 

@@ -16,12 +16,9 @@ from argparse import ArgumentParser
 
 parser = ArgumentParser()
 parser.add_argument("cam", type=int, choices=(1, 2))
-parser.add_argument(
-        "-m", "--mode", choices=[
-                BaseVCAM.FULL, BaseVCAM.STANDARD, BaseVCAM.MBI,
-                BaseVCAM.MBI_REDUCED
-        ], default=BaseVCAM.STANDARD,
-        help="Camera mode (default is %(default)s)")
+parser.add_argument("-m", "--mode", choices=list(VCAM1.MODES.keys()),
+                    default=BaseVCAM.STANDARD,
+                    help="Camera mode (default is %(default)s)")
 
 
 def main():
@@ -42,9 +39,9 @@ def main():
             tmux_name=f'streamTCPreceive_{TCP_PORT}',
             # Urrrrrh this is getting messy
             cli_cmd=
-            'creashmim %s %u %u --type=u16 --kw=100; shmimTCPreceive -c %s %s',
+            'creashmim %s %u %u --type=u16 --kw=100; shmimTCPreceive -c aol0RT2 %s',
             cli_args=(stream_name, MAGIC_HW_STR.HEIGHT, MAGIC_HW_STR.WIDTH,
-                      stream_name, TCP_PORT),
+                      TCP_PORT),
             remote_host='scexao@' + scxconf.IPLAN_SC6,
             kill_upon_create=False,
     )
@@ -78,7 +75,7 @@ def main():
     # PIPE over ZMQ into the LAN until we find a better solution (sender)
     zmq_send = DependentProcess(
             tmux_name=f'vcam{cam}_zmq',
-            cli_cmd='zmq_send.py %s:%u %s -f 30',
+            cli_cmd='zmq_send.py %s:%u %s -f 10',
             cli_args=(scxconf.IP_SC5, ZMQ_PORT, stream_name),
             kill_upon_create=True,
     )

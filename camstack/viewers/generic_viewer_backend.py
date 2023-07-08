@@ -97,7 +97,8 @@ class GenericViewerBackend:
                 buts.Shortcut(pgmc.K_h, 0x0): self.print_help,
                 buts.Shortcut(pgmc.K_m, 0x0): self.toggle_cmap,
                 buts.Shortcut(pgmc.K_l, 0x0): self.toggle_scaling,
-                buts.Shortcut(pgmc.K_z, 0x0): self.toggle_crop,
+                buts.Shortcut(pgmc.K_z, 0x0): partial(self.toggle_crop, incr=1),
+                buts.Shortcut(pgmc.K_z, pgmc.KMOD_LSHIFT): partial(self.toggle_crop, incr=-1),
                 buts.Shortcut(pgmc.K_z, pgmc.KMOD_LCTRL): self.reset_crop,
                 buts.Shortcut(pgmc.K_v, 0x0): self.toggle_averaging,
                 buts.Shortcut(pgmc.K_UP, 0x0): partial(self.steer_crop, pgmc.K_UP),
@@ -175,10 +176,10 @@ class GenericViewerBackend:
         else:
             self.flag_non_linear = value
 
-    def toggle_crop(self, which: Op[int] = None) -> None:
+    def toggle_crop(self, which: Op[int] = None, incr: int = 1) -> None:
         if which is None:
-            self.crop_lvl_id = (self.crop_lvl_id + 1) % \
-                        (self.MAX_ZOOM_LEVEL + 1)
+            self.crop_lvl_id = (self.crop_lvl_id + incr) % \
+                        (self.MAX_ZOOM_LEVEL + incr)
         else:
             self.crop_lvl_id = which
 
