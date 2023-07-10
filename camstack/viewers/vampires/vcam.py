@@ -331,6 +331,11 @@ class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):
         self.lbl_times.blit(self.pg_screen)
         r += int(self.lbl_times.em_size)
 
+        self.lbl_trig = futs.LabelMessage("Trigger: %s", futs.Fonts.MONO,
+                                          topleft=(c, r))
+        self.lbl_trig.blit(self.pg_screen)
+        r += int(self.lbl_trig.em_size)
+
         self.lbl_data_val = futs.LabelMessage("m,M=(%5.0f, %5.0f) mu=%5.0f",
                                               futs.Fonts.MONO, topleft=(c, r))
         self.lbl_data_val.blit(self.pg_screen)
@@ -347,15 +352,20 @@ class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):
         return r
 
     def _inloop_update_labels(self) -> None:
-        assert self.backend_obj
+        assert self.backend_obj is not None
 
-        tint = self.backend_obj.input_shm.get_expt()  # seconds
-        fps = self.backend_obj.input_shm.get_fps()
+        kws = self.backend_obj.input_shm.get_keywords(
+        )  # single fetch rather than pymilk functions.
+
+        tint: float = kws["EXPTIME"]  # seconds
+        fps: float = kws["FRATE"]
+        trigger: str = 'EXT' if kws["EXTTRIG"] else 'INT'
         tint_ms = tint * 1e3
 
         self.lbl_cropzone.render(tuple(self.backend_obj.input_shm.get_crop()),
                                  blit_onto=self.pg_screen)
         self.lbl_times.render((tint_ms, fps), blit_onto=self.pg_screen)
+        self.lbl_trig.render((trigger, ), blit_onto=self.pg_screen)
         self.lbl_data_val.render(
                 (self.backend_obj.data_min, self.backend_obj.data_max,
                  self.backend_obj.data_mean), blit_onto=self.pg_screen)
