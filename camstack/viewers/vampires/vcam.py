@@ -213,19 +213,6 @@ CTRL  + s     : Save current position to last configuration"""
     def toggle_crop(self, *args, **kwargs) -> None:
         super().toggle_crop(*args, **kwargs)
 
-        # hotspots_cam1 = {
-        #         "770": (1961.4, 812.2),  # x, y on detector
-        #         "720": (839.4, 829.7),
-        #         "670": (276.7, 832.6),
-        #         "620": (268.5, 273.4)
-        # }
-        # hotspots_cam2 = {
-        #         "770": (1970.0, 327.1),
-        #         "720": (849.7, 283.0),
-        #         "670": (287.1, 267.1),
-        #         "620": (268.5, 829.1)
-        # }
-
         # calculate crops for each window
         if self.cam_num == 1:
             hotspots = VCAM1.HOTSPOTS
@@ -306,28 +293,29 @@ class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):
         super().__init__(*args, **kwargs)
 
     def _init_labels(self) -> int:
-        r = self.data_disp_size[1] + 3 * self.system_zoom
-        c = 10 * self.system_zoom
+        self.fonts = futs.FontBook(self.fonts_zoom)
+        r = self.data_disp_size[1] + 1.5 * self.fonts_zoom
+        c = 5 * self.fonts_zoom
 
         # Generic camera viewer
         self.lbl_title = futs.LabelMessage(self.WINDOW_NAME,
-                                           futs.Fonts.DEFAULT_25, topleft=(c,
+                                           self.fonts.DEFAULT_25, topleft=(c,
                                                                            r))
         self.lbl_title.blit(self.pg_screen)
         r += int(self.lbl_title.em_size)
 
         self.lbl_help = futs.LabelMessage("For help press [h], quit [x]",
-                                          futs.Fonts.MONO, topleft=(c, r))
+                                          self.fonts.MONO, topleft=(c, r))
         self.lbl_help.blit(self.pg_screen)
         r += int(self.lbl_help.em_size)
 
         self.lbl_cropzone = futs.LabelMessage("crop = [%4d %4d %4d %4d]",
-                                              futs.Fonts.MONO, topleft=(c, r))
+                                              self.fonts.MONO, topleft=(c, r))
         self.lbl_cropzone.blit(self.pg_screen)
         r += int(self.lbl_cropzone.em_size)
 
         self.lbl_times = futs.LabelMessage("t=%10.3f ms - fps= %4.0f",
-                                           futs.Fonts.MONO, topleft=(c, r))
+                                           self.fonts.MONO, topleft=(c, r))
         self.lbl_times.blit(self.pg_screen)
         r += int(self.lbl_times.em_size)
 
@@ -337,16 +325,16 @@ class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):
         r += int(self.lbl_trig.em_size)
 
         self.lbl_data_val = futs.LabelMessage("m,M=(%5.0f, %5.0f) mu=%5.0f",
-                                              futs.Fonts.MONO, topleft=(c, r))
+                                              self.fonts.MONO, topleft=(c, r))
         self.lbl_data_val.blit(self.pg_screen)
         r += int(1.2 * self.lbl_data_val.em_size)
 
         # {Status message [sat, acquiring dark, acquiring ref...]}
         # At the bottom right.
-        self.lbl_saturation = futs.LabelMessage("%28s", futs.Fonts.MONO,
+        self.lbl_saturation = futs.LabelMessage("%28s", self.fonts.MONO,
                                                 topleft=(c, r))
         r += int(1.2 * self.lbl_saturation.em_size)
-        self.lbl_status = futs.LabelMessage("%28s", futs.Fonts.MONO,
+        self.lbl_status = futs.LabelMessage("%28s", self.fonts.MONO,
                                             topleft=(c, r))
         r += int(self.lbl_status.em_size)
         return r
@@ -359,7 +347,7 @@ class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):
 
         tint: float = kws["EXPTIME"]  # seconds
         fps: float = kws["FRATE"]
-        trigger: str = 'EXT' if kws["EXTTRIG"] else 'INT'
+        trigger: str = 'EXT' if kws["EXTTRIG"] == '#TRUE#' else 'INT'
         tint_ms = tint * 1e3
 
         self.lbl_cropzone.render(tuple(self.backend_obj.input_shm.get_crop()),

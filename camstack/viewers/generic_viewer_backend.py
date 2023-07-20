@@ -179,7 +179,7 @@ class GenericViewerBackend:
     def toggle_crop(self, which: Op[int] = None, incr: int = 1) -> None:
         if which is None:
             self.crop_lvl_id = (self.crop_lvl_id + incr) % \
-                        (self.MAX_ZOOM_LEVEL + incr)
+                        (self.MAX_ZOOM_LEVEL)
         else:
             self.crop_lvl_id = which
 

@@ -130,8 +130,8 @@ class GenericViewerFrontend:
     def _init_labels(self) -> int:
 
         sz = self.system_zoom  # Shorthandy
-        r = self.data_disp_size[1] + 3 * self.system_zoom
-        c = 10 * self.system_zoom
+        r = self.data_disp_size[1] + 3 * sz
+        c = 10 * sz
 
         # Generic camera viewer
         self.lbl_title = futs.LabelMessage(self.WINDOW_NAME,

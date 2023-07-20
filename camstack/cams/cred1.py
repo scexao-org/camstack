@@ -572,7 +572,8 @@ class Apapane(CRED1):
             except:
                 logg.error("REDIS unavailable @ _fill_keywords @ Apapane")
 
-        self._set_formatted_keyword("FILTER01", filter01)
+        if shm_write:
+            self._set_formatted_keyword("FILTER01", filter01)
         # FIXME decision clause for the spectro???
         if ("IN" in wollaston) and ("ON" in flc_on) and ("IN" in flc_in):
             obs_mod = "IPOL_FPDI"
@@ -581,7 +582,8 @@ class Apapane(CRED1):
         else:
             obs_mod = "IMAG"
 
-        self._set_formatted_keyword("OBS-MOD", obs_mod)
+        if shm_write:
+            self._set_formatted_keyword("OBS-MOD", obs_mod)
 
         # Hotspot of physical detector in the current crop coordinates.
         # Could be beyond the sensor if the crop does not include the detector center.
@@ -629,9 +631,10 @@ class Apapane(CRED1):
                     double_with_subaru_fake_standard=False,
             )
 
-        for wcs_dict in [wcs_dict_1, wcs_dict_2]:
-            for key in wcs_dict:
-                self._set_formatted_keyword(key, wcs_dict[key][0])
+        if shm_write:
+            for wcs_dict in [wcs_dict_1, wcs_dict_2]:
+                for key in wcs_dict:
+                    self._set_formatted_keyword(key, wcs_dict[key][0])
 
     def _fill_keywords(self) -> None:
         # Call superclass - in BaseCamera, this will allocate the WCS dictionary

@@ -37,15 +37,15 @@ class MaskWheelPlugin(DeviceMixin, BasePlugin):
 
     def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
         super().__init__(frontend_obj)
-        zoom = self.frontend_obj.system_zoom
-        font = pygame.font.SysFont("default", 40 * zoom)
+        zoom = self.frontend_obj.fonts_zoom
+        font = pygame.font.SysFont("default", 20 * zoom)
         self.enabled = True
         # Ideally you'd instantiate the label in the frontend, cuz different viewers could be wanting the same info
         # displayed at different locations.
         self.label = futs.LabelMessage(
                 "%s", font, fg_col=futs.Colors.GREEN, bg_col=None,
-                topleft=(20 * zoom,
-                         self.frontend_obj.data_disp_size[1] - 40 * zoom))
+                topleft=(10 * zoom,
+                         self.frontend_obj.data_disp_size[1] - 20 * zoom))
         self.label.blit(self.frontend_obj.pg_datasurface)
         self.current_index = None
         # yapf: disable
@@ -153,15 +153,15 @@ class FilterWheelPlugin(DeviceMixin, BasePlugin):
 
     def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
         super().__init__(frontend_obj)
-        zoom = self.frontend_obj.system_zoom
-        font = pygame.font.SysFont("default", 30 * zoom)
+        zoom = self.frontend_obj.fonts_zoom
+        font = pygame.font.SysFont("default", 15 * zoom)
         self.enabled = True
         # Ideally you'd instantiate the label in the frontend, cuz different viewers could be wanting the same info
         # displayed at different locations.
-        r = 15 * zoom
+        r = 7 * zoom
         self.label = futs.LabelMessage(
                 "%8s", font, fg_col=futs.Colors.GREEN, bg_col=None,
-                topright=(self.frontend_obj.data_disp_size[0] - 60 * zoom, r))
+                topright=(self.frontend_obj.data_disp_size[0] - 30 * zoom, r))
 
         # yapf: disable
         self.shortcut_map = {
@@ -208,15 +208,15 @@ class DiffFilterWheelPlugin(DeviceMixin, BasePlugin):
 
     def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
         super().__init__(frontend_obj)
-        zoom = self.frontend_obj.system_zoom
-        font = pygame.font.SysFont("default", 25 * zoom)
+        zoom = self.frontend_obj.fonts_zoom
+        font = pygame.font.SysFont("default", 10 * zoom)
         self.enabled = True
         # Ideally you'd instantiate the label in the frontend, cuz different viewers could be wanting the same info
         # displayed at different locations.
-        r = 40 * zoom
+        r = 20 * zoom
         self.label = futs.LabelMessage(
                 "%8s", font, fg_col=futs.Colors.GREEN, bg_col=None,
-                topright=(self.frontend_obj.data_disp_size[0] - 70 * zoom, r))
+                topright=(self.frontend_obj.data_disp_size[0] - 35 * zoom, r))
         self.label.blit(self.frontend_obj.pg_datasurface)
 
         # yapf: disable
@@ -273,16 +273,16 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
 
     def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
         super().__init__(frontend_obj)
-        zoom = self.frontend_obj.system_zoom
-        font = pygame.font.SysFont("default", 30 * zoom)
+        zoom = self.frontend_obj.fonts_zoom
+        font = pygame.font.SysFont("default", 15 * zoom)
         self.enabled = True
         self.is_offset = False
         # Ideally you'd instantiate the label in the frontend, cuz different viewers could be wanting the same info
         # displayed at different locations.
         self.label = futs.LabelMessage(
                 "%s", font, fg_col=futs.Colors.GREEN, bg_col=None,
-                topright=(self.frontend_obj.data_disp_size[0] - 120 * zoom,
-                          self.frontend_obj.data_disp_size[1] - 30 * zoom))
+                topright=(self.frontend_obj.data_disp_size[0] - 60 * zoom,
+                          self.frontend_obj.data_disp_size[1] - 15 * zoom))
         self.label.blit(self.frontend_obj.pg_datasurface)
         self.current_index = None
 
@@ -353,8 +353,13 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
         self.is_offset = move_out
 
     def change_fieldstop(self, index: int):
+        name = None
+        for config in self.device.get_configurations():
+            if config["idx"] == index:
+                name = config["name"]
+                break
         self.backend_obj.logger.info(
-                f"Moving fieldstop to configuration {index}")
+                f"Moving filter to configuration {index}: {name}")
         self.device.move_configuration_idx__oneway(index)
         self.current_index = index
 
@@ -365,8 +370,13 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
             return
         else:
             index = self.current_index
+        name = None
+        for config in self.device.get_configurations():
+            if config["idx"] == index:
+                name = config["name"]
+                break
         self.backend_obj.logger.info(
-                f"Saving position for configuration {index}")
+                f"Saving position for configuration {index}: {name}")
         self.device.save_configuration(index=index)
         self.device.update_keys()
 
@@ -403,28 +413,28 @@ class MBIWheelPlugin(DeviceMixin, BasePlugin):
             buts.Shortcut(pgmc.K_m, pgmc.KMOD_LALT): self.save_configuration,
         }
         # yapf: enable
-        zoom = self.frontend_obj.system_zoom
-        font = pygame.font.SysFont("monospace", 15 * zoom)
+        zoom = self.frontend_obj.fonts_zoom
+        font = pygame.font.SysFont("monospace", 7 * zoom)
         # Ideally you'd instantiate the label in the frontend, cuz different viewers could be wanting the same info
         # displayed at different locations.
         self.field_labels = (
                 futs.LabelMessage("%s", font, fg_col=futs.Colors.WHITE,
-                                  bg_col=futs.Colors.BLACK, topleft=(5, 5)),
+                                  bg_col=futs.Colors.BLACK, topleft=(0, 0)),
                 futs.LabelMessage(
                         "%s", font, fg_col=futs.Colors.WHITE,
                         bg_col=futs.Colors.BLACK,
-                        topleft=(5,
-                                 self.frontend_obj.data_disp_size[1] / 2 + 5)),
+                        topleft=(0,
+                                 self.frontend_obj.data_disp_size[1] / 2 + 2)),
                 futs.LabelMessage(
                         "%s", font, fg_col=futs.Colors.WHITE,
                         bg_col=futs.Colors.BLACK,
-                        topleft=(self.frontend_obj.data_disp_size[0] / 2 + 5,
-                                 5)),
+                        topleft=(self.frontend_obj.data_disp_size[0] / 2 + 2,
+                                 0)),
                 futs.LabelMessage(
                         "%s", font, fg_col=futs.Colors.WHITE,
                         bg_col=futs.Colors.BLACK,
-                        topleft=(self.frontend_obj.data_disp_size[0] / 2 + 5,
-                                 self.frontend_obj.data_disp_size[1] / 2 + 5)),
+                        topleft=(self.frontend_obj.data_disp_size[0] / 2 + 2,
+                                 self.frontend_obj.data_disp_size[1] / 2 + 2)),
         )
 
     def rotate_wheel(self, key, fine=True):
@@ -492,15 +502,15 @@ class VAMPIRESPupilMode(DeviceMixin, PupilMode):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        zoom = self.frontend_obj.system_zoom
-        font = pygame.font.SysFont("default", 30 * zoom)
+        zoom = self.frontend_obj.fonts_zoom
+        font = pygame.font.SysFont("default", 15 * zoom)
         self.label = futs.LabelMessage("%s", font, fg_col=futs.Colors.GREEN,
-                                       bg_col=None, topleft=(20 * zoom,
-                                                             20 * zoom))
+                                       bg_col=None, topleft=(10 * zoom,
+                                                             10 * zoom))
         self.status_label = futs.LabelMessage(
                 "%s", font, fg_col=futs.Colors.GREEN, bg_col=None,
                 topleft=(20 * zoom,
-                         self.frontend_obj.data_disp_size[1] - 30 * zoom))
+                         self.frontend_obj.data_disp_size[1] - 15 * zoom))
         self.label.blit(self.frontend_obj.pg_datasurface)
 
     def frontend_action(self) -> None:
@@ -635,8 +645,8 @@ class VCAMCompassPlugin(OnOffPlugin):
         self.enabled = False
         self.imrpad = None
         self.surface = self.frontend_obj.pg_datasurface
-        font = pygame.font.SysFont("monospace",
-                                   7 * (self.frontend_obj.system_zoom + 1))
+        self.zoom = self.frontend_obj.fonts_zoom
+        font = pygame.font.SysFont("monospace", 4 * (self.zoom + 1))
         self.text_X = font.render("X", True, self.color)
         self.text_X_rect = self.text_X.get_rect()
         self.text_Y = font.render("Y", True, self.color)
@@ -658,11 +668,11 @@ class VCAMCompassPlugin(OnOffPlugin):
 
         ## Plot X/Y arrows
         xtot_fe, ytot_fe = self.frontend_obj.data_disp_size
-        xc = xtot_fe - 70 * self.frontend_obj.system_zoom
-        yc = ytot_fe - 80 * self.frontend_obj.system_zoom
+        xc = xtot_fe - 35 * self.zoom
+        yc = ytot_fe - 40 * self.zoom
         ctr = np.array((xc, yc))
-        length = 25 * self.frontend_obj.system_zoom
-        lbl_length = 35 * self.frontend_obj.system_zoom
+        length = 12 * self.zoom
+        lbl_length = 17 * self.zoom
 
         # X
         if self.backend_obj.cam_num == 1:
@@ -739,20 +749,21 @@ class VCAMScalePlugin(OnOffPlugin):
         super().__init__(frontend_obj, key_onoff, modifier_and)
         self.color = color
         self.surface = self.frontend_obj.pg_datasurface
-        font = pygame.font.SysFont("monospace",
-                                   7 * (self.frontend_obj.system_zoom + 1),
-                                   bold=True)
+        self.zoom = self.frontend_obj.fonts_zoom
+        font = pygame.font.SysFont("monospace", 5 * (self.zoom + 1), bold=True)
         self.platescale = self.eff_plate_scale = platescale  # mas / px
         xtot_fe, ytot_fe = self.frontend_obj.data_disp_size
         self.length = 0.38 * xtot_fe
-        self.xc = 15 * self.frontend_obj.system_zoom
-        self.yc = ytot_fe - 15 * self.frontend_obj.system_zoom
+        self.xc = 7 * self.zoom
+        self.yc = ytot_fe - 7 * self.zoom
         self.lbl_y = futs.LabelMessage(
                 "%3.01f\"", font, fg_col=self.color, bg_col=None,
-                center=(self.xc + 8, self.yc - self.length - 15))
+                center=(self.xc + 8 * self.zoom,
+                        self.yc - self.length - 8 * self.zoom))
         self.lbl_x = futs.LabelMessage(
                 "%3.01f\"", font, fg_col=self.color, bg_col=None,
-                center=(self.xc + self.length + 30, self.yc - 5))
+                center=(self.xc + self.length + 15 * self.zoom,
+                        self.yc - 2.5 * self.zoom))
 
     def frontend_action(self) -> None:
         assert self.backend_obj  # mypy happy

@@ -31,6 +31,7 @@ def main():
     Klass = {1: VCAM1, 2: VCAM2}[cam]
     stream_name = f'vcam{cam}'
     cpuset_acquisition = f'v{cam}_asl'
+    cpuset_tcp = {1: 'v_tcp', 2: 'v_tcp'}[cam]
     TCP_PORT = {1: scxconf.TCPPORT_VCAM1, 2: scxconf.TCPPORT_VCAM2}[cam]
     ZMQ_PORT = {1: scxconf.ZMQPORT_VCAM1, 2: scxconf.ZMQPORT_VCAM2}[cam]
 
@@ -55,7 +56,7 @@ def main():
             # Sender is kill_upon_create - rather than when starting. that ensures it dies well before the receiver
             # Which is better for flushing TCP sockets
             kill_upon_create=True,
-            cset='v_tcp',
+            cset=cpuset_tcp,
             rtprio=45,
     )
     tcp_send.start_order = 1

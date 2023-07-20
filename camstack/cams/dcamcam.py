@@ -332,20 +332,27 @@ class OrcaQuest(DCAMCamera):
         return val
 
     def set_tint(self, tint: float) -> float:
-        self._dcam_prm_setvalue(float(tint), "EXPTIME",
-                                dcamprop.EProp.EXPOSURETIME)
+        tint = self._dcam_prm_setvalue(float(tint), "EXPTIME",
+                                       dcamprop.EProp.EXPOSURETIME)
         # update FRATE and EXPTIME
         self.get_fps()
+        return tint
 
     def get_fps(self) -> float:
-        exp_time, read_time = self._dcam_prm_getmultivalue(
-                ["EXPTIME", None],
+        exp_time, read_time, ext_trig = self._dcam_prm_getmultivalue(
+                ["EXPTIME", None, None],
                 [
                         dcamprop.EProp.EXPOSURETIME,
-                        dcamprop.EProp.TIMING_READOUTTIME
+                        dcamprop.EProp.TIMING_READOUTTIME,
+                        dcamprop.EProp.TRIGGERSOURCE
                 ],
         )
-        fps = 1 / max(exp_time, read_time)
+        if ext_trig == dcamprop.ETriggerSource.INTERNAL:
+            fps = 1 / max(exp_time, read_time)
+        else:
+            fps = 1 / (
+                    exp_time + read_time
+            )  # Rolling shutter for the currently used trigger mode. FIXME when we deploy continuous external trigger mode.
         self._set_formatted_keyword("FRATE", fps)
         logg.info(f"get_fps {fps}")
         return fps
@@ -385,6 +392,12 @@ class OrcaQuest(DCAMCamera):
         self.grab_shm_fill_keywords()
         self.prepare_camera_finalize()
 
+    def get_external_trigger(self) -> bool:
+        val = (self._dcam_prm_getvalue(None, dcamprop.EProp.TRIGGERSOURCE) ==
+               dcamprop.ETriggerSource.EXTERNAL)
+        self._set_formatted_keyword("EXTTRIG", val)
+        return val
+
     def set_external_trigger(self, enable: bool) -> bool:
         if enable:
             logg.debug(f"Enabling external trigger.")
@@ -402,8 +415,10 @@ class OrcaQuest(DCAMCamera):
                     dcamprop.EProp.TRIGGERSOURCE,
             )
 
-        self._set_formatted_keyword("EXTTRIG", bool(result))
-        return bool(result)
+        ext_trig = result == dcamprop.ETriggerSource.EXTERNAL
+        self._set_formatted_keyword("EXTTRIG", ext_trig)
+        self.get_fps()  # fps has to be refreshed after changing trigger mode.
+        return ext_trig
 
     def set_output_trigger_options(self, kind: str, polarity: str,
                                    num: int = 1) -> List[float]:
@@ -486,8 +501,8 @@ class AlalaOrcam(OrcaQuest):
 
 
 class BaseVCAM(OrcaQuest):
-    PLATE_SCALE = (1.5583e-6, 1.5583e-6)  # deg / px
-    PA_OFFSET = -78.6  # deg
+    PLATE_SCALE = (-1.6717718901193757e-6, 1.6717718901193757e-6)  # deg / px
+    PA_OFFSET = -41.323163723676146  # deg
 
     ## camera keywords
     KEYWORDS: Dict[str, Tuple[util.KWType, str, str, str]] = {
@@ -642,7 +657,8 @@ class BaseVCAM(OrcaQuest):
 
 
 class VCAM1(BaseVCAM):
-    PLATE_SCALE = (-1.5583e-6, -1.5583e-6)  # deg / px
+    PLATE_SCALE = (BaseVCAM.PLATE_SCALE[0], -BaseVCAM.PLATE_SCALE[1]
+                   )  # deg / px
 
     MODES = {
             BaseVCAM.STANDARD:
@@ -686,8 +702,6 @@ class VCAM1(BaseVCAM):
 
 
 class VCAM2(BaseVCAM):
-    PLATE_SCALE = (-1.5583e-6, 1.5583e-6)  # deg / px
-
     MODES = {
             BaseVCAM.STANDARD:
                     util.CameraMode(x0=1768, x1=2303, y0=892, y1=1427,

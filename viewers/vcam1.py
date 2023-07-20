@@ -14,15 +14,22 @@ def main(zoom, binn):
     binned_backend_shape = (560 // binn, 560 // binn)
 
     frontend = VAMPIRESBaseViewerFrontend(1, zoom, 20, binned_backend_shape,
-                                          fonts_zoom=2 * zoom)
-    plugins = (SaturationPlugin(frontend, sat_value=65535,
-                                textbox=frontend.lbl_saturation),
-               FieldstopPlugin(frontend), FilterWheelPlugin(frontend),
-               MBIWheelPlugin(frontend), VAMPIRESPupilMode(frontend),
-               VCAMDarkAcquirePlugin(frontend, textbox=frontend.lbl_status),
-               VCAMTriggerPlugin(frontend), DiffFilterWheelPlugin(frontend),
-               VCAMCompassPlugin(frontend, imrpad_offset=50.6),
-               VCAMScalePlugin(frontend))
+                                          fonts_zoom=2 * zoom // binn)
+    plugins = (
+            SaturationPlugin(frontend, sat_value=65535,
+                             textbox=frontend.lbl_saturation),
+            FieldstopPlugin(frontend),
+            FilterWheelPlugin(frontend),
+            MBIWheelPlugin(frontend),
+            VAMPIRESPupilMode(frontend),
+            VCAMDarkAcquirePlugin(frontend, textbox=frontend.lbl_status),
+            VCAMTriggerPlugin(frontend),
+            DiffFilterWheelPlugin(frontend),
+            VCAMCompassPlugin(
+                    frontend,
+                    imrpad_offset=41.323163723676146  # deg
+            ),
+            VCAMScalePlugin(frontend, platescale=6.018378804429752))
 
     frontend.plugins.extend(plugins)
     frontend.register_backend(backend)

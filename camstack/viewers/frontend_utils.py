@@ -33,6 +33,22 @@ COLOR_BACKGROUND = Colors.BLACK  # background color
 COLOR_BUTTON = Colors.BLUE  # button color
 
 
+class FontBook:
+
+    def __init__(self, system_zoom: int) -> None:
+
+        self.DEFAULT_25 = \
+            pygame.font.SysFont("default", 20 * system_zoom)
+        self.DEFAULT_16 = \
+            pygame.font.SysFont("default", 10 * system_zoom)
+        self.MONO_5 = \
+            pygame.font.SysFont("monospace", 5 * system_zoom)
+        self.MONO = \
+            pygame.font.SysFont("monospace", 8 * system_zoom)
+        self.MONOBOLD = \
+            pygame.font.SysFont("monospace", 7 * system_zoom, bold=True)
+
+
 # Dynamic generation of fonts with the system zoom
 class Fonts:
     # Cannot initialize from the get go, cause we need pygame to be initialized.
