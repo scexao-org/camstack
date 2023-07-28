@@ -10,14 +10,16 @@ if __name__ == "__main__":
     os.makedirs(os.environ['HOME'] + "/logs", exist_ok=True)
     init_camstack_logger(os.environ['HOME'] + "/logs/camstack-firstcam.log")
 
-    mode = OrcaQuest.FIRST
+    # mode = OrcaQuest.FIRST
+    mode = OrcaQuest.FIRSTPL
+    # mode = OrcaQuest.FULL
 
     cam = OrcaQuest('orcam', 'orcam', dcam_number=0, mode_id=mode,
                     taker_cset_prio=('user', 42), dependent_processes=[])
 
     from camstack.core.utilities import shellify_methods
     shellify_methods(cam, globals())
-
+    '''
     # PYROSERVER
     from scxconf import PYRONS3_HOST, PYRONS3_PORT
     from camstack import pyro_keys as pk
@@ -26,3 +28,4 @@ if __name__ == "__main__":
     server = PyroServer(nsAddress=(PYRONS3_HOST, PYRONS3_PORT))
     server.add_device(cam, pk.FIRST, add_oneway_callables=True)
     server.start()
+    '''
