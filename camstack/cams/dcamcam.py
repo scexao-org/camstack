@@ -165,7 +165,7 @@ class DCAMCamera(BaseCamera):
 
         from camstack.core.tmux import find_pane_running_pid
         pid = find_pane_running_pid(self.take_tmux_pane)
-        assert pid is not None
+        assert pid is not None, f"pid in frame taker tmux is None - the framegrab process did not start/crashed."
         try:
             os.kill(pid, 0)
         except OSError:
