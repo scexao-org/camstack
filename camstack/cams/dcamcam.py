@@ -260,7 +260,8 @@ class OrcaQuest(DCAMCamera):
     INTERACTIVE_SHELL_METHODS = [
             "FIRST",
             "FULL",
-            "FIRSTPL','set_tint",
+            "FIRSTPL",
+            "set_tint",
             "get_tint",
             "get_temperature",
             "set_readout_mode",
