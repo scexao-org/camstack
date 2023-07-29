@@ -25,6 +25,8 @@ class DCAMCamera(BaseCamera):
     KEYWORDS = {}
     KEYWORDS.update(BaseCamera.KEYWORDS)
 
+    IS_WATER_COOLED = False  # Amend in subclasses.
+
     def __init__(
             self,
             name: str,
@@ -101,10 +103,14 @@ class DCAMCamera(BaseCamera):
                         dcamprop.EOutputTriggerKind.TRIGGERREADY,
                 dcamprop.EProp.OUTPUTTRIGGER_POLARITY:
                         dcamprop.EOutputTriggerPolarity.POSITIVE,
-                # liquid cooling (has no effect if air cooling is on)
-                dcamprop.EProp.SENSORCOOLER:
-                        dcamprop.ESensorCooler.MAX
         }
+
+        if self.IS_WATER_COOLED:
+            # Cooling to da max.
+            # OK in water cooling
+            # Send a DCAMERR Invalid Property in air cooling.
+            # DCAMERRS are fatal in dcamtake.c in setup phase, nonfatal after.
+            params[dcamprop.EProp.SENSORCOOLER] = dcamprop.ESensorCooler.MAX
 
         # Additional parameters for custom calls
         # Designed for e.g. dcamprop.EProp.READOUTSPEED
@@ -277,6 +283,8 @@ class OrcaQuest(DCAMCamera):
 
     KEYWORDS = {}
     KEYWORDS.update(DCAMCamera.KEYWORDS)
+
+    IS_WATER_COOLED = False
 
     def __init__(
             self,
@@ -548,6 +556,8 @@ class BaseVCAM(OrcaQuest):
     MODES = {
             FULL: util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
     }
+
+    IS_WATER_COOLED = True  # Results in prepare_camera_for_size setting cooler to MAX.
 
     def set_readout_mode(self, mode: str) -> None:
         super().set_readout_mode(mode)
