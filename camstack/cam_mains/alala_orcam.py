@@ -25,5 +25,5 @@ if __name__ == "__main__":
 
     server = PyroServer(bindTo=(IP_ALALA, 0),
                         nsAddress=(PYRONS3_HOST, PYRONS3_PORT))
-    server.add_device(cam, pk.ALALA_ORCA, add_oneway_callables=True)
+    server.add_device(cam, pk.ALALA, add_oneway_callables=True)
     server.start()

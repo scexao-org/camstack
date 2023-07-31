@@ -275,11 +275,10 @@ class OrcaQuest(DCAMCamera):
             FULL: util.CameraMode(x0=0, x1=4095, y0=0, y1=2103, tint=0.001),
             FIRSTPL: util.CameraMode(x0=1500, x1=3395, y0=1580, y1=1983, tint=0.001),
             0: util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),  # Also full
-            1: util.CameraMode(x0=1196, x1=2127, y0=784, y1=1039, tint=0.001),    # Kyohoon is Using for WFS mode
-            11: util.CameraMode(x0=1536, x1=2335, y0=976, y1=1231, tint=0.1), # Same as 1 no tint.
+            1: util.CameraMode(x0=1580, x1=2639, y0=1088, y1=1247, tint=0.001),    # Kyohoon is Using for WFS mode
             2: util.CameraMode(x0=800, x1=3295, y0=876, y1=1531, tint=0.001),      # Kyohoon is Using for WFS align
-            3: util.CameraMode(x0=1148, x1=2947, y0=696, y1=1807, tint=0.001),
-            4: util.CameraMode(x0=1700, x1=1963, y0=760, y1=1015, tint=0.001),    # Jen is using for focal plane mode
+            3: util.CameraMode(x0=1924, x1=2723, y0=1244, y1=1443, tint=0.001),
+            4: util.CameraMode(x0=2140, x1=2395, y0=832, y1=1087, tint=0.000001),    # Jen is using for focal plane mode
             DICHROIC: util.CameraMode(x0=2336, x1=3135, y0=0, y1=2303, tint=0.01), # Dichroic stack mode
     }
     # yapf: enable
