@@ -3,6 +3,8 @@
 
     Factorizing some code between apapane.py, palila.py, renocam.py
 '''
+from __future__ import annotations
+
 from typing import Tuple, Optional as Op, TYPE_CHECKING, Callable
 if TYPE_CHECKING:
     from scxkw.redisutil.typed_db import Redis
@@ -221,18 +223,12 @@ def get_img_data(cam: SHM, cam_type: CREDWHAT, bias: Op[np.ndarray] = None,
     #cam_clean.set_data(temp.astype(np.float32))
 
     if subt_ref:
-        assert ref
+        assert ref is not None
         temp -= ref
         if not lin_scale:
             temp = np.abs(temp)
 
     return (temp, isat)
-
-
-from functools import partial
-
-get_img_data_cred1 = partial(get_img_data, cam_type=CREDWHAT.ONE)
-get_img_data_cred2 = partial(get_img_data, cam_type=CREDWHAT.TWO)
 
 
 def ave_img_data_from_callable(get_img_data: Callable, nave: int,
@@ -260,14 +256,14 @@ def ave_img_data_from_callable(get_img_data: Callable, nave: int,
             ave_im = get_img_data(bias=bias, badpixmap=badpixmap,
                                   clean=clean)[0].astype(np.float32)
         else:
-            assert ave_im
+            assert ave_im is not None
             ave_im += get_img_data(bias=bias, badpixmap=badpixmap,
                                    clean=clean)[0]
         count += 1
         if time.time() - t_start > timeout:
             break
 
-    assert ave_im
+    assert ave_im is not None
     ave_im /= float(count)
 
     return ave_im
