@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import Dict, Callable, Optional, TYPE_CHECKING
-from swmain.redis import RDB
 
 if TYPE_CHECKING:
     from .generic_viewer_frontend import GenericViewerFrontend
@@ -231,3 +230,27 @@ class BullseyePlugin(OnOffPlugin):
             return
 
         self.hotspot = self.get_centroid()
+
+
+# class MouseFluxPlugin(BasePlugin):
+
+#     def __init__(self, frontend_obj: GenericViewerFrontend,
+#                  textbox: futs.LabelMessage) -> None:
+#         super().__init__(frontend_obj)
+#         assert re.match('%.*s', textbox.template_str)
+#         self.textbox = textbox
+#         self.mx_im = self.my_im = self.flux = None
+
+#     def frontend_action(self) -> None:
+#         # Just remind the front end to blit on top of the data.
+#         if self.mx_im is None or self.my_im is None or self.flux is None:
+#             return
+#         self.frontend_obj.pg_updated_rects.append(self.textbox.rectangle)
+
+#     def backend_action(self) -> None:
+#         if not self.backend_obj.data_debias:
+#             return
+#         mx, my = pygame.mouse.get_pos()
+#         self.mx_im = int(mx / zg + xmin - xshift)
+#         self.my_im = int(my / zg + ymin - yshift)
+#         self.flux = self.backend_obj.data_debias[my_im, mx_im]

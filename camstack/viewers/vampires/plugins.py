@@ -11,7 +11,7 @@ import pygame.constants as pgmc
 from functools import partial
 import pygame
 import logging
-from swmain.redis import get_values, RDB
+from swmain.redis import get_values
 from rich.panel import Panel
 from rich.live import Live
 from rich.logging import RichHandler
@@ -141,7 +141,7 @@ class MaskWheelPlugin(DeviceMixin, BasePlugin):
 
     def backend_action(self) -> None:
         # Warning: this is called every time the window refreshes, i.e. ~20Hz.
-        name = RDB.hget("U_MASK", "value")
+        name = get_values(("U_MASK", ))["U_MASK"]
         self.status = name
         if not self.enabled:
             return
@@ -259,7 +259,8 @@ class DiffFilterWheelPlugin(DeviceMixin, BasePlugin):
             return
         # Warning: this is called every time the window refreshes, i.e. ~20Hz.
         diff_key = f"U_DIFFL{self.backend_obj.cam_num}"
-        diff_filt = RDB.hget(diff_key, "value")
+        diff_filt = get_values((diff_key, ))[diff_key]
+
         if self.label:
             if diff_filt.upper() == "OPEN":
                 self.label.render_whitespace()
@@ -386,7 +387,7 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
 
     def backend_action(self) -> None:
         # Warning: this is called every time the window refreshes, i.e. ~20Hz.
-        name = RDB.hget("U_FLDSTP", "value")
+        name = get_values(("U_FLDSTP", ))["U_FLDSTP"]
         self.status = f"{name.upper():>9s}"
         if self.is_offset:
             self.status = "OFFSET"
@@ -395,7 +396,7 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
 class MBIWheelPlugin(DeviceMixin, BasePlugin):
 
     DEVICE_NAME = "VAMPIRES_MBI"
-    FIELDS = "F620", "F720", "F670", "F770"
+    FIELDS = "F610", "F720", "F670", "F770"
 
     def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
         super().__init__(frontend_obj)
@@ -492,7 +493,7 @@ class MBIWheelPlugin(DeviceMixin, BasePlugin):
     def backend_action(self) -> None:
         if not self.enabled:
             return
-        name = RDB.hget("U_MBI", "value")
+        name = get_values(("U_MBI", ))["U_MBI"]
         self.status = name.upper()
 
 
@@ -523,8 +524,9 @@ class VAMPIRESPupilMode(DeviceMixin, PupilMode):
             return
 
     def backend_action(self) -> None:
-        self.status = RDB.hget("U_PUPST", "value").upper()
-        self.mask_name = RDB.hget("U_MASK", "value").upper()
+        status_dict = get_values(("U_PUPST", "U_MASK"))
+        self.status = status_dict["U_PUPST"].upper()
+        self.mask_name = status_dict["U_MASK"].upper()
         if not self.enabled:
             return
 
@@ -675,14 +677,8 @@ class VCAMCompassPlugin(OnOffPlugin):
         lbl_length = 17 * self.zoom
 
         # X
-        if self.backend_obj.cam_num == 1:
-            pygame.draw.line(self.surface, self.color, ctr, (xc, yc - length),
-                             2)
-            self.text_X_rect.center = xc, yc - lbl_length
-        else:
-            pygame.draw.line(self.surface, self.color, ctr, (xc, yc + length),
-                             2)
-            self.text_X_rect.center = xc, yc + lbl_length
+        pygame.draw.line(self.surface, self.color, ctr, (xc, yc - length), 2)
+        self.text_X_rect.center = xc, yc - lbl_length
         self.surface.blit(self.text_X, self.text_X_rect)
         # Y
         pygame.draw.line(self.surface, self.color, ctr, (xc - length, yc), 2)

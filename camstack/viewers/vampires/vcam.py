@@ -227,7 +227,7 @@ CTRL  + s     : Save current position to last configuration"""
                 self._get_crop_slice(center=centers["770"], shape=_mbi_shape),
                 self._get_crop_slice(center=centers["720"], shape=_mbi_shape),
                 self._get_crop_slice(center=centers["670"], shape=_mbi_shape),
-                self._get_crop_slice(center=centers["620"], shape=_mbi_shape),
+                self._get_crop_slice(center=centers["610"], shape=_mbi_shape),
         )
 
     def _data_crop(self) -> None:
@@ -244,6 +244,7 @@ CTRL  + s     : Save current position to last configuration"""
         self.data_min = np.min(self.data_raw_uncrop)
         self.data_max = np.max(self.data_raw_uncrop)
         self.data_mean = np.mean(self.data_raw_uncrop)
+        self.data_median = np.median(self.data_raw_uncrop)
 
         ## determine our camera mode from the data size
         Nx, Ny = self.data_debias_uncrop.shape
@@ -283,7 +284,7 @@ CTRL  + s     : Save current position to last configuration"""
 class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):
     WINDOW_NAME = "VCAM"
     CARTOON_FILE = "opeapea1.png"
-    BOTTOM_PX_PAD = 155
+    BOTTOM_PX_PAD = 175
 
     def __init__(self, cam_num, *args, **kwargs) -> None:
         self.cam_num = cam_num
@@ -314,17 +315,17 @@ class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):
         self.lbl_cropzone.blit(self.pg_screen)
         r += int(self.lbl_cropzone.em_size)
 
-        self.lbl_times = futs.LabelMessage("t=%10.3f ms - fps= %4.0f",
+        self.lbl_times = futs.LabelMessage("t=%10.3f ms / fps= %4.0f",
                                            self.fonts.MONO, topleft=(c, r))
         self.lbl_times.blit(self.pg_screen)
         r += int(self.lbl_times.em_size)
 
-        self.lbl_trig = futs.LabelMessage("Trigger: %s", futs.Fonts.MONO,
-                                          topleft=(c, r))
+        self.lbl_trig = futs.LabelMessage("trigger: %3s / readout: %4s",
+                                          futs.Fonts.MONO, topleft=(c, r))
         self.lbl_trig.blit(self.pg_screen)
         r += int(self.lbl_trig.em_size)
 
-        self.lbl_data_val = futs.LabelMessage("m,M=(%5.0f, %5.0f) mu=%5.0f",
+        self.lbl_data_val = futs.LabelMessage("l,h=(%5.0f, %5.0f) med=%5.0f",
                                               self.fonts.MONO, topleft=(c, r))
         self.lbl_data_val.blit(self.pg_screen)
         r += int(1.2 * self.lbl_data_val.em_size)
@@ -345,18 +346,21 @@ class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):
         kws = self.backend_obj.input_shm.get_keywords(
         )  # single fetch rather than pymilk functions.
 
-        tint: float = kws["EXPTIME"]  # seconds
-        fps: float = kws["FRATE"]
-        trigger: str = 'EXT' if kws["EXTTRIG"] == '#TRUE#' else 'INT'
+        tint: float = kws.get("EXPTIME", 0)  # seconds
+        fps: float = kws.get("FRATE", 0)
+        trigger: str = ""
+        if "EXTTRIG" in kws:
+            trigger = "EXT" if kws["EXTTRIG"] == "#TRUE#" else "INT"
+        readmode: str = kws.get("U_DETMOD", "").strip().upper()
         tint_ms = tint * 1e3
 
         self.lbl_cropzone.render(tuple(self.backend_obj.input_shm.get_crop()),
                                  blit_onto=self.pg_screen)
         self.lbl_times.render((tint_ms, fps), blit_onto=self.pg_screen)
-        self.lbl_trig.render((trigger, ), blit_onto=self.pg_screen)
+        self.lbl_trig.render((trigger, readmode), blit_onto=self.pg_screen)
         self.lbl_data_val.render(
                 (self.backend_obj.data_min, self.backend_obj.data_max,
-                 self.backend_obj.data_mean), blit_onto=self.pg_screen)
+                 self.backend_obj.data_median), blit_onto=self.pg_screen)
 
         self.pg_updated_rects.extend((
                 self.lbl_cropzone.rectangle,
