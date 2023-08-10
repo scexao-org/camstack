@@ -8,7 +8,7 @@
     which also includes ZMQ streaming, UTR, and ocam_decode
 
     Usage:
-        cam-restartdeps (ocam|palila|apapane|kiwikiu|glint)...
+        cam-restartdeps (ocam|palila|apapane|kiwikiu|glint|vcam1|vcam2)...
 '''
 
 
@@ -33,6 +33,8 @@ if __name__ == "__main__":
         'apapane': 'apapane_ctrl',
         'ocam': 'ocam_ctrl',
         'palila': 'palila_ctrl',
+        'vcam1': 'vcam1_ctrl',
+        'vcam2': 'vcam2_ctrl',
     }
 
     tmuxes = [NAME_MAPPING[cam] for cam in args if args[cam]]
