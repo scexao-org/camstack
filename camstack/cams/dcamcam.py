@@ -65,7 +65,7 @@ class DCAMCamera(BaseCamera):
         # Try create a feedback SHM for parameters
         if self.control_shm is None:
             self.control_shm = SHM(self.STREAMNAME + "_params_fb",
-                                   np.zeros((1, ), dtype=np.int16))
+                                   np.zeros((1, ), dtype=np.int32))
 
     def prepare_camera_for_size(
             self,
@@ -540,7 +540,7 @@ class BaseVCAM(OrcaQuest):
                        "QWP2"),
             "U_QWP2TH":
                     (-1, "[deg] VAMPIRES QWP 2 wheel theta", "%16.3f", "QWP2T"),
-            ## polarzation terms managed by HWP daemon
+            ## polarization terms managed by HWP daemon
             "RET-ANG1": (-1, "[deg] Polarization angle of first retarder plate",
                          "%20.2f", "RTAN1"),
             "RET-ANG2":
@@ -636,8 +636,8 @@ class BaseVCAM(OrcaQuest):
         if "MBI" in obs_mod:
             # 4 WCS
             wcs_dicts = []
-            for i, field in enumerate(("770", "720", "670", "620")):
-                if field == "620" and obs_mod.endswith("MBIR"):
+            for i, field in enumerate(("770", "720", "670", "610")):
+                if field == "610" and obs_mod.endswith("MBIR"):
                     name = "NA"
                 else:
                     name = f"F{field}"
@@ -677,20 +677,20 @@ class VCAM1(BaseVCAM):
                     util.CameraMode(x0=1764, x1=2299, y0=896, y1=1431,
                                     tint=1e-3),
             BaseVCAM.MBI:
-                    util.CameraMode(x0=612, x1=2855, y0=640, y1=1747,
+                    util.CameraMode(x0=756, x1=2995, y0=632, y1=1735,
                                     tint=1e-3),
             BaseVCAM.MBI_REDUCED:
-                    util.CameraMode(x0=612, x1=2855, y0=1148, y1=1747,
+                    util.CameraMode(x0=756, x1=2995, y0=1152, y1=1735,
                                     tint=1e-3),
             BaseVCAM.PUPIL:
                     util.CameraMode(x0=1644, x1=2403, y0=784, y1=1543, tint=0.1)
     }
     MODES.update(BaseVCAM.MODES)
     HOTSPOTS = {
-            "770": (1983.5, 809.3),
-            "720": (861.8, 828.9),
-            "670": (297.5, 831.5),
-            "620": (285.7, 268.9)
+            "770": (1965.4, 808.2),
+            "720": (843.9, 830.0),
+            "670": (279.4, 833.5),
+            "610": (268.7, 270.7)
     }
 
     def _fill_keywords(self) -> None:
@@ -705,12 +705,24 @@ class VCAM1(BaseVCAM):
 
         # Defaults
         filter02 = "Unknown"
+        qwp1 = qwp1th = -1
+        qwp2 = qwp2th = -1
         try:
-            filter02 = self.RDB.hget('U_DIFFL1', 'value')
+            with self.RDB.pipeline() as pipe:
+                pipe.hget("U_DIFFL1", "value")
+                pipe.hget("U_QWP1", "value")
+                pipe.hget("U_QWP1TH", "value")
+                pipe.hget("U_QWP2", "value")
+                pipe.hget("U_QWP2TH", "value")
+                filter02, qwp1, qwp1th, qwp2, qwp2th = pipe.execute()
         except:
             logg.error('REDIS unavailable @ _fill_keywords @ VCAM1')
 
         self._set_formatted_keyword("FILTER02", filter02)
+        self._set_formatted_keyword("U_QWP1", qwp1)
+        self._set_formatted_keyword("U_QWP1TH", qwp1th)
+        self._set_formatted_keyword("U_QWP2", qwp2)
+        self._set_formatted_keyword("U_QWP2TH", qwp2th)
 
 
 class VCAM2(BaseVCAM):
@@ -719,10 +731,10 @@ class VCAM2(BaseVCAM):
                     util.CameraMode(x0=1768, x1=2303, y0=892, y1=1427,
                                     tint=1e-3),
             BaseVCAM.MBI:
-                    util.CameraMode(x0=612, x1=2855, y0=564, y1=1671,
+                    util.CameraMode(x0=756, x1=2995, y0=572, y1=1675,
                                     tint=1e-3),
             BaseVCAM.MBI_REDUCED:
-                    util.CameraMode(x0=612, x1=2855, y0=564, y1=1155,
+                    util.CameraMode(x0=756, x1=2995, y0=572, y1=1155,
                                     tint=1e-3),
             BaseVCAM.PUPIL:
                     util.CameraMode(x0=1648, x1=2407, y0=772, y1=1531, tint=0.1)
@@ -730,10 +742,10 @@ class VCAM2(BaseVCAM):
     MODES.update(BaseVCAM.MODES)
 
     HOTSPOTS = {
-            "770": (1991.7, 321.4),
-            "720": (872.0, 283.6),
-            "670": (307.5, 271.5),
-            "620": (286.4, 836.6)
+            "770": (1970.5, 313.1),
+            "720": (850.8, 279.3),
+            "670": (286.4, 268.9),
+            "610": (269.3, 834.4)
     }
 
     def _fill_keywords(self) -> None:
