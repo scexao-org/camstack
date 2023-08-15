@@ -108,6 +108,9 @@ class ParamsSHMCamera(BaseCamera):
             To perform set-gets and just gets with the same procedure... we leverage the hexmasks
             All parameters (see Eprop in dcamprop.py) are 32 bit starting with 0x0
             We set the first bit to 1 if it's a set.
+
+            #FIXME: DCAM would really only like to use float64.
+            #FIXME: PVCAM is a little more flexible but mostly prefers uint64
         """
 
         logg.debug(

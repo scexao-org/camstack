@@ -141,6 +141,9 @@ class DCAMCamera(ParamsSHMCamera):
         if reuse_shm:
             self.taker_tmux_command += " -R"  # Do not overwrite the SHM.
 
+    # def _params_shm_return_raw_to_fits_val(self, api_key: int, value: float):
+    # Unecessary: happy with the superclass.
+
     def _params_shm_return_raw_to_format_val(self, dcam_key: int, value: float):
         if (dcam_key in dcamprop.PROP_ENUM_MAP and value is not None and
                     value != self.PARAMS_SHM_INVALID_MAGIC):
@@ -409,6 +412,7 @@ class AlalaOrcam(OrcaQuest):
 class BaseVCAM(OrcaQuest):
     PLATE_SCALE = (-1.6717718901193757e-6, 1.6717718901193757e-6)  # deg / px
     PA_OFFSET = -41.323163723676146  # deg
+    HOTSPOTS: Dict[str, Tuple[float, float]] = {}
 
     ## camera keywords
     KEYWORDS: Dict[str, Tuple[util.KWType, str, str, str]] = {
@@ -537,10 +541,11 @@ class BaseVCAM(OrcaQuest):
                     name = "NA"
                 else:
                     name = f"F{field}"
-                wcs_dict = wcs_dict_init(
-                        i, pix=np.array(self.HOTSPOTS[field]) + 0.5,
-                        delt_val=self.PLATE_SCALE, cd_rot_rad=self.PA_OFFSET,
-                        name=name, double_with_subaru_fake_standard=False)
+                hx, hy = self.HOTSPOTS[field]
+                wcs_dict = wcs_dict_init(i, pix=(hx + 0.5, hy + 0.5),
+                                         delt_val=self.PLATE_SCALE,
+                                         cd_rot_rad=self.PA_OFFSET, name=name,
+                                         double_with_subaru_fake_standard=False)
                 wcs_dicts.append(wcs_dict)
         else:
             # 1 WCS, Central column
