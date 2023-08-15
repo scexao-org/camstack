@@ -2,7 +2,7 @@ from camstack.cams.flycapturecam import VampiresPupilFlea
 
 from camstack.core.utilities import shellify_methods
 from scxconf import PYRONS3_HOST, PYRONS3_PORT, IP_VAMPIRES
-from camstack import pyro_keys as pk
+import scxconf.pyrokeys as pk
 from swmain.network.pyroserver_registerable import PyroServer
 
 DEFAULT_SHM_NAME = "vpupcam"

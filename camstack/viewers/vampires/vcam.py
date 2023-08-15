@@ -47,9 +47,9 @@ p         : display compass
 i         : display scale bar
 l         : linear/non-linear display
 m         : cycle colormaps
-o         : TODO bullseye on the PSF
 v         : start/stop accumulating and averaging frames
 z         : zoom/unzoom on the center of the image
+SHIFT + z : unzoom image (cycle backwards)
 ARROW     : steer crop
 CTRL + z  : reset zoom and crop
 

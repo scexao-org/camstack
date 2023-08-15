@@ -82,24 +82,24 @@ x, ESC      : quit vpupcam
 
 pupil wheel controls:
 ---------------------
-CTRL+ -- :  change filter wheel slot
-        1:  Open (0 deg)
-        2:  SAM-7
-        3:  SAM-9
-        4:  SAM-18
-        5:  SAM-18-Nudged
-        6:  SAM-Ann-Nudged
-        7:  Mirror
-        8:  SAM-Ann
-        9:  LyotStop
-        0:  Open (218 deg)
-        -:  ND10
-        =:  ND25
-CTRL+ARROW :  Nudge wheel 0.01 mm in x (left/right) and y (up/down)
-SHIFT+ARROW:  Move wheel 1 mm in x (left/right) and y (up/down)
-CTRL+[]    :  Nudge wheel 0.1 deg in theta (ccw/cw)
-SHIFT+[]   :  Nudge wheel 1 deg in theta (ccw/cw)
-    """
+CTRL+ --  : change filter wheel slot
+        1 : Open (0 deg)
+        2 : SAM-7
+        3 : SAM-9
+        4 : SAM-18
+        5 : SAM-18-Nudged
+        6 : SAM-Ann-Nudged
+        7 : Mirror
+        8 : SAM-Ann
+        9 : LyotStop
+        0 : Open (218 deg)
+        - : ND10
+        = : ND25
+CTRL+ARROW  : Nudge wheel 0.01 mm in x (left/right) and y (up/down)
+SHIFT+ARROW : Move wheel 1 mm in x (left/right) and y (up/down)
+CTRL+[]     : Nudge wheel 0.1 deg in theta (ccw/cw)
+SHIFT+[]    : Nudge wheel 1 deg in theta (ccw/cw)
+CTRL+S      : Save position to the last-moved-to configuration"""
 
     # CTRL+S:  Save current position to preset
     # CTRL+F:  Change preset file

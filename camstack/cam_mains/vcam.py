@@ -9,7 +9,7 @@ import logging
 
 # PYROSERVER
 import scxconf
-from camstack import pyro_keys as pk
+import scxconf.pyrokeys as pk
 from swmain.network.pyroserver_registerable import PyroServer
 from camstack.core.utilities import shellify_methods
 from argparse import ArgumentParser
