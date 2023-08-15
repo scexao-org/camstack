@@ -189,6 +189,9 @@ class DependentMultiManager:
         self.dependent_list = dependents
 
     def initialize_tmux(self):
+        if len(self.dependent_list) == 0:
+            return
+
         for dependent in self.dependent_list:
             dependent.assign_tmux_pane()
         time.sleep(3.0)
@@ -196,6 +199,9 @@ class DependentMultiManager:
         self.stop(watch_kill_create_flag=True)
 
     def start(self):
+        if len(self.dependent_list) == 0:
+            return
+
         self.dependent_list.sort(key=lambda x: x.start_order)
 
         for dependent in self.dependent_list:
@@ -205,6 +211,9 @@ class DependentMultiManager:
             dependent.make_children_rt()
 
     def stop(self, watch_kill_create_flag: bool = False):
+        if len(self.dependent_list) == 0:
+            return
+
         self.dependent_list.sort(key=lambda x: x.kill_order)
         for dependent in self.dependent_list:
             if (not watch_kill_create_flag) or dependent.kill_upon_init:
