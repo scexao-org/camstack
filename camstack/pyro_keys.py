@@ -1,3 +1,15 @@
+"""
+DEPRECATED
+
+DO NOT USE THIS MODULE
+
+USE `scxconf.pyrokeys` INSTEAD!
+"""
+from warnings import warn
+
+warn("Please update your code: `camstack.pyro_keys` is deprecated in favor of `scxconf.pyrokeys`"
+     )
+
 APAPANE = BUFFY = 'APAPANE'
 IIWI = 'IIWI'
 PALILA = CHUCK = 'PALILA'
