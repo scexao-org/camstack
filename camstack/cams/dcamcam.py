@@ -573,6 +573,7 @@ class VCAM1(BaseVCAM):
     PLATE_SCALE = (BaseVCAM.PLATE_SCALE[0], -BaseVCAM.PLATE_SCALE[1]
                    )  # deg / px
 
+    GAINS = {"FAST": 0.1052, "SLOW": 0.1046}
     MODES = {
             BaseVCAM.STANDARD:
                     util.CameraMode(x0=1764, x1=2299, y0=896, y1=1431,
@@ -600,6 +601,9 @@ class VCAM1(BaseVCAM):
         # Override detector name
         self._set_formatted_keyword("DETECTOR", "VCAM1 - OrcaQ")
         self._set_formatted_keyword("U_CAMERA", 1)
+
+        # Override detector specs from calibration data
+        self._prm_getvalue("GAIN", self.GAINS[self.readout_mode.upper()])
 
     def poll_camera_for_keywords(self) -> None:
         super().poll_camera_for_keywords()
@@ -642,6 +646,7 @@ class VCAM2(BaseVCAM):
     }
     MODES.update(BaseVCAM.MODES)
 
+    GAINS = {"FAST": 0.1052, "SLOW": 0.1046}
     HOTSPOTS = {
             "770": (1970.5, 313.1),
             "720": (850.8, 279.3),
@@ -655,6 +660,9 @@ class VCAM2(BaseVCAM):
         # Override detector name
         self._set_formatted_keyword("DETECTOR", "VCAM2 - OrcaQ")
         self._set_formatted_keyword("U_CAMERA", 2)
+
+        # Override detector specs from calibration data
+        self._prm_getvalue("GAIN", self.GAINS[self.readout_mode.upper()])
 
     def poll_camera_for_keywords(self) -> None:
         super().poll_camera_for_keywords()
