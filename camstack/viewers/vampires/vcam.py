@@ -244,7 +244,6 @@ CTRL  + s     : Save current position to last configuration"""
         self.data_min = np.min(self.data_raw_uncrop)
         self.data_max = np.max(self.data_raw_uncrop)
         self.data_mean = np.mean(self.data_raw_uncrop)
-        self.data_median = np.median(self.data_raw_uncrop)
 
         ## determine our camera mode from the data size
         Nx, Ny = self.data_debias_uncrop.shape
@@ -325,7 +324,7 @@ class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):
         self.lbl_trig.blit(self.pg_screen)
         r += int(self.lbl_trig.em_size)
 
-        self.lbl_data_val = futs.LabelMessage("l,h=(%5.0f, %5.0f) med=%5.0f",
+        self.lbl_data_val = futs.LabelMessage("l,h=(%5.0f, %5.0f) mu=%6.0f",
                                               self.fonts.MONO, topleft=(c, r))
         self.lbl_data_val.blit(self.pg_screen)
         r += int(1.2 * self.lbl_data_val.em_size)
@@ -360,7 +359,7 @@ class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):
         self.lbl_trig.render((trigger, readmode), blit_onto=self.pg_screen)
         self.lbl_data_val.render(
                 (self.backend_obj.data_min, self.backend_obj.data_max,
-                 self.backend_obj.data_median), blit_onto=self.pg_screen)
+                 self.backend_obj.data_mean), blit_onto=self.pg_screen)
 
         self.pg_updated_rects.extend((
                 self.lbl_cropzone.rectangle,

@@ -603,7 +603,8 @@ class VCAM1(BaseVCAM):
         self._set_formatted_keyword("U_CAMERA", 1)
 
         # Override detector specs from calibration data
-        self._prm_getvalue("GAIN", self.GAINS[self.readout_mode.upper()])
+        self._set_formatted_keyword("GAIN",
+                                    self.GAINS[self.readout_mode.upper()])
 
     def poll_camera_for_keywords(self) -> None:
         super().poll_camera_for_keywords()
@@ -662,7 +663,8 @@ class VCAM2(BaseVCAM):
         self._set_formatted_keyword("U_CAMERA", 2)
 
         # Override detector specs from calibration data
-        self._prm_getvalue("GAIN", self.GAINS[self.readout_mode.upper()])
+        self._set_formatted_keyword("GAIN",
+                                    self.GAINS[self.readout_mode.upper()])
 
     def poll_camera_for_keywords(self) -> None:
         super().poll_camera_for_keywords()
