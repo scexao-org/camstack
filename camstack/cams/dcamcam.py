@@ -268,6 +268,10 @@ class OrcaQuest(DCAMCamera):
         logg.info(f"get_fps {fps}")
         return fps
 
+    def set_fps(self, fps: float) -> float:
+        self.set_tint(1 / fps)
+        return self.get_fps()
+
     def get_maxfps(self) -> float:
         fps = 1 / self._prm_getvalue(None, dcamprop.EProp.TIMING_READOUTTIME)
         logg.info(f"get_fps {fps}")
@@ -301,6 +305,17 @@ class OrcaQuest(DCAMCamera):
         # Are those two necessary in this context??? reuse_shm should cover.
         self.grab_shm_fill_keywords()
         self.prepare_camera_finalize()
+
+    def get_readout_mode(self) -> str:
+        readmode = self._prm_getvalue(None, dcamprop.EProp.READOUTSPEED)
+        if readmode == dcamprop.EReadoutSpeed.READOUT_ULTRAQUIET:
+            mode = "SLOW"
+        elif readmode == dcamprop.EReadoutSpeed.READOUT_FAST:
+            mode = "FAST"
+        else:
+            mode = "Unknown"
+
+        return mode
 
     def get_external_trigger(self) -> bool:
         val = (self._prm_getvalue(None, dcamprop.EProp.TRIGGERSOURCE) ==
