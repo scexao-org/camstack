@@ -658,7 +658,9 @@ class Kalao(NUVU):
         NUVU._fill_keywords(self)
 
         # Override detector name
-        self.camera_shm.update_keyword('DETECTOR', 'NUVU - KALAO')
+        self._set_formatted_keyword('DETECTOR', 'NUVU - KALAO')
+        self._set_formatted_keyword('DETPXSZ1', 0.024)
+        self._set_formatted_keyword('DETPXSZ2', 0.024)
 
 
 # Quick shorthand for testing

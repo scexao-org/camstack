@@ -144,9 +144,14 @@ class OCAM2K(EDTCamera):
 
         self._set_formatted_keyword('DETECTOR', 'OCAM2K (RENO)')
         self._set_formatted_keyword('DET-SMPL', 'GlobRstSingle')
+        self._set_formatted_keyword('DETPXSZ1', 0.024)
+        self._set_formatted_keyword('DETPXSZ2', 0.024)
 
         self._set_formatted_keyword('BIN-FCT1', self.current_mode.binx)
         self._set_formatted_keyword('BIN-FCT2', self.current_mode.biny)
+
+        self._set_formatted_keyword('F-RATIO', 0.0)  # FIXME
+        self._set_formatted_keyword('INST-PA', -360.0)  # FIXME
 
         self._set_formatted_keyword('CROPPED',
                                     False)  # Ocam bins but never crops.

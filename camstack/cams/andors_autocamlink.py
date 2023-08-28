@@ -33,6 +33,13 @@ class AutoAndor897(AutoDumbEDTCamera):
                                    taker_cset_prio=taker_cset_prio,
                                    dependent_processes=dependent_processes)
 
+    def _fill_keywords(self) -> None:
+        AutoDumbEDTCamera._fill_keywords(self)
+
+        # Override detector name
+        self._set_formatted_keyword('DETPXSZ1', 0.016)
+        self._set_formatted_keyword('DETPXSZ2', 0.016)
+
 
 class Vampires(AutoAndor897):
     MODES = {

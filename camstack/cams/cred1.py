@@ -205,6 +205,9 @@ class CRED1(EDTCamera):
         self._set_formatted_keyword("DETECTOR", "CRED1")
         self._set_formatted_keyword("CROPPED",
                                     self.current_mode_id != self.FULL)
+        self._set_formatted_keyword("DETPXSZ1", 0.024)
+        self._set_formatted_keyword("DETPXSZ2", 0.024)
+
         self.get_NDR()  # Sets 'NDR'
         self.get_tint()  # Sets 'EXPTIME'
         self.get_fps()  # Sets 'FRATE'
@@ -505,37 +508,6 @@ class Apapane(CRED1):
         'FILTER01': ('UNKNOWN', 'IRCAMs filter state', '%-16s', 'FILT1'),
         'RET-ANG1': (0.0, 'Position angle of first retarder plate (deg)', '%20.2f', 'HWPAG'),
     }
-    # WIP: migrating WCS to a more automated approach.
-    '''
-        'CDELT1': (4.5e-6, 'X Scale projected on detector (#/pix)', '%20.8f', 'CDEL1'),
-        'CDELT2': (4.5e-6, 'Y Scale projected on detector (#/pix)', '%20.8f', 'CDEL2'),
-        'CUNIT1': ('DEGREE    ', 'Units used in both CRVAL1 and CDELT1', '%-10s', 'CUNI1'),
-        'CUNIT2': ('DEGREE    ', 'Units used in both CRVAL2 and CDELT2', '%-10s', 'CUNI2'),
-        'CTYPE1': ('RA---TAN  ', 'Pixel coordinate system', '%-10s', 'CTYP1'),
-        'CTYPE2': ('DEC--TAN  ', 'Pixel coordinate system', '%-10s', 'CTYP2'),
-
-        'C2ELT1': (4.5e-6, 'X Scale projected on detector (#/pix)', '%20.8f', 'C2EL1'),
-        'C2ELT2': (4.5e-6, 'Y Scale projected on detector (#/pix)', '%20.8f', 'C2EL2'),
-        'C2YPE1': ('RA---TAN  ', 'Pixel coordinate system', '%-10s', 'C2YP1'),
-        'C2YPE2': ('DEC--TAN  ', 'Pixel coordinate system', '%-10s', 'C2YP2'),
-        'C2NIT1': ('DEGREE    ', 'Units used in both C2VAL1 and C2ELT1', '%-10s', 'C2NI1'),
-        'C2NIT2': ('DEGREE    ', 'Units used in both C2VAL2 and C2ELT2', '%-10s', 'C2NI2'),
-
-        # Those will change with cropmode
-        'CRPIX1': ( 40., 'Reference pixel in X (pixel)', '%20.1f', 'CRPX1'),
-        'CRPIX2': ( 80., 'Reference pixel in Y (pixel)', '%20.1f', 'CRPX2'),
-        'CD1_1': (4.5e-6, 'Pixel coordinate translation matrix', '%20.8f', 'CD1_1'),
-        'CD1_2': (    0., 'Pixel coordinate translation matrix', '%20.8f', 'CD1_2'),
-        'CD2_1': (    0., 'Pixel coordinate translation matrix', '%20.8f', 'CD2_1'),
-        'CD2_2': (4.5e-6, 'Pixel coordinate translation matrix', '%20.8f', 'CD2_2'),
-
-        'C2PIX1': (120., 'Reference pixel in X (pixel)', '%20.1f', 'C2PX1'),
-        'C2PIX2': ( 80., 'Reference pixel in Y (pixel)', '%20.1f', 'C2PX2'),
-        'C21_1': (4.5e-6, 'Pixel coordinate translation matrix', '%20.8f', 'CD1_1'),
-        'C21_2': (    0., 'Pixel coordinate translation matrix', '%20.8f', 'CD1_2'),
-        'C22_1': (    0., 'Pixel coordinate translation matrix', '%20.8f', 'CD2_1'),
-        'C22_2': (4.5e-6, 'Pixel coordinate translation matrix', '%20.8f', 'CD2_2'),
-    '''
     # yapf: enable
     KEYWORDS.update(CRED1.KEYWORDS)
 
@@ -644,6 +616,8 @@ class Apapane(CRED1):
         # Override detector name
         self._set_formatted_keyword("DETECTOR", "CRED1 - APAPANE")
         self._set_formatted_keyword("GAIN", 0.45)
+        self._set_formatted_keyword("INST-PA", -360.0)  # FIXME
+        self._set_formatted_keyword("F-RATIO", 0.0)  # FIXME
 
         # Note: RET-ANG1 is set externally by a call to "updatekw apapane RET-ANG1" from HWP scripts.
         # This avoids latency in reporting HWP states.
@@ -655,7 +629,8 @@ class Iiwi(CRED1):
     MODES = {}
     MODES.update(CRED1.MODES)
 
-    KEYWORDS = {}
+    KEYWORDS = {
+    }  # FIXME FILTER01 and FILTER02 should reflect the dichro and the filter.
     KEYWORDS.update(CRED1.KEYWORDS)
 
     REDIS_PUSH_ENABLED = True

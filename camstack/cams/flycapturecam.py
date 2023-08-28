@@ -302,6 +302,8 @@ class Grasshopper3(FlyCaptureUSBCamera):
         self._set_formatted_keyword('CROPPED',
                                     self.current_mode_id != self.FULL)
         self._set_formatted_keyword('DETECTOR', 'FLIR GS3')
+        self._set_formatted_keyword("DETPXSZ1", 0.00586)
+        self._set_formatted_keyword("DETPXSZ2", 0.00586)
 
 
 class Flea3(FlyCaptureUSBCamera):
@@ -326,6 +328,8 @@ class Flea3(FlyCaptureUSBCamera):
         self._set_formatted_keyword('CROPPED',
                                     self.current_mode_id != self.FULL)
         self._set_formatted_keyword('DETECTOR', 'FLIR Flea3')
+        self._set_formatted_keyword("DETPXSZ1", 0.00363)
+        self._set_formatted_keyword("DETPXSZ2", 0.00363)
 
 
 class VampiresPupilFlea(Flea3):

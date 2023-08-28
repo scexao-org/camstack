@@ -46,8 +46,8 @@ class SpinnakerUSBCamera(BaseCamera):
         self.spinn_system = None
         self.spinn_cam = None
 
-        BaseCamera.__init__(self, name, stream_name, mode_id,
-                            no_start=no_start, taker_cset_prio=taker_cset_prio,
+        BaseCamera.__init__(self, name, stream_name, mode_id, no_start=no_start,
+                            taker_cset_prio=taker_cset_prio,
                             dependent_processes=dependent_processes)
 
         # The int values of the enumerations took a little digging...
@@ -227,8 +227,7 @@ class FLIR_U3_Camera(SpinnakerUSBCamera):
     KEYWORDS.update(SpinnakerUSBCamera.KEYWORDS)
 
     def _spinnaker_subtypes_constructor_finalizer(self):
-        logg.debug(
-                '_spinnaker_subtypes_constructor_finalizer @ FLIR_U3_Camera')
+        logg.debug('_spinnaker_subtypes_constructor_finalizer @ FLIR_U3_Camera')
 
         # Disable autoexp
         self.spinn_cam.ExposureAuto.SetValue(PySpin.ExposureAuto_Off)
@@ -329,6 +328,9 @@ class BlackFlyS(SpinnakerUSBCamera):
         self.camera_shm.update_keyword('CROPPED',
                                        self.current_mode_id != self.FULL)
         self.camera_shm.update_keyword('DETECTOR', 'BlackFly S')
+
+        self._set_formatted_keyword('DETPXSZ1', 0.00345)
+        self._set_formatted_keyword('DETPXSZ2', 0.00345)
 
     def prepare_camera_for_size(self, mode_id=None):
         logg.debug('prepare_camera_for_size @ BlackFlyS')

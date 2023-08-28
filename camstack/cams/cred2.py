@@ -165,6 +165,8 @@ class CRED2(EDTCamera):
         self._set_formatted_keyword('DETECTOR', 'CRED2')
         self._set_formatted_keyword('CROPPED',
                                     self.current_mode_id != self.FULL)
+        self._set_formatted_keyword("DETPXSZ1", 0.015)
+        self._set_formatted_keyword("DETPXSZ2", 0.015)
 
         # Additional fill-up of the camera state
         self.get_gain()  # Sets 'DETGAIN'
@@ -409,6 +411,8 @@ class Palila(CRED2):
 
         # Override detector name
         self._set_formatted_keyword('DETECTOR', 'CRED2 - PALILA')
+        self._set_formatted_keyword("INST-PA", -360.0)  # FIXME
+        self._set_formatted_keyword("F-RATIO", 0.0)  # FIXME
 
     def poll_camera_for_keywords(self) -> None:
         CRED2.poll_camera_for_keywords(self)

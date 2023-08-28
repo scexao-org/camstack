@@ -217,6 +217,9 @@ class OrcaQuest(DCAMCamera):
         self._set_formatted_keyword("DETECTOR", "Orca Quest")
         self._set_formatted_keyword("CROPPED",
                                     self.current_mode_id != self.FULL)
+        self._set_formatted_keyword("DETPXSZ1", 0.0046)
+        self._set_formatted_keyword("DETPXSZ2", 0.0046)
+
         # Detector specs from instruction manual
         self._prm_getvalue("GAIN", dcamprop.EProp.CONVERSIONFACTOR_COEFF)
         self._prm_getvalue("BIAS", dcamprop.EProp.CONVERSIONFACTOR_OFFSET)
@@ -470,6 +473,10 @@ class BaseVCAM(OrcaQuest):
         self._set_formatted_keyword("U_DETMOD", self.readout_mode.title())
         cropped = self.current_mode_id != self.FULL
         self._set_formatted_keyword("CROPPED", cropped)
+
+        self._set_formatted_keyword("F-RATIO", 21.3)
+        self._set_formatted_keyword("INST-PA", -41.4)
+
         self.get_fps()
         self.get_tint()
 

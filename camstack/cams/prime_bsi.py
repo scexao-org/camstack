@@ -169,6 +169,9 @@ class JensPrimeBSI(PVCAMCamera):
         self._set_formatted_keyword(
                 "CROPPED", self.current_mode_id
                 not in (self.FULL, self.FULLBIN))
+        self._set_formatted_keyword('DETPXSZ1', 0.0065)
+        self._set_formatted_keyword('DETPXSZ2', 0.0065)
+
         # Detector specs from instruction manual
         # TODO GAIN?
         # TODO BIAS?
