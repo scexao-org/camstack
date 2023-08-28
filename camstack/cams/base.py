@@ -501,7 +501,7 @@ class BaseCamera:
         assert self.camera_shm is not None  # mypy happy assert
 
         if self.REDIS_PUSH_ENABLED and self.HAS_REDIS:
-            assert self.REDIS_PREFIX  # mypy
+            assert self.REDIS_PREFIX is not None  # mypy
             try:
                 keywords_shm = self.camera_shm.get_keywords(False)
                 with self.RDB.pipeline() as pipe:
