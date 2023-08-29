@@ -60,7 +60,7 @@ from camstack.core import tmux as tmuxlib
 # ------------------------------------------------------------------
 def get_img_data(*args, **kwargs):
     # Arguments: bias, badpixmap, subt_ref, ref, line_scale, clean, check
-    return cvc.get_img_data_cred1(cam, *args, **kwargs)
+    return cvc.get_img_data(cam, cvc.CREDWHAT.ONE, *args, **kwargs)
 
 
 # ------------------------------------------------------------------
@@ -747,7 +747,7 @@ plot_hotspot = False  # flag for display of the hotspot
 plot_history = False  # flag for display of position history
 subt_bias = True  # flag for bias subtraction
 subt_ref = False  # flag for ref subtraction
-lin_scale = True  # flag for linear range
+lin_scale = False  # flag for linear range
 average = False  # flag for averaging
 saveim = False  # flag to save images
 logexpt = False  # flag to log the exposure time
@@ -755,7 +755,7 @@ logndr = False  # flag to log the exposure time
 seeing = False
 seeing_plot = False
 plot_pa = False
-clr_scale = 0  # flag for the display color scale
+clr_scale = 1  # flag for the display color scale
 shmreload = 0
 keeprpin = False
 wait_for_archive_datatype = False
@@ -1318,6 +1318,8 @@ while True:  # the main game loop
                 timendr = []
                 logndr = False
         if cnti % 20 == 0:
+            if not rdb_alive:
+                rdb, rdb_alive = cvc.locate_redis_db()
             try:
                 (pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad,
                  target, pdi) = cvc.RDB_pull(rdb, rdb_alive, True,
@@ -1928,7 +1930,7 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL) and (mmods & KMOD_LALT):
                     # Index 12 == Ctrl+alt+f == full
-                    mode_id = (what_key, "FULL")[event.key == K_f]
+                    mode_id = (what_key, "full")[event.key == K_f]
                     if event.key == K_f and xsizeim == 320 and ysizeim == 256:
                         # Skip full frame if full frame already
                         print('Camera already in full frame - skipping set_camera_mode()'

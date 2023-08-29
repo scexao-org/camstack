@@ -78,7 +78,7 @@ from camstack.core import tmux as tmuxlib
 
 def get_img_data(*args, **kwargs):
     # Arguments: bias, badpixmap, subt_ref, ref, lin_scale, clean, check
-    return cvc.get_img_data_cred2(cam, *args, **kwargs)
+    return cvc.get_img_data(cam, cvc.CREDWHAT.TWO, *args, **kwargs)
 
 
 # ------------------------------------------------------------------
@@ -684,8 +684,8 @@ rct_sc2.bottomleft = (5 * z1 - 4, ysc - ktot)
 
 #REACH Photometry parameters
 dreachphoto = 64. * z1
-xreachphoto = -3.5 * z1
-yreachphoto = -10.5 * z1
+xreachphoto = -11.5 * z1
+yreachphoto = -12. * z1
 preachphoto = dreachphoto / 7.
 reachphotoc = preachphoto / 2.
 
@@ -763,7 +763,7 @@ plot_hotspot = False  # flag for display of the hotspot
 plot_history = False  # flag for display of position history
 subt_bias = True  # flag for bias subtraction
 subt_ref = False  # flag for ref subtraction
-lin_scale = True  # flag for linear range
+lin_scale = False  # flag for linear range
 average = False  # flag for averaging
 saveim = False  # flag to save images
 logexpt = False  # flag to log the exposure time
@@ -775,7 +775,7 @@ strehl_plot = False
 binary = False
 binary_plot = False
 plot_pa = False  # flag to plot compass roses
-clr_scale = 0  # flag for the display color scale
+clr_scale = 1  # flag for the display color scale
 shmreload = 0
 keeprpin = False
 wait_for_archive_datatype = False
@@ -1443,6 +1443,8 @@ while True:  # the main game loop
                 timendr = []
                 logndr = False
         if cnti % 20 == 0:
+            if rdb_alive is False:
+                rdb, rdb_alive = cvc.locate_redis_db()
             try:
                 (pup, reachphoto, ppin, rpin, bpin, slot, block, pap, pad,
                  target, pdi) = cvc.RDB_pull(rdb, rdb_alive, False,
