@@ -130,37 +130,38 @@ def RDB_pull(rdb: Redis, rdb_alive: bool, cam_apapane: bool,
                     rather than all of a sudden overwrite with all the defaults.
     '''
 
+    import redis  # Need the namespace for the exception to catch
+
+    fits_keys_to_pull = {
+            'X_IRCFLT',
+            'X_IRCBLK',
+            'X_PALPUP',
+            'X_PALPUS',
+            'X_PHOPKO',
+            'X_RCHPKO',
+            'X_APAPKO',
+            'D_IMRPAD',
+            'D_IMRPAP',
+            'OBJECT',
+            'X_IRCWOL',
+    }
+    # Now Getting the keys
+
     if rdb_alive:
-        import redis  # Need the namespace for the exception to catch
-        try:
-            rdb.ping()
-        except redis.exceptions.TimeoutError:
-            rdb_alive = False
+        with rdb.pipeline() as pipe:
+            for key in fits_keys_to_pull:
+                pipe.hget(key, 'value')
+
+            try:
+                values = pipe.execute()
+                status = {k: v for k, v in zip(fits_keys_to_pull, values)}
+            except redis.exceptions.TimeoutError:
+                rdb_alive = False
 
     if not rdb_alive and not do_defaults:
         raise ConnectionError("Redis unavailable and not skipping defaults")
 
     if rdb_alive:  # Fetch from RDB
-        fits_keys_to_pull = {
-                'X_IRCFLT',
-                'X_IRCBLK',
-                'X_PALPUP',
-                'X_PALPUS',
-                'X_PHOPKO',
-                'X_RCHPKO',
-                'X_APAPKO',
-                'D_IMRPAD',
-                'D_IMRPAP',
-                'OBJECT',
-                'X_IRCWOL',
-        }
-        # Now Getting the keys
-        with rdb.pipeline() as pipe:
-            for key in fits_keys_to_pull:
-                pipe.hget(key, 'value')
-            values = pipe.execute()
-        status = {k: v for k, v in zip(fits_keys_to_pull, values)}
-
         pup = status['X_PALPUP'].strip() == 'IN'
         reachphoto = status['X_PALPUS'].strip() == 'REACH'
         gpin = status['X_PHOPKO'].strip() == 'IN'
@@ -178,7 +179,7 @@ def RDB_pull(rdb: Redis, rdb_alive: bool, cam_apapane: bool,
         gpin = False
         rpin = False
         bpin = False
-        slot = 'H-band'
+        slot = '!NO REDIS!'
         block = False
         pap = 0.
         pad = 0.
