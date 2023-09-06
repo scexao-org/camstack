@@ -56,7 +56,7 @@ class BaseVCAM(OrcaQuest):
     KEYWORDS.update(OrcaQuest.KEYWORDS)
     N_WCS = 4
     ## camera modes
-    FULL, STANDARD, MBI, MBI_REDUCED, PUPIL = "FULL", "STANDARD", "MBI", "MBI_REDUCED", "PUPIL"
+    FULL, STANDARD, NPBS, MBI, MBI_REDUCED, PUPIL = "FULL", "STANDARD", "NPBS", "MBI", "MBI_REDUCED", "PUPIL"
     MODES = {
             FULL: util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
     }
@@ -144,7 +144,7 @@ class BaseVCAM(OrcaQuest):
         if "MBI" in obs_mod:
             # 4 WCS
             wcs_dicts = []
-            for i, field in enumerate(("770", "720", "670", "610")):
+            for i, field in enumerate(("760", "720", "670", "610")):
                 if field == "610" and obs_mod.endswith("MBIR"):
                     name = "NA"
                 else:
@@ -196,8 +196,9 @@ class VCAM1(BaseVCAM):
                     util.CameraMode(x0=1644, x1=2403, y0=784, y1=1543, tint=0.1)
     }
     MODES.update(BaseVCAM.MODES)
+    MODES[BaseVCAM.NPBS] = MODES[BaseVCAM.STANDARD]
     HOTSPOTS = {
-            "770": (1965.4, 808.2),
+            "760": (1965.4, 808.2),
             "720": (843.9, 830.0),
             "670": (279.4, 833.5),
             "610": (268.7, 270.7)
@@ -247,6 +248,9 @@ class VCAM2(BaseVCAM):
             BaseVCAM.STANDARD:
                     util.CameraMode(x0=1768, x1=2303, y0=892, y1=1427,
                                     tint=1e-3),
+            BaseVCAM.NPBS:
+                    util.CameraMode(x0=1700, x1=2235, y0=816, y1=1351,
+                                    tint=1e-3),
             BaseVCAM.MBI:
                     util.CameraMode(x0=756, x1=2995, y0=572, y1=1675,
                                     tint=1e-3),
@@ -260,7 +264,7 @@ class VCAM2(BaseVCAM):
 
     GAINS = {"FAST": 0.1052, "SLOW": 0.1046}
     HOTSPOTS = {
-            "770": (1970.5, 313.1),
+            "760": (1970.5, 313.1),
             "720": (850.8, 279.3),
             "670": (286.4, 268.9),
             "610": (269.3, 834.4)
