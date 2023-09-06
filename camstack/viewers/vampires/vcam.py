@@ -11,7 +11,7 @@ from rich.live import Live
 from rich.logging import RichHandler
 from skimage.transform import rescale
 import numpy as np
-from camstack.cams.dcamcam import VCAM1, VCAM2
+from camstack.cams.vampires import VCAM1, VCAM2
 
 stream_handler = RichHandler(level=logging.INFO, show_level=False,
                              show_path=False, log_time_format="%H:%M:%S")
@@ -224,7 +224,7 @@ CTRL  + s     : Save current position to last configuration"""
                 for k, v in hotspots.items()
         }
         self.mbi_slices = (
-                self._get_crop_slice(center=centers["770"], shape=_mbi_shape),
+                self._get_crop_slice(center=centers["760"], shape=_mbi_shape),
                 self._get_crop_slice(center=centers["720"], shape=_mbi_shape),
                 self._get_crop_slice(center=centers["670"], shape=_mbi_shape),
                 self._get_crop_slice(center=centers["610"], shape=_mbi_shape),

@@ -141,8 +141,11 @@ class MaskWheelPlugin(DeviceMixin, BasePlugin):
 
     def backend_action(self) -> None:
         # Warning: this is called every time the window refreshes, i.e. ~20Hz.
-        name = get_values(("U_MASK", ))["U_MASK"]
-        self.status = name
+        try:
+            name = get_values(("U_MASK", ))["U_MASK"]
+            self.status = name
+        except:
+            pass
         if not self.enabled:
             return
 
@@ -197,9 +200,12 @@ class FilterWheelPlugin(DeviceMixin, BasePlugin):
         if not self.enabled:
             return
         # Warning: this is called every time the window refreshes, i.e. ~20Hz.
-        filter_dict = get_values(("U_FILTER", ))
-        if self.label:
-            self.label.render(f"{filter_dict['U_FILTER'].upper():>7s}")
+        try:
+            filter_dict = get_values(("U_FILTER", ))
+            if self.label:
+                self.label.render(f"{filter_dict['U_FILTER'].upper():>7s}")
+        except:
+            pass
 
 
 class DiffFilterWheelPlugin(DeviceMixin, BasePlugin):
@@ -259,13 +265,16 @@ class DiffFilterWheelPlugin(DeviceMixin, BasePlugin):
             return
         # Warning: this is called every time the window refreshes, i.e. ~20Hz.
         diff_key = f"U_DIFFL{self.backend_obj.cam_num}"
-        diff_filt = get_values((diff_key, ))[diff_key]
+        try:
+            diff_filt = get_values((diff_key, ))[diff_key]
 
-        if self.label:
-            if diff_filt.upper() == "OPEN":
-                self.label.render_whitespace()
-            else:
-                self.label.render(f"{diff_filt.upper():>7s}")
+            if self.label:
+                if diff_filt.upper() == "OPEN":
+                    self.label.render_whitespace()
+                else:
+                    self.label.render(f"{diff_filt.upper():>7s}")
+        except:
+            pass
 
 
 class FieldstopPlugin(DeviceMixin, BasePlugin):
@@ -387,16 +396,20 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
 
     def backend_action(self) -> None:
         # Warning: this is called every time the window refreshes, i.e. ~20Hz.
-        name = get_values(("U_FLDSTP", ))["U_FLDSTP"]
-        self.status = f"{name.upper():>9s}"
         if self.is_offset:
             self.status = "OFFSET"
+            return
+        try:
+            name = get_values(("U_FLDSTP", ))["U_FLDSTP"]
+            self.status = f"{name.upper():>9s}"
+        except:
+            pass
 
 
 class MBIWheelPlugin(DeviceMixin, BasePlugin):
 
     DEVICE_NAME = "VAMPIRES_MBI"
-    FIELDS = "F610", "F720", "F670", "F770"
+    FIELDS = "F610", "F720", "F670", "F760"
 
     def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
         super().__init__(frontend_obj)
@@ -493,8 +506,11 @@ class MBIWheelPlugin(DeviceMixin, BasePlugin):
     def backend_action(self) -> None:
         if not self.enabled:
             return
-        name = get_values(("U_MBI", ))["U_MBI"]
-        self.status = name.upper()
+        try:
+            name = get_values(("U_MBI", ))["U_MBI"]
+            self.status = name.upper()
+        except:
+            pass
 
 
 class VAMPIRESPupilMode(DeviceMixin, PupilMode):
@@ -524,9 +540,12 @@ class VAMPIRESPupilMode(DeviceMixin, PupilMode):
             return
 
     def backend_action(self) -> None:
-        status_dict = get_values(("U_PUPST", "U_MASK"))
-        self.status = status_dict["U_PUPST"].upper()
-        self.mask_name = status_dict["U_MASK"].upper()
+        try:
+            status_dict = get_values(("U_PUPST", "U_MASK"))
+            self.status = status_dict["U_PUPST"].upper()
+            self.mask_name = status_dict["U_MASK"].upper()
+        except:
+            pass
         if not self.enabled:
             return
 
@@ -722,10 +741,13 @@ class VCAMCompassPlugin(OnOffPlugin):
     def backend_action(self) -> None:
         if not self.enabled:
             return
-        redis_values = get_values(
-                ("D_IMRPAD", "D_IMRPAP", "ALTITUDE", "AZIMUTH"))
-        self.imrpad = redis_values["D_IMRPAD"] + self.imrpad_offset
-        self.imrpap = redis_values["D_IMRPAP"] + self.imrpad_offset
+        try:
+            redis_values = get_values(
+                    ("D_IMRPAD", "D_IMRPAP", "ALTITUDE", "AZIMUTH"))
+            self.imrpad = redis_values["D_IMRPAD"] + self.imrpad_offset
+            self.imrpap = redis_values["D_IMRPAP"] + self.imrpad_offset
+        except:
+            pass
 
 
 def rotation_matrix(angle: float):
