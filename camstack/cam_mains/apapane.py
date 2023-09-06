@@ -20,8 +20,9 @@ if __name__ == "__main__":
     tcp_recv = RemoteDependentProcess(
             tmux_name=f'streamTCPreceive_{scxconf.TCPPORT_APAPANE}',
             # Urrrrrh this is getting messy
-            cli_cmd='creashmim %s %u %u; shmimTCPreceive -c ircam ' +
-            f'{scxconf.TCPPORT_APAPANE}',
+            cli_cmd=
+            'creashmim %s %u %u --type=f32 --kw=100; shmimTCPreceive -c ircam '
+            + f'{scxconf.TCPPORT_APAPANE}',
             cli_args=('apapane', MAGIC_HW_STR.HEIGHT, MAGIC_HW_STR.WIDTH),
             remote_host=scxconf.IP_SC6,
             kill_upon_create=False,
@@ -48,9 +49,9 @@ if __name__ == "__main__":
     tcp_recv_raw = RemoteDependentProcess(
             tmux_name=f'streamTCPreceive_{scxconf.TCPPORT_APAPANE_RAW}',
             # Urrrrrh this is getting messy
-            cli_cmd=
-            'milk-exec "creaushortimshm %s %u %u"; shmimTCPreceive -c ircam ' +
-            f'{scxconf.TCPPORT_APAPANE_RAW}',
+            cli_cmd=  # FIXME
+            'milk-exec "creashmim %s %u %u --type=u16 --kw=100"; shmimTCPreceive -c ircam '
+            + f'{scxconf.TCPPORT_APAPANE_RAW}',
             cli_args=('apapane_raw', MAGIC_HW_STR.HEIGHT, MAGIC_HW_STR.WIDTH),
             remote_host=scxconf.IP_SC6,
             kill_upon_create=False,
