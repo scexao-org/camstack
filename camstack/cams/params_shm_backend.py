@@ -4,6 +4,8 @@ import os
 import logging as logg
 
 from camstack.cams.base import BaseCamera
+from camstack.core import utilities as util
+from camstack.core.tmux import find_pane_running_pid
 
 from pyMilk.interfacing.shm import SHM
 import numpy as np
@@ -32,7 +34,8 @@ class ParamsSHMCamera(BaseCamera):
 
         # Do basic stuff
         self.control_shm: typ.Optional[SHM] = None
-        self.control_shm_lock = threading.Lock()
+        self.control_shm_lock = threading.RLock(
+        )  # Need an RLock because during the set_camera_mode we eventually get to a _prm_setget_multivalue for fill_keywords.
 
         super().__init__(*args, **kwargs)
 
@@ -52,6 +55,11 @@ class ParamsSHMCamera(BaseCamera):
             self.control_shm = SHM(self.STREAMNAME + "_params_fb",
                                    np.zeros((1, ), dtype=np.int32))
 
+    def set_camera_mode(self, mode_id: util.ModeIDType) -> None:
+        # Wrap into something thread-safe during the restart.
+        with self.control_shm_lock:
+            return super().set_camera_mode(mode_id)
+
     def _ensure_backend_restarted(self) -> None:
         # In case we recreated the SHM...
         # The sleep(1.0) used elsewhere, TOO FAST FOR DCAM!
@@ -60,17 +68,26 @@ class ParamsSHMCamera(BaseCamera):
         assert self.control_shm  # mypy happyness check.
 
         # This should work, unless the grabber crashes during restart.
-        self.control_shm.get_data(check=True, checkSemAndFlush=True,
-                                  timeout=15.0)
+        for k in range(20):
+            time.sleep(1)
 
-        from camstack.core.tmux import find_pane_running_pid
-        pid = find_pane_running_pid(self.take_tmux_pane)
-        assert pid is not None, f"pid in frame taker tmux is None - the framegrab process did not start/crashed."
-        try:
-            os.kill(pid, 0)
-        except OSError:
-            logg.error('dcam/pvcam grabber crashed during restart.')
-            raise RuntimeError('dcam/pvcam grabber crashed during restard.')
+            pid = find_pane_running_pid(self.take_tmux_pane)
+            assert pid is not None, f"pid in frame taker tmux is None - the framegrab process did not start/crashed."
+            try:
+                os.kill(pid, 0)
+            except OSError:
+                logg.error('dcam/pvcam grabber crashed during restart.')
+                raise RuntimeError('dcam/pvcam grabber crashed during restard.')
+
+            if self.control_shm.check_sem_trywait():
+                break
+
+            if k == 19:
+                message = 'dcam/pvcam grabber taking more than 20 sec to restart.'
+                # Ensure the state is known by making absolutely sure we kill this.
+                self._kill_taker_no_dependents(bypass_aux_thread=True)
+                logg.critical(message)
+                raise RuntimeError(message)
 
     def _prm_setvalue(self, value: typ.Any, fits_key: typ.Optional[str],
                       api_cam_key: int) -> float:
@@ -135,7 +152,8 @@ class ParamsSHMCamera(BaseCamera):
             })
             self.control_shm.set_data(self.control_shm.get_data() * 0 +
                                       n_keywords)  # Toggle grabber process
-            self.control_shm.multi_recv_data(3, True)  # Ensure re-sync
+            self.control_shm.multi_recv_data(3, True,
+                                             timeout=1.0)  # Ensure re-sync
 
             fb_values: typ.List[float] = [
                     self.control_shm.get_keywords()[dk]

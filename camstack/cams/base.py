@@ -238,8 +238,9 @@ class BaseCamera:
         # Gets called after the framegrabbing has restarted spinning
         if mode_id is None:
             mode_id = self.current_mode_id
-        logg.warning('Calling prepare_camera on generic BaseCameraClass. '
-                     'Nothing happens here.')
+        logg.warning(
+                'Calling prepare_camera_finalize on generic BaseCameraClass. '
+                'Nothing happens here.')
 
     def set_camera_mode(self, mode_id: util.ModeIDType) -> None:
         '''
@@ -338,23 +339,33 @@ class BaseCamera:
             raise AssertionError('self.taker_tmux_command is not defined?!')
 
         # Let's do it.
-        tmux_util.send_keys(self.take_tmux_pane, self.taker_tmux_command)
+        success = False
+        count = 0
+        while not success:
+            tmux_util.send_keys(self.take_tmux_pane, self.taker_tmux_command)
 
-        if self.taker_cset_prio[1] is not None:  # Set rtprio !
-            subprocess.run(
-                    [
-                            'milk-makecsetandrt',
-                            str(
-                                    tmux_util.find_pane_running_pid(
-                                            self.take_tmux_pane)),  # PID
-                            self.taker_cset_prio[0],  # CPUSET
-                            str(self.taker_cset_prio[1])  # PRIORITY
-                    ],
-                    stdout=subprocess.PIPE)
+            if self.taker_cset_prio[1] is not None:  # Set rtprio !
+                subprocess.run(
+                        [
+                                'milk-makecsetandrt',
+                                str(
+                                        tmux_util.find_pane_running_pid(
+                                                self.take_tmux_pane)),  # PID
+                                self.taker_cset_prio[0],  # CPUSET
+                                str(self.taker_cset_prio[1])  # PRIORITY
+                        ],
+                        stdout=subprocess.PIPE)
+            try:
+                self._ensure_backend_restarted()
+                success = True
+            except:
+                if count == 3:
+                    raise
+                logg.error(
+                        '_start_taker_no_dependents @ BaseCamera - acknowledge _ensure_backend_restarted and retrying'
+                )
+                count += 1
 
-        self._ensure_backend_restarted()
-
-        # Should these 3 be there ???
         self.grab_shm_fill_keywords()
         self.prepare_camera_finalize()
 
@@ -524,6 +535,9 @@ class BaseCamera:
     def start_auxiliary_thread(self) -> None:
         logg.info('start_auxiliary_thread')
         self.event = threading.Event()
+        if self.thread is not None:
+            logg.error(
+                    'start_auxiliary_thread @ Basecamera - something wrong???')
         self.thread = threading.Thread(
                 target=self.auxiliary_thread_run_function)
         self.thread.start()
@@ -537,15 +551,25 @@ class BaseCamera:
         if self.thread is not None:
             self.event.set()
             self.thread.join()
+            if self.thread.is_alive():
+                logg.error(
+                        'stop_auxiliary_thread @ Basecamera - still alive???')
             self.thread = None
 
     def auxiliary_thread_run_function(self) -> None:
         assert self.event is not None  # mypy happy assert
 
+        event_count = 0
         while True:
-            ret = self.event.wait(10)
+            ret = self.event.wait(1)
             if ret:  # Signal to break the loop
                 break
+            event_count += 1
+            if event_count % 10 > 0:
+                continue
+
+            if not self.is_taker_running():
+                logg.critical('take_tmux_pane contains no live PID.')
 
             # Dependents cset + RTprio checking
             for proc in self.dependent_processes:

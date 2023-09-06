@@ -113,8 +113,12 @@ class DCAMCamera(ParamsSHMCamera):
         # There's something with the taker not implementing the
         # triple-semaphore-click feedback at this point yet.
         dump_params = {f"{k:08x}": 1.0 * params[k] for k in params}
+
         self.control_shm.reset_keywords(dump_params)
         self.control_shm.set_data(self.control_shm.get_data() * 0 + len(params))
+        while self.control_shm.check_sem_trywait(
+        ):  # semflush the post we just made.
+            pass
 
     def abort_exposure(self) -> None:
         # Basically restart the stack. Hacky way to abort a very long exposure.
@@ -124,11 +128,12 @@ class DCAMCamera(ParamsSHMCamera):
         # This is a faster version of the intended:
         # self.set_camera_mode(self.current_mode_id)
 
-        self._kill_taker_no_dependents()
-        self.prepare_camera_for_size(
-                self.current_mode_id,
-                params_injection={dcamprop.EProp.EXPOSURETIME: 0.1})
-        self._start_taker_no_dependents(reuse_shm=True)
+        with self.control_shm_lock:
+            self._kill_taker_no_dependents()
+            self.prepare_camera_for_size(
+                    self.current_mode_id,
+                    params_injection={dcamprop.EProp.EXPOSURETIME: 0.1})
+            self._start_taker_no_dependents(reuse_shm=True)
 
     def _prepare_backend_cmdline(self, reuse_shm: bool = False) -> None:
 
@@ -296,15 +301,12 @@ class OrcaQuest(DCAMCamera):
         self.readout_mode = mode
 
         # preserve trigger mode
-        self._kill_taker_no_dependents()
-        self.prepare_camera_for_size(params_injection={
-                dcamprop.EProp.READOUTSPEED: readmode,
-        })
-
-        self._start_taker_no_dependents(reuse_shm=True)
-        # Are those two necessary in this context??? reuse_shm should cover.
-        self.grab_shm_fill_keywords()
-        self.prepare_camera_finalize()
+        with self.control_shm_lock:
+            self._kill_taker_no_dependents()
+            self.prepare_camera_for_size(params_injection={
+                    dcamprop.EProp.READOUTSPEED: readmode,
+            })
+            self._start_taker_no_dependents(reuse_shm=True)
 
     def get_readout_mode(self) -> str:
         readmode = self._prm_getvalue(None, dcamprop.EProp.READOUTSPEED)
