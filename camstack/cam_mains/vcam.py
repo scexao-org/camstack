@@ -31,7 +31,7 @@ def main():
     Klass = {1: VCAM1, 2: VCAM2}[cam]
     stream_name = f'vcam{cam}'
     cpuset_acquisition = f'v{cam}_asl'
-    cpuset_tcp = {1: 'v_tcp', 2: 'v_tcp'}[cam]
+    cpuset_tcp = f'v{cam}_tcp'
     TCP_PORT = {1: scxconf.TCPPORT_VCAM1, 2: scxconf.TCPPORT_VCAM2}[cam]
     ZMQ_PORT = {1: scxconf.ZMQPORT_VCAM1, 2: scxconf.ZMQPORT_VCAM2}[cam]
 
@@ -108,6 +108,7 @@ def main():
     server = PyroServer(bindTo=(scxconf.IP_SC5, 0),
                         nsAddress=(scxconf.PYRONS3_HOST, scxconf.PYRONS3_PORT))
     server.add_device(vcam, pyrokey, add_oneway_callables=True)
+
     globals()["server"] = server
     server.start()
 
