@@ -1,4 +1,6 @@
-from typing import List, Any, Union, Tuple, Optional as Op, Dict
+from __future__ import annotations
+import typing as typ
+from typing import Optional as t_Op
 
 import os
 import time
@@ -15,7 +17,7 @@ try:
 except:
     logg.error('Import error upon trying to import scxkw.config.')
 
-    def redis_check_enabled() -> Tuple[Any, bool]:
+    def redis_check_enabled() -> typ.Tuple[typ.Any, bool]:
         return None, False
 
 
@@ -44,7 +46,7 @@ class BaseCamera:
     '''
 
     REDIS_PUSH_ENABLED: bool = False
-    REDIS_PREFIX: Op[str] = None
+    REDIS_PREFIX: t_Op[str] = None
 
     INTERACTIVE_SHELL_METHODS = [
             'close',
@@ -55,10 +57,10 @@ class BaseCamera:
             'set_camera_size',
     ]
 
-    MODES: Dict[util.ModeIDType, util.CameraMode] = {}
+    MODES: typ.Dict[util.ModeIDType, util.CameraMode] = {}
 
     # yapf: disable
-    KEYWORDS: Dict[str, Tuple[util.KWType, str, str, str]] = {
+    KEYWORDS: typ.Dict[str, typ.Tuple[util.KWType, str, str, str]] = {
             # Format is name:
             #   (value,
             #    description,
@@ -104,7 +106,8 @@ class BaseCamera:
     def __init__(self, name: str, stream_name: str,
                  mode_id_or_hw: util.ModeIDorHWType, no_start: bool = False,
                  taker_cset_prio: util.CsetPrioType = ('system', None),
-                 dependent_processes: List[util.DependentProcess] = []) -> None:
+                 dependent_processes: typ.List[util.DependentProcess] = []
+                 ) -> None:
 
         #=======================
         # COPYING ARGS
@@ -120,7 +123,7 @@ class BaseCamera:
 
         if isinstance(mode_id_or_hw, tuple):  # Allow (width, height) fallback
             width, height = mode_id_or_hw
-            self.current_mode_id: Union[str, int] = 'CUSTOM'
+            self.current_mode_id: typ.Union[str, int] = 'CUSTOM'
             self.MODES['CUSTOM'] = util.CameraMode(x0=0, x1=width - 1, y0=0,
                                                    y1=height - 1)
         else:
@@ -137,8 +140,8 @@ class BaseCamera:
         self.taker_cset_prio = taker_cset_prio
 
         # Thread:
-        self.event: Op[threading.Event] = None
-        self.thread: Op[threading.Thread] = None
+        self.event: t_Op[threading.Event] = None
+        self.thread: t_Op[threading.Thread] = None
 
         #=======================
         # TMUX TAKE SESSION MGMT
@@ -146,8 +149,8 @@ class BaseCamera:
         # The taker tmux name will be allocated in the call to kill_taker_and_dependents
         # The tmux will also be created if it doesn't exist
         # If this session dies, we'll have to call this again
-        self.take_tmux_name: Op[str] = None
-        self.taker_tmux_command: Op[str] = None
+        self.take_tmux_name: t_Op[str] = None
+        self.taker_tmux_command: t_Op[str] = None
         self.kill_taker_and_dependents()
 
         #============================================
@@ -178,7 +181,7 @@ class BaseCamera:
         # =================
         # ALLOCATE KEYWORDS
         # =================
-        self.camera_shm: Op[SHM] = None
+        self.camera_shm: t_Op[SHM] = None
         self.grab_shm_fill_keywords()
         self.redis_push_values()
         # Maybe we can use a class variable as well to define what the expected keywords are ?
@@ -201,7 +204,7 @@ class BaseCamera:
         raise NotImplementedError("Must be subclassed from the base class")
 
     def prepare_camera_for_size(self,
-                                mode_id: Op[util.ModeIDType] = None) -> None:
+                                mode_id: t_Op[util.ModeIDType] = None) -> None:
         logg.debug('prepare_camera_for_size @ BaseCamera')
         # Gets called during constructor and set_mode
         if mode_id is None:
@@ -214,7 +217,8 @@ class BaseCamera:
         for dep_proc in self.dependent_processes:
             if (MAGIC_HW_STR.HEIGHT in dep_proc.cli_original_args or
                         MAGIC_HW_STR.WIDTH in dep_proc.cli_original_args):
-                arglist: List[util.KWType] = list(dep_proc.cli_original_args)
+                arglist: typ.List[util.KWType] = list(
+                        dep_proc.cli_original_args)
 
                 cm = self.current_mode
                 h, w = ((cm.x1 - cm.x0 + 1) // cm.binx,
@@ -229,7 +233,7 @@ class BaseCamera:
                 dep_proc.cli_args = arglist
 
     def prepare_camera_finalize(self,
-                                mode_id: Op[util.ModeIDType] = None) -> None:
+                                mode_id: t_Op[util.ModeIDType] = None) -> None:
         logg.debug('prepare_camera_finalize @ BaseCamera')
         # Gets called after the framegrabbing has restarted spinning
         if mode_id is None:
@@ -418,11 +422,11 @@ class BaseCamera:
 
         return shm
 
-    def set_keyword(self, key: str, value: Union[str, int, float]) -> None:
+    def set_keyword(self, key: str, value: typ.Union[str, int, float]) -> None:
         return self._set_formatted_keyword(key, value)
 
-    def _set_formatted_keyword(self, key: str, value: Union[str, int,
-                                                            float]) -> None:
+    def _set_formatted_keyword(self, key: str, value: typ.Union[str, int,
+                                                                float]) -> None:
 
         assert self.camera_shm is not None  # mypy happy assert
 
@@ -483,7 +487,8 @@ class BaseCamera:
     def set_fg_parameters(self) -> None:
         pass
 
-    def _fg_size_from_mode(self, mode_id: util.ModeIDType) -> Tuple[int, int]:
+    def _fg_size_from_mode(self,
+                           mode_id: util.ModeIDType) -> typ.Tuple[int, int]:
         width, height = self.MODES[mode_id].fgsize
         return width, height
 
