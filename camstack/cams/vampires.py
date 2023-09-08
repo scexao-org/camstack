@@ -34,8 +34,6 @@ class BaseVCAM(OrcaQuest):
             ## QWP terms managed by QWP daemon
             "U_QWP1": (-1, "[deg] VAMPIRES QWP 1 polarization angle", "%16.3f",
                        "QWP1"),
-            "U_QWP1": (-1, "[deg] VAMPIRES QWP 1 polarization angle", "%16.3f",
-                       "QWP1"),
             "U_QWP1TH":
                     (-1, "[deg] VAMPIRES QWP 1 wheel theta", "%16.3f", "QWP1T"),
             "U_QWP2": (-1, "[deg] VAMPIRES QWP 1 polarization angle", "%16.3f",

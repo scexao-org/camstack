@@ -12,6 +12,7 @@ from rich.logging import RichHandler
 from skimage.transform import rescale
 import numpy as np
 from camstack.cams.vampires import VCAM1, VCAM2
+from swmain.redis import get_values
 
 stream_handler = RichHandler(level=logging.INFO, show_level=False,
                              show_path=False, log_time_format="%H:%M:%S")
@@ -19,6 +20,8 @@ stream_handler = RichHandler(level=logging.INFO, show_level=False,
 
 class VAMPIRESBaseViewerBackend(GenericViewerBackend):
     HELP_MSG = """
+VAMPIRES Camera Viewer
+==================================================
 h           : display this message
 x, ESC      : quit viewer
 
@@ -32,8 +35,8 @@ CTRL  + e         : Enable hardware trigger
 SHIFT + e         : Disable hardware trigger
 CTRL  + t         : Enable micro-controller trigger
 SHIFT + t         : Disable micro-controller trigger
-CTRL  + f         : Switch to FAST readout mode
-SHIFT + f         : Switch to SLOW readout mode
+CTRL  + f         : Switch to SLOW readout mode
+SHIFT + f         : Switch to FAST readout mode
 
 Display controls:
 --------------------------------------------------
@@ -98,7 +101,7 @@ CTRL  + s     : Save current position to last configuration"""
     # CTRL+S:  Save current position to preset
     # CTRL+F:  Change preset file
     # add additional shortcuts
-    def __init__(self, cam_num, name_shm=None, cam_name=None):
+    def __init__(self, cam_num, name_shm, cam_name=None):
         if cam_name is None:
             cam_name = f"VCAM{cam_num}"
         self.cam_name = cam_name
@@ -116,13 +119,13 @@ CTRL  + s     : Save current position to last configuration"""
 
         self.SHORTCUTS.update({
                 buts.Shortcut(pgmc.K_f, pgmc.KMOD_LCTRL):
-                        partial(self.set_readout_mode, mode="FAST", both=True),
-                buts.Shortcut(pgmc.K_f, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
-                        partial(self.set_readout_mode, mode="FAST"),
-                buts.Shortcut(pgmc.K_f, pgmc.KMOD_LSHIFT):
                         partial(self.set_readout_mode, mode="SLOW", both=True),
-                buts.Shortcut(pgmc.K_f, pgmc.KMOD_LSHIFT | pgmc.KMOD_LALT):
+                buts.Shortcut(pgmc.K_f, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
                         partial(self.set_readout_mode, mode="SLOW"),
+                buts.Shortcut(pgmc.K_f, pgmc.KMOD_LSHIFT):
+                        partial(self.set_readout_mode, mode="FAST", both=True),
+                buts.Shortcut(pgmc.K_f, pgmc.KMOD_LSHIFT | pgmc.KMOD_LALT):
+                        partial(self.set_readout_mode, mode="FAST"),
                 buts.Shortcut(pgmc.K_j, pgmc.KMOD_LCTRL):
                         partial(self.increase_exposure_time, both=True),
                 buts.Shortcut(pgmc.K_j, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
@@ -131,22 +134,6 @@ CTRL  + s     : Save current position to last configuration"""
                         partial(self.decrease_exposure_time, both=True),
                 buts.Shortcut(pgmc.K_k, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
                         partial(self.decrease_exposure_time, both=False),
-                # buts.Shortcut(pgmc.K_m, pgmc.KMOD_LCTRL):
-                #         partial(self.set_camera_mode, mode="STANDARD",
-                #                 both=True),
-                # buts.Shortcut(pgmc.K_m, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
-                #         partial(self.set_camera_mode, mode="STANDARD"),
-                # buts.Shortcut(pgmc.K_m, pgmc.KMOD_LSHIFT):
-                #         partial(self.set_camera_mode, mode="MBI", both=True),
-                # buts.Shortcut(pgmc.K_m, pgmc.KMOD_LSHIFT | pgmc.KMOD_LALT):
-                #         partial(self.set_camera_mode, mode="MBI"),
-                # buts.Shortcut(pgmc.K_m, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT):
-                #         partial(self.set_camera_mode, mode="MBI_REDUCED",
-                #                 both=True),
-                # buts.Shortcut(
-                #         pgmc.K_m,
-                #         pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT | pgmc.KMOD_LALT):
-                #         partial(self.set_camera_mode, mode="MBI_REDUCED"),
         })
         # flip steering direction on cam2 to compensate
         if self.cam_num == 2:
@@ -218,6 +205,9 @@ CTRL  + s     : Save current position to last configuration"""
             hotspots = VCAM1.HOTSPOTS
         elif self.cam_num == 2:
             hotspots = VCAM2.HOTSPOTS
+        else:
+            raise ValueError(f"Unknown camera number {self.cam_num}")
+
         _mbi_shape = 520, 520
         centers = {
                 k: (v[0] + self.crop_offset[0], v[1] + self.crop_offset[1])
@@ -344,19 +334,26 @@ class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):
 
         kws = self.backend_obj.input_shm.get_keywords(
         )  # single fetch rather than pymilk functions.
-
+        redis_dict = get_values(("U_TRIGEN", ))
         tint: float = kws.get("EXPTIME", 0)  # seconds
         fps: float = kws.get("FRATE", 0)
         trigger: str = ""
         if "EXTTRIG" in kws:
             trigger = "EXT" if kws["EXTTRIG"] == "#TRUE#" else "INT"
+
         readmode: str = kws.get("U_DETMOD", "").strip().upper()
         tint_ms = tint * 1e3
 
         self.lbl_cropzone.render(tuple(self.backend_obj.input_shm.get_crop()),
                                  blit_onto=self.pg_screen)
         self.lbl_times.render((tint_ms, fps), blit_onto=self.pg_screen)
-        self.lbl_trig.render((trigger, readmode), blit_onto=self.pg_screen)
+        # check if the external trigger is on but arduino is off- paint red
+        if trigger == "EXT" and redis_dict["U_TRIGEN"] == "#FALSE#":
+            self.lbl_trig.render((trigger, readmode), blit_onto=self.pg_screen,
+                                 fg_col=futs.Colors.WHITE,
+                                 bg_col=futs.Colors.VERY_RED)
+        else:
+            self.lbl_trig.render((trigger, readmode), blit_onto=self.pg_screen)
         self.lbl_data_val.render(
                 (self.backend_obj.data_min, self.backend_obj.data_max,
                  self.backend_obj.data_mean), blit_onto=self.pg_screen)
