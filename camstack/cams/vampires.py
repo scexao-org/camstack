@@ -54,9 +54,23 @@ class BaseVCAM(OrcaQuest):
     KEYWORDS.update(OrcaQuest.KEYWORDS)
     N_WCS = 4
     ## camera modes
-    FULL, STANDARD, NPBS, MBI, MBI_REDUCED, PUPIL = "FULL", "STANDARD", "NPBS", "MBI", "MBI_REDUCED", "PUPIL"
+    FULL, TWOARC, HALF, ONEARC, STANDARD, NPBS, MBI, MBI_REDUCED, PUPIL = \
+        "FULL", "TWOARC", "HALF", "ONEARC", "STANDARD", "NPBS", "MBI", "MBI_REDUCED", "PUPIL"
     MODES = {
-            FULL: util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
+            FULL:
+                    util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
+            STANDARD:
+                    util.CameraMode(x0=1780, x1=2315, y0=884, y1=1419,
+                                    tint=1e-3),
+            TWOARC:
+                    util.CameraMode(x0=1868, x1=2227, y0=972, y1=1331,
+                                    tint=1e-3),
+            HALF:
+                    util.CameraMode(x0=1914, x1=2181, y0=1018, y1=1285,
+                                    tint=1e-3),
+            ONEARC:
+                    util.CameraMode(x0=1956, x1=2139, y0=1060, y1=1243,
+                                    tint=1e-3),
     }
 
     IS_WATER_COOLED = True  # Results in prepare_camera_for_size setting cooler to MAX.
@@ -181,9 +195,9 @@ class VCAM1(BaseVCAM):
 
     GAINS = {"FAST": 0.1052, "SLOW": 0.1046}
     MODES = {
-            BaseVCAM.STANDARD:
-                    util.CameraMode(x0=1764, x1=2299, y0=896, y1=1431,
-                                    tint=1e-3),
+            # BaseVCAM.STANDARD:
+            #         util.CameraMode(x0=1764, x1=2299, y0=896, y1=1431,
+            #                         tint=1e-3),
             BaseVCAM.MBI:
                     util.CameraMode(x0=756, x1=2995, y0=632, y1=1735,
                                     tint=1e-3),
@@ -243,9 +257,9 @@ class VCAM1(BaseVCAM):
 
 class VCAM2(BaseVCAM):
     MODES = {
-            BaseVCAM.STANDARD:
-                    util.CameraMode(x0=1768, x1=2303, y0=892, y1=1427,
-                                    tint=1e-3),
+            # BaseVCAM.STANDARD:
+            #         util.CameraMode(x0=1768, x1=2303, y0=892, y1=1427,
+            #                         tint=1e-3),
             BaseVCAM.NPBS:
                     util.CameraMode(x0=1700, x1=2235, y0=816, y1=1351,
                                     tint=1e-3),
