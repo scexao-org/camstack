@@ -65,7 +65,7 @@ def main_acquire_flycapture(api_cam_num_or_serial: int, stream_name: str,
         fly_cam.connect(uid)
         fly_cam.setConfiguration(numBuffers=10,
                                  grabMode=PC2.GRAB_MODE.DROP_FRAMES,
-                                 grabTimeout=1100)
+                                 grabTimeout=5000)
 
         fly_cam.startCapture()
 
