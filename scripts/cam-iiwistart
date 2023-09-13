@@ -3,7 +3,7 @@
 tnew="tmux new-session -d -s"
 tsend="tmux send-keys -t"
 
-tname="iiwi_ctrl"
+tname="apapane_ctrl"
 
 # Create tmuxes and issue kills
 $tnew $tname
@@ -19,6 +19,6 @@ sleep 0.3
 $tsend $tname "kill %" Enter
 
 
-$tsend $tname "python -im camstack.cam_mains.iiwi" Enter
+$tsend $tname "python -im camstack.cam_mains.apapane_at_aorts" Enter
 
-echo "startIiwi completed. See tmux iiwi_ctrl"
+echo "startIiwi completed. See tmux apapane_ctrl"

@@ -40,6 +40,7 @@ scripts = [
         './scripts/cam-restartdeps',
         './scripts/cam-apapanestart',
         './scripts/cam-palilastart',
+        './scripts/cam-iiwistart',
         './scripts/cam-glintstart',
         './scripts/cam-ocamstart',
         './scripts/cam-kiwikiustart',

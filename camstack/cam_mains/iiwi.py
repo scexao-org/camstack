@@ -12,7 +12,7 @@ if __name__ == "__main__":
     os.makedirs(os.environ['HOME'] + "/logs", exist_ok=True)
     init_camstack_logger(os.environ['HOME'] + "/logs/camstack-iiwi.log")
 
-    mode = 0
+    mode = 3
     
     # UTR is unecessary since we will only use CDS with IIWI.
     # Rawimages off will be fine.
@@ -20,7 +20,7 @@ if __name__ == "__main__":
     dependent_processes: List[DependentProcess] = []
 
     cam = Iiwi('iiwi', 'iiwi', unit=0, channel=0, mode_id=mode,
-               taker_cset_prio=('irwfs_edt',
+               taker_cset_prio=('i_edt',
                                 49), dependent_processes=dependent_processes)
 
     from camstack.core.utilities import shellify_methods

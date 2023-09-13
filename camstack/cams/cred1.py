@@ -623,6 +623,49 @@ class Apapane(CRED1):
         # This avoids latency in reporting HWP states.
 
 
+class ApapaneAtAORTS(Apapane):
+    '''
+        Temporary class for having the CRED1 plugged into AORTS act as BOTH Apapane and Iiwi
+        functionality.
+        The bash started would simlink /milk/shm/iiwi.im.shm onto /milk/shm/apapane_raw.im.shm
+        UTR would still be enabled but trippy
+    '''
+    
+    IIWI = 9 # Choosing thus so Ctrl+Alt+9 in the viewer should work.
+    
+    INTERACTIVE_SHELL_METHODS = ['IIWI'] + CRED1.INTERACTIVE_SHELL_METHODS
+    
+    MODES = {
+        IIWI: CameraMode(x0=64, x1=223, y0=48, y1=207, fps=1000.)
+    }
+    MODES.update(Apapane.MODES)
+   
+    EDTTAKE_EMBEDMICROSECOND = False
+    
+    def _constructor_finalize(self) -> None:
+        # Constructor finalize is in mode 3.
+        self.send_command('set imagetags off')
+        self.send_command('set rawimages off')
+        self.send_command('set aduoffset 1000')
+    
+    def set_camera_mode(self, mode_id: ModeIDType) -> None:
+        if mode_id == self.IIWI:
+            for i in range(2): # Just a bit of forcing
+                self.set_NDR(2)
+            self.send_command('set imagetags off')
+            self.send_command('set rawimages off')
+            self.send_command('set aduoffset 1000')
+        else:
+            self.send_command('set imagetags off')
+            self.send_command('set rawimages off')
+            self.send_command('set aduoffset 1000') # Doesn't matter in rawimages anyway.
+            for i in range(2): # Just a bit of forcing
+                self.set_NDR(8)
+            
+        return Apapane.set_camera_mode(self, mode_id)
+    
+    # Hijinxes related to sending the
+
 class Iiwi(CRED1):
     INTERACTIVE_SHELL_METHODS = [] + CRED1.INTERACTIVE_SHELL_METHODS
 
@@ -636,9 +679,12 @@ class Iiwi(CRED1):
     REDIS_PUSH_ENABLED = True
     REDIS_PREFIX = "x_I"  # LOWERCASE x to not get mixed with the SCExAO keys
 
+    EDTTAKE_EMBEDMICROSECOND = False
+
     def _constructor_finalize(self) -> None:
         self.send_command("set imagetags off")
         self.send_command("set rawimages off")
+        self.send_command('set aduoffset 1000')
         self.set_gain(self.get_maxpossiblegain())
 
     def _fill_keywords(self) -> None:

@@ -558,7 +558,7 @@ else:
     fps = cam.get_fps()
     delay = 0
 ndr = int(cam.get_ndr())
-crop = cam.get_crop().astype(int)
+crop = np.asarray(cam.get_crop()).astype(int)
 etimet = etime * ndr
 
 (fpss2, nfps2, findex) = whatfps(fps, crop)
@@ -894,7 +894,7 @@ while True:  # the main game loop
             fpsn = cam.get_fps()
             delay = 0
         ndrn = int(cam.get_ndr())
-        cropn = cam.get_crop().astype(int)
+        cropn = np.asarray(cam.get_crop()).astype(int)
         if gpin:
             cor = cort[:, 0]
         else:
