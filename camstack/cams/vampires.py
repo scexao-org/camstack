@@ -77,16 +77,21 @@ class BaseVCAM(OrcaQuest):
 
     def set_readout_mode(self, mode: str) -> None:
         super().set_readout_mode(mode)
-        self._set_formatted_keyword("U_DETMOD", mode.title())
+        self._set_formatted_keyword("U_DETMOD", mode.upper())
+
+    def get_readout_mode(self) -> str:
+        mode = super().get_readout_mode()
+        self._set_formatted_keyword("U_DETMOD", mode.upper())
+        return mode
 
     def _fill_keywords(self) -> None:
         super()._fill_keywords()
-        self._set_formatted_keyword("U_DETMOD", self.readout_mode.title())
         cropped = self.current_mode_id != self.FULL
         self._set_formatted_keyword("CROPPED", cropped)
 
         self._set_formatted_keyword("F-RATIO", 21.3)
         self._set_formatted_keyword("INST-PA", self.PA_OFFSET)
+        self._set_formatted_keyword("U_DETMOD", self.get_readout_mode().upper())
 
         self.get_fps()
         self.get_tint()
@@ -100,6 +105,10 @@ class BaseVCAM(OrcaQuest):
         hwp_stage = 0
         lp_stage = 0
         scex_lp = 'Unknown'
+        qwp1 = qwp1th = -1
+        qwp2 = qwp2th = -1
+        retang1 = retpos1 = -1
+        retang2 = retpos2 = -1
         try:
             with self.RDB.pipeline() as pipe:
                 pipe.hget('U_FILTER', 'value')
@@ -109,13 +118,29 @@ class BaseVCAM(OrcaQuest):
                 pipe.hget('X_POLAR', 'value')
                 pipe.hget('U_DIFFL1', 'value')
                 pipe.hget('U_DIFFL2', 'value')
-                filter01, bs, lp_stage, hwp_stage, scex_lp, dfl1, dfl2 = pipe.execute(
+                pipe.hget("U_QWP1", "value")
+                pipe.hget("U_QWP1TH", "value")
+                pipe.hget("U_QWP2", "value")
+                pipe.hget("U_QWP2TH", "value")
+                pipe.hget("RET-ANG1", "value")
+                pipe.hget("RET-ANG2", "value")
+                pipe.hget("RET-POS1", "value")
+                pipe.hget("RET-POS2", "value")
+                filter01, bs, lp_stage, hwp_stage, scex_lp, dfl1, dfl2, qwp1, qwp1th, qwp2, qwp2th, retang1, retang2, retpos1, retpos2 = pipe.execute(
                 )
         except:
-            logg.error('REDIS unavailable @ _fill_keywords @ VCAM')
+            logg.exception(
+                    'REDIS unavailable @ poll_camera_for_keywords @ BaseVCAM')
 
         self._set_formatted_keyword('FILTER01', filter01)
-
+        self._set_formatted_keyword("U_QWP1", qwp1)
+        self._set_formatted_keyword("U_QWP1TH", qwp1th)
+        self._set_formatted_keyword("U_QWP2", qwp2)
+        self._set_formatted_keyword("U_QWP2TH", qwp2th)
+        self._set_formatted_keyword("RET-ANG1", retang1)
+        self._set_formatted_keyword("RET-ANG2", retang2)
+        self._set_formatted_keyword("RET-POS1", retpos1)
+        self._set_formatted_keyword("RET-POS2", retpos2)
         ## determine observing mode from the following logic
         # if the PBS is in and the HWP is running, we're doing polarimetry
         polarimetry = bs.upper() == "PBS" and \
@@ -193,7 +218,7 @@ class VCAM1(BaseVCAM):
     PLATE_SCALE = (BaseVCAM.PLATE_SCALE[0], -BaseVCAM.PLATE_SCALE[1]
                    )  # deg / px
 
-    GAINS = {"FAST": 0.1052, "SLOW": 0.1046}
+    GAINS = {"FAST": 0.103, "SLOW": 0.105}
     MODES = {
             # BaseVCAM.STANDARD:
             #         util.CameraMode(x0=1764, x1=2299, y0=896, y1=1431,
@@ -227,32 +252,23 @@ class VCAM1(BaseVCAM):
         self._set_formatted_keyword("U_CAMERA", 1)
 
         # Override detector specs from calibration data
-        self._set_formatted_keyword("GAIN",
-                                    self.GAINS[self.readout_mode.upper()])
+        ro_mode = self.get_readout_mode()
+        self._set_formatted_keyword("GAIN", self.GAINS[ro_mode])
 
     def poll_camera_for_keywords(self) -> None:
         super().poll_camera_for_keywords()
 
         # Defaults
         filter02 = "Unknown"
-        qwp1 = qwp1th = -1
-        qwp2 = qwp2th = -1
         try:
             with self.RDB.pipeline() as pipe:
                 pipe.hget("U_DIFFL1", "value")
-                pipe.hget("U_QWP1", "value")
-                pipe.hget("U_QWP1TH", "value")
-                pipe.hget("U_QWP2", "value")
-                pipe.hget("U_QWP2TH", "value")
-                filter02, qwp1, qwp1th, qwp2, qwp2th = pipe.execute()
+                filter02 = pipe.execute()
         except:
-            logg.error('REDIS unavailable @ _fill_keywords @ VCAM1')
+            logg.exception(
+                    'REDIS unavailable @ poll_camera_for_keywords @ VCAM1')
 
         self._set_formatted_keyword("FILTER02", filter02)
-        self._set_formatted_keyword("U_QWP1", qwp1)
-        self._set_formatted_keyword("U_QWP1TH", qwp1th)
-        self._set_formatted_keyword("U_QWP2", qwp2)
-        self._set_formatted_keyword("U_QWP2TH", qwp2th)
 
 
 class VCAM2(BaseVCAM):
@@ -274,7 +290,7 @@ class VCAM2(BaseVCAM):
     }
     MODES.update(BaseVCAM.MODES)
 
-    GAINS = {"FAST": 0.1052, "SLOW": 0.1046}
+    GAINS = {"FAST": 0.103, "SLOW": 0.105}
     HOTSPOTS = {
             "760": (1970.5, 313.1),
             "720": (850.8, 279.3),
@@ -293,8 +309,8 @@ class VCAM2(BaseVCAM):
         self._set_formatted_keyword("U_CAMERA", 2)
 
         # Override detector specs from calibration data
-        self._set_formatted_keyword("GAIN",
-                                    self.GAINS[self.readout_mode.upper()])
+        ro_mode = self.get_readout_mode()
+        self._set_formatted_keyword("GAIN", self.GAINS[ro_mode])
 
     def poll_camera_for_keywords(self) -> None:
         super().poll_camera_for_keywords()
@@ -303,7 +319,9 @@ class VCAM2(BaseVCAM):
         filter02 = "Unknown"
         try:
             filter02 = self.RDB.hget('U_DIFFL2', 'value')
+
         except:
-            logg.error('REDIS unavailable @ _fill_keywords @ VCAM2')
+            logg.exception(
+                    'REDIS unavailable @ poll_camera_for_keywords @ VCAM2')
 
         self._set_formatted_keyword("FILTER02", filter02)

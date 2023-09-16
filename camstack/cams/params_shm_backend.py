@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from types import TracebackType
 import typing as typ
 
 import os
@@ -8,10 +11,39 @@ from camstack.core import utilities as util
 from camstack.core.tmux import find_pane_running_pid
 
 from pyMilk.interfacing.shm import SHM
+
 import numpy as np
 
 import time
 import threading
+
+
+class WrappingVerboseRLock:
+
+    def __init__(self) -> None:
+        self.rlock = threading.RLock()
+
+    def acquire(self, *args, **kwargs):
+        print(f'{threading.current_thread()} acquiring RLock...', end='')
+        r = self.rlock.acquire(*args, **kwargs)
+        print(('DENIED.', 'acquired.')[r])
+        return r
+
+    def release(self, *args, **kwargs):
+        print(f'{threading.current_thread()} releasing RLock...', end='')
+        self.rlock.release(*args, **kwargs)
+        print('released.')
+
+    def __enter__(self):
+        print(f'{threading.current_thread()} entering RLock...', end='')
+        self.rlock.__enter__()
+        print('entered.')
+
+    def __exit__(self, t: type[BaseException] | None, v: BaseException | None,
+                 tb: TracebackType | None) -> None:
+        print(f'{threading.current_thread()} exiting RLock...', end='')
+        self.rlock.__exit__(t, v, tb)
+        print('exited.')
 
 
 class ParamsSHMCamera(BaseCamera):
@@ -34,8 +66,8 @@ class ParamsSHMCamera(BaseCamera):
 
         # Do basic stuff
         self.control_shm: typ.Optional[SHM] = None
-        self.control_shm_lock = threading.RLock(
-        )  # Need an RLock because during the set_camera_mode we eventually get to a _prm_setget_multivalue for fill_keywords.
+        # Need an RLock because during the set_camera_mode we eventually get to a _prm_setget_multivalue for fill_keywords.
+        self.control_shm_lock = WrappingVerboseRLock()  #threading.RLock()
 
         super().__init__(*args, **kwargs)
 
@@ -55,10 +87,10 @@ class ParamsSHMCamera(BaseCamera):
             self.control_shm = SHM(self.STREAMNAME + "_params_fb",
                                    np.zeros((1, ), dtype=np.int32))
 
-    def set_camera_mode(self, mode_id: util.ModeIDType) -> None:
+    def set_camera_mode(self, mode_id: util.ModeIDType, **kwargs) -> None:
         # Wrap into something thread-safe during the restart.
         with self.control_shm_lock:
-            return super().set_camera_mode(mode_id)
+            return super().set_camera_mode(mode_id, **kwargs)
 
     def _ensure_backend_restarted(self) -> None:
         # In case we recreated the SHM...
@@ -68,7 +100,8 @@ class ParamsSHMCamera(BaseCamera):
         assert self.control_shm  # mypy happyness check.
 
         # This should work, unless the grabber crashes during restart.
-        for k in range(20):
+        n_secs: int = 20
+        for k in range(n_secs):
             time.sleep(1)
 
             pid = find_pane_running_pid(self.take_tmux_pane)
@@ -82,7 +115,7 @@ class ParamsSHMCamera(BaseCamera):
             if self.control_shm.check_sem_trywait():
                 break
 
-            if k == 19:
+            if k == n_secs - 1:
                 message = 'dcam/pvcam grabber taking more than 20 sec to restart.'
                 # Ensure the state is known by making absolutely sure we kill this.
                 self._kill_taker_no_dependents(bypass_aux_thread=True)
@@ -184,3 +217,53 @@ class ParamsSHMCamera(BaseCamera):
         # So as to amend how the return values from _prm_setgetmultivalue
         # are provided (think enums... se dcamcam)
         return value  # Nothing to do here
+
+    def auxiliary_thread_run_function(self) -> None:
+        '''
+            I need to subclass this because we're having a freaking deadlock during the joining...
+            (in the base version)
+            If the control_lock is requested by the main thread,
+            this ends up blocking on the control lock during poll_camera_for_keywords
+            Then the main thread requests a join... which is impossible because the aux thread is waiting
+            on the lock.
+
+            So as a fix, we subclass the entire execution flow of the aux thread,
+            and make sure every single iteration is dependent
+            on owning the lock... non-blockingly! So we can loop-out and join.
+        '''
+
+        assert self.event is not None  # mypy happy assert
+
+        event_count = 0
+        while True:
+            ret = self.event.wait(1)
+            if ret:  # Signal to break the loop
+                break
+
+            event_count += 1
+            if event_count % 10 > 0:
+                continue
+
+            if not self.control_shm_lock.acquire(blocking=False):
+                continue
+
+            try:
+                if not self.is_taker_running():
+                    logg.critical('take_tmux_pane contains no live PID.')
+
+                # Dependents cset + RTprio checking
+                for proc in self.dependent_processes:
+                    proc.make_children_rt()
+
+                # Camera specifics !
+                try:
+                    self.poll_camera_for_keywords()
+                except Exception as e:
+                    logg.error(f"Polling thread: error [{e}]")
+
+                try:
+                    self.redis_push_values()
+                except Exception as e:
+                    logg.error(f"Polling thread: error [{e}]")
+            finally:
+                self.control_shm_lock.release()

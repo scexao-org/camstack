@@ -171,7 +171,7 @@ class OrcaQuest(DCAMCamera):
             "set_external_trigger",
     ] + DCAMCamera.INTERACTIVE_SHELL_METHODS
 
-    FIRST, FULL, FIRSTPL, DICHROIC = 'FIRST', 'FULL', 'FIRSTPL', 'DICHROIC'
+    FIRST, FULL, FIRSTPL = 'FIRST', 'FULL', 'FIRSTPL'
     # yapf: disable
     MODES = {
             FIRST: util.CameraMode(x0=0, x1=4095, y0=1004, y1=2303, tint=0.001),
@@ -182,7 +182,6 @@ class OrcaQuest(DCAMCamera):
             2: util.CameraMode(x0=800, x1=3295, y0=876, y1=1531, tint=0.001),      # Kyohoon is Using for WFS align
             3: util.CameraMode(x0=1924, x1=2723, y0=1244, y1=1443, tint=0.001),
             4: util.CameraMode(x0=2140, x1=2395, y0=832, y1=1087, tint=0.000001),    # Jen is using for focal plane mode
-            DICHROIC: util.CameraMode(x0=2336, x1=3135, y0=0, y1=2303, tint=0.01), # Dichroic stack mode
     }
     # yapf: enable
 
@@ -201,8 +200,6 @@ class OrcaQuest(DCAMCamera):
             taker_cset_prio: util.CsetPrioType = ("system", None),
             dependent_processes: List[util.DependentProcess] = [],
     ) -> None:
-
-        self.readout_mode = "FAST"
         super().__init__(
                 name,
                 stream_name,
@@ -284,10 +281,10 @@ class OrcaQuest(DCAMCamera):
 
     def set_readout_mode(self, mode: str) -> None:
         logg.debug("set_readout_mode @ OrcaQuest")
-
         mode = mode.upper()
+        curr_mode = self.get_readout_mode().upper()
         # if we're already in that read mode, don't do anything!
-        if mode == self.readout_mode:
+        if mode == curr_mode:
             logg.debug(f"Already using readout mode {mode}; doing nothing")
             return
 
@@ -297,8 +294,6 @@ class OrcaQuest(DCAMCamera):
             readmode = dcamprop.EReadoutSpeed.READOUT_FAST
         else:
             raise ValueError(f"Unrecognized readout mode: {mode}")
-
-        self.readout_mode = mode
 
         # preserve trigger mode
         with self.control_shm_lock:
@@ -315,8 +310,8 @@ class OrcaQuest(DCAMCamera):
         elif readmode == dcamprop.EReadoutSpeed.READOUT_FAST:
             mode = "FAST"
         else:
+            # should never get here
             mode = "Unknown"
-
         return mode
 
     def get_external_trigger(self) -> bool:
@@ -404,6 +399,8 @@ class OrcaQuest(DCAMCamera):
             prop = dcamprop.ESensorCooler.ON
         elif mode == "MAX":
             prop = dcamprop.ESensorCooler.MAX
+        else:
+            raise ValueError(f"Invalid cooling mode {mode}")
 
         logg.debug(f"Setting cooling mode to {mode}")
         self._prm_setvalue(float(prop), None, dcamprop.EProp.SENSORCOOLER)

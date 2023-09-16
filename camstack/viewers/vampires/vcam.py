@@ -12,7 +12,7 @@ from rich.logging import RichHandler
 from skimage.transform import rescale
 import numpy as np
 from camstack.cams.vampires import VCAM1, VCAM2
-from swmain.redis import get_values
+from swmain.redis import RDB, get_values
 
 stream_handler = RichHandler(level=logging.INFO, show_level=False,
                              show_path=False, log_time_format="%H:%M:%S")
@@ -143,6 +143,9 @@ CTRL  + s     : Save current position to last configuration"""
                     buts.Shortcut(pgmc.K_DOWN, 0x0):
                             partial(self.steer_crop, pgmc.K_UP),
             })
+
+        # variables to carry state
+        self.hwtrig_enabled = None
 
     def set_readout_mode(self, mode: str, both: bool = False):
         self.logger.info(
@@ -334,7 +337,10 @@ class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):
 
         kws = self.backend_obj.input_shm.get_keywords(
         )  # single fetch rather than pymilk functions.
-        redis_dict = get_values(("U_TRIGEN", ))
+        try:
+            self.hwtrig_enabled = RDB.hget("U_TRIGEN", "value")
+        except:
+            pass
         tint: float = kws.get("EXPTIME", 0)  # seconds
         fps: float = kws.get("FRATE", 0)
         trigger: str = ""
@@ -348,7 +354,7 @@ class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):
                                  blit_onto=self.pg_screen)
         self.lbl_times.render((tint_ms, fps), blit_onto=self.pg_screen)
         # check if the external trigger is on but arduino is off- paint red
-        if trigger == "EXT" and redis_dict["U_TRIGEN"] == "#FALSE#":
+        if trigger == "EXT" and not self.hwtrig_enabled:
             self.lbl_trig.render((trigger, readmode), blit_onto=self.pg_screen,
                                  fg_col=futs.Colors.WHITE,
                                  bg_col=futs.Colors.VERY_RED)
