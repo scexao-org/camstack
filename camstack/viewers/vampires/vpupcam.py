@@ -111,3 +111,9 @@ CTRL+S      : Save position to the last-moved-to configuration"""
         super().__init__(name_shm=name_shm)
         self.wheel = connect("VAMPIRES_MASK")
         self.logger = logger
+
+    def _data_grab(self) -> None:
+        ## hack this to crop the troublesome rows of the Flea3
+        super()._data_grab()
+        assert self.data_raw_uncrop is not None
+        self.data_raw_uncrop = self.data_raw_uncrop[1:, 1:]
