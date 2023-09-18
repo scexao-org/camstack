@@ -1,4 +1,6 @@
-from typing import Union, Tuple, List, Any, TYPE_CHECKING, Optional as Op
+from __future__ import annotations
+
+import typing as typ
 
 import os
 import subprocess
@@ -31,7 +33,7 @@ class EDTCamera(BaseCamera):
                  mode_id_or_hw: ModeIDorHWType, pdv_unit: int, pdv_channel: int,
                  pdv_basefile: str, no_start: bool = False,
                  taker_cset_prio: CsetPrioType = ('system', None),
-                 dependent_processes: List[DependentProcess] = []) -> None:
+                 dependent_processes: typ.List[DependentProcess] = []) -> None:
 
         self.pdv_unit: int = pdv_unit
         self.pdv_channel: int = pdv_channel
@@ -40,7 +42,7 @@ class EDTCamera(BaseCamera):
         self.pdv_taps: int = 1  # We will retrive this from the FG.
 
         # See self.init_framegrab_backend
-        self.edt_iface: Op[EdtInterfaceSerial] = None
+        self.edt_iface: EdtInterfaceSerial | None = None
 
         BaseCamera.__init__(self, name, stream_name, mode_id_or_hw,
                             no_start=no_start, taker_cset_prio=taker_cset_prio,

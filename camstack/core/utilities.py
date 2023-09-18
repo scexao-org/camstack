@@ -25,11 +25,11 @@ def enforce_optional(anything: typ.Optional[T]) -> T:
     return anything
 
 
-ModeIDType = typ.Union[str, int]
-ModeIDorHWType = typ.Union[ModeIDType, typ.Tuple[int, int]]
-CsetPrioType = typ.Tuple[str, typ.Optional[int]]
-KWType = typ.Union[bool, int, float, str]
-KWTypeNoBool = typ.Union[int, float, str]
+ModeIDType: typ.TypeAlias = typ.Union[str, int]
+ModeIDorHWType: typ.TypeAlias = typ.Union[ModeIDType, typ.Tuple[int, int]]
+CsetPrioType: typ.TypeAlias = typ.Tuple[str, typ.Optional[int]]
+KWType: typ.TypeAlias = typ.Union[bool, int, float, str]
+KWTypeNoBool: typ.TypeAlias = typ.Union[int, float, str]
 
 
 class CameraMode:
