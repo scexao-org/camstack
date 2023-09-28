@@ -40,7 +40,7 @@ def main():
             tmux_name=f'streamTCPreceive_{TCP_PORT}',
             # Urrrrrh this is getting messy
             cli_cmd=
-            'creashmim %s %u %u --type=u16; shmimTCPreceive -c aol0RT2 %s',
+            'creashmim %s %u %u --type=u16 --kw=200; shmimTCPreceive -c aol0RT2 %s',
             cli_args=(stream_name, MAGIC_HW_STR.HEIGHT, MAGIC_HW_STR.WIDTH,
                       TCP_PORT),
             remote_host='scexao@' + scxconf.IPLAN_SC6,

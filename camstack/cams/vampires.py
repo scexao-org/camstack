@@ -274,9 +274,7 @@ class VCAM1(BaseVCAM):
         # Defaults
         filter02 = "Unknown"
         try:
-            with self.RDB.pipeline() as pipe:
-                pipe.hget("U_DIFFL1", "value")
-                filter02 = pipe.execute()
+            filter02 = self.RDB.hget("U_DIFFL1", "value")
         except:
             logg.exception(
                     'REDIS unavailable @ poll_camera_for_keywords @ VCAM1')
@@ -332,7 +330,6 @@ class VCAM2(BaseVCAM):
         filter02 = "Unknown"
         try:
             filter02 = self.RDB.hget('U_DIFFL2', 'value')
-
         except:
             logg.exception(
                     'REDIS unavailable @ poll_camera_for_keywords @ VCAM2')
