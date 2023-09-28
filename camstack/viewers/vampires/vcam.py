@@ -212,15 +212,37 @@ CTRL  + s     : Save current position to last configuration"""
             raise ValueError(f"Unknown camera number {self.cam_num}")
 
         _mbi_shape = 520, 520
-        centers = {
-                k: (v[0] + self.crop_offset[0], v[1] + self.crop_offset[1])
-                for k, v in hotspots.items()
-        }
+        mbi_centers = {}
+        mbir_centers = {}
+        for key, hotspot in hotspots.items():
+            cr = hotspot[0] + self.crop_offset[0]
+            cc = hotspot[1] + self.crop_offset[1]
+            mbi_centers[key] = cr, cc
+            # reduced mode
+            if cr >= self.shm_shape[0]:
+                cr -= 520
+            if cc >= self.shm_shape[1]:
+                cc -= 520
+            mbir_centers[key] = cr, cc
         self.mbi_slices = (
-                self._get_crop_slice(center=centers["760"], shape=_mbi_shape),
-                self._get_crop_slice(center=centers["720"], shape=_mbi_shape),
-                self._get_crop_slice(center=centers["670"], shape=_mbi_shape),
-                self._get_crop_slice(center=centers["610"], shape=_mbi_shape),
+                self._get_crop_slice(center=mbi_centers["760"],
+                                     shape=_mbi_shape),
+                self._get_crop_slice(center=mbi_centers["720"],
+                                     shape=_mbi_shape),
+                self._get_crop_slice(center=mbi_centers["670"],
+                                     shape=_mbi_shape),
+                self._get_crop_slice(center=mbi_centers["610"],
+                                     shape=_mbi_shape),
+        )
+        self.mbir_slices = (
+                self._get_crop_slice(center=mbir_centers["760"],
+                                     shape=_mbi_shape),
+                self._get_crop_slice(center=mbir_centers["720"],
+                                     shape=_mbi_shape),
+                self._get_crop_slice(center=mbir_centers["670"],
+                                     shape=_mbi_shape),
+                self._get_crop_slice(center=mbir_centers["610"],
+                                     shape=_mbi_shape),
         )
 
     def _data_crop(self) -> None:
@@ -242,22 +264,24 @@ CTRL  + s     : Save current position to last configuration"""
         Nx, Ny = self.data_debias_uncrop.shape
         if Nx > 800 and Ny > 800:
             self.mode = "MBI"
+            slices = self.mbi_slices
         elif Nx > 800:
             self.mode = "MBI_REDUCED"
+            slices = self.mbir_slices
         elif Nx > 536 and Ny > 536:
             self.mode = "PUPIL"
         else:
             self.mode = "STANDARD"
 
         if self.mode.startswith("MBI"):
-            field_775 = self.data_debias_uncrop[self.mbi_slices[0]]
-            field_725 = self.data_debias_uncrop[self.mbi_slices[1]]
-            field_675 = self.data_debias_uncrop[self.mbi_slices[2]]
+            field_775 = self.data_debias_uncrop[slices[0]]
+            field_725 = self.data_debias_uncrop[slices[1]]
+            field_675 = self.data_debias_uncrop[slices[2]]
             # MBI-reduced mode
             if self.mode.endswith("REDUCED"):
                 field_625 = np.full_like(field_675, np.nan)
             else:
-                field_625 = self.data_debias_uncrop[self.mbi_slices[3]]
+                field_625 = self.data_debias_uncrop[slices[3]]
             fields = [[field_625, field_725], [field_675, field_775]]
             if self.cam_num == 2:
                 fields = [[np.fliplr(field_625),

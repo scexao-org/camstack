@@ -42,7 +42,7 @@ class GenericViewerBackend:
     COLORMAPS = COLORMAPS_A
 
     CROP_CENTER_SPOT: Op[Tuple[float, float]] = None
-    MAX_ZOOM_LEVEL = 4  # Power of 2, 4 is 16x, 3 is 8x
+    MAX_ZOOM_LEVEL = 5  # Power of 2, 4 is 16x, 3 is 8x
 
     SHORTCUTS: Dict[buts.Shortcut,
                     Callable] = {}  # Do not subclass this, see constructor
