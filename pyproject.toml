@@ -24,8 +24,8 @@ packages = ["camstack"]
 #[tool.setuptools.packages.find]
 #include = ["camstack*"]
 
-#[project.scripts]
-#camstart = "camstack.cam_mains.main:main"
+[project.scripts]
+camstart = "camstack.cam_mains.main:main"
 #anycam = "camstack.viewers.anycam:main"
 #pueo = "camstack.viewers.pueo:main"
 #apapane = "camstack.viewers.apapane:main"
