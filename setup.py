@@ -1,10 +1,7 @@
 '''
 camstack setup.py
 
-deps:
-    libtmux
-    pyMilk
-    docopt
+See pyproject.toml
 '''
 
 from setuptools import setup
@@ -15,18 +12,7 @@ from subprocess import check_call
 import os
 
 WHICHCOMP = os.environ.get('WHICHCOMP', '')
-
-
-class PreInstallCommand(develop):
-
-    def run(self):
-        # Add custom make commands here !
-        # Migration of compiled grabbers to hardwaresecrets repo.
-        #os.system('cd src; ./compile_edt; cd ..')
-        #os.system('cd src; ./compile_dcamusb; cd ..')
-        develop.run(self)
-
-
+'''
 with open("README.md", 'r') as f:
     long_description = f.read()
 
@@ -76,17 +62,6 @@ what_scripts += {
         'K': scripts_kamua,
         'A': scripts_alala,
 }.get(WHICHCOMP, [])
+'''
 
-setup(
-        name='camstack',
-        version='0.01',
-        description='SCExAO unified EDT cameras to streams',
-        long_description=long_description,
-        author='Vincent Deo',
-        author_email='vdeo@naoj.org',
-        url="http://www.github.com/scexao-org/camstack",
-        packages=['camstack'],  # same as name
-        install_requires=['docopt', 'libtmux', 'pygame', "rich"],
-        scripts=what_scripts,
-        cmdclass={'develop': PreInstallCommand},
-)
+setup()

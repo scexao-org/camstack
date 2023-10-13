@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=58", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "camstack"
+description = "SCExAO camera codebase"
+readme = "README.md"
+authors = [
+    {name = "Vincent Deo", email = "vdeo@naoj.org"},
+    {name = "Miles Lucas", email = "mdlucas@hawaii.edu"}
+]
+version = "0.1.0"
+dependencies = [
+    "docopt",
+    "libtmux",
+    "pygame",
+    # "pyMilk" DO NOT - there is a pyMilk on pipy which is a completely different thing.
+]
+
+[tool.setuptools]
+packages = ["camstack"]
+
+#[tool.setuptools.packages.find]
+#include = ["camstack*"]
+
+#[project.scripts]
+#camstart = "camstack.cam_mains.main:main"
+#anycam = "camstack.viewers.anycam:main"
+#pueo = "camstack.viewers.pueo:main"
+#apapane = "camstack.viewers.apapane:main"
+#palila = "camstack.viewers.palila:main"
+#firstcam = "camstack.viewers.firstcam:main"
+#vpupcam = "camstack.viewers.vpupcam:main"
+#simcam_framegen = "camstack.simcam_framegen:main"
+#flycapture_usbtake = "camstack.flycapture_usbtake:main"
+#spinnaker_usbtake = "camstack.spinnaker_usbtake:main"
+
+#[project.optional-dependencies]
