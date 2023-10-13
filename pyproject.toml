@@ -32,7 +32,8 @@ camstart = "camstack.cam_mains.main:main"
 #palila = "camstack.viewers.palila:main"
 #firstcam = "camstack.viewers.firstcam:main"
 #vpupcam = "camstack.viewers.vpupcam:main"
-#simcam_framegen = "camstack.simcam_framegen:main"
+# FRAMEGRABBERS (and simulator)
+#simucam_framegen = "camstack.simcam_framegen:main"
 #flycapture_usbtake = "camstack.flycapture_usbtake:main"
 #spinnaker_usbtake = "camstack.spinnaker_usbtake:main"
 

@@ -78,6 +78,7 @@ def main(call_from_dunder_main: bool = False):
     # initiating this camera's main method
     print(f"DEBUG: using {cam_method}")
     send_keys(tmux, f"ipython -i -m {cam_method}")
+
     # all done. no cleanup
     print(f"Finished initiating camera. Inspect {tmux_name} "
           "for further debug information (some cameras take "
