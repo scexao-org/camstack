@@ -1,6 +1,6 @@
 echo "Starting vcam1"
-cam-vcam1start
+camstart vcam1
 # echo "Waiting 15s for vcam1 to start"
 sleep 1
 echo "Starting vcam2"
-cam-vcam2start
+camstart vcam2

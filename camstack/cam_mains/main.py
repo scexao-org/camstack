@@ -1,14 +1,19 @@
+from __future__ import annotations
+
+import typing as typ
+
 from argparse import ArgumentParser
 
 from camstack.core.tmux import find_or_create, send_keys, kill_running
 
 # This is the main data structure for
 # which cameras map to which python modules/files
-CAM_METHODS = {
+CAM_INVOCATION = {
         "ALALA": "camstack.cam_mains.alala_orcam",
         "APAPANE": "camstack.cam_mains.apapane",
         "FIRST": "camstack.cam_mains.first_orcam",
         "FIRST_PUPIL": "camstack.cam_mains.first_pupil",
+        "IIWI": "camstack.cam_mains.apapane_at_aorts",
         "GLINTCAM": "camstack.cam_mains.glintcam",
         "KALAOCAM": "camstack.cam_mains.kalaocam",
         "KIWIKIU": "camstack.cam_mains.kiwikiu",
@@ -16,12 +21,13 @@ CAM_METHODS = {
         "PALILA": "camstack.cam_mains.palila",
         "PUEO": "camstack.cam_mains.pueo",
         "SIMUCAM": "camstack.cam_mains.simucam",
-        "VAMPIRES": "camstack.cam_mains.vampires",
+        "VCAM1": "camstack.cam_mains.vcam -- 1",
+        "VCAM2": "camstack.cam_mains.vcam -- 2",
         "VPUPCAM": "camstack.cam_mains.vpupcam",
         "NULL": "null",
 }
 
-CAM_NAMES = [str(k) for k in CAM_METHODS]
+CAM_NAMES = [str(k) for k in CAM_INVOCATION]
 
 parser = ArgumentParser(prog="camstart",
                         description="Spin up or restart a camera tmux daemon")
@@ -58,16 +64,20 @@ echo "alalacamstart completed (but actually not yet, just wait a bit)."
 """
 
 
-def main(call_from_dunder_main: bool = False):
+def main(call_from_dunder_main: bool = False,
+         cam_name_arg: typ.Optional[str] = None):
     # print(f'call_from_dunder_main: {call_from_dunder_main}')
+    if cam_name_arg is not None:
+        cam_name = cam_name_arg
+    else:
+        args = parser.parse_args()
+        cam_name: str = args.camera
 
-    args = parser.parse_args()
     ## Step 1. Create tmux and issue kills
-    cam_name = args.camera
     if cam_name not in CAM_NAMES:
         # Can't happen since args will throw an ArgumentError and exit
         raise ValueError(f"{cam_name} not recognized.")
-    cam_method = CAM_METHODS[cam_name]
+    cam_pyinvocationstring = CAM_INVOCATION[cam_name]
 
     # default came name e.g. palila_ctrl
     tmux_name = f"{cam_name.lower()}_ctrl"
@@ -76,8 +86,8 @@ def main(call_from_dunder_main: bool = False):
     kill_running(tmux)
 
     # initiating this camera's main method
-    print(f"DEBUG: using {cam_method}")
-    send_keys(tmux, f"ipython -i -m {cam_method}")
+    print(f"DEBUG: using {cam_pyinvocationstring}")
+    send_keys(tmux, f"ipython -i -m {cam_pyinvocationstring}")
 
     # all done. no cleanup
     print(f"Finished initiating camera. Inspect {tmux_name} "

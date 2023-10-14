@@ -1,40 +1,55 @@
 [build-system]
-requires = ["setuptools>=58", "wheel"]
 build-backend = "setuptools.build_meta"
+requires = ["setuptools>=58", "wheel"]
 
 [project]
-name = "camstack"
-description = "SCExAO camera codebase"
-readme = "README.md"
 authors = [
-    {name = "Vincent Deo", email = "vdeo@naoj.org"},
-    {name = "Miles Lucas", email = "mdlucas@hawaii.edu"}
+  {name = "Vincent Deo", email = "vdeo@naoj.org"},
+  {name = "Miles Lucas", email = "mdlucas@hawaii.edu"},
 ]
-version = "0.1.0"
 dependencies = [
-    "docopt",
-    "libtmux",
-    "pygame",
-    # "pyMilk" DO NOT - there is a pyMilk on pipy which is a completely different thing.
+  "docopt",
+  "libtmux",
+  "pygame", # "pyMilk" DO NOT - there is a pyMilk on pipy which is a completely different thing.
 ]
+description = "SCExAO camera codebase"
+name = "camstack"
+readme = "README.md"
+version = "0.1.0"
 
 [tool.setuptools]
 packages = ["camstack"]
+script-files = [
+  "./scripts/cam-restartdeps",
+  "./scripts/cam-killall",
+  "./scripts/cam-vcamstart",
+]
 
 #[tool.setuptools.packages.find]
 #include = ["camstack*"]
+#[project.optional-dependencies]
 
 [project.scripts]
 camstart = "camstack.cam_mains.main:main"
-#anycam = "camstack.viewers.anycam:main"
-#pueo = "camstack.viewers.pueo:main"
-#apapane = "camstack.viewers.apapane:main"
-#palila = "camstack.viewers.palila:main"
-#firstcam = "camstack.viewers.firstcam:main"
-#vpupcam = "camstack.viewers.vpupcam:main"
-# FRAMEGRABBERS (and simulator)
-#simucam_framegen = "camstack.simcam_framegen:main"
-#flycapture_usbtake = "camstack.flycapture_usbtake:main"
-#spinnaker_usbtake = "camstack.spinnaker_usbtake:main"
 
-#[project.optional-dependencies]
+cam-alalacamstart = "camstack.deprecatedscripts.main:alala"
+cam-apapanestart = "camstack.deprecatedscripts.main:apapane"
+cam-fircamstart = "camstack.deprecatedscripts.main:first"
+cam-firstpupstart = "camstack.deprecatedscripts.main:first_pupil"
+cam-glintstart = "camstack.deprecatedscripts.main:glint"
+cam-iiwistart = "camstack.deprecatedscripts.main:iiwi"
+cam-kiwikiustart = "camstack.deprecatedscripts.main:kiwikiu"
+cam-nuvustart = "camstack.deprecatedscripts.main:kalao"
+cam-ocamstart = "camstack.deprecatedscripts.main:pueo"
+cam-palilastart = "camstack.deprecatedscripts.main:palila"
+cam-vcam1start = "camstack.deprecatedscripts.main:vcam1"
+cam-vcam2start = "camstack.deprecatedscripts.main:vcam2"
+cam-vpupcamstart = "camstack.deprecatedscripts.main:vpup"
+
+anycam = "camstack.viewers.anycam:main"
+apapane = "camstack.viewers.apapane:main"
+firstcam = "camstack.viewers.firstcam:main"
+palila = "camstack.viewers.palila:main"
+pueo = "camstack.viewers.pueo:main"
+vcam = "camstack.viewers.vcam:main"
+vpupcam = "camstack.viewers.vpupcam:main"
