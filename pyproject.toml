@@ -23,6 +23,8 @@ script-files = [
   "./scripts/cam-restartdeps",
   "./scripts/cam-killall",
   "./scripts/cam-vcamstart",
+  # "./viewers/anycam.py", script that is de-__main__ified and instead dud_main-ified for example, see below.
+  "./viewers/apapane.py"
 ]
 
 #[tool.setuptools.packages.find]
@@ -46,7 +48,10 @@ cam-vcam1start = "camstack.deprecatedscripts.main:vcam1"
 cam-vcam2start = "camstack.deprecatedscripts.main:vcam2"
 cam-vpupcamstart = "camstack.deprecatedscripts.main:vpup"
 
-anycam = "camstack.viewers.anycam:main"
+anycam = "camstack.viewermain.anycam:dud_main" # Look at the code - the function never run, since the import while(True)'s!
+
+
+# This is broken!! The paths are wrong!
 apapane = "camstack.viewers.apapane:main"
 firstcam = "camstack.viewers.firstcam:main"
 palila = "camstack.viewers.palila:main"

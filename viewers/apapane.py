@@ -35,11 +35,11 @@ from scxkw.redisutil.typed_db import Redis
 
 from pyMilk.interfacing.isio_shmlib import SHM
 
-import camstack.viewers.viewer_common as cvc
+import camstack.viewertools.viewer_common as cvc
 
-home = os.getenv('HOME')  # Expected /home/scexao
-conf_dir = home + "/conf/apapane_aux/"
-sys.path.append(home + '/src/lib/python/')
+HOME = os.getenv('HOME')  # Expected /home/scexao
+conf_dir = HOME + "/conf/apapane_aux/"
+sys.path.append(HOME + '/src/lib/python/')
 
 MILK_SHM_DIR = os.getenv(
         'MILK_SHM_DIR')  # Expected /tmp <- MULTIVERSE FIXING NEEDED
@@ -442,7 +442,7 @@ rdb, rdb_alive = cvc.locate_redis_db()
 
 pscale = 16.9  #mas per pixel in Apapane
 
-filename = home + "/conf/apapane_aux/hotspots_cor.txt"
+filename = HOME + "/conf/apapane_aux/hotspots_cor.txt"
 cors = [line.rstrip('\n') for line in open(filename)]
 ncor = len(cors)
 cort = np.zeros((2, ncor))
@@ -486,7 +486,7 @@ tmux_ircam_synchro = tmuxlib.find_or_create(
         'ircam_synchro')  # start a tmux session for FLC synchro
 
 res = subprocess.check_output("ps aux | grep ircam_synchro", shell=True)
-if bytes(home, 'utf8') + b'/bin/devices/ircam_synchro' not in res:
+if bytes(HOME, 'utf8') + b'/bin/devices/ircam_synchro' not in res:
     tmux_ircam_synchro.send_keys("ircam_synchro")
 
 # ------------------------------------------------------------------
@@ -1055,8 +1055,8 @@ while True:  # the main game loop
 
             else:
                 [cx, cy] = impro.centroid(temp2)
-                if (cx >= 0) and (cx < xsizeim) and (cy >= 0) and (cy <
-                                                                   ysizeim):
+                if (cx >= 0) and (cx < xsizeim) and (cy >= 0) and (cy
+                                                                   < ysizeim):
                     fh = temp2[int(cy), int(cx)]
                     msg3 = "center = %3d,%3d flux = %5d" % (cx, cy, fh)
                     info3 = font3.render(msg3, True, FGCOL, BGCOL)
@@ -1301,7 +1301,7 @@ while True:  # the main game loop
             time.sleep(0.1)
             if timeexpt[-1] - timeexpt[0] > 4:
                 tmux_apapane.send_keys(
-                        home +
+                        HOME +
                         "/bin/log Apapane: changing exposure time to %d" %
                         etime)
                 timeexpt = []
@@ -1312,7 +1312,7 @@ while True:  # the main game loop
             time.sleep(0.1)
             if timendr[-1] - timendr[0] > 4:
                 tmux_apapane.send_keys(
-                        home +
+                        HOME +
                         "/bin/log Apapane: changing exposure time to %d" %
                         etime)
                 timendr = []

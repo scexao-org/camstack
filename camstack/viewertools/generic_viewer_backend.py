@@ -17,7 +17,7 @@ os.sched_setaffinity(0, _CORES)  # AMD fix
 from astropy.io import fits
 from pyMilk.interfacing.shm import SHM
 
-from camstack.viewers import backend_utils as buts
+from . import backend_utils as buts
 
 from astropy.io import fits
 from pyMilk.interfacing.shm import SHM
