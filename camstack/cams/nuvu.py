@@ -666,7 +666,8 @@ class Kalao(NUVU):
 # Quick shorthand for testing
 
 if __name__ == "__main__":
-    cam = Kalao(name='nuvu', stream_name='nuvu_raw', unit=0, channel=0)
+    cam = Kalao(name='nuvu', stream_name='nuvu_raw', unit=0, channel=0,
+                taker_cset_prio=('wfs_cpuset', 44))
     from camstack.core.utilities import shellify_methods
     shellify_methods(cam, globals())
     #kalao.mytemptests()
