@@ -1,4 +1,6 @@
 #!/bin/bash
+source /home/kalao/kalao-venv/bin/activate
+source ~/.kalao_env
 
 tnew="tmux new-session -d -s"
 tsend="tmux send-keys -t"
