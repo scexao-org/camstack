@@ -22,7 +22,7 @@ if __name__ == "__main__":
     mode = 1  # 64x64 binning
 
     cam = Kalao('nuvu', 'nuvu_raw', unit=0, channel=0, mode_id=mode,
-                taker_cset_prio=('wfs_cpuset', 44))
+                taker_cset_prio=('nuvu_cpuset', 44))
 
     from camstack.core.utilities import shellify_methods
     shellify_methods(cam, globals())
