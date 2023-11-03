@@ -163,7 +163,7 @@ class BaseVCAM(OrcaQuest):
                        scex_lp.strip().upper() == "IN")
         base_mode = "IPOL" if polarimetry else "IMAG"
         # Determine whether in standard mode, SDI mode, or MBI/r mode
-        nonsdi_flts = ("UNKNOWN", "OPEN")
+        nonsdi_flts = ("UNKNOWN", "OPEN", "BLOCK")
         sdi = dfl1.upper() not in nonsdi_flts and dfl2.upper() not in nonsdi_flts
         if sdi:
             obs_mod = f"{base_mode}_SDI"

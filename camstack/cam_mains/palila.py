@@ -20,7 +20,7 @@ if __name__ == "__main__":
     tcp_recv = RemoteDependentProcess(
             tmux_name=f'streamTCPreceive_{scxconf.TCPPORT_PALILA}',
             # Urrrrrh this is getting messy
-            cli_cmd='creashmim %s %u %u; shmimTCPreceive -c ircam ' +
+            cli_cmd='creashmim %s %u %u --kw=300; shmimTCPreceive -c ircam ' +
             f'{scxconf.TCPPORT_PALILA}',
             cli_args=('palila', MAGIC_HW_STR.HEIGHT, MAGIC_HW_STR.WIDTH),
             remote_host='scexao@' + scxconf.IPLAN_SC6,

@@ -93,6 +93,7 @@ CTRL  + 8     : CLC-2
 CTRL  + 9     : CLC-3
 CTRL  + 0     : CLC-5
 CTRL  + -     : CLC-7
+CTRL  + =     : DGVVC
 CTRL  + ARROW : Nudge 0.001 mm in x (left/right) and y (up/down)
 SHIFT + ARROW : Nudge 0.05 mm in x (left/right) and y (up/down)
 CTRL  + o     : Offset fieldstop 0.5 mm; press again to return

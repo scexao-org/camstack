@@ -324,6 +324,8 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
                     partial(self.change_fieldstop, 4),
             buts.Shortcut(pgmc.K_MINUS, pgmc.KMOD_LCTRL):
                     partial(self.change_fieldstop, 5),
+            buts.Shortcut(pgmc.K_EQUALS, pgmc.KMOD_LCTRL):
+                    partial(self.change_fieldstop, 6),
             buts.Shortcut(pgmc.K_s, pgmc.KMOD_LCTRL): self.save_config,
             buts.Shortcut(pgmc.K_o, pgmc.KMOD_LCTRL): self.offset_fieldstop
         }
@@ -567,6 +569,32 @@ class VAMPIRESPupilMode(DeviceMixin, PupilMode):
         self.device.move_configuration_name__oneway("out")
 
 
+class DiffWheelBlockPlugin(DeviceMixin, OnOffPlugin):
+    DEVICE_NAME = "VAMPIRES_DIFF"
+
+    def __init__(self, *args, key_onoff=pgmc.K_d,
+                 modifier_and=pgmc.K_LCTRL | pgmc.K_LSHIFT, **kwargs) -> None:
+        super().__init__(*args, key_onoff=key_onoff, modifier_and=modifier_and,
+                         **kwargs)
+        self.curr_posn = None
+
+    def enable(self) -> None:
+        super().enable()
+        self.curr_posn = self.device.get_position()
+        self.device.move_configuration(7)
+
+    def disable(self) -> None:
+        super().disable()
+        if self.curr_posn is not None:
+            self.device.move_absolute(self.curr_posn)
+
+    def frontend_action(self) -> None:
+        return super().frontend_action()
+
+    def backend_action(self) -> None:
+        return super().backend_action()
+
+
 class VCAMDarkAcquirePlugin(DeviceMixin, DarkAcquirePlugin):
     DEVICE_NAME = "VAMPIRES_DIFF"
 
@@ -574,9 +602,9 @@ class VCAMDarkAcquirePlugin(DeviceMixin, DarkAcquirePlugin):
         if in_true:
             # don't use __oneway because we don't want to start taking darks
             # until block is fully in
-            self.device.move_relative(30)
+            self.device.move_relative(31)
         else:
-            self.device.move_relative__oneway(-30)
+            self.device.move_relative__oneway(-31)
 
 
 class VCAMTriggerPlugin(DeviceMixin, BasePlugin):

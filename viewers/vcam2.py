@@ -1,6 +1,6 @@
 import click
 from camstack.viewers.vampires.vcam import VAMPIRESBaseViewerBackend, VAMPIRESBaseViewerFrontend
-from camstack.viewers.vampires.plugins import FilterWheelPlugin, MBIWheelPlugin, VAMPIRESPupilMode, FieldstopPlugin, VCAMDarkAcquirePlugin, VCAMTriggerPlugin, DiffFilterWheelPlugin, VCAMCompassPlugin, VCAMScalePlugin
+from camstack.viewers.vampires.plugins import FilterWheelPlugin, MBIWheelPlugin, VAMPIRESPupilMode, FieldstopPlugin, VCAMDarkAcquirePlugin, VCAMTriggerPlugin, DiffFilterWheelPlugin, VCAMCompassPlugin, VCAMScalePlugin, DiffWheelBlockPlugin
 from camstack.viewers.plugins import SaturationPlugin, CenteredCrossHairPlugin
 
 
@@ -22,7 +22,8 @@ def main(zoom, binn):
                VCAMDarkAcquirePlugin(frontend, textbox=frontend.lbl_status),
                VCAMTriggerPlugin(frontend), DiffFilterWheelPlugin(frontend),
                VCAMCompassPlugin(frontend, imrpad_offset=41.323163723676146),
-               VCAMScalePlugin(frontend, platescale=6.018378804429752))
+               VCAMScalePlugin(frontend, platescale=6.018378804429752),
+               DiffWheelBlockPlugin(frontend))
 
     frontend.plugins.extend(plugins)
     frontend.register_backend(backend)
