@@ -371,7 +371,7 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
                 name = config["name"]
                 break
         self.backend_obj.logger.info(
-                f"Moving filter to configuration {index}: {name}")
+                f"Moving field stop to configuration {index}: {name}")
         self.device.move_configuration_idx__oneway(index)
         self.current_index = index
 

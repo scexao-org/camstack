@@ -86,13 +86,13 @@ CTRL+ --  : change filter wheel slot
         1 : Open (0 deg)
         2 : SAM-7
         3 : SAM-9
-        4 : SAM-18
+        4 : Open (73 deg)
         5 : SAM-18-Nudged
         6 : SAM-Ann-Nudged
         7 : Mirror
-        8 : SAM-Ann
+        8 : Open (164 deg)
         9 : LyotStop
-        0 : Open (218 deg)
+        0 : RAP
         - : ND10
         = : ND25
 CTRL+ARROW  : Nudge wheel 0.01 mm in x (left/right) and y (up/down)
