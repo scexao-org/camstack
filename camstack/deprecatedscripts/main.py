@@ -48,7 +48,7 @@ def glint():
 def kalao():
     # NO COMPUTER ENFORCE! NOT A SCEXAO CAMERA!
     print_dep_warning('cam-nuvustart', 'camstart kalaocam')
-    main(cam_name_arg='FIRST')
+    main(cam_name_arg='KALAO')
 
 
 def kiwikiu():

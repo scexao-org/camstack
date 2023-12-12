@@ -28,16 +28,25 @@ script-files = [
   "./scripts/cam-killall",
   "./scripts/cam-vcamstart",
   # "./viewers/anycam.py", script that is de-__main__ified and instead dud_main-ified for example, see below.
-  "./viewers/apapane.py"
 ]
 
 #[tool.setuptools.packages.find]
 #include = ["camstack*"]
-#[project.optional-dependencies]
 
+# vdeo: tentative - mark extras in order to deploy entry-points
+# only for installs with extras.
+[project.optional-dependencies]
+sc5 = []
+sc6 = []
+all = []
+
+# vdeo: but at this time, entrypoints only with an extra dep don't seem to be
+# possible... https://github.com/pypa/pip/issues/9726
 [project.scripts]
+# NEW for starting cams.
 camstart = "camstack.cam_mains.main:main"
 
+# DEPRECATED
 cam-alalacamstart = "camstack.deprecatedscripts.main:alala"
 cam-apapanestart = "camstack.deprecatedscripts.main:apapane"
 cam-fircamstart = "camstack.deprecatedscripts.main:first"
@@ -45,20 +54,22 @@ cam-firstpupstart = "camstack.deprecatedscripts.main:first_pupil"
 cam-glintstart = "camstack.deprecatedscripts.main:glint"
 cam-iiwistart = "camstack.deprecatedscripts.main:iiwi"
 cam-kiwikiustart = "camstack.deprecatedscripts.main:kiwikiu"
-cam-nuvustart = "camstack.deprecatedscripts.main:kalao"
 cam-ocamstart = "camstack.deprecatedscripts.main:pueo"
 cam-palilastart = "camstack.deprecatedscripts.main:palila"
 cam-vcam1start = "camstack.deprecatedscripts.main:vcam1"
 cam-vcam2start = "camstack.deprecatedscripts.main:vcam2"
 cam-vpupcamstart = "camstack.deprecatedscripts.main:vpup"
 
-anycam = "camstack.viewermain.anycam:dud_main" # Look at the code - the function never run, since the import while(True)'s!
+# VIEWERS
+# Using an empty dud_main function at the end of file for when
+# We really just want the script
+anycam = "camstack.viewermains.anycam:dud_main"
+firstcam = "camstack.viewermains.firstcam:main"
+apapane = "camstack.viewermains.apapane:dud_main"
+palila = "camstack.viewermains.palila:dud_main"
+pueo = "camstack.viewermains.pueo:dud_main"
 
-
-# This is broken!! The paths are wrong!
-apapane = "camstack.viewers.apapane:main"
-firstcam = "camstack.viewers.firstcam:main"
-palila = "camstack.viewers.palila:main"
-pueo = "camstack.viewers.pueo:main"
-vcam = "camstack.viewers.vcam:main"
-vpupcam = "camstack.viewers.vpupcam:main"
+# @Miles is this what's supposed to happen?
+vcam1 = "camstack.viewermains.vcam:main1"
+vcam2 = "camstack.viewermains.vcam:main2"
+vpupcam = "camstack.viewermains.vpupcam:main"

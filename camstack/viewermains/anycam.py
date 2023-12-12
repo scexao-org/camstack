@@ -42,7 +42,7 @@ binned_backend_shape = (backend.shm_shape[0] // binn,
 frontend = GenericViewerFrontend(zoom, 20, binned_backend_shape,
                                  fonts_zoom=fonts_zoom)
 frontend.register_backend(backend)
-frontend.run()
+frontend.run()  # Perpetual while True:
 
 
 # For pyproject entrypoint.

@@ -617,3 +617,8 @@ while True:  # the main game loop
 
 pygame.quit()
 sys.exit()
+
+
+# pyproject.toml entry point.
+def dud_main():
+    pass
