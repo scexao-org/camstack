@@ -29,7 +29,7 @@ import copy
 import datetime as dt
 from astropy.io import fits as pf
 from pyMilk.interfacing.isio_shmlib import SHM
-import camstack.viewers.viewer_common as cvc
+import camstack.viewertools.viewer_common as cvc
 
 MILK_SHM_DIR = os.environ['MILK_SHM_DIR']
 home = os.getenv('HOME')

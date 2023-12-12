@@ -1,7 +1,8 @@
 import click
-from camstack.viewers.vampires.vcam import VAMPIRESBaseViewerBackend, VAMPIRESBaseViewerFrontend
-from camstack.viewers.vampires.plugins import FilterWheelPlugin, MBIWheelPlugin, VAMPIRESPupilMode, FieldstopPlugin, VCAMDarkAcquirePlugin, VCAMTriggerPlugin, DiffFilterWheelPlugin, VCAMCompassPlugin, VCAMScalePlugin, DiffWheelBlockPlugin
-from camstack.viewers.plugins import SaturationPlugin, CenteredCrossHairPlugin
+
+from camstack.viewermain.vcam import VAMPIRESBaseViewerBackend, VAMPIRESBaseViewerFrontend
+from camstack.viewertools.plugins import SaturationPlugin
+import camstack.viewertools.vampires_plugins as vplugs
 
 
 @click.command("vcam2.py")
@@ -17,13 +18,18 @@ def main(zoom, binn):
                                           fonts_zoom=2 * zoom)
     plugins = (SaturationPlugin(frontend, sat_value=65535,
                                 textbox=frontend.lbl_saturation),
-               FieldstopPlugin(frontend), FilterWheelPlugin(frontend),
-               MBIWheelPlugin(frontend), VAMPIRESPupilMode(frontend),
-               VCAMDarkAcquirePlugin(frontend, textbox=frontend.lbl_status),
-               VCAMTriggerPlugin(frontend), DiffFilterWheelPlugin(frontend),
-               VCAMCompassPlugin(frontend, imrpad_offset=41.323163723676146),
-               VCAMScalePlugin(frontend, platescale=6.018378804429752),
-               DiffWheelBlockPlugin(frontend))
+               vplugs.FieldstopPlugin(frontend),
+               vplugs.FilterWheelPlugin(frontend),
+               vplugs.MBIWheelPlugin(frontend),
+               vplugs.VAMPIRESPupilMode(frontend),
+               vplugs.VCAMDarkAcquirePlugin(frontend,
+                                            textbox=frontend.lbl_status),
+               vplugs.VCAMTriggerPlugin(frontend),
+               vplugs.DiffFilterWheelPlugin(frontend),
+               vplugs.VCAMCompassPlugin(frontend,
+                                        imrpad_offset=41.323163723676146),
+               vplugs.VCAMScalePlugin(frontend, platescale=6.018378804429752),
+               vplugs.DiffWheelBlockPlugin(frontend))
 
     frontend.plugins.extend(plugins)
     frontend.register_backend(backend)

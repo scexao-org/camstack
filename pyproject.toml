@@ -10,7 +10,11 @@ authors = [
 dependencies = [
   "docopt",
   "libtmux",
-  "pygame", # "pyMilk" DO NOT - there is a pyMilk on pipy which is a completely different thing.
+  "pygame",
+  #"pyMilk", DO NOT - there is a pyMilk on pipy which is a completely different thing.
+  "numpy",
+  "tqdm",
+
 ]
 description = "SCExAO camera codebase"
 name = "camstack"

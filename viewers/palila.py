@@ -52,7 +52,7 @@ from scxkw.redisutil.typed_db import Redis
 
 from pyMilk.interfacing.isio_shmlib import SHM
 
-import camstack.viewers.viewer_common as cvc
+import camstack.viewertools.viewer_common as cvc
 
 home = os.getenv('HOME')  # Expected /home/scexao
 conf_dir = home + "/conf/palila_aux/"
@@ -1179,8 +1179,8 @@ while True:  # the main game loop
 
             else:
                 [cx, cy] = impro.centroid(temp2, method="airy")
-                if (cx >= 0) and (cx < xsizeim) and (cy >= 0) and (cy <
-                                                                   ysizeim):
+                if (cx >= 0) and (cx < xsizeim) and (cy >= 0) and (cy
+                                                                   < ysizeim):
                     fh = temp2[int(cy), int(cx)]
                     msg3 = "center = %3d,%3d flux = %5d" % (cx, cy, fh)
                     info3 = font3.render(msg3, True, FGCOL, BGCOL)

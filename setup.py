@@ -17,7 +17,7 @@ with open("README.md", 'r') as f:
     long_description = f.read()
 
 scripts_everyone = [
-        './viewers/anycam.py',
+        './camstack/viewers/anycam.py',
         './scripts/cam-restartdeps',
 ]
 
