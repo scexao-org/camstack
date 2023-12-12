@@ -21,7 +21,7 @@ if __name__ == "__main__":
             tmux_name=f'streamTCPreceive_{scxconf.TCPPORT_APAPANE}',
             # Urrrrrh this is getting messy
             cli_cmd=
-            'creashmim %s %u %u --type=f32 --kw=100; shmimTCPreceive -c ircam '
+            'creashmim %s %u %u --type=f32 --kw=300; shmimTCPreceive -c ircam '
             + f'{scxconf.TCPPORT_APAPANE}',
             cli_args=('apapane', MAGIC_HW_STR.HEIGHT, MAGIC_HW_STR.WIDTH),
             remote_host=scxconf.IP_SC6,
@@ -50,7 +50,7 @@ if __name__ == "__main__":
             tmux_name=f'streamTCPreceive_{scxconf.TCPPORT_APAPANE_RAW}',
             # Urrrrrh this is getting messy
             cli_cmd=  # FIXME
-            'milk-exec "creashmim %s %u %u --type=u16 --kw=100"; shmimTCPreceive -c ircam '
+            'milk-exec "creashmim %s %u %u --type=u16 --kw=300"; shmimTCPreceive -c ircam '
             + f'{scxconf.TCPPORT_APAPANE_RAW}',
             cli_args=('apapane_raw', MAGIC_HW_STR.HEIGHT, MAGIC_HW_STR.WIDTH),
             remote_host=scxconf.IP_SC6,

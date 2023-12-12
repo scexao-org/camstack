@@ -31,6 +31,12 @@ class BaseVCAM(OrcaQuest):
             ## Filters
             "FILTER01": ("", "Primary filter name", "%-16s", "FILT01"),
             "FILTER02": ("", "Secondary filter name", "%-16s", "FILT02"),
+            ## IMR because sometimes in cals it's a little tight
+            "D_IMRANG": (-1, "[deg] IMR angle", "%16.3f", "IMRANG"),
+            "D_IMRPAD": (-1, "[deg] IMR position angle of dec. axis", "%16.3f",
+                         "IMRPAD"),
+            ## Polarization terms from sc2
+            "X_POLARP": (-1, "[deg] Polarizer angle", "%16.3f", "POLAR"),
             ## QWP terms managed by QWP daemon
             "U_QWP1": (-1, "[deg] VAMPIRES QWP 1 polarization angle", "%16.3f",
                        "QWP1"),
@@ -105,6 +111,7 @@ class BaseVCAM(OrcaQuest):
         hwp_stage = 0
         lp_stage = 0
         scex_lp = 'Unknown'
+        lp_theta = imrang = imrpad = -1
         qwp1 = qwp1th = -1
         qwp2 = qwp2th = -1
         retang1 = retpos1 = -1
@@ -116,6 +123,9 @@ class BaseVCAM(OrcaQuest):
                 pipe.hget('P_STGPS1', 'value')
                 pipe.hget('P_STGPS2', 'value')
                 pipe.hget('X_POLAR', 'value')
+                pipe.hget('X_POLARP', 'value')
+                pipe.hget('D_IMRANG', 'value')
+                pipe.hget('D_IMRPAD', 'value')
                 pipe.hget('U_DIFFL1', 'value')
                 pipe.hget('U_DIFFL2', 'value')
                 pipe.hget("U_QWP1", "value")
@@ -126,13 +136,16 @@ class BaseVCAM(OrcaQuest):
                 pipe.hget("RET-ANG2", "value")
                 pipe.hget("RET-POS1", "value")
                 pipe.hget("RET-POS2", "value")
-                filter01, bs, lp_stage, hwp_stage, scex_lp, dfl1, dfl2, qwp1, qwp1th, qwp2, qwp2th, retang1, retang2, retpos1, retpos2 = pipe.execute(
+                filter01, bs, lp_stage, hwp_stage, scex_lp, lp_theta, imrang, imrpad, dfl1, dfl2, qwp1, qwp1th, qwp2, qwp2th, retang1, retang2, retpos1, retpos2 = pipe.execute(
                 )
         except:
             logg.exception(
                     'REDIS unavailable @ poll_camera_for_keywords @ BaseVCAM')
 
         self._set_formatted_keyword('FILTER01', filter01)
+        self._set_formatted_keyword("X_POLARP", lp_theta)
+        self._set_formatted_keyword("D_IMRANG", imrang)
+        self._set_formatted_keyword("D_IMRPAD", imrpad)
         self._set_formatted_keyword("U_QWP1", qwp1)
         self._set_formatted_keyword("U_QWP1TH", qwp1th)
         self._set_formatted_keyword("U_QWP2", qwp2)
@@ -150,7 +163,7 @@ class BaseVCAM(OrcaQuest):
                        scex_lp.strip().upper() == "IN")
         base_mode = "IPOL" if polarimetry else "IMAG"
         # Determine whether in standard mode, SDI mode, or MBI/r mode
-        nonsdi_flts = ("UNKNOWN", "OPEN")
+        nonsdi_flts = ("UNKNOWN", "OPEN", "BLOCK")
         sdi = dfl1.upper() not in nonsdi_flts and dfl2.upper() not in nonsdi_flts
         if sdi:
             obs_mod = f"{base_mode}_SDI"
@@ -261,9 +274,7 @@ class VCAM1(BaseVCAM):
         # Defaults
         filter02 = "Unknown"
         try:
-            with self.RDB.pipeline() as pipe:
-                pipe.hget("U_DIFFL1", "value")
-                filter02 = pipe.execute()
+            filter02 = self.RDB.hget("U_DIFFL1", "value")
         except:
             logg.exception(
                     'REDIS unavailable @ poll_camera_for_keywords @ VCAM1')
@@ -319,7 +330,6 @@ class VCAM2(BaseVCAM):
         filter02 = "Unknown"
         try:
             filter02 = self.RDB.hget('U_DIFFL2', 'value')
-
         except:
             logg.exception(
                     'REDIS unavailable @ poll_camera_for_keywords @ VCAM2')
