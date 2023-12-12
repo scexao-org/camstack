@@ -10,7 +10,8 @@
     camname <camname>
 '''
 
-from swmain.infra.utilities import enforce_whichcomp  #, WhichcompEnum?
+from camstack.core.utilities import enforce_whichcomp
+
 from .depwarning import print_dep_warning
 from camstack.cam_mains.main import main
 

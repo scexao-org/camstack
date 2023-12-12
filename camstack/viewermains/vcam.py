@@ -10,7 +10,7 @@ import camstack.viewertools.vampires_plugins as vplugs
               help="Graphics window zoom factor", show_default=True)
 @click.option("-b", "--bin", "binn", type=int, default=1,
               help="SHM binning factor", show_default=True)
-def main(zoom, binn):
+def main1(zoom, binn):
     backend = VAMPIRESBaseViewerBackend(1, "vcam1")
     binned_backend_shape = (560 // binn, 560 // binn)
 
