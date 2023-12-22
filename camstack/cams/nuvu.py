@@ -215,16 +215,15 @@ class NUVU(EDTCamera):
         )  # Sets 'T_CCD' 'T_CNTRLR' 'T_PSU' 'T_FPGA' 'T_HSINK'
 
         # Additional fill-up of the camera state
-        self.get_gain()  # Sets 'DETGAIN'
-        self.get_readout_mode()  # Set 'DET-SMPL'
-        self.GetAnalogicGain()  # Set 'GAIN'
+        self.GetReadoutMode()  # Set 'DET-SMPL'
+        self.GetAnalogicGain()  # Set 'DET GAIN'
 
         # Call the stuff that we can't know otherwise
         self.poll_camera_for_keywords()  # Sets 'DET-TMP'
 
     def poll_camera_for_keywords(self, shm_write: bool = True) -> None:
 
-        self.get_temperature(shm_write=shm_write)  # Sets DET-TMP
+        self.GetTemperature(shm_write=shm_write)  # Sets DET-TMP
         time.sleep(.1)
 
     def _update_nuvu_config(self, retries: int = 10, timeout: float = 100.):
@@ -315,6 +314,8 @@ class NUVU(EDTCamera):
     def GetReadoutMode(self):
         (success, answer) = self.send_command("ld")
         if success:
+            self.camera_shm.update_keyword('RO-MODE', answer)
+
             return (int(answer), self.RO_MODES[int(answer)])
         return 'failed'
 
