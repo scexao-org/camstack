@@ -223,7 +223,7 @@ class NUVU(EDTCamera):
 
     def poll_camera_for_keywords(self, shm_write: bool = True) -> None:
 
-        self.GetTemperature(shm_write=shm_write)  # Sets DET-TMP
+        self.GetTemperature()  # Sets DET-TMP
         time.sleep(.1)
 
     def _update_nuvu_config(self, retries: int = 10, timeout: float = 100.):
