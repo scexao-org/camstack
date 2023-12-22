@@ -314,7 +314,7 @@ class NUVU(EDTCamera):
     def GetReadoutMode(self):
         (success, answer) = self.send_command("ld")
         if success:
-            self.camera_shm.update_keyword('RO-MODE', answer)
+            self.camera_shm.update_keyword('DET-SMPL', answer)
 
             return (int(answer), self.RO_MODES[int(answer)])
         return 'failed'
