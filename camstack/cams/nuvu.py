@@ -208,9 +208,7 @@ class NUVU(EDTCamera):
 
         EDTCamera._fill_keywords(self)
 
-        self._set_formatted_keyword('DETECTOR', 'CRED1')
-        self._set_formatted_keyword('CROPPED',
-                                    self.current_mode_id != self.FULL)
+        self._set_formatted_keyword('DETECTOR', 'NUVU - KalAO')
 
         self.GetExposureTime()  # Sets 'EXPTIME' and 'FRATE'
         self.GetTemperature(
@@ -331,7 +329,10 @@ class NUVU(EDTCamera):
         if success:
             texp = float(answer)
             self.camera_shm.update_keyword('EXPTIME', texp)
-            self.camera_shm.update_keyword('FRATE', 1. / texp)
+            if texp == 0:
+                self.camera_shm.update_keyword('FRATE', 1800)
+            else:
+                self.camera_shm.update_keyword('FRATE', 1. / texp)
             return float(answer)
         return 'failed'
 
