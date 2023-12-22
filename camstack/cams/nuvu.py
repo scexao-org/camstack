@@ -202,6 +202,33 @@ class NUVU(EDTCamera):
         (success, resdict) = self._get_nuvu_response(resp)
         return (success, resdict)
 
+    def _fill_keywords(self) -> None:
+        # Do a little more filling than the subclass after changing a mode
+        # And call the thread-polling function
+
+        EDTCamera._fill_keywords(self)
+
+        self._set_formatted_keyword('DETECTOR', 'CRED1')
+        self._set_formatted_keyword('CROPPED',
+                                    self.current_mode_id != self.FULL)
+
+        self.GetExposureTime()  # Sets 'EXPTIME' and 'FRATE'
+        self.GetTemperature(
+        )  # Sets 'T_CCD' 'T_CNTRLR' 'T_PSU' 'T_FPGA' 'T_HSINK'
+
+        # Additional fill-up of the camera state
+        self.get_gain()  # Sets 'DETGAIN'
+        self.get_readout_mode()  # Set 'DET-SMPL'
+        self.GetAnalogicGain()  # Set 'GAIN'
+
+        # Call the stuff that we can't know otherwise
+        self.poll_camera_for_keywords()  # Sets 'DET-TMP'
+
+    def poll_camera_for_keywords(self, shm_write: bool = True) -> None:
+
+        self.get_temperature(shm_write=shm_write)  # Sets DET-TMP
+        time.sleep(.1)
+
     def _update_nuvu_config(self, retries: int = 10, timeout: float = 100.):
         r = 0
         while r < retries:
@@ -653,6 +680,9 @@ class Kalao(NUVU):
 
     KEYWORDS = {}
     KEYWORDS.update(NUVU.KEYWORDS)
+
+    def poll_camera_for_keywords(self, shm_write: bool = True) -> None:
+        NUVU.poll_camera_for_keywords(self, shm_write)
 
     def _fill_keywords(self):
         NUVU._fill_keywords(self)
