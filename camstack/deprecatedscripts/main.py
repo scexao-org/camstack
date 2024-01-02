@@ -17,32 +17,32 @@ from camstack.cam_mains.main import main
 
 
 def alala():
-    enforce_whichcomp('A')
     print_dep_warning('cam-alalacamstart', 'camstart alala')
+    enforce_whichcomp('A')
     main(cam_name_arg='ALALA')
 
 
 def apapane():
-    enforce_whichcomp('5')
     print_dep_warning('cam-apapanestart', 'camstart apapane')
+    enforce_whichcomp('5')
     main(cam_name_arg='APAPANE')
 
 
 def first():
-    enforce_whichcomp('K')
     print_dep_warning('cam-fircamstart', 'camstart first')
+    enforce_whichcomp('K')
     main(cam_name_arg='FIRST')
 
 
 def first_pupil():
-    enforce_whichcomp('K')
     print_dep_warning('cam-firstpupstart', 'camstart first_pupil')
+    enforce_whichcomp('K')
     main(cam_name_arg='FIRST_PUPIL')
 
 
 def glint():
-    enforce_whichcomp('5')
     print_dep_warning('cam-glintstart', 'camstart glint')
+    enforce_whichcomp('5')
     main(cam_name_arg='GLINT')
 
 
@@ -53,42 +53,47 @@ def kalao():
 
 
 def kiwikiu():
-    enforce_whichcomp('5')
     print_dep_warning('cam-kiwikiustart', 'camstart kiwikiu')
+    enforce_whichcomp('5')
     main(cam_name_arg='KIWIKIU')
 
 
 def pueo():
-    enforce_whichcomp('5')
     print_dep_warning('cam-ocamstart', 'camstart pueo')
+    enforce_whichcomp('5')
     main(cam_name_arg='PUEO')
 
 
 def vpup():
-    enforce_whichcomp('V')
     print_dep_warning('cam-vpupcamstart', 'camstart vpupcam')
+    enforce_whichcomp('V')
     main(cam_name_arg='VPUPCAM')
 
 
 def vcam1():
-    enforce_whichcomp('5')
     print_dep_warning('cam-vcam1start', 'camstart vcam1')
+    enforce_whichcomp('5')
     main(cam_name_arg='VCAM1')
 
 
 def vcam2():
-    enforce_whichcomp('5')
     print_dep_warning('cam-vcam2start', 'camstart vcam2')
+    enforce_whichcomp('5')
     main(cam_name_arg='VCAM2')
 
 
 def iiwi_but_actually_apapane():
-    enforce_whichcomp('AORTS')
     print_dep_warning('cam-iiwistart', 'camstart iiwi')
+    enforce_whichcomp('AORTS')
     main(cam_name_arg='IIWI')
 
 
 def palila():
-    enforce_whichcomp('5')
     print_dep_warning('cam-palilastart', 'camstart palila')
+    enforce_whichcomp('5')
     main(cam_name_arg='PALILA')
+
+
+def simucam():
+    print_dep_warning('cam-simucamstart', 'camstart simucam')
+    main(cam_name_arg='SIMUCAM')

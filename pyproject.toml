@@ -59,6 +59,7 @@ cam-palilastart = "camstack.deprecatedscripts.main:palila"
 cam-vcam1start = "camstack.deprecatedscripts.main:vcam1"
 cam-vcam2start = "camstack.deprecatedscripts.main:vcam2"
 cam-vpupcamstart = "camstack.deprecatedscripts.main:vpup"
+cam-simucamstart = "camstack.deprecatedscripts.main:simucam"
 
 # VIEWERS
 # Using an empty dud_main function at the end of file for when
