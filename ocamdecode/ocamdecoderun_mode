@@ -16,7 +16,7 @@ case $MODE in
 1)
 	npixr=240
 	npixc=240
-	outname="ocam2dhr"
+	outname="ocam2d"
 	;;
 3)
 	npixr=120
