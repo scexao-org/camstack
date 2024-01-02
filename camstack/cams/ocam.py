@@ -78,7 +78,7 @@ class OCAM2K(EDTCamera):
         self.send_command_parsed('temp reset')
         self.gain_protection_reset()
         self.set_gain(1)
-        self.set_synchro(True)  # Is called by the setmode in the constructor.
+        #self.set_synchro(True)  # Is called by the setmode in the constructor.
 
     # =====================
     # AD HOC PREPARE CAMERA

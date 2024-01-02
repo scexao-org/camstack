@@ -579,9 +579,9 @@ class BaseCamera:
             try:
                 self.poll_camera_for_keywords()
             except Exception as e:
-                logg.error(f"Polling thread: error [{e}]")
+                logg.error(f"Polling thread: error [{e!r}]")
 
             try:
                 self.redis_push_values()
             except Exception as e:
-                logg.error(f"Polling thread: error [{e}]")
+                logg.error(f"Polling thread: error [{e!r}]")
