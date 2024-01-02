@@ -17,6 +17,8 @@ from rich.live import Live
 from rich.logging import RichHandler
 import numpy as np
 
+from scxconf.pyrokeys import VAMPIRES
+
 logger = logging.getLogger()
 
 
@@ -33,7 +35,7 @@ class DeviceMixin:
 
 class MaskWheelPlugin(DeviceMixin, BasePlugin):
 
-    DEVICE_NAME = "VAMPIRES_MASK"
+    DEVICE_NAME = VAMPIRES.MASK
 
     def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
         super().__init__(frontend_obj)
@@ -152,7 +154,7 @@ class MaskWheelPlugin(DeviceMixin, BasePlugin):
 
 class FilterWheelPlugin(DeviceMixin, BasePlugin):
 
-    DEVICE_NAME = "VAMPIRES_FILT"
+    DEVICE_NAME = VAMPIRES.FILT
 
     def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
         super().__init__(frontend_obj)
@@ -210,7 +212,7 @@ class FilterWheelPlugin(DeviceMixin, BasePlugin):
 
 class DiffFilterWheelPlugin(DeviceMixin, BasePlugin):
 
-    DEVICE_NAME = "VAMPIRES_DIFF"
+    DEVICE_NAME = VAMPIRES.DIFF
 
     def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
         super().__init__(frontend_obj)
@@ -279,7 +281,7 @@ class DiffFilterWheelPlugin(DeviceMixin, BasePlugin):
 
 class FieldstopPlugin(DeviceMixin, BasePlugin):
 
-    DEVICE_NAME = "VAMPIRES_FIELDSTOP"
+    DEVICE_NAME = VAMPIRES.FIELDSTOP
 
     def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
         super().__init__(frontend_obj)
@@ -410,7 +412,7 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
 
 class MBIWheelPlugin(DeviceMixin, BasePlugin):
 
-    DEVICE_NAME = "VAMPIRES_MBI"
+    DEVICE_NAME = VAMPIRES.MBI
     FIELDS = "F610", "F720", "F670", "F760"
 
     def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
@@ -515,9 +517,86 @@ class MBIWheelPlugin(DeviceMixin, BasePlugin):
             pass
 
 
+class FocusPlugin(DeviceMixin, BasePlugin):
+
+    DEVICE_NAME = VAMPIRES.FOCUS
+
+    def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
+        super().__init__(frontend_obj)
+        self.status = None
+        self.current_index = None
+        self.enabled = True
+        # yapf: disable
+        self.shortcut_map = {
+            buts.Shortcut(pgmc.K_u, pgmc.KMOD_LCTRL): partial(self.nudge_focus, pgmc.K_u, fine=True),
+            buts.Shortcut(pgmc.K_u, pgmc.KMOD_LSHIFT): partial(self.nudge_focus, pgmc.K_u, fine=False),
+            buts.Shortcut(pgmc.K_i, pgmc.KMOD_LCTRL): partial(self.nudge_focus, pgmc.K_i, fine=True),
+            buts.Shortcut(pgmc.K_i, pgmc.KMOD_LSHIFT): partial(self.nudge_focus, pgmc.K_i, fine=False),
+        }
+
+    def nudge_focus(self, key, fine=True):
+        if key == pgmc.K_u:
+            sign = 1
+        elif key == pgmc.K_i:
+            sign = -1
+        else:
+            sign = 0
+
+        if fine:
+            nudge_value = sign * 0.005
+        else:
+            # big step
+            nudge_value = sign * 0.1
+        self.backend_obj.logger.info(f"Nudging focus by {nudge_value} mm")
+        self.device.move_relative__oneway(nudge_value)
+
+    def frontend_action(self) -> None:
+        pass
+
+    def backend_action(self) -> None:
+        pass
+
+class CamFocusPlugin(DeviceMixin, BasePlugin):
+
+    DEVICE_NAME = VAMPIRES.CAMFCS
+
+    def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
+        super().__init__(frontend_obj)
+        self.status = None
+        self.current_index = None
+        self.enabled = True
+        # yapf: disable
+        self.shortcut_map = {
+            buts.Shortcut(pgmc.K_l, pgmc.KMOD_LCTRL): partial(self.nudge_focus, pgmc.K_l, fine=True),
+            buts.Shortcut(pgmc.K_l, pgmc.KMOD_LSHIFT): partial(self.nudge_focus, pgmc.K_l, fine=False),
+            buts.Shortcut(pgmc.K_SEMICOLON, pgmc.KMOD_LCTRL): partial(self.nudge_focus, pgmc.K_SEMICOLON, fine=True),
+            buts.Shortcut(pgmc.K_SEMICOLON, pgmc.KMOD_LSHIFT): partial(self.nudge_focus, pgmc.K_SEMICOLON, fine=False),
+        }
+
+    def nudge_focus(self, key, fine=True):
+        # CCW
+        sign = 1
+        if key == pgmc.K_l:
+            sign = 1
+        # CW
+        elif key == pgmc.K_SEMICOLON:
+            sign = -1
+        if fine:
+            nudge_value = sign * 0.005
+        else:
+            # big step
+            nudge_value = sign * 0.1
+        self.backend_obj.logger.info(f"Nudging cam focus by {nudge_value} mm")
+        self.device.move_relative__oneway(nudge_value)
+
+    def frontend_action(self) -> None:
+        pass
+
+    def backend_action(self) -> None:
+        pass
 class VAMPIRESPupilMode(DeviceMixin, PupilMode):
 
-    DEVICE_NAME = "VAMPIRES_PUPIL"
+    DEVICE_NAME = VAMPIRES.PUPIL
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -570,7 +649,7 @@ class VAMPIRESPupilMode(DeviceMixin, PupilMode):
 
 
 class DiffWheelBlockPlugin(DeviceMixin, OnOffPlugin):
-    DEVICE_NAME = "VAMPIRES_DIFF"
+    DEVICE_NAME = VAMPIRES.DIFF
 
     def __init__(self, *args, key_onoff=pgmc.K_d,
                  modifier_and=pgmc.K_LCTRL | pgmc.K_LSHIFT, **kwargs) -> None:
@@ -596,7 +675,7 @@ class DiffWheelBlockPlugin(DeviceMixin, OnOffPlugin):
 
 
 class VCAMDarkAcquirePlugin(DeviceMixin, DarkAcquirePlugin):
-    DEVICE_NAME = "VAMPIRES_DIFF"
+    DEVICE_NAME = VAMPIRES.DIFF
 
     def move_appropriate_block(self, in_true: bool) -> None:
         if in_true:

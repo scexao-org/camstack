@@ -13,7 +13,8 @@ from .dcamcam import OrcaQuest
 
 class BaseVCAM(OrcaQuest):
     PLATE_SCALE = (-1.6717718901193757e-6, 1.6717718901193757e-6)  # deg / px
-    PA_OFFSET = -41.323163723676146  # deg
+    # PA_OFFSET = -41.323163723676146  # deg
+    PA_OFFSET = 138.67683627632385  # deg
     HOTSPOTS: typ.Dict[str, typ.Tuple[float, float]] = {}
 
     ## camera keywords

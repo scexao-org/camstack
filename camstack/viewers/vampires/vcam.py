@@ -60,6 +60,20 @@ Pupil mode:
 --------------------------------------------------
 CTRL  + p : toggle pupil lens
 
+Focus controls:
+--------------------------------------------------
+CTRL  + u          : Nudge focus by  0.005 mm
+CTRL  + i          : Nudge focus by -0.005 mm
+SHIFT + u          : Nudge focus by  0.1 mm
+SHIFT + i          : Nudge focus by -0.1 mm
+
+Cam focus controls:
+--------------------------------------------------
+CTRL  + l          : Nudge cam focus by  0.01 mm
+CTRL  + ;          : Nudge cam focus by -0.01mm
+SHIFT + l          : Nudge cam focus by  0.1 mm
+SHIFT + ;          : Nudge cam focus by -0.1 mm
+
 MBI wheel controls:
 --------------------------------------------------
 CTRL  + []         : Nudge wheel 0.005 deg CCW / CW
