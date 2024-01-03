@@ -217,7 +217,7 @@ class FlyCaptureUSBCamera(BaseCamera):
     def _prepare_backend_cmdline(self, reuse_shm: bool = False):
 
         # Prepare the cmdline for starting up!
-        exec_path = os.environ['HOME'] + '/src/camstack/src/flycapture_usbtake'
+        exec_path = "python -m camstack.acq.flycapture_usbtake"
         self.taker_tmux_command = (f'{exec_path} -s {self.STREAMNAME} '
                                    f'-u {self.fly_number} -l 0')
         if reuse_shm:
@@ -299,8 +299,8 @@ class Grasshopper3(FlyCaptureUSBCamera):
     def _fill_keywords(self):
 
         FlyCaptureUSBCamera._fill_keywords(self)
-        self._set_formatted_keyword('CROPPED',
-                                    self.current_mode_id != self.FULL)
+        self._set_formatted_keyword('CROPPED', self.current_mode_id
+                                    != self.FULL)
         self._set_formatted_keyword('DETECTOR', 'FLIR GS3')
         self._set_formatted_keyword("DETPXSZ1", 0.00586)
         self._set_formatted_keyword("DETPXSZ2", 0.00586)
@@ -325,8 +325,8 @@ class Flea3(FlyCaptureUSBCamera):
     def _fill_keywords(self):
 
         FlyCaptureUSBCamera._fill_keywords(self)
-        self._set_formatted_keyword('CROPPED',
-                                    self.current_mode_id != self.FULL)
+        self._set_formatted_keyword('CROPPED', self.current_mode_id
+                                    != self.FULL)
         self._set_formatted_keyword('DETECTOR', 'FLIR Flea3')
         self._set_formatted_keyword("DETPXSZ1", 0.00363)
         self._set_formatted_keyword("DETPXSZ2", 0.00363)

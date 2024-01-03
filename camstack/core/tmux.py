@@ -28,7 +28,7 @@ def find_or_create_(session_name: str) -> Pane_T:
     if session is None:
         session = TMUX_SERVER.new_session(session_name)
 
-    pane = session.attached_pane
+    pane: Pane_T = session.attached_pane
 
     return pane
 

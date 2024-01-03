@@ -1,9 +1,9 @@
-from camstack.viewers.generic_viewer_frontend import GenericViewerFrontend
+from camstack.viewertools.generic_viewer_frontend import GenericViewerFrontend
 from swmain.network.pyroclient import connect
-from camstack.viewers.generic_viewer_backend import GenericViewerBackend
+from camstack.viewertools.generic_viewer_backend import GenericViewerBackend
 import logging
 from rich.logging import RichHandler
-import camstack.viewers.frontend_utils as futs
+import camstack.viewertools.frontend_utils as futs
 
 logger = logging.getLogger("vpupcam")
 stream_handler = RichHandler(level=logging.INFO, show_level=False,

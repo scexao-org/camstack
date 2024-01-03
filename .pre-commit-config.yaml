@@ -1,7 +1,7 @@
 exclude: "^.github/"
 repos:
--   repo: https://github.com/pre-commit/mirrors-yapf.git
-    rev: v0.32.0
+-   repo: https://github.com/google/yapf.git
+    rev: v0.40.2
     hooks:
     -   id: yapf
         additional_dependencies: [toml]

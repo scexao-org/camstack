@@ -1,9 +1,9 @@
 from typing import Optional as Op, Tuple
-from camstack.viewers.generic_viewer_backend import GenericViewerBackend
-from camstack.viewers.generic_viewer_frontend import GenericViewerFrontend
+from camstack.viewertools.generic_viewer_backend import GenericViewerBackend
+from camstack.viewertools.generic_viewer_frontend import GenericViewerFrontend
 from swmain.network.pyroclient import connect
-from camstack.viewers import backend_utils as buts
-import camstack.viewers.frontend_utils as futs
+from camstack.viewertools import backend_utils as buts
+import camstack.viewertools.frontend_utils as futs
 import pygame.constants as pgmc
 from functools import partial
 import logging

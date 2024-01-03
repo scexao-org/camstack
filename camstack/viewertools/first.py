@@ -1,6 +1,6 @@
 from typing import Tuple
-from camstack.viewers.generic_viewer_backend import GenericViewerBackend
-from camstack.viewers.generic_viewer_frontend import GenericViewerFrontend
+from camstack.viewertools.generic_viewer_backend import GenericViewerBackend
+from camstack.viewertools.generic_viewer_frontend import GenericViewerFrontend
 
 
 class FirstViewerBackend(GenericViewerBackend):
