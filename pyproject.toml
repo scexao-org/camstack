@@ -74,3 +74,14 @@ pueo = "camstack.viewermains.pueo:dud_main"
 vcam1 = "camstack.viewermains.vcam:main1"
 vcam2 = "camstack.viewermains.vcam:main2"
 vpupcam = "camstack.viewermains.vpupcam:main"
+
+[tool.mypy]
+disallow_untyped_defs = true
+show_error_codes = true
+no_implicit_optional = true
+warn_return_any = true
+warn_unused_ignores = true
+warn_unused_configs = true
+ignore_missing_imports = true
+packages = "camstack"
+exclude = ["build/"]
