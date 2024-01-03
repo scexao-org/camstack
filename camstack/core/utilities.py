@@ -236,12 +236,14 @@ def shellify_methods(instance_of_camera, top_level_globals):
                                                  method_name)
 
 
-def enforce_whichcomp(comp: str):
+def enforce_whichcomp(comp: str, err: bool = True) -> bool:
     '''
         For scripts: enforce we're running on the right computer using the WHICHCOMP variable
     '''
     this_comp = os.environ.get('WHICHCOMP', '')
-    if this_comp != comp:
+    if err and this_comp != comp:
         raise SystemError(
                 f"WHICHCOMP variable {this_comp} doesn't match {comp}.\nYou need to be on the right computer to run this script."
         )
+
+    return this_comp == comp

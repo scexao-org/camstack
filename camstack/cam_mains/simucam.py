@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
     cam = SimulatedCam('simuquest', 'simuquest', mode_id=(2048, 512),
                        taker_cset_prio=('rajni_edt', 41),
-                       dependent_processes=[tcp_recv, tcp_send])
+                       dependent_processes=[])  #[tcp_recv, tcp_send])
 
     from camstack.core.utilities import shellify_methods
     shellify_methods(cam, globals())

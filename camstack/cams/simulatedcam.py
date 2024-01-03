@@ -67,7 +67,7 @@ class SimulatedCam(BaseCamera):
 
     def _prepare_backend_cmdline(self, reuse_shm: bool = False) -> None:
         # Prepare the cmdline for starting up!
-        exec_path = CAMSTACK_HOME + '/src/simcam_framegen'
+        exec_path = "python -m camstack.acq.simcam_framegen"
         w = self.current_mode.y1 - self.current_mode.y0 + 1
         h = self.current_mode.x1 - self.current_mode.x0 + 1
         self.taker_tmux_command = f'{exec_path} {self.STREAMNAME} {w} {h} -t {self.dtype_string}'

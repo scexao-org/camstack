@@ -355,7 +355,7 @@ class GenericViewerFrontend:
 
 if __name__ == "__main__":
 
-    from camstack.viewers.generic_viewer_backend import GenericViewerBackend
+    from camstack.viewertools.generic_viewer_backend import GenericViewerBackend
     backend = GenericViewerBackend('prout')
     #backend.assign_shortcuts should have been called?
 

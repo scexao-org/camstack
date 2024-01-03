@@ -1,5 +1,6 @@
 import os
 import time
+import logging as logg
 
 from typing import Union, Tuple, List, Any
 
@@ -129,7 +130,7 @@ class SpinnakerUSBCamera(BaseCamera):
     def _prepare_backend_cmdline(self, reuse_shm: bool = False):
 
         # Prepare the cmdline for starting up!
-        exec_path = os.environ['HOME'] + '/src/camstack/src/spinnaker_usbtake'
+        exec_path = "python -m camstack.acq.spinnaker_usbtake"
         self.taker_tmux_command = (f'{exec_path} -s {self.STREAMNAME} '
                                    f'-u {self.spinn_number} -l 0')
         if reuse_shm:
@@ -325,8 +326,8 @@ class BlackFlyS(SpinnakerUSBCamera):
     def _fill_keywords(self):
 
         SpinnakerUSBCamera._fill_keywords(self)
-        self.camera_shm.update_keyword('CROPPED',
-                                       self.current_mode_id != self.FULL)
+        self.camera_shm.update_keyword('CROPPED', self.current_mode_id
+                                       != self.FULL)
         self.camera_shm.update_keyword('DETECTOR', 'BlackFly S')
 
         self._set_formatted_keyword('DETPXSZ1', 0.00345)

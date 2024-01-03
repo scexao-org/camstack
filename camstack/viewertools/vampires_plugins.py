@@ -1,12 +1,12 @@
 from typing import Optional as Op, Optional, Tuple
-from camstack.viewers.generic_viewer_frontend import GenericViewerFrontend
+from camstack.viewertools.generic_viewer_frontend import GenericViewerFrontend
 from swmain.network.pyroclient import connect
-from camstack.viewers.generic_viewer_backend import GenericViewerBackend
-from camstack.viewers import backend_utils as buts
-from camstack.viewers import frontend_utils as futs
-from camstack.viewers.plugin_arch import BasePlugin, OnOffPlugin
-from camstack.viewers.image_stacking_plugins import DarkAcquirePlugin
-from camstack.viewers.plugins import PupilMode, CrossHairPlugin, BullseyePlugin
+from camstack.viewertools.generic_viewer_backend import GenericViewerBackend
+from camstack.viewertools import backend_utils as buts
+from camstack.viewertools import frontend_utils as futs
+from camstack.viewertools.plugin_arch import BasePlugin, OnOffPlugin
+from camstack.viewertools.image_stacking_plugins import DarkAcquirePlugin
+from camstack.viewertools.plugins import PupilMode, CrossHairPlugin, BullseyePlugin
 import pygame.constants as pgmc
 from functools import partial
 import pygame

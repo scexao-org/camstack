@@ -1,0 +1,87 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=58", "wheel"]
+
+[project]
+authors = [
+  {name = "Vincent Deo", email = "vdeo@naoj.org"},
+  {name = "Miles Lucas", email = "mdlucas@hawaii.edu"},
+]
+dependencies = [
+  "docopt",
+  "libtmux",
+  "pygame",
+  #"pyMilk", DO NOT - there is a pyMilk on pipy which is a completely different thing.
+  "numpy",
+  "tqdm",
+
+]
+description = "SCExAO camera codebase"
+name = "camstack"
+readme = "README.md"
+version = "0.1.0"
+
+[tool.setuptools]
+packages = ["camstack"]
+script-files = [
+  "./scripts/cam-restartdeps",
+  "./scripts/cam-killall",
+  "./scripts/cam-vcamstart",
+  # "./viewers/anycam.py", script that is de-__main__ified and instead dud_main-ified for example, see below.
+]
+
+#[tool.setuptools.packages.find]
+#include = ["camstack*"]
+
+# vdeo: tentative - mark extras in order to deploy entry-points
+# only for installs with extras.
+[project.optional-dependencies]
+sc5 = []
+sc6 = []
+all = []
+
+# vdeo: but at this time, entrypoints only with an extra dep don't seem to be
+# possible... https://github.com/pypa/pip/issues/9726
+[project.scripts]
+# NEW for starting cams.
+camstart = "camstack.cam_mains.main:main"
+
+# DEPRECATED
+cam-alalacamstart = "camstack.deprecatedscripts.main:alala"
+cam-apapanestart = "camstack.deprecatedscripts.main:apapane"
+cam-fircamstart = "camstack.deprecatedscripts.main:first"
+cam-firstpupstart = "camstack.deprecatedscripts.main:first_pupil"
+cam-glintstart = "camstack.deprecatedscripts.main:glint"
+cam-iiwistart = "camstack.deprecatedscripts.main:iiwi"
+cam-kiwikiustart = "camstack.deprecatedscripts.main:kiwikiu"
+cam-ocamstart = "camstack.deprecatedscripts.main:pueo"
+cam-palilastart = "camstack.deprecatedscripts.main:palila"
+cam-vcam1start = "camstack.deprecatedscripts.main:vcam1"
+cam-vcam2start = "camstack.deprecatedscripts.main:vcam2"
+cam-vpupcamstart = "camstack.deprecatedscripts.main:vpup"
+cam-simucamstart = "camstack.deprecatedscripts.main:simucam"
+
+# VIEWERS
+# Using an empty dud_main function at the end of file for when
+# We really just want the script
+anycam = "camstack.viewermains.anycam:dud_main"
+firstcam = "camstack.viewermains.firstcam:main"
+apapane = "camstack.viewermains.apapane:dud_main"
+palila = "camstack.viewermains.palila:dud_main"
+pueo = "camstack.viewermains.pueo:dud_main"
+
+# @Miles is this what's supposed to happen?
+vcam1 = "camstack.viewermains.vcam:main1"
+vcam2 = "camstack.viewermains.vcam:main2"
+vpupcam = "camstack.viewermains.vpupcam:main"
+
+[tool.mypy]
+disallow_untyped_defs = true
+show_error_codes = true
+no_implicit_optional = true
+warn_return_any = true
+warn_unused_ignores = true
+warn_unused_configs = true
+ignore_missing_imports = true
+packages = "camstack"
+exclude = ["build/"]

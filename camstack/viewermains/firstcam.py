@@ -20,8 +20,8 @@ __doc__ = f'''
 
 import docopt
 
-from camstack.viewers.first import FirstViewerFrontend
-from camstack.viewers.first import FirstViewerBackend
+from camstack.viewertools.first import FirstViewerFrontend
+from camstack.viewertools.first import FirstViewerBackend
 
 
 def main():
