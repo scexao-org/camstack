@@ -1,4 +1,4 @@
-def print_dep_warning(orig_script: str, new_script: str):
+def print_dep_warning(orig_script: str, new_script: str) -> None:
     print('-' * 60, '-' * 60, f'{"DEPRECATION WARNING": ^60s}',
           f'{orig_script: ^60s}',
           f'{"will be deprecated sometime soon. Use instead:": ^60s}',

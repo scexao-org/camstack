@@ -25,22 +25,23 @@ from pyMilk.interfacing.shm import SHM
 import time
 
 
-def nparray_from_flyimage(fly_image):
+def nparray_from_flyimage(fly_image: PC2.image) -> np.ndarray:
     shape_rows, shape_cols = fly_image.getRows(), fly_image.getCols()
     if fly_image.getPixelFormat() == PC2.PIXEL_FORMAT.MONO12:
         fly_image = fly_image.convert(PC2.PIXEL_FORMAT.MONO16)
 
-    data_raw_arr = fly_image.getData()
+    data_raw_arr: np.ndarray = fly_image.getData()
 
     # Cast the array buffer
     if fly_image.getPixelFormat() == PC2.PIXEL_FORMAT.MONO16:
-        data_raw_arr.dtype = np.uint16
+        data_raw_arr.dtype = np.uint16  # type: ignore
 
     return data_raw_arr.reshape(shape_rows, shape_cols)
 
 
 def main_acquire_flycapture(api_cam_num_or_serial: int, stream_name: str,
-                            n_loops: int, attempt_shm_reuse: bool = True):
+                            n_loops: int,
+                            attempt_shm_reuse: bool = True) -> None:
 
     fly_bus = None
     fly_cam = None

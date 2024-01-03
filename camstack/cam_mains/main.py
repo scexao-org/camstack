@@ -47,9 +47,9 @@ _group.add_argument('-l', '--local', action='store_true',
 def main(
         call_from_dunder_main: bool = False,
         cam_name_arg: typ.Optional[str] = None,
-        permit_ssh_bounce: bool = False,  # type: ignore - permit obscuration
-        force_local: bool = False  # type: ignore - permit obscuration
-):
+        permit_ssh_bounce: bool = False,  # type: ignore # obscuration under
+        force_local: bool = False  # type: ignore # obscuration under
+) -> None:
 
     if cam_name_arg is not None:
         # This is a CLI call
@@ -57,8 +57,8 @@ def main(
     else:
         # This is probs a entrypoint bare main() call
         args = parser.parse_args()
-        permit_ssh_bounce: bool = args.sshok
-        force_local: bool = args.local
+        permit_ssh_bounce: bool = args.sshok  # type: ignore
+        force_local: bool = args.local  # type: ignore
 
     cam_name: str = args.camera
 

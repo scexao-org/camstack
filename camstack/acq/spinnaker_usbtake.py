@@ -19,7 +19,7 @@ import time
 
 
 def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
-                           attempt_shm_reuse: bool = True):
+                           attempt_shm_reuse: bool = True) -> None:
 
     spinn_system = None
     spinn_cam = None

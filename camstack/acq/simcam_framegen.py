@@ -13,13 +13,19 @@
 
 Types: f32, f64, c64, c128, u8, u16, u32, u64, i8, i16, i32, i64
 '''
+from __future__ import annotations
+
+import typing as typ
+if typ.TYPE_CHECKING:
+    import numpy.typing as npt
+
 import time
 from threading import Timer
 
 from pyMilk.interfacing.shm_functions import creashmim
 import numpy as np
 
-TYPE_DICT = {
+TYPE_DICT: dict[str, npt.DTypeLike] = {
         'f32': np.float32,
         'f64': np.float64,
         'c64': np.csingle,
@@ -35,7 +41,7 @@ TYPE_DICT = {
 }
 
 
-def make_data_circ_buff(r: int, c: int, type: np.dtype) -> np.ndarray:
+def make_data_circ_buff(r: int, c: int, type: npt.DTypeLike) -> np.ndarray:
     row_ramp_01 = np.linspace(0, 1, r, True)
     extended_cols = np.arange(2 * c - 1)
 
@@ -48,7 +54,9 @@ def make_data_circ_buff(r: int, c: int, type: np.dtype) -> np.ndarray:
     buffer_float = row_ramp_01[:, None] * sine1[None, :] + (
             1 - row_ramp_01[:, None]) * sine2[None, :]
 
-    return ((buffer_float + 1.) * 63.5).astype(type)
+    buffer_casted: np.ndarray = ((buffer_float + 1.) * 63.5).astype(type)
+
+    return buffer_casted
 
 
 if __name__ == '__main__':
@@ -89,9 +97,9 @@ if __name__ == '__main__':
     mfrate = 1e6 / exptime
     mfrate_gain = 0.01
 
-    t = 0
-    t_new = 0
-    t_next = 0
+    t = 0.0
+    t_new = 0.0
+    t_next = 0.0
 
     while count != arg_n_loops:
         if count > 1:
