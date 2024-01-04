@@ -75,13 +75,17 @@ vcam1 = "camstack.viewermains.vcam:main1"
 vcam2 = "camstack.viewermains.vcam:main2"
 vpupcam = "camstack.viewermains.vpupcam:main"
 
-[tool.mypy]
-disallow_untyped_defs = true
-show_error_codes = true
-no_implicit_optional = true
-warn_return_any = true
-warn_unused_ignores = true
-warn_unused_configs = true
-ignore_missing_imports = true
-packages = "camstack"
-exclude = ["build/"]
+[tool.pyright]
+extraPaths = ["/home/vdeo/src/swmain",] # Need to list scexao's pip install -e packages...
+typeCheckingMode = "basic" # off | basic | standard | strict # Look there https://github.com/microsoft/pyright/blob/main/docs/configuration.md
+include = ["camstack"]
+exclude = ["build/",
+           "**/__pycache",
+           "**/.mypy_cache",
+           "camstack/acq/flycapture_usbtake.py",
+           "camstack/acq/spinnaker_usbtake.py"
+           ]
+reportMissingImports = true
+reportMissingTypeStubs = false
+pythonVersion = "3.10"
+pythonPlatform = "Linux"

@@ -1,9 +1,9 @@
 import typing as t
 from math import cos, sin
 
-from camstack.core.utilities import KWType
+from camstack.core.utilities import Typ_shm_kw
 
-WCSDictType = t.Dict[str, t.Tuple[KWType, str, str, str]]
+WCSDictType = t.Dict[str, t.Tuple[Typ_shm_kw, str, str, str]]
 
 
 def wcs_dict_init(
@@ -32,7 +32,7 @@ def wcs_dict_init(
     # Will always come from the aux header.
 
     # yapf: disable
-    wcs_kw_basedict: t.Dict[str, t.Tuple[KWType, str, str, str]] = {
+    wcs_kw_basedict: t.Dict[str, t.Tuple[Typ_shm_kw, str, str, str]] = {
         'CDELT1': (delt_val[0], 'X Scale projected on detector (#/pix)', '%20.8f', 'CDE1'),
         'CDELT2': (delt_val[1], 'Y Scale projected on detector (#/pix)', '%20.8f', 'CDE2'),
         'CUNIT1': ('DEGREE    ', 'Units used in both CRVAL1 and CDELT1', '%-10s', 'CUN1'),
@@ -53,7 +53,7 @@ def wcs_dict_init(
     }
     # yapf: enable
 
-    wcs_kw_final_dict: t.Dict[str, t.Tuple[KWType, str, str, str]] = {}
+    wcs_kw_final_dict: t.Dict[str, t.Tuple[Typ_shm_kw, str, str, str]] = {}
 
     for key in wcs_kw_basedict:
         val, comment, fmt, subkey = wcs_kw_basedict[key]

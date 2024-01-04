@@ -32,10 +32,10 @@ class DCAMCamera(ParamsSHMCamera):
             self,
             name: str,
             stream_name: str,
-            mode_id: util.ModeIDorHWType,
+            mode_id: util.Typ_mode_id_or_heightwidth,
             dcam_number: int,
             no_start: bool = False,
-            taker_cset_prio: util.CsetPrioType = ("system", None),
+            taker_cset_prio: util.Typ_tuple_cset_prio = ("system", None),
             dependent_processes: List[util.DependentProcess] = [],
     ) -> None:
 
@@ -52,7 +52,7 @@ class DCAMCamera(ParamsSHMCamera):
 
     def prepare_camera_for_size(
             self,
-            mode_id: Op[util.ModeIDType] = None,
+            mode_id: Op[util.Typ_mode_id] = None,
             params_injection: Op[Dict[dcamprop.EProp, Union[int,
                                                             float]]] = None,
     ) -> None:
@@ -194,10 +194,10 @@ class OrcaQuest(DCAMCamera):
             self,
             name: str,
             stream_name: str,
-            mode_id: util.ModeIDorHWType,
+            mode_id: util.Typ_mode_id_or_heightwidth,
             dcam_number: int,
             no_start: bool = False,
-            taker_cset_prio: util.CsetPrioType = ("system", None),
+            taker_cset_prio: util.Typ_tuple_cset_prio = ("system", None),
             dependent_processes: List[util.DependentProcess] = [],
     ) -> None:
         super().__init__(
@@ -215,8 +215,8 @@ class OrcaQuest(DCAMCamera):
 
         # Override detector name
         self._set_formatted_keyword("DETECTOR", "Orca Quest")
-        self._set_formatted_keyword("CROPPED",
-                                    self.current_mode_id != self.FULL)
+        self._set_formatted_keyword("CROPPED", self.current_mode_id
+                                    != self.FULL)
         self._set_formatted_keyword("DETPXSZ1", 0.0046)
         self._set_formatted_keyword("DETPXSZ2", 0.0046)
 

@@ -62,7 +62,7 @@ class CRED2(EDTCamera):
 
     def __init__(self, name: str, stream_name: str, mode_id: int = 0,
                  unit: int = 0, channel: int = 0,
-                 taker_cset_prio: util.CsetPrioType = ('system', None),
+                 taker_cset_prio: util.Typ_tuple_cset_prio = ('system', None),
                  dependent_processes: List[util.DependentProcess] = []) -> None:
 
         # Allocate and start right in the appropriate binning mode
@@ -96,7 +96,7 @@ class CRED2(EDTCamera):
     # =====================
 
     def prepare_camera_for_size(self,
-                                mode_id: Op[util.ModeIDType] = None) -> None:
+                                mode_id: Op[util.Typ_mode_id] = None) -> None:
         logg.debug('prepare_camera_for_size @ CRED2')
 
         self.send_command('set cropping on')
@@ -119,7 +119,7 @@ class CRED2(EDTCamera):
         EDTCamera.prepare_camera_for_size(self, mode_id=mode_id)
 
     def prepare_camera_finalize(self,
-                                mode_id: Op[util.ModeIDType] = None) -> None:
+                                mode_id: Op[util.Typ_mode_id] = None) -> None:
         logg.debug('prepare_camera_finalize @ CRED2')
 
         if mode_id is None:
@@ -163,8 +163,8 @@ class CRED2(EDTCamera):
         self.get_fps()  # Sets 'FRATE'
 
         self._set_formatted_keyword('DETECTOR', 'CRED2')
-        self._set_formatted_keyword('CROPPED',
-                                    self.current_mode_id != self.FULL)
+        self._set_formatted_keyword('CROPPED', self.current_mode_id
+                                    != self.FULL)
         self._set_formatted_keyword("DETPXSZ1", 0.015)
         self._set_formatted_keyword("DETPXSZ2", 0.015)
 

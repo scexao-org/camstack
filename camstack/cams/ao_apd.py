@@ -16,8 +16,8 @@ import logging as logg
 from camstack.cams.base import BaseCamera
 from camstack.core import utilities as util
 
-from camstack.core.utilities import (ModeIDorHWType, CsetPrioType,
-                                     DependentProcess)
+from camstack.core.utilities import (Typ_mode_id_or_heightwidth,
+                                     Typ_tuple_cset_prio, DependentProcess)
 
 
 class APDAcquisition(BaseCamera):
@@ -25,8 +25,9 @@ class APDAcquisition(BaseCamera):
     MODES = {0: util.CameraMode(x0=0, x1=215, y0=0, y1=0)}
 
     def __init__(self, name: str, stream_name: str, fpdp_channel: int,
-                 no_start: bool = False, taker_cset_prio: CsetPrioType = ...,
-                 dependent_processes: typ.List[DependentProcess] = ...) -> None:
+                 no_start: bool = False,
+                 taker_cset_prio: Typ_tuple_cset_prio = ('system', None),
+                 dependent_processes: typ.List[DependentProcess] = []) -> None:
 
         self.fpdp_channel = fpdp_channel
 

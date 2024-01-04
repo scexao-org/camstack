@@ -10,8 +10,8 @@ import logging as logg
 from camstack.cams.base import BaseCamera
 from hwmain.edt.edtinterface import EdtInterfaceSerial
 
-from camstack.core.utilities import (ModeIDorHWType, CsetPrioType,
-                                     DependentProcess)
+from camstack.core.utilities import (Typ_mode_id_or_heightwidth,
+                                     Typ_tuple_cset_prio, DependentProcess)
 
 
 class EDTCamera(BaseCamera):
@@ -30,9 +30,9 @@ class EDTCamera(BaseCamera):
     EDTTAKE_EMBEDMICROSECOND = False  # We want this for CRED1 / 2 but not elsewhere
 
     def __init__(self, name: str, stream_name: str,
-                 mode_id_or_hw: ModeIDorHWType, pdv_unit: int, pdv_channel: int,
-                 pdv_basefile: str, no_start: bool = False,
-                 taker_cset_prio: CsetPrioType = ('system', None),
+                 mode_id_or_hw: Typ_mode_id_or_heightwidth, pdv_unit: int,
+                 pdv_channel: int, pdv_basefile: str, no_start: bool = False,
+                 taker_cset_prio: Typ_tuple_cset_prio = ('system', None),
                  dependent_processes: typ.List[DependentProcess] = []) -> None:
 
         self.pdv_unit: int = pdv_unit

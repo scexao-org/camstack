@@ -27,11 +27,12 @@ def enforce_optional(anything: typ.Optional[T]) -> T:
     return anything
 
 
-ModeIDType: typ.TypeAlias = typ.Union[str, int]
-ModeIDorHWType: typ.TypeAlias = typ.Union[ModeIDType, typ.Tuple[int, int]]
-CsetPrioType: typ.TypeAlias = typ.Tuple[str, typ.Optional[int]]
-KWType: typ.TypeAlias = typ.Union[bool, int, float, str]
-KWTypeNoBool: typ.TypeAlias = typ.Union[int, float, str]
+Typ_mode_id: typ.TypeAlias = typ.Union[str, int]
+Typ_mode_id_or_heightwidth: typ.TypeAlias = typ.Union[Typ_mode_id,
+                                                      typ.Tuple[int, int]]
+Typ_tuple_cset_prio: typ.TypeAlias = typ.Tuple[str, typ.Optional[int]]
+Typ_shm_kw: typ.TypeAlias = typ.Union[bool, int, float, str]
+Typ_shm_kw_nobool: typ.TypeAlias = typ.Union[int, float, str]
 
 
 class CameraMode:
@@ -87,7 +88,7 @@ class DependentProcess:
         self.tmux_pane = None
         self.cli_cmd = cli_cmd
         self.cli_original_args = cli_args  # Can hold magic replace-me placeholders, e.g. #HEIGHT#
-        self.cli_args: typ.List[KWType] = [t for t in cli_args]  # Deepcopy
+        self.cli_args: typ.List[Typ_shm_kw] = [t for t in cli_args]  # Deepcopy
 
         self.start_order = 0
         self.kill_order = 0
@@ -107,6 +108,7 @@ class DependentProcess:
             self.stop()
 
     def start_command_line(self):
+        assert self.tmux_pane is not None
         tmux.send_keys(self.tmux_pane, self.cli_cmd % tuple(self.cli_args))
 
     def start(self):
@@ -143,6 +145,9 @@ class DependentProcess:
     def stop(self):
         if self.tmux_pane is None:
             self.assign_tmux_pane()
+
+        assert self.tmux_pane is not None
+
         tmux.kill_running_Cc(self.tmux_pane)
         time.sleep(2)
         tmux.kill_running_Cz(self.tmux_pane)
@@ -152,6 +157,7 @@ class DependentProcess:
         return self.get_pid() is not None
 
     def get_pid(self):
+        assert self.tmux_pane is not None
         return tmux.find_pane_running_pid(self.tmux_pane)
 
 
@@ -213,16 +219,19 @@ class DependentMultiManager:
             dependent.make_children_rt()
 
     def stop(self, watch_kill_create_flag: bool = False):
+
         if len(self.dependent_list) == 0:
             return
 
         self.dependent_list.sort(key=lambda x: x.kill_order)
         for dependent in self.dependent_list:
             if (not watch_kill_create_flag) or dependent.kill_upon_init:
+                assert dependent.tmux_pane is not None
                 tmux.kill_running_Cc(dependent.tmux_pane)
         time.sleep(2.0)
         for dependent in self.dependent_list:
             if (not watch_kill_create_flag) or dependent.kill_upon_init:
+                assert dependent.tmux_pane is not None
                 tmux.kill_running_Cz(dependent.tmux_pane)
         time.sleep(.5)
 

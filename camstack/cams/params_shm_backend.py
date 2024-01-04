@@ -87,7 +87,7 @@ class ParamsSHMCamera(BaseCamera):
             self.control_shm = SHM(self.STREAMNAME + "_params_fb",
                                    np.zeros((1, ), dtype=np.int32))
 
-    def set_camera_mode(self, mode_id: util.ModeIDType, **kwargs) -> None:
+    def set_camera_mode(self, mode_id: util.Typ_mode_id, **kwargs) -> None:
         # Wrap into something thread-safe during the restart.
         with self.control_shm_lock:
             return super().set_camera_mode(mode_id, **kwargs)

@@ -18,7 +18,7 @@ class BaseVCAM(OrcaQuest):
     HOTSPOTS: typ.Dict[str, typ.Tuple[float, float]] = {}
 
     ## camera keywords
-    KEYWORDS: typ.Dict[str, typ.Tuple[util.KWType, str, str, str]] = {
+    KEYWORDS: typ.Dict[str, typ.Tuple[util.Typ_shm_kw, str, str, str]] = {
             # Format is name:
             #   (value,
             #    description,

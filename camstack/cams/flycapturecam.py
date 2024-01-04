@@ -5,7 +5,7 @@ import logging as logg
 from typing import Union, Tuple, List, Any
 
 from camstack.cams.base import BaseCamera
-from camstack.core.utilities import CameraMode
+import camstack.core.utilities as util
 
 import numpy as np
 
@@ -70,8 +70,8 @@ class FlyCaptureUSBCamera(BaseCamera):
     FULL_GS = 'FULL_GS'
     FULL_FL = 'FULL_FL'
     MODES = {
-            FULL_GS: CameraMode(x0=0, x1=1919, y0=0, y1=1199),
-            FULL_FL: CameraMode(x0=0, x1=1327, y0=0, y1=1047),
+            FULL_GS: util.CameraMode(x0=0, x1=1919, y0=0, y1=1199),
+            FULL_FL: util.CameraMode(x0=0, x1=1327, y0=0, y1=1047),
     }
 
     KEYWORDS = {}
@@ -79,11 +79,10 @@ class FlyCaptureUSBCamera(BaseCamera):
 
     MAX_GAIN = 0.
 
-    def __init__(self, name: str, stream_name: str, mode_id: Union[CameraMode,
-                                                                   Tuple[int,
-                                                                         int]],
-                 flycap_number: int, no_start: bool = False,
-                 taker_cset_prio: Union[str, int] = ('system', None),
+    def __init__(self, name: str, stream_name: str,
+                 mode_id: util.Typ_mode_id_or_heightwidth, flycap_number: int,
+                 no_start: bool = False,
+                 taker_cset_prio: util.Typ_tuple_cset_prio = ('system', None),
                  dependent_processes: List[Any] = []):
 
         # Do basic stuff

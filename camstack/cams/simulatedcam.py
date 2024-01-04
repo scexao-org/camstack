@@ -41,10 +41,10 @@ class SimulatedCam(BaseCamera):
     KEYWORDS.update(BaseCamera.KEYWORDS)
 
     def __init__(self, name: str, stream_name: str,
-                 mode_id: util.ModeIDorHWType,
+                 mode_id: util.Typ_mode_id_or_heightwidth,
                  data_type: Union[str, DTypeLike] = np.uint16,
                  no_start: bool = False,
-                 taker_cset_prio: util.CsetPrioType = ('system', None),
+                 taker_cset_prio: util.Typ_tuple_cset_prio = ('system', None),
                  dependent_processes: List[util.DependentProcess] = []) -> None:
 
         if isinstance(data_type, str):

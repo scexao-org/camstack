@@ -12,8 +12,8 @@ from camstack.cams.edtcam import EDTCamera
 
 from camstack.core.utilities import (
         CameraMode,
-        ModeIDType,
-        CsetPrioType,
+        Typ_mode_id,
+        Typ_tuple_cset_prio,
         DependentProcess,
 )
 from camstack.core.wcs import wcs_dict_init
@@ -84,11 +84,11 @@ class CRED1(EDTCamera):
             self,
             name: str,
             stream_name: str,
-            mode_id: ModeIDType = "full",
+            mode_id: Typ_mode_id = "full",
             unit: int = 1,
             channel: int = 0,
             basefile=None,
-            taker_cset_prio: CsetPrioType = ("system", None),
+            taker_cset_prio: Typ_tuple_cset_prio = ("system", None),
             dependent_processes: List[DependentProcess] = [],
     ) -> None:
         # Allocate and start right in the appropriate binning mode
@@ -134,7 +134,7 @@ class CRED1(EDTCamera):
                 "Calling _constructor_finalize on base CRED1 class. Must subclass."
         )
 
-    def prepare_camera_for_size(self, mode_id: Op[ModeIDType] = None) -> None:
+    def prepare_camera_for_size(self, mode_id: Op[Typ_mode_id] = None) -> None:
         # Note: when called the first time, this immediately follows
         # self.init_framegrab_backend()
         # So, the serial port is live, but we haven't tried to talk yet.
@@ -158,7 +158,7 @@ class CRED1(EDTCamera):
 
         EDTCamera.prepare_camera_for_size(self, mode_id=mode_id)
 
-    def prepare_camera_finalize(self, mode_id: Op[ModeIDType] = None) -> None:
+    def prepare_camera_finalize(self, mode_id: Op[Typ_mode_id] = None) -> None:
         logg.debug("prepare_camera_finalize @ CRED1")
 
         if mode_id is None:
@@ -203,8 +203,8 @@ class CRED1(EDTCamera):
         EDTCamera._fill_keywords(self)
 
         self._set_formatted_keyword("DETECTOR", "CRED1")
-        self._set_formatted_keyword("CROPPED",
-                                    self.current_mode_id != self.FULL)
+        self._set_formatted_keyword("CROPPED", self.current_mode_id
+                                    != self.FULL)
         self._set_formatted_keyword("DETPXSZ1", 0.024)
         self._set_formatted_keyword("DETPXSZ2", 0.024)
 
@@ -630,27 +630,25 @@ class ApapaneAtAORTS(Apapane):
         The bash started would simlink /milk/shm/iiwi.im.shm onto /milk/shm/apapane_raw.im.shm
         UTR would still be enabled but trippy
     '''
-    
-    IIWI = 9 # Choosing thus so Ctrl+Alt+9 in the viewer should work.
-    
+
+    IIWI = 9  # Choosing thus so Ctrl+Alt+9 in the viewer should work.
+
     INTERACTIVE_SHELL_METHODS = ['IIWI'] + CRED1.INTERACTIVE_SHELL_METHODS
-    
-    MODES = {
-        IIWI: CameraMode(x0=64, x1=223, y0=48, y1=207, fps=1000.)
-    }
+
+    MODES = {IIWI: CameraMode(x0=64, x1=223, y0=48, y1=207, fps=1000.)}
     MODES.update(Apapane.MODES)
-   
+
     EDTTAKE_EMBEDMICROSECOND = False
-    
+
     def _constructor_finalize(self) -> None:
         # Constructor finalize is in mode 3.
         self.send_command('set imagetags off')
         self.send_command('set rawimages off')
         self.send_command('set aduoffset 1000')
-    
-    def set_camera_mode(self, mode_id: ModeIDType) -> None:
+
+    def set_camera_mode(self, mode_id: Typ_mode_id) -> None:
         if mode_id == self.IIWI:
-            for i in range(2): # Just a bit of forcing
+            for i in range(2):  # Just a bit of forcing
                 self.set_NDR(2)
             self.send_command('set imagetags off')
             self.send_command('set rawimages off')
@@ -658,13 +656,15 @@ class ApapaneAtAORTS(Apapane):
         else:
             self.send_command('set imagetags off')
             self.send_command('set rawimages off')
-            self.send_command('set aduoffset 1000') # Doesn't matter in rawimages anyway.
-            for i in range(2): # Just a bit of forcing
+            self.send_command(
+                    'set aduoffset 1000')  # Doesn't matter in rawimages anyway.
+            for i in range(2):  # Just a bit of forcing
                 self.set_NDR(8)
-            
+
         return Apapane.set_camera_mode(self, mode_id)
-    
+
     # Hijinxes related to sending the
+
 
 class Iiwi(CRED1):
     INTERACTIVE_SHELL_METHODS = [] + CRED1.INTERACTIVE_SHELL_METHODS

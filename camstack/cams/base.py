@@ -57,10 +57,10 @@ class BaseCamera:
             'set_camera_size',
     ]
 
-    MODES: typ.Dict[util.ModeIDType, util.CameraMode] = {}
+    MODES: typ.Dict[util.Typ_mode_id, util.CameraMode] = {}
 
     # yapf: disable
-    KEYWORDS: typ.Dict[str, typ.Tuple[util.KWType, str, str, str]] = {
+    KEYWORDS: typ.Dict[str, typ.Tuple[util.Typ_shm_kw, str, str, str]] = {
             # Format is name:
             #   (value,
             #    description,
@@ -104,8 +104,9 @@ class BaseCamera:
     N_WCS: int = 0  # Number of WCS keyword sets to allocate on top of the dictionary above.
 
     def __init__(self, name: str, stream_name: str,
-                 mode_id_or_hw: util.ModeIDorHWType, no_start: bool = False,
-                 taker_cset_prio: util.CsetPrioType = ('system', None),
+                 mode_id_or_hw: util.Typ_mode_id_or_heightwidth,
+                 no_start: bool = False,
+                 taker_cset_prio: util.Typ_tuple_cset_prio = ('system', None),
                  dependent_processes: typ.List[util.DependentProcess] = []
                  ) -> None:
 
@@ -204,7 +205,7 @@ class BaseCamera:
         raise NotImplementedError("Must be subclassed from the base class")
 
     def prepare_camera_for_size(self,
-                                mode_id: t_Op[util.ModeIDType] = None) -> None:
+                                mode_id: t_Op[util.Typ_mode_id] = None) -> None:
         logg.debug('prepare_camera_for_size @ BaseCamera')
         # Gets called during constructor and set_mode
         if mode_id is None:
@@ -217,7 +218,7 @@ class BaseCamera:
         for dep_proc in self.dependent_processes:
             if (MAGIC_HW_STR.HEIGHT in dep_proc.cli_original_args or
                         MAGIC_HW_STR.WIDTH in dep_proc.cli_original_args):
-                arglist: typ.List[util.KWType] = list(
+                arglist: typ.List[util.Typ_shm_kw] = list(
                         dep_proc.cli_original_args)
 
                 cm = self.current_mode
@@ -233,7 +234,7 @@ class BaseCamera:
                 dep_proc.cli_args = arglist
 
     def prepare_camera_finalize(self,
-                                mode_id: t_Op[util.ModeIDType] = None) -> None:
+                                mode_id: t_Op[util.Typ_mode_id] = None) -> None:
         logg.debug('prepare_camera_finalize @ BaseCamera')
         # Gets called after the framegrabbing has restarted spinning
         if mode_id is None:
@@ -242,7 +243,7 @@ class BaseCamera:
                 'Calling prepare_camera_finalize on generic BaseCameraClass. '
                 'Nothing happens here.')
 
-    def set_camera_mode(self, mode_id: util.ModeIDType) -> None:
+    def set_camera_mode(self, mode_id: util.Typ_mode_id) -> None:
         '''
             Quite same as above - but mostly meant to be called by subclasses that do have defined modes.
         '''
@@ -263,16 +264,16 @@ class BaseCamera:
 
         self.prepare_camera_finalize()
 
-    def set_mode(self, mode_id: util.ModeIDType) -> None:
+    def set_mode(self, mode_id: util.Typ_mode_id) -> None:
         '''
         Alias
         '''
         self.set_camera_mode(mode_id)
 
-    def get_camera_mode(self) -> util.ModeIDType:
+    def get_camera_mode(self) -> util.Typ_mode_id:
         return self.current_mode_id
 
-    def get_mode(self) -> util.ModeIDType:
+    def get_mode(self) -> util.Typ_mode_id:
         '''
         Alias
         '''
@@ -499,7 +500,7 @@ class BaseCamera:
         pass
 
     def _fg_size_from_mode(self,
-                           mode_id: util.ModeIDType) -> typ.Tuple[int, int]:
+                           mode_id: util.Typ_mode_id) -> typ.Tuple[int, int]:
         width, height = self.MODES[mode_id].fgsize
         return width, height
 

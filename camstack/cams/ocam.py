@@ -47,7 +47,7 @@ class OCAM2K(EDTCamera):
     def __init__(self, name: str, mangled_stream_name: str,
                  final_stream_name: str, binning: bool = True, unit: int = 3,
                  channel: int = 0,
-                 taker_cset_prio: util.CsetPrioType = ('system', None),
+                 taker_cset_prio: util.Typ_tuple_cset_prio = ('system', None),
                  dependent_processes: List[util.DependentProcess] = []) -> None:
 
         # Allocate and start right in the appropriate binning mode
@@ -85,7 +85,7 @@ class OCAM2K(EDTCamera):
     # =====================
 
     def prepare_camera_for_size(self,
-                                mode_id: Op[util.ModeIDType] = None) -> None:
+                                mode_id: Op[util.Typ_mode_id] = None) -> None:
         logg.debug('prepare_camera_for_size @ OCAM2K')
 
         # This function called during the EDTCamera.__init__ from self.__init__
@@ -115,7 +115,7 @@ class OCAM2K(EDTCamera):
                 dep_proc.cli_args = [dep_proc.cli_args[0], h, w]
 
     def prepare_camera_finalize(self,
-                                mode_id: Op[util.ModeIDType] = None) -> None:
+                                mode_id: Op[util.Typ_mode_id] = None) -> None:
         logg.debug('prepare_camera_finalize @ OCAM2K')
 
         if mode_id is None:

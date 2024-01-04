@@ -1,10 +1,10 @@
-import os
+import os, sys
 import logging as logg
 from logging import handlers as logghandlers
 
 
 def init_camstack_logger(file_fullpath: str, file_debug: bool = False) -> None:
-    stdouthandler = logg.StreamHandler(os.sys.stdout)
+    stdouthandler = logg.StreamHandler(sys.stdout)
     stdouthandler.setLevel(logg.WARNING)
 
     logfilehandler = logghandlers.RotatingFileHandler(

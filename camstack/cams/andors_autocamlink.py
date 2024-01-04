@@ -20,8 +20,8 @@ class AutoAndor897(AutoDumbEDTCamera):
     EDTTAKE_EMBEDMICROSECOND = False
 
     def __init__(self, name: str, stream_name: str, unit: int = 2,
-                 channel: int = 0, mode_id: util.ModeIDType = 512,
-                 taker_cset_prio: util.CsetPrioType = ('system', None),
+                 channel: int = 0, mode_id: util.Typ_mode_id = 512,
+                 taker_cset_prio: util.Typ_tuple_cset_prio = ('system', None),
                  dependent_processes: List[util.DependentProcess] = []) -> None:
 
         # Since this is a no-control, auto-detect camera, this is really only useful for the number of taps.
@@ -55,8 +55,8 @@ class Vampires(AutoAndor897):
     EDTTAKE_EMBEDMICROSECOND = False
 
     def __init__(self, name: str, stream_name: str, unit: int = 2,
-                 channel: int = 0, mode_id: util.ModeIDType = 512,
-                 taker_cset_prio: util.CsetPrioType = ('system', None),
+                 channel: int = 0, mode_id: util.Typ_mode_id = 512,
+                 taker_cset_prio: util.Typ_tuple_cset_prio = ('system', None),
                  dependent_processes: List[util.DependentProcess] = []) -> None:
         # Just register the vampires camera number... which is the camlink channel.
         self.vcam_num = channel

@@ -92,7 +92,7 @@ if __name__ == '__main__':
 
     data_circ_buff = np.random.poisson(data_circ_buff).astype(data_type)
 
-    exptime = shm.get_keywords()['_ETIMEUS']
+    exptime: float = shm.get_keywords()['_ETIMEUS']  # type: ignore
     count = 1
     mfrate = 1e6 / exptime
     mfrate_gain = 0.01
@@ -115,7 +115,8 @@ if __name__ == '__main__':
         dt_s_float = t_new - t
         t = t_new
 
-        exptime = shm.get_keywords()['_ETIMEUS']  # If any change.
+        exptime: float = shm.get_keywords()[
+                '_ETIMEUS']  # type: ignore # If any change.
         mfrate = (1 - mfrate_gain) * mfrate + 1 / dt_s_float * mfrate_gain
         shm.update_keyword('MFRATE', mfrate)
         shm.update_keyword('_MAQTIME', t_us)

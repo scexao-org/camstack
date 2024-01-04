@@ -28,10 +28,10 @@ class PVCAMCamera(ParamsSHMCamera):
             self,
             name: str,
             stream_name: str,
-            mode_id: util.ModeIDorHWType,
+            mode_id: util.Typ_mode_id_or_heightwidth,
             pvcam_number: int,
             no_start: bool = False,
-            taker_cset_prio: util.CsetPrioType = ("system", None),
+            taker_cset_prio: util.Typ_tuple_cset_prio = ("system", None),
             dependent_processes: typ.List[util.DependentProcess] = [],
     ) -> None:
 
@@ -51,7 +51,7 @@ class PVCAMCamera(ParamsSHMCamera):
 
     def prepare_camera_for_size(
             self,
-            mode_id: typ.Optional[util.ModeIDType] = None,
+            mode_id: typ.Optional[util.Typ_mode_id] = None,
             params_injection: T_params_inj = None,
     ) -> None:
         # TODO

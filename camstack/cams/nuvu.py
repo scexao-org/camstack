@@ -7,7 +7,7 @@ import logging
 from enum import Enum
 from typing import Union
 
-from camstack.core.utilities import CameraMode
+from camstack.core.utilities import CameraMode, Typ_tuple_cset_prio
 from camstack.cams.edtcam import EDTCamera
 
 CAMSTACK_HOME = os.environ['HOME'] + '/kalao-camstack'  # AMEND AS NEEDED
@@ -93,9 +93,8 @@ class NUVU(EDTCamera):
 
     def __init__(self, name: str, stream_name: str, mode_id: int = 1,
                  unit: int = 0, channel: int = 0,
-                 taker_cset_prio: Union[str,
-                                        int] = ('system',
-                                                None), dependent_processes=[]):
+                 taker_cset_prio: Typ_tuple_cset_prio = ('system', None),
+                 dependent_processes=[]):
 
         debug = 1
         basefile = CAMSTACK_HOME + '/config/nuvu_kalao_16bit.cfg'
@@ -150,14 +149,14 @@ class NUVU(EDTCamera):
         self.SetWaitingTime(0)
 
         # Open shutter
-        self.SetShutterMode(2)
+        self.SetShutterMode(self._ShutterMode.OPEN)
 
         # Internal trigger
-        self.SetTriggerMode(0, 1)
+        self.SetTriggerMode(self._TriggerMode.INT, 1)
 
         self.SetContinuousAcquisition()
 
-    def prepare_camera_finalize(self, mode_id: int = None):
+    def prepare_camera_finalize(self, mode_id: int | None = None):
         # Set EM gain to 1
         self.SetEMCalibratedGain(1.0)
 

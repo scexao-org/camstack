@@ -4,14 +4,15 @@ import os
 
 import libtmux as tmux
 
-from typing import TYPE_CHECKING, Union, Optional as Op
-if TYPE_CHECKING:
-    Pane_T = Union[tmux.Pane, 'RemotePanePatch', 'DeprecatedPanePatch']
+import typing as typ
+if typ.TYPE_CHECKING:
+    Pane_T: typ.TypeAlias = typ.Union[tmux.pane.Pane, 'RemotePanePatch',
+                                      'DeprecatedPanePatch']
 
 import time
 import subprocess
 
-TMUX_SERVER = tmux.Server()  # No arguments: defaut server
+TMUX_SERVER = tmux.server.Server()  # No arguments: defaut server
 if not TMUX_SERVER.is_alive():
     # There's probably better...
     import os
@@ -28,12 +29,13 @@ def find_or_create_(session_name: str) -> Pane_T:
     if session is None:
         session = TMUX_SERVER.new_session(session_name)
 
-    pane: Pane_T = session.attached_pane
+    pane = session.attached_pane
+    assert isinstance(pane, tmux.pane.Pane)
 
     return pane
 
 
-def find_or_create_deprecated(session_name: str):
+def find_or_create_deprecated(session_name: str) -> Pane_T:
     '''
         Mimic of find_or_create, but on a deprecated (tmux < 2.0) machine.
         Will return a DeprecatedPanePatch object
@@ -81,7 +83,7 @@ def kill_running(pane: Pane_T) -> None:
     kill_running_Cz(pane)
 
 
-def find_pane_running_pid(pane: Pane_T) -> Op[int]:
+def find_pane_running_pid(pane: Pane_T) -> int | None:
     # Identify the PIDs running in a pane.
     # Generally, we expect to find nothing, or only one front-end job.
 
