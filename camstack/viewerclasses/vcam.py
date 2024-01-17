@@ -21,8 +21,8 @@ stream_handler = RichHandler(level=logging.INFO, show_level=False,
 class VAMPIRESBaseViewerBackend(GenericViewerBackend):
     HELP_MSG = """
 VAMPIRES Camera Viewer
-==================================================
-h           : display this message
+=======================================
+h           : display this help message
 x, ESC      : quit viewer
 
 Camera controls:
@@ -62,43 +62,25 @@ CTRL  + p : toggle pupil lens
 
 Focus controls:
 --------------------------------------------------
-CTRL  + u          : Nudge focus by  0.005 mm
-CTRL  + i          : Nudge focus by -0.005 mm
-SHIFT + u          : Nudge focus by  0.1 mm
-SHIFT + i          : Nudge focus by -0.1 mm
+CTRL  + u : Nudge focus by  0.005 mm
+CTRL  + i : Nudge focus by -0.005 mm
+SHIFT + u : Nudge focus by  0.1 mm
+SHIFT + i : Nudge focus by -0.1 mm
 
 Cam focus controls:
 --------------------------------------------------
-CTRL  + l          : Nudge cam focus by  0.01 mm
-CTRL  + ;          : Nudge cam focus by -0.01mm
-SHIFT + l          : Nudge cam focus by  0.1 mm
-SHIFT + ;          : Nudge cam focus by -0.1 mm
+CTRL  + l : Nudge cam focus by  0.01 mm
+CTRL  + ; : Nudge cam focus by -0.01mm
+SHIFT + l : Nudge cam focus by  0.1 mm
+SHIFT + ; : Nudge cam focus by -0.1 mm
 
 MBI wheel controls:
 --------------------------------------------------
-CTRL  + []         : Nudge wheel 0.005 deg CCW / CW
-SHIFT + []         : Nudge wheel 0.2 deg CCW / CW
-CTRL  + m          : Insert MBI dichroics
-SHIFT + m          : Remove MBI dichroics
-ALT   + m          : Save current angle to last configuration
-
-Filter controls:
---------------------------------------------------
-CTRL + 1 : Open
-CTRL + 2 : 625-50
-CTRL + 3 : 675-60
-CTRL + 4 : 725-50
-CTRL + 5 : 750-50
-CTRL + 6 : 775-50
-
-Diff Filter controls:
---------------------------------------------------
-CTRL + SHIFT + 7 : Open / Open
-CTRL + SHIFT + 8 : SII-Cont / SII
-CTRL + SHIFT + 9 : Ha-Cont / Halpha
-CTRL + SHIFT + 0 : Open / Open
-CTRL + SHIFT + - : SII / SII-Cont
-CTRL + SHIFT + = : Halpha / Ha-Cont
+CTRL  + [] : Nudge wheel 0.005 deg CCW / CW
+SHIFT + [] : Nudge wheel 0.2 deg CCW / CW
+CTRL  + m  : Insert MBI dichroics
+SHIFT + m  : Remove MBI dichroics
+ALT   + m  : Save current angle to last configuration
 
 Field stop controls:
 --------------------------------------------------
@@ -111,7 +93,25 @@ CTRL  + =     : DGVVC
 CTRL  + ARROW : Nudge 0.001 mm in x (left/right) and y (up/down)
 SHIFT + ARROW : Nudge 0.05 mm in x (left/right) and y (up/down)
 CTRL  + o     : Offset fieldstop 0.5 mm; press again to return
-CTRL  + s     : Save current position to last configuration"""
+CTRL  + s     : Save current position to last configuration
+
+Filter controls:
+--------------------------------------------------
+CTRL + 1 : Open
+CTRL + 2 : 625-50
+CTRL + 3 : 675-60
+CTRL + 4 : 725-50
+CTRL + 5 : 750-50
+CTRL + 6 : 775-50
+
+Diff filter controls:
+--------------------------------------------------
+CTRL + SHIFT + 7 : Open / Open
+CTRL + SHIFT + 8 : SII-Cont / SII
+CTRL + SHIFT + 9 : Ha-Cont / Halpha
+CTRL + SHIFT + 0 : Open / Open
+CTRL + SHIFT + - : SII / SII-Cont
+CTRL + SHIFT + = : Halpha / Ha-Cont"""
 
     # CTRL+S:  Save current position to preset
     # CTRL+F:  Change preset file

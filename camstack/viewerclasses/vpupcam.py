@@ -76,30 +76,36 @@ class VAMPIRESPupilCamViewerFrontend(GenericViewerFrontend):
 
 class VAMPIRESPupilCamViewerBackend(GenericViewerBackend):
     HELP_MSG = """VPUPCAM controls
----------------
-h           : display this message
+=======================================
+h           : display this help message
 x, ESC      : quit vpupcam
 
-pupil wheel controls:
----------------------
-CTRL+ --  : change filter wheel slot
-        1 : Open (0 deg)
-        2 : SAM-7
-        3 : SAM-9
-        4 : Open (73 deg)
-        5 : SAM-18-Nudged
-        6 : SAM-Ann-Nudged
-        7 : Mirror
-        8 : Open (164 deg)
-        9 : LyotStop
-        0 : RAP
-        - : ND10
-        = : ND25
-CTRL+ARROW  : Nudge wheel 0.01 mm in x (left/right) and y (up/down)
-SHIFT+ARROW : Move wheel 1 mm in x (left/right) and y (up/down)
-CTRL+[]     : Nudge wheel 0.1 deg in theta (ccw/cw)
-SHIFT+[]    : Nudge wheel 1 deg in theta (ccw/cw)
-CTRL+S      : Save position to the last-moved-to configuration"""
+pupil wheel alignment:
+-----------------------------------------------------
+CTRL  + ARROW : Nudge wheel 0.01 mm in x (left/right)
+                                   and y (up/down)
+SHIFT + ARROW : Move wheel 1 mm in x (left/right)
+                               and y (up/down)
+CTRL  + []    : Nudge wheel 0.1 deg in theta (ccw/cw)
+SHIFT + []    : Nudge wheel 1 deg in theta (ccw/cw)
+CTRL  + S     : Save position to the last configuration
+
+pupil wheel masks:
+----------------------------------
+CTRL  + 1         : Open (0 deg)
+CTRL  + 2         : SAM-7
+CTRL  + 3         : SAM-9
+CTRL  + 4         : Open (73 deg)
+CTRL  + 5         : SAM-18-Nudged
+CTRL  + 6         : SAM-Ann-Nudged
+CTRL  + 7         : Mirror
+CTRL  + 8         : Open (164 deg)
+CTRL  + 9         : LyotStop
+CTRL  + 0         : RAP
+CTRL  + -         : ND10
+CTRL  + =         : ND25
+CTRL  + SHIFT + 7 : LyotOpt
+CTRL  + SHIFT + 8 : PupilRef"""
 
     # CTRL+S:  Save current position to preset
     # CTRL+F:  Change preset file
