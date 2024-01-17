@@ -76,6 +76,9 @@ class MaskWheelPlugin(DeviceMixin, BasePlugin):
             buts.Shortcut(pgmc.K_0, pgmc.KMOD_LCTRL): partial(self.change_wheel, 10),
             buts.Shortcut(pgmc.K_MINUS, pgmc.KMOD_LCTRL): partial(self.change_wheel, 11),
             buts.Shortcut(pgmc.K_EQUALS, pgmc.KMOD_LCTRL): partial(self.change_wheel, 12),
+            buts.Shortcut(pgmc.K_7, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT): partial(self.change_wheel, 13),
+            buts.Shortcut(pgmc.K_8, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT): partial(self.change_wheel, 14),
+            # buts.Shortcut(pgmc.K_9, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT): partial(self.change_wheel, 15),
             buts.Shortcut(pgmc.K_s, pgmc.KMOD_LCTRL): self.save_config,
         }
         # yapf: enable
@@ -328,6 +331,10 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
                     partial(self.change_fieldstop, 5),
             buts.Shortcut(pgmc.K_EQUALS, pgmc.KMOD_LCTRL):
                     partial(self.change_fieldstop, 6),
+            buts.Shortcut(pgmc.K_PERIOD, pgmc.KMOD_LCTRL):
+                    partial(self.nudge_focus, pgmc.K_PERIOD),
+            buts.Shortcut(pgmc.K_COMMA, pgmc.KMOD_LCTRL):
+                    partial(self.nudge_focus, pgmc.K_COMMA),
             buts.Shortcut(pgmc.K_s, pgmc.KMOD_LCTRL): self.save_config,
             buts.Shortcut(pgmc.K_o, pgmc.KMOD_LCTRL): self.offset_fieldstop
         }
@@ -352,6 +359,16 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
             nudge_value = sign * 0.001
         else:
             nudge_value = sign * 0.05
+        self.backend_obj.logger.info(f"Moving {substage} by {nudge_value} mm")
+        self.device.move_relative__oneway(substage, nudge_value)
+
+    def nudge_focus(self, key, value=0.01):
+        substage = "f"
+        if key == pgmc.K_COMMA:
+            sign = -1
+        elif key == pgmc.K_PERIOD:
+            sign = 1
+        nudge_value = sign * value
         self.backend_obj.logger.info(f"Moving {substage} by {nudge_value} mm")
         self.device.move_relative__oneway(substage, nudge_value)
 

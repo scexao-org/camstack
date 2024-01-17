@@ -1,12 +1,15 @@
+# PYTHON_ARGCOMPLETE_OK
 from __future__ import annotations
 
 import typing as typ
 
+import argcomplete
 from argparse import ArgumentParser
 
 from camstack.core.tmux import (find_or_create, send_keys, kill_running,
                                 find_or_create_remote)
 from camstack.core.utilities import enforce_whichcomp
+import scxconf
 
 # This is the main data structure for
 # which cameras map to which python modules/files
@@ -19,7 +22,6 @@ CAM_INVOCATION: dict[str | None, tuple[str | None, str | None]] = {
         "GLINTCAM": ("camstack.cam_mains.glintcam", '5'),
         "KALAOCAM": ("camstack.cam_mains.kalaocam", None),
         "KIWIKIU": ("camstack.cam_mains.kiwikiu", '5'),
-        "MILES": ("camstack.cam_mains.miles_orcam", None),
         "PALILA": ("camstack.cam_mains.palila", '5'),
         "PUEO": ("camstack.cam_mains.pueo", '5'),
         "SIMUCAM": ("camstack.cam_mains.simucam", None),
@@ -53,6 +55,7 @@ def main(
 
     if cam_name_arg is not None:
         # This is a CLI call
+        argcomplete.autocomplete(parser)
         args = parser.parse_args([cam_name_arg])
     else:
         # This is probs a entrypoint bare main() call
@@ -75,7 +78,6 @@ def main(
     else:
         # Remote
         if (permit_ssh_bounce and required_machine is not None):
-            import scxconf
             tmux = find_or_create_remote(
                     tmux_name,
                     scxconf.SSH_LOOKUP_FROM_WHICHCOMP[required_machine])
