@@ -12,10 +12,8 @@ from .dcamcam import OrcaQuest
 
 
 class BaseVCAM(OrcaQuest):
-    PLATE_SCALE = (-1.6717718901193757e-6, 1.6717718901193757e-6)  # deg / px
-    # PA_OFFSET = -41.323163723676146  # deg
-    PA_OFFSET = 138.67683627632385  # deg
     HOTSPOTS: typ.Dict[str, typ.Tuple[float, float]] = {}
+    PA_OFFSET: float = 0
 
     ## camera keywords
     KEYWORDS: typ.Dict[str, typ.Tuple[util.Typ_shm_kw, str, str, str]] = {
@@ -203,7 +201,7 @@ class BaseVCAM(OrcaQuest):
                 hx, hy = self.HOTSPOTS[field]
                 wcs_dict = wcs_dict_init(i, pix=(hx + 0.5, hy + 0.5),
                                          delt_val=self.PLATE_SCALE,
-                                         cd_rot_rad=self.PA_OFFSET, name=name,
+                                         cd_rot_rad=self.INST_PA, name=name,
                                          double_with_subaru_fake_standard=False)
                 wcs_dicts.append(wcs_dict)
         else:
@@ -211,14 +209,14 @@ class BaseVCAM(OrcaQuest):
             wcs_dicts = [
                     wcs_dict_init(0, pix=frame_center,
                                   delt_val=self.PLATE_SCALE,
-                                  cd_rot_rad=self.PA_OFFSET, name="PRIMARY",
+                                  cd_rot_rad=self.INST_PA, name="PRIMARY",
                                   double_with_subaru_fake_standard=False)
             ]
             for i in range(1, 4):
                 wcs_dicts.append(
                         wcs_dict_init(i, pix=frame_center,
                                       delt_val=self.PLATE_SCALE,
-                                      cd_rot_rad=self.PA_OFFSET,
+                                      cd_rot_rad=self.INST_PA,
                                       double_with_subaru_fake_standard=False,
                                       name="NA"))
 
@@ -229,9 +227,8 @@ class BaseVCAM(OrcaQuest):
 
 
 class VCAM1(BaseVCAM):
-    PLATE_SCALE = (BaseVCAM.PLATE_SCALE[0], -BaseVCAM.PLATE_SCALE[1]
-                   )  # deg / px
-
+    PLATE_SCALE = (-1.675e-6, -1.675e-6)  # deg / px
+    INST_PA = -40.6  # deg
     GAINS = {"FAST": 0.103, "SLOW": 0.105}
     MODES = {
             # BaseVCAM.STANDARD:
@@ -284,6 +281,8 @@ class VCAM1(BaseVCAM):
 
 
 class VCAM2(BaseVCAM):
+    PLATE_SCALE = (-1.678e-6, 1.678e-6)  # deg / px
+    INST_PA = -41.4  # deg
     MODES = {
             # BaseVCAM.STANDARD:
             #         util.CameraMode(x0=1768, x1=2303, y0=892, y1=1427,

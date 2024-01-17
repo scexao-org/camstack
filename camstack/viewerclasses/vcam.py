@@ -111,7 +111,22 @@ CTRL + SHIFT + 8 : SII-Cont / SII
 CTRL + SHIFT + 9 : Ha-Cont / Halpha
 CTRL + SHIFT + 0 : Open / Open
 CTRL + SHIFT + - : SII / SII-Cont
-CTRL + SHIFT + = : Halpha / Ha-Cont"""
+CTRL + SHIFT + = : Halpha / Ha-Cont
+
+Field stop controls:
+--------------------------------------------------
+CTRL  + 7     : Fieldstop
+CTRL  + 8     : CLC-2
+CTRL  + 9     : CLC-3
+CTRL  + 0     : CLC-5
+CTRL  + -     : CLC-7
+CTRL  + =     : DGVVC
+CTRL  + ARROW : Nudge 0.001 mm in x (left/right) and y (up/down)
+SHIFT + ARROW : Nudge 0.05 mm in x (left/right) and y (up/down)
+CTRL  + .     : Nudge -0.01 mm in focus
+CTRL  + ;     : Nudge 0.01 mm in focus
+CTRL  + o     : Offset fieldstop 0.5 mm; press again to return
+CTRL  + s     : Save current position to last configuration"""
 
     # CTRL+S:  Save current position to preset
     # CTRL+F:  Change preset file
