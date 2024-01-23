@@ -121,7 +121,13 @@ class MaskWheelPlugin(DeviceMixin, BasePlugin):
         self.device.move_relative__oneway("theta", nudge_value)
 
     def change_wheel(self, index: int):
-        self.backend_obj.logger.info(f"Moving wheel to configuration {index}")
+        name = None
+        for config in self.device.get_configurations():
+            if config["idx"] == index:
+                name = config["name"]
+                break
+        self.backend_obj.logger.info(
+                f"Moving wheel to configuration {index}: {name}")
         self.device.move_configuration_idx__oneway(index)
         self.current_index = index
 
