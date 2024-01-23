@@ -17,7 +17,6 @@ class VAMPIRESPupilCamViewerFrontend(GenericViewerFrontend):
 
     def _init_labels(self) -> int:
 
-        sz = self.system_zoom  # Shorthandy
         r = self.data_disp_size[1] + 3 * self.system_zoom
         c = 10 * self.system_zoom
 
@@ -115,8 +114,9 @@ CTRL  + SHIFT + 8 : PupilRef"""
         if name_shm is None:
             name_shm = "vpupcam"
         super().__init__(name_shm=name_shm)
-        self.wheel = connect("VAMPIRES_MASK")
-        self.logger = logger
+        self.logger = logging.getLogger(name_shm)
+        self.logger.setLevel(logging.INFO)
+        self.logger.addHandler(stream_handler)
 
     def _data_grab(self) -> None:
         ## hack this to crop the troublesome rows of the Flea3
