@@ -13,7 +13,7 @@ from .dcamcam import OrcaQuest
 
 class BaseVCAM(OrcaQuest):
     HOTSPOTS: typ.Dict[str, typ.Tuple[float, float]] = {}
-    PA_OFFSET: float = 0
+    PA_OFFSET: float = 0  # default value, must be overridden by sub-classes
 
     ## camera keywords
     KEYWORDS: typ.Dict[str, typ.Tuple[util.Typ_shm_kw, str, str, str]] = {
@@ -59,8 +59,8 @@ class BaseVCAM(OrcaQuest):
     KEYWORDS.update(OrcaQuest.KEYWORDS)
     N_WCS = 4
     ## camera modes
-    FULL, TWOARC, HALF, ONEARC, STANDARD, NPBS, MBI, MBI_REDUCED, PUPIL = \
-        "FULL", "TWOARC", "HALF", "ONEARC", "STANDARD", "NPBS", "MBI", "MBI_REDUCED", "PUPIL"
+    FULL, TWOARC, ONEARC, HALFARC, STANDARD, NPBS, MBI, MBI_REDUCED, PUPIL = \
+        "FULL", "TWOARC", "ONEARC", "HALFARC", "STANDARD", "NPBS", "MBI", "MBI_REDUCED", "PUPIL"
     MODES = {
             FULL:
                     util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
@@ -70,11 +70,11 @@ class BaseVCAM(OrcaQuest):
             TWOARC:
                     util.CameraMode(x0=1868, x1=2227, y0=972, y1=1331,
                                     tint=1e-3),
-            HALF:
-                    util.CameraMode(x0=1914, x1=2181, y0=1018, y1=1285,
-                                    tint=1e-3),
             ONEARC:
                     util.CameraMode(x0=1956, x1=2139, y0=1060, y1=1243,
+                                    tint=1e-3),
+            HALFARC:
+                    util.CameraMode(x0=1914, x1=2181, y0=1018, y1=1285,
                                     tint=1e-3),
     }
 
