@@ -362,7 +362,7 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
         self.backend_obj.logger.info(f"Moving {substage} by {nudge_value} mm")
         self.device.move_relative__oneway(substage, nudge_value)
 
-    def nudge_focus(self, key, value=0.01):
+    def nudge_focus(self, key, value=0.05):
         substage = "f"
         if key == pgmc.K_COMMA:
             sign = -1
