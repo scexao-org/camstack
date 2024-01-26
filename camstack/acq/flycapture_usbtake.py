@@ -7,15 +7,18 @@
 
     Options:
         -s <stream_name> SHM name
-        -u <unit>        Number (index/serial) of the camera for the Spinnaker API [default: 0]
+        -u <unit>        Number (index/serial) of the camera for the FlyCapture API [default: 0]
         -l <loops>       Number of images to take (0 for free run) [default: 0]
         -R               Attempt SHM reuse if possible
 '''
+from __future__ import annotations
 '''
     NOTE: SERIALS
     Vampires pupil Flea3:         13380425
     FIRST pupil Flea3:            14317519
     Coro spy camera Grasshopper3: 17266134
+    GLINT PG1                     15322651
+    GLINT PG2                     15322653
 '''
 
 import PyCapture2 as PC2
@@ -25,7 +28,7 @@ from pyMilk.interfacing.shm import SHM
 import time
 
 
-def nparray_from_flyimage(fly_image: PC2.image) -> np.ndarray:
+def nparray_from_flyimage(fly_image: PC2.Image) -> np.ndarray:
     shape_rows, shape_cols = fly_image.getRows(), fly_image.getCols()
     if fly_image.getPixelFormat() == PC2.PIXEL_FORMAT.MONO12:
         fly_image = fly_image.convert(PC2.PIXEL_FORMAT.MONO16)

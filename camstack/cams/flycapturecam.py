@@ -1,16 +1,22 @@
-import os
+from __future__ import annotations
+
 import time
 import logging as logg
 
-from typing import Union, Tuple, List, Any
+from typing import List, Any
 
 from camstack.cams.base import BaseCamera
 import camstack.core.utilities as util
 
-import numpy as np
-
-import PyCapture2 as PC2
-from PyCapture2 import PIXEL_FORMAT, PROPERTY_TYPE as PROPS
+try:
+    import PyCapture2 as PC2
+    from PyCapture2 import PROPERTY_TYPE as PROPS
+except ModuleNotFoundError:
+    msg = """Could not import the PyCapture2 module, which is proprietary
+    Teledyne SDK and runs in a python 3.7 environemnt. Look in ~/soft for
+    files on SCExAO machines.
+    """
+    raise RuntimeError(msg)
 
 
 def pretty_print_prop(cam: PC2.Camera, property_type: PC2.PROPERTY_TYPE):
@@ -216,7 +222,7 @@ class FlyCaptureUSBCamera(BaseCamera):
     def _prepare_backend_cmdline(self, reuse_shm: bool = False):
 
         # Prepare the cmdline for starting up!
-        exec_path = "python -m camstack.acq.flycapture_usbtake"
+        exec_path = "conda activate pycapture; python -m camstack.acq.flycapture_usbtake"
         self.taker_tmux_command = (f'{exec_path} -s {self.STREAMNAME} '
                                    f'-u {self.fly_number} -l 0')
         if reuse_shm:
@@ -279,6 +285,29 @@ class FlyCaptureUSBCamera(BaseCamera):
         return temp
 
 
+class Chameleon3(FlyCaptureUSBCamera):  # From GLINT
+    INTERACTIVE_SHELL_METHODS = FlyCaptureUSBCamera.INTERACTIVE_SHELL_METHODS
+
+    FULL = 'FULL'
+
+    MODES = {
+            FULL: util.CameraMode(x0=0, x1=1279, y0=0, y1=1023),
+    }
+    MODES.update(FlyCaptureUSBCamera.MODES)
+
+    KEYWORDS = {}
+    KEYWORDS.update(FlyCaptureUSBCamera.KEYWORDS)
+
+    def _fill_keywords(self):
+
+        FlyCaptureUSBCamera._fill_keywords(self)
+        self._set_formatted_keyword('CROPPED', self.current_mode_id
+                                    != self.FULL)
+        self._set_formatted_keyword('DETECTOR', 'FLIR CM3')
+        self._set_formatted_keyword("DETPXSZ1", 0.0048)
+        self._set_formatted_keyword("DETPXSZ2", 0.0048)
+
+
 class Grasshopper3(FlyCaptureUSBCamera):
 
     INTERACTIVE_SHELL_METHODS = FlyCaptureUSBCamera.INTERACTIVE_SHELL_METHODS
@@ -286,9 +315,9 @@ class Grasshopper3(FlyCaptureUSBCamera):
     FULL = 'FULL'
 
     MODES = {
-            FULL: CameraMode(x0=0, x1=1919, y0=0, y1=1199),
+            FULL: util.CameraMode(x0=0, x1=1919, y0=0, y1=1199),
             # Centercrop half-size, adjusted for granularity?
-            1: CameraMode(x0=480, x1=1439, y0=300, y1=899),
+            1: util.CameraMode(x0=480, x1=1439, y0=300, y1=899),
     }
     MODES.update(FlyCaptureUSBCamera.MODES)
 
@@ -312,9 +341,9 @@ class Flea3(FlyCaptureUSBCamera):
     FULL = 'FULL'
 
     MODES = {
-            FULL: CameraMode(x0=0, x1=1327, y0=0, y1=1047),
+            FULL: util.CameraMode(x0=0, x1=1327, y0=0, y1=1047),
             # Centercrop half-size, adjusted for granularity?
-            1: CameraMode(x0=332, x1=995, y0=262, y1=785),
+            1: util.CameraMode(x0=332, x1=995, y0=262, y1=785),
     }
     MODES.update(FlyCaptureUSBCamera.MODES)
 
@@ -335,8 +364,8 @@ class VampiresPupilFlea(Flea3):
 
     MODES = {
             'CROP_VPUP':
-                    CameraMode(x0=444, x1=955, y0=310, y1=821, fps=30,
-                               tint=0.03),
+                    util.CameraMode(x0=444, x1=955, y0=310, y1=821, fps=30,
+                                    tint=0.03),
     }
     MODES.update(Flea3.MODES)
 
