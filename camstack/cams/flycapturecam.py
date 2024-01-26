@@ -13,8 +13,9 @@ try:
     from PyCapture2 import PROPERTY_TYPE as PROPS
 except ModuleNotFoundError:
     msg = """Could not import the PyCapture2 module, which is proprietary
-    Teledyne SDK and runs in a python 3.7 environemnt. Look in ~/soft for
-    files on SCExAO machines.
+    Teledyne SDK and runs in a python 3.7 environemnt. Make sure there is a
+    conda environment named `pycapture` with the package installed.
+    Look in ~/soft for the PyCapture2 files on the SCExAO machines.
     """
     raise RuntimeError(msg)
 
