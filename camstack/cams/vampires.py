@@ -13,7 +13,8 @@ from .dcamcam import OrcaQuest
 
 class BaseVCAM(OrcaQuest):
     HOTSPOTS: typ.Dict[str, typ.Tuple[float, float]] = {}
-    PA_OFFSET: float = 0  # default value, must be overridden by sub-classes
+    PLATE_SCALE: float = 0  # deg/px, must be overridden by sub-classes
+    INST_PA: float = 0  # deg, must be overridden by sub-classes
 
     ## camera keywords
     KEYWORDS: typ.Dict[str, typ.Tuple[util.Typ_shm_kw, str, str, str]] = {
@@ -95,7 +96,7 @@ class BaseVCAM(OrcaQuest):
         self._set_formatted_keyword("CROPPED", cropped)
 
         self._set_formatted_keyword("F-RATIO", 21.3)
-        self._set_formatted_keyword("INST-PA", self.PA_OFFSET)
+        self._set_formatted_keyword("INST-PA", self.INST_PA)
         self._set_formatted_keyword("U_DETMOD", self.get_readout_mode().upper())
 
         self.get_fps()
@@ -115,6 +116,7 @@ class BaseVCAM(OrcaQuest):
         qwp2 = qwp2th = -1
         retang1 = retpos1 = -1
         retang2 = retpos2 = -1
+        pupil_lens = "Unknown"
         try:
             with self.RDB.pipeline() as pipe:
                 pipe.hget('U_FILTER', 'value')
@@ -135,9 +137,10 @@ class BaseVCAM(OrcaQuest):
                 pipe.hget("RET-ANG2", "value")
                 pipe.hget("RET-POS1", "value")
                 pipe.hget("RET-POS2", "value")
-                filter01, bs, lp_stage, hwp_stage, scex_lp, lp_theta, imrang, imrpad, dfl1, dfl2, qwp1, qwp1th, qwp2, qwp2th, retang1, retang2, retpos1, retpos2 = pipe.execute(
+                pipe.hget("U_PUPST", "value")
+                filter01, bs, lp_stage, hwp_stage, scex_lp, lp_theta, imrang, imrpad, dfl1, dfl2, qwp1, qwp1th, qwp2, qwp2th, retang1, retang2, retpos1, retpos2, pupil_lens = pipe.execute(
                 )
-        except:
+        except Exception:
             logg.exception(
                     'REDIS unavailable @ poll_camera_for_keywords @ BaseVCAM')
 
@@ -170,7 +173,7 @@ class BaseVCAM(OrcaQuest):
             obs_mod = f"{base_mode}_MBI"
         elif self.current_mode_id == "MBI_REDUCED":
             obs_mod = f"{base_mode}_MBIR"
-        elif self.current_mode_id == "PUPIL":
+        elif pupil_lens.strip().upper() == "IN":
             obs_mod = f"{base_mode}_PUP"
         else:
             obs_mod = base_mode
@@ -189,6 +192,14 @@ class BaseVCAM(OrcaQuest):
         yfull2 = (self.current_mode.y1 - self.current_mode.y0 + 1) / 2.
         frame_center = xfull2, yfull2
         # Create and update WCS keywords
+        d_imrpad = 0
+        try:
+            d_imrpad = self.RDB.hget('D_IMRPAD', 'value')
+        except Exception:
+            logg.exception(
+                    'REDIS unavailable @ poll_camera_for_keywords @ BaseVCAM')
+
+        cd_angle = np.deg2rad(self.INST_PA + d_imrpad)
 
         if "MBI" in obs_mod:
             # 4 WCS
@@ -201,7 +212,7 @@ class BaseVCAM(OrcaQuest):
                 hx, hy = self.HOTSPOTS[field]
                 wcs_dict = wcs_dict_init(i, pix=(hx + 0.5, hy + 0.5),
                                          delt_val=self.PLATE_SCALE,
-                                         cd_rot_rad=self.INST_PA, name=name,
+                                         cd_rot_rad=cd_angle, name=name,
                                          double_with_subaru_fake_standard=False)
                 wcs_dicts.append(wcs_dict)
         else:
@@ -209,14 +220,14 @@ class BaseVCAM(OrcaQuest):
             wcs_dicts = [
                     wcs_dict_init(0, pix=frame_center,
                                   delt_val=self.PLATE_SCALE,
-                                  cd_rot_rad=self.INST_PA, name="PRIMARY",
+                                  cd_rot_rad=cd_angle, name="PRIMARY",
                                   double_with_subaru_fake_standard=False)
             ]
             for i in range(1, 4):
                 wcs_dicts.append(
                         wcs_dict_init(i, pix=frame_center,
                                       delt_val=self.PLATE_SCALE,
-                                      cd_rot_rad=self.INST_PA,
+                                      cd_rot_rad=cd_angle,
                                       double_with_subaru_fake_standard=False,
                                       name="NA"))
 
@@ -241,7 +252,7 @@ class VCAM1(BaseVCAM):
                     util.CameraMode(x0=756, x1=2995, y0=1152, y1=1735,
                                     tint=1e-3),
             BaseVCAM.PUPIL:
-                    util.CameraMode(x0=1644, x1=2403, y0=784, y1=1543, tint=0.1)
+                    util.CameraMode(x0=1608, x1=2499, y0=692, y1=1583, tint=0.1)
     }
     MODES.update(BaseVCAM.MODES)
     MODES[BaseVCAM.NPBS] = MODES[BaseVCAM.STANDARD]

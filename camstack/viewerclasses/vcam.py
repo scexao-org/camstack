@@ -292,10 +292,10 @@ CTRL  + s     : Save current position to last configuration"""
 
         ## determine our camera mode from the data size
         Nx, Ny = self.data_debias_uncrop.shape
-        if Nx > 800 and Ny > 800:
+        if Nx > 900 and Ny > 900:
             self.mode = "MBI"
             slices = self.mbi_slices
-        elif Nx > 800:
+        elif Nx > 900:
             self.mode = "MBI_REDUCED"
             slices = self.mbir_slices
         elif Nx > 536 and Ny > 536:

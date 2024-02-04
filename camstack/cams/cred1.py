@@ -3,10 +3,11 @@
 """
 from typing import Union, Optional as Op, Tuple, List
 
+import logging as logg
 import os
 import time
 
-import logging as logg
+import numpy as np
 
 from camstack.cams.edtcam import EDTCamera
 
@@ -338,6 +339,10 @@ class CRED1(EDTCamera):
                     logg.warning(
                             f"status = {status} - Cryo temp = {self.get_temperature(shm_write=False):.1f} - Water temp = {self.get_water_temperature():.1f}"
                     )
+                # At the end of a successful cooldown, the camera will briefly flash "standby" before going "operational"
+                if status == 'standby':
+                    time.sleep(3.0)
+                    status = self.get_camera_status()
 
             except KeyboardInterrupt:
                 logg.error(
@@ -495,7 +500,7 @@ class CRED1(EDTCamera):
 
 class Apapane(CRED1):
     INTERACTIVE_SHELL_METHODS = [] + CRED1.INTERACTIVE_SHELL_METHODS
-
+    INST_PA: float = -7.4  # deg
     MODES = {}
     MODES.update(CRED1.MODES)
 
@@ -567,6 +572,14 @@ class Apapane(CRED1):
         xfull2 = (self.MODES[self.FULL].x1 - self.MODES[self.FULL].x0 +
                   1) / 2.0 - 16.0
         yfull2 = (self.MODES[self.FULL].y1 - self.MODES[self.FULL].y0 + 1) / 2.0
+        d_imrpad = 0
+        try:
+            d_imrpad = self.RDB.hget('D_IMRPAD', 'value')
+        except Exception:
+            logg.exception(
+                    'REDIS unavailable @ poll_camera_for_keywords @ Apapane')
+
+        cd_angle = np.deg2rad(self.INST_PA + d_imrpad)
 
         # Create and update WCS keywords
         cm = self.current_mode
@@ -576,14 +589,14 @@ class Apapane(CRED1):
                     0,
                     pix=(xfull2 - 40.0 - cm.x0, yfull2 - cm.y0),
                     delt_val=4.5e-6,
-                    cd_rot_rad=0.0,
+                    cd_rot_rad=cd_angle,
                     double_with_subaru_fake_standard=False,
             )
             wcs_dict_2 = wcs_dict_init(
                     1,
                     pix=(xfull2 + 40.0 - cm.x0, yfull2 - cm.y0),
                     delt_val=4.5e-6,
-                    cd_rot_rad=0.0,
+                    cd_rot_rad=cd_angle,
                     double_with_subaru_fake_standard=False,
             )
         else:
@@ -592,14 +605,14 @@ class Apapane(CRED1):
                     0,
                     pix=(xfull2 - cm.x0, yfull2 - cm.y0),
                     delt_val=4.5e-6,
-                    cd_rot_rad=0.0,
+                    cd_rot_rad=cd_angle,
                     double_with_subaru_fake_standard=False,
             )
             wcs_dict_2 = wcs_dict_init(
                     0,
                     pix=(xfull2 - cm.x0, yfull2 - cm.y0),
                     delt_val=4.5e-6,
-                    cd_rot_rad=0.0,
+                    cd_rot_rad=cd_angle,
                     double_with_subaru_fake_standard=False,
             )
 
@@ -616,7 +629,7 @@ class Apapane(CRED1):
         # Override detector name
         self._set_formatted_keyword("DETECTOR", "CRED1 - APAPANE")
         self._set_formatted_keyword("GAIN", 0.45)
-        self._set_formatted_keyword("INST-PA", -360.0)  # FIXME
+        self._set_formatted_keyword("INST-PA", self.INST_PA)  # FIXME
         self._set_formatted_keyword("F-RATIO", 0.0)  # FIXME
 
         # Note: RET-ANG1 is set externally by a call to "updatekw apapane RET-ANG1" from HWP scripts.
