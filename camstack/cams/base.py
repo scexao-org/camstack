@@ -3,13 +3,16 @@ import typing as typ
 from typing import Optional as t_Op
 
 import os
+import atexit
 import time
 import subprocess
 import threading
 import logging as logg
 
 from camstack.core import utilities as util
-from camstack.core import tmux as tmux_util
+from camstack.core.thread import HackedExitJoinThread
+from camstack.core import tmux as tmux_util, thread as threadutil
+
 from camstack.core.wcs import wcs_dummy_dict
 
 try:
@@ -142,7 +145,12 @@ class BaseCamera:
 
         # Thread:
         self.event: t_Op[threading.Event] = None
-        self.thread: t_Op[threading.Thread] = None
+        self.thread: t_Op[threadutil.HackedExitJoinThread] = None
+
+        # LIFO... we first close the daemonized thread, then release all.
+        # (which will also try to re-join... but we'd rather that goes fast).
+        atexit.register(self.release)
+        atexit.register(self.stop_auxiliary_thread)
 
         #=======================
         # TMUX TAKE SESSION MGMT
@@ -344,18 +352,6 @@ class BaseCamera:
         count = 0
         while not success:
             tmux_util.send_keys(self.take_tmux_pane, self.taker_tmux_command)
-
-            if self.taker_cset_prio[1] is not None:  # Set rtprio !
-                subprocess.run(
-                        [
-                                'milk-makecsetandrt',
-                                str(
-                                        tmux_util.find_pane_running_pid(
-                                                self.take_tmux_pane)),  # PID
-                                self.taker_cset_prio[0],  # CPUSET
-                                str(self.taker_cset_prio[1])  # PRIORITY
-                        ],
-                        stdout=subprocess.PIPE)
             try:
                 self._ensure_backend_restarted()
                 success = True
@@ -366,6 +362,19 @@ class BaseCamera:
                         '_start_taker_no_dependents @ BaseCamera - acknowledge _ensure_backend_restarted and retrying'
                 )
                 count += 1
+
+        if self.taker_cset_prio[1] is not None:  # Set rtprio !
+            subprocess.run(
+                    [
+                            'milk-makecsetandrt',
+                            str(
+                                    tmux_util.find_pane_running_pid(
+                                            self.take_tmux_pane)),  # PID
+                            self.taker_cset_prio[0],  # CPUSET
+                            str(self.taker_cset_prio[1])  # PRIORITY
+                    ],
+                    stdout=subprocess.PIPE)
+            print(f'Calling rtset w/ {self.taker_cset_prio}')
 
         self.grab_shm_fill_keywords()
         self.prepare_camera_finalize()
@@ -437,29 +446,12 @@ class BaseCamera:
     def set_keyword(self, key: str, value: typ.Union[str, int, float]) -> None:
         return self._set_formatted_keyword(key, value)
 
-    def _set_formatted_keyword(self, key: str, value: typ.Union[str, int,
-                                                                float]) -> None:
+    def _set_formatted_keyword(self, key: str, value: util.Typ_shm_kw) -> None:
 
         assert self.camera_shm is not None  # mypy happy assert
 
-        fmt = self.KEYWORDS[key][2]
-        val = value
-        if value is not None:
-            try:
-                if fmt == 'BOOLEAN':
-                    assert isinstance(value, bool)  # mypy happy assert
-                    val = MAGIC_BOOL_STR.TUPLE[value]
-                elif fmt[-1] == 'd':
-                    val = int(fmt % value)
-                elif fmt[-1] == 'f':
-                    val = float(fmt % value)
-                elif fmt[-1] == 's':  # string
-                    val = fmt % value
-            except:  # Sometime garbage values cannot be formatted properly...
-                logg.error(
-                        f"fits_headers: formatting error on {key}, {value}, {fmt}"
-                )
-
+        format = self.KEYWORDS[key][2]
+        val = util.keyword_camstack_to_pyMilk(value, format)
         self.camera_shm.update_keyword(key, val)
 
     def _fill_keywords(self) -> None:
@@ -469,10 +461,10 @@ class BaseCamera:
         # These are pretty much defaults - we don't know anything about this
         # basic abstract camera
         preex_keywords = self.camera_shm.get_keywords(True)
-        preex_keywords.update(self.KEYWORDS)
+        preex_keywords.update(util.keyword_dictionary_camstack_to_pyMilk(self.KEYWORDS))
         for i in range(self.N_WCS):
             wcs_dict = wcs_dummy_dict(i)
-            preex_keywords.update(wcs_dict)
+            preex_keywords.update(util.keyword_dictionary_camstack_to_pyMilk(wcs_dict))
             self.KEYWORDS.update(wcs_dict)
         self.camera_shm.set_keywords(preex_keywords)  # Initialize comments
         # Second pass to enforce formatting...
@@ -539,7 +531,8 @@ class BaseCamera:
         if self.thread is not None:
             logg.error(
                     'start_auxiliary_thread @ Basecamera - something wrong???')
-        self.thread = threading.Thread(
+        self.thread = HackedExitJoinThread(
+                event=self.event, daemon=True,
                 target=self.auxiliary_thread_run_function)
         self.thread.start()
 

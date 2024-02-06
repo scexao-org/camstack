@@ -5,8 +5,11 @@ import typing as typ
 import os
 import time
 import subprocess
+import logging
+logg = logging.getLogger(__name__)
 
 from camstack.core import tmux
+from scxkw.config import MAGIC_BOOL_STR
 
 
 class CamstackStateException(Exception):
@@ -16,7 +19,7 @@ class CamstackStateException(Exception):
 T = typ.TypeVar('T')
 
 
-def enforce_optional(anything: typ.Optional[T]) -> T:
+def enforce_optional(anything: T | None) -> T:
     '''
     This functions goal is to make mypy happy.
     And to test that an Optional is not None
@@ -33,6 +36,41 @@ Typ_mode_id_or_heightwidth: typ.TypeAlias = typ.Union[Typ_mode_id,
 Typ_tuple_cset_prio: typ.TypeAlias = typ.Tuple[str, typ.Optional[int]]
 Typ_shm_kw: typ.TypeAlias = typ.Union[bool, int, float, str]
 Typ_shm_kw_nobool: typ.TypeAlias = typ.Union[int, float, str]
+
+def keyword_camstack_to_pyMilk(value: Typ_shm_kw, format: str) -> Typ_shm_kw_nobool:
+    val = value
+    try:
+        if format == 'BOOLEAN':
+            if isinstance(value, bool):
+                # Booleans that are not formatted yet
+                val = MAGIC_BOOL_STR.TUPLE[value]
+            else:
+                # Booleans that came back from pyMilk and are already string-formatted
+                assert val in MAGIC_BOOL_STR.TUPLE
+        elif format[-1] == 'd':
+            val = int(format % value)
+        elif format[-1] == 'f':
+            val = float(format % value)
+        elif format[-1] == 's':  # string
+            val = format % value
+    except:  # Sometime garbage values cannot be formatted properly...
+        logg.error(
+                f"keyword_camstack_to_pyMilk: formatting error on {value}, {format}"
+        )
+        raise
+        
+    return val
+
+def keyword_dictionary_camstack_to_pyMilk(cam_keyword_dict: dict[str, tuple[Typ_shm_kw, str, str, str]]
+                              ) -> dict[str, tuple[Typ_shm_kw_nobool, str]]:
+    '''
+    Used to convert from the Camera.KEYWORDS dictionary down to the pyMilk compliant
+    keyword dictionary, including boolean magic.
+    '''
+    return {
+        key: (keyword_camstack_to_pyMilk(tup[0], tup[2]), tup[1]) for key, tup in cam_keyword_dict.items()
+    }
+    
 
 
 class CameraMode:
