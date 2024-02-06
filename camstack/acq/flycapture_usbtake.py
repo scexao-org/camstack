@@ -59,12 +59,19 @@ def main_acquire_flycapture(api_cam_num_or_serial: int, stream_name: str,
                 for ii in range(num_cams)
         ]
 
+        print()
+        print(f'flycapture2: found {num_cams} cameras on the bus.')
+        print(f'Serials: {fly_serials}')
+        print()
+
         fly_cam = PC2.Camera()
 
+        # These blocks will raise a BusMasterFailure if the Camera doesn't exist.
         if api_cam_num_or_serial < num_cams:  # It's an index number
             uid = fly_bus.getCameraFromIndex(api_cam_num_or_serial)
         else:  # It's a serial
             uid = fly_bus.getCameraFromSerialNumber(api_cam_num_or_serial)
+
 
         fly_cam.connect(uid)
         fly_cam.setConfiguration(numBuffers=10,
@@ -120,7 +127,8 @@ def main_acquire_flycapture(api_cam_num_or_serial: int, stream_name: str,
                 break
 
     except Exception as ex:
-        print('Error 0: %s' % ex)
+        print('Error: %s' % ex)
+        print('Bus Master Failure may mean that no cameras are detected / serial is wrong.')
     finally:
         # Graceful cleanup?
         # How much do we have to clean?
