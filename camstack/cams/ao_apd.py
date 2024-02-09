@@ -34,10 +34,10 @@ class APDAcquisition(BaseCamera):
         # Add a curvature compute dependent.
         # Just put it on the same cset...
         cset = taker_cset_prio[0]
-        prio = taker_cset_prio[1] - 1 if taker_cset_prio[1] is not None else 0
+        prio = (taker_cset_prio[1] - 2) if taker_cset_prio[1] is not None else 0
 
         cli_cmd_curv_computer = '\n'.join([
-                'cacao << EOF',
+                'OMP_NUM_THREADS=1 cacao << EOF',
                 'cacaoio.ao188preproc ..procinfo 1',
                 f'cacaoio.ao188preproc ..triggersname {stream_name}',
                 'cacaoio.ao188preproc ..triggermode 3',
@@ -52,7 +52,7 @@ class APDAcquisition(BaseCamera):
                 'apd_curv', cli_cmd=cli_cmd_curv_computer, cli_args=[],
                 cset=cset, rtprio=prio, kill_upon_create=True)
 
-        self.dependent_processes += [curvature_computation]
+        dependent_processes += [curvature_computation]
 
         super().__init__(name, stream_name, 0, no_start, taker_cset_prio,
                          dependent_processes)
@@ -100,3 +100,47 @@ class APDAcquisition(BaseCamera):
             msg = 'Curvature computer crashed!!! Safety disabled!!!'
             logg.critical(msg)
             raise AssertionError(msg)  # Wait this is gonna get catched.
+
+    def __del__(self):
+        '''
+            Try to kill the tunnels upon exit
+        '''
+        import signal
+        if hasattr(self, 'ssh_tunnel_howfs'):
+            self.ssh_tunnel_howfs.send_signal(signal.SIGINT)
+        if hasattr(self, 'ssh_tunnel_lowfs'):
+            self.ssh_tunnel_lowfs.send_signal(signal.SIGINT)
+
+
+if __name__ == "__main__":
+
+    doc = '''
+        APD camstack starter
+        
+        Usage: camstack.cams.ao_apd [tmux] -u <channel>
+    '''
+    from docopt import docopt
+
+    args = docopt(doc)
+
+    if args['tmux']:
+        '''
+            Re-run the same command in tmux session apd_ctrl
+        '''
+
+        from camstack.core.utilities import DependentProcess
+        tmux = DependentProcess(
+                'apd_ctrl',
+                f'python -im camstack.cams.ao_apd -u {args["<channel>"]}', [])
+        tmux.initialize_tmux(True)
+        tmux.start_command_line()
+        
+        exit(0)
+    else:
+
+        apd = APDAcquisition('apd', 'apd', args['<channel>'],
+                             taker_cset_prio=('fpdp_recv',
+                                              45), dependent_processes=[])
+
+        from camstack.core.utilities import shellify_methods
+        shellify_methods(apd, globals())

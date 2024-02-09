@@ -10,7 +10,7 @@ if __name__ == "__main__":
     init_camstack_logger(os.environ['HOME'] + "/logs/camstack-orcam.log")
 
     mode = AlalaOrcam.FULL
-    mode = 1
+    mode = AlalaOrcam.WFS
 
     cam = AlalaOrcam('orcam', 'orcam', dcam_number=0, mode_id=mode,
                      taker_cset_prio=('user', 42), dependent_processes=[])
@@ -19,11 +19,11 @@ if __name__ == "__main__":
     shellify_methods(cam, globals())
     
     # PYROSERVER
-    from scxconf import PYRONS3_HOST, PYRONS3_PORT, IP_ALALA
+    from scxconf import PYRONS3_HOST, PYRONS3_PORT, IP_AORTS_SUMMIT
     from camstack import pyro_keys as pk
     from swmain.network.pyroserver_registerable import PyroServer
 
-    server = PyroServer(bindTo=(IP_ALALA, 0),
+    server = PyroServer(bindTo=(IP_AORTS_SUMMIT, 0),
                         nsAddress=(PYRONS3_HOST, PYRONS3_PORT))
     server.add_device(cam, pk.ALALA, add_oneway_callables=True)
     server.start()
