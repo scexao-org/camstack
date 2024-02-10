@@ -5,7 +5,6 @@ from scxkw.config import MAGIC_HW_STR
 from camstack.core.utilities import DependentProcess, RemoteDependentProcess
 from camstack.cams.vampires import VCAM1, VCAM2, BaseVCAM
 from camstack.core.logger import init_camstack_logger
-import logging
 
 # PYROSERVER
 import scxconf

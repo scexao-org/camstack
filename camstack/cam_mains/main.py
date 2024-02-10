@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import typing as typ
 
-import argcomplete
 from argparse import ArgumentParser
 
 from camstack.core.tmux import (find_or_create, send_keys, kill_running,
@@ -18,7 +17,9 @@ CAM_INVOCATION: dict[str | None, tuple[str | None, str | None]] = {
         "APAPANE": ("camstack.cam_mains.apapane", '5'),
         "FIRST": ("camstack.cam_mains.first_orcam", 'F'),
         "FIRST_PUPIL": ("camstack.cam_mains.first_pupil", 'F'),
-        "IIWI": ("camstack.cam_mains.apapane_at_aorts", 'AORTS'),
+        "IIWI": ("camstack.cam_mains.iiwi", 'AORTS'),
+        "IIWIA": ("camstack.cam_mains.iiwi -- A", 'AORTS'),
+        "IIWIG": ("camstack.cam_mains.iiwi -- G", 'AORTS'),
         "GLINTCAM": ("camstack.cam_mains.glintcam", '5'),
         "KALAOCAM": ("camstack.cam_mains.kalaocam", None),
         "KIWIKIU": ("camstack.cam_mains.kiwikiu", '5'),
@@ -55,7 +56,6 @@ def main(
 
     if cam_name_arg is not None:
         # This is a CLI call
-        argcomplete.autocomplete(parser)
         args = parser.parse_args([cam_name_arg])
     else:
         # This is probs a entrypoint bare main() call

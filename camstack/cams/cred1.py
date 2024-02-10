@@ -636,7 +636,7 @@ class Apapane(CRED1):
         # This avoids latency in reporting HWP states.
 
 
-class ApapaneAtAORTS(Apapane):
+class IiwiButItsApapane(Apapane):
     '''
         Temporary class for having the CRED1 plugged into AORTS act as BOTH Apapane and Iiwi
         functionality.
@@ -676,13 +676,23 @@ class ApapaneAtAORTS(Apapane):
 
         return Apapane.set_camera_mode(self, mode_id)
 
+    def _fill_keywords(self) -> None:
+        Apapane._fill_keywords(self)
+
+        # Override detector name
+        self._set_formatted_keyword("DETECTOR", "CRED1 - IIWIAP")
+
     # Hijinxes related to sending the
 
 
 class Iiwi(CRED1):
     INTERACTIVE_SHELL_METHODS = [] + CRED1.INTERACTIVE_SHELL_METHODS
 
-    MODES = {}
+    IIWI = 9  # Choosing thus so Ctrl+Alt+9 in the viewer should work.
+
+    INTERACTIVE_SHELL_METHODS = ['IIWI'] + CRED1.INTERACTIVE_SHELL_METHODS
+
+    MODES = {IIWI: CameraMode(x0=64, x1=223, y0=48, y1=207, fps=1000.)}
     MODES.update(CRED1.MODES)
 
     KEYWORDS = {
