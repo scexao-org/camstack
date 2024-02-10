@@ -1,6 +1,7 @@
 import os
 
 from camstack.core.utilities import DependentProcess, RemoteDependentProcess
+from camstack.cams.edtcam import EDTCamera
 from camstack.cams.cred1 import IiwiButItsApapane, Iiwi, CRED1
 from camstack.cams.cred2 import IiwiButItsGLINT, CRED2
 
@@ -19,14 +20,29 @@ from argparse import ArgumentParser
 parser = ArgumentParser(
         prog="iiwimain",
         description="Start iiwi, with Iiwi, Apapane or GLINT as actual camera.")
-parser.add_argument("camflag", choices=['I', 'A', 'G'], type=str.upper,
-                    help="Physical camera: I Iiwi | A Apapane | G Glint",
-                    default='I')
+parser.add_argument("camflag", choices=['I', 'A', 'G', 'AUTO'], type=str.upper,
+                    help="Physical camera: I Iiwi | A Apapane | G Glint | AUTO",
+                    default='AUTO')
 
 
 def main():
     args = parser.parse_args()
     cam_flag: str = args.camflag
+
+    if cam_flag == 'AUTO':
+        # Perform a direct call to obtain the hwuid of the camera.
+        from hwmain.edt.edtinterface import EdtInterfaceSerial
+        # This cfg file will work the serial for all FLI cameras.
+        edt_serial = EdtInterfaceSerial(
+                unit=0, channel=0, config_file=os.environ['HOME'] +
+                '/src/camstack/config/cred2_single_channel.cfg')
+        uid = edt_serial.send_command('hwuid', base_timeout=1.0)
+
+        cam_flag = {
+                '01-000016436d3e': 'G',
+                '01-0000190ddb96': 'A',
+                None: 'I'
+        }[uid]
 
     os.makedirs(os.environ['HOME'] + "/logs", exist_ok=True)
     init_camstack_logger(os.environ['HOME'] + "/logs/camstack-iiwi.log")

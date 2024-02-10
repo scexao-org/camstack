@@ -20,6 +20,7 @@ CAM_INVOCATION: dict[str | None, tuple[str | None, str | None]] = {
         "IIWI": ("camstack.cam_mains.iiwi", 'AORTS'),
         "IIWIA": ("camstack.cam_mains.iiwi -- A", 'AORTS'),
         "IIWIG": ("camstack.cam_mains.iiwi -- G", 'AORTS'),
+        "IIWII": ("camstack.cam_mains.iiwi -- I", 'AORTS'),
         "GLINTCAM": ("camstack.cam_mains.glintcam", '5'),
         "KALAOCAM": ("camstack.cam_mains.kalaocam", None),
         "KIWIKIU": ("camstack.cam_mains.kiwikiu", '5'),
