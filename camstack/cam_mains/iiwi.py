@@ -22,7 +22,7 @@ parser = ArgumentParser(
         description="Start iiwi, with Iiwi, Apapane or GLINT as actual camera.")
 parser.add_argument("camflag", choices=['I', 'A', 'G', 'AUTO'], type=str.upper,
                     help="Physical camera: I Iiwi | A Apapane | G Glint | AUTO",
-                    default='AUTO')
+                    default='AUTO', nargs='?')
 
 
 def main():
@@ -36,7 +36,7 @@ def main():
         edt_serial = EdtInterfaceSerial(
                 unit=0, channel=0, config_file=os.environ['HOME'] +
                 '/src/camstack/config/cred2_single_channel.cfg')
-        uid = edt_serial.send_command('hwuid', base_timeout=1.0)
+        uid = edt_serial.send_command('hwuid', base_timeout=1.0).removesuffix('\r\nOK\r\nfli-cli>')
 
         cam_flag = {
                 '01-000016436d3e': 'G',
@@ -83,6 +83,24 @@ def main():
     tcp_send.start_order = 2
     tcp_send.kill_order = 0
     '''
+    dependent_processes: list[DependentProcess] = []
+    stream_name = 'iiwi'
+    
+    # If this is the GLINT CRED2, we fire a downsampolator
+    if cam_flag == 'G':
+        stream_name = 'iiwi_raw'
+        downsampler = DependentProcess(
+            tmux_name = 'iiwi_160downsampler',
+            cli_cmd = 'python -i /home/aorts/src/camstack/scripts/iiwi_downsampler.py',
+            cli_args = [],
+            cset = 'i_acq_wfs',
+            rtprio=45
+        )
+        downsampler.start_order = 0 # first
+        downsampler.kill_order = 100 # last
+        
+        dependent_processes.append(downsampler)
+
 
     # PIPE over ZMQ into the LAN until we find a better solution (receiver)
     zmq_recv = RemoteDependentProcess(
@@ -104,10 +122,12 @@ def main():
     )
     zmq_send.start_order = 6
     zmq_send.kill_order = 5
+    
+    dependent_processes += [zmq_recv, zmq_send]
 
-    cam = Klass('iiwi', 'iiwi', unit=0, channel=0, mode_id=mode,
+    cam = Klass('iiwi', stream_name, unit=0, channel=0, mode_id=mode,
                 taker_cset_prio=('i_edt',
-                                 48), dependent_processes=[zmq_recv, zmq_send])
+                                 48), dependent_processes=dependent_processes)
 
     shellify_methods(cam, globals())
 
