@@ -69,7 +69,11 @@ def main(
     cam_pyinvocationstring, required_machine = CAM_INVOCATION[cam_name]
 
     # Default cam name e.g. palila_ctrl
-    tmux_name = f"{cam_name.lower()}_ctrl"
+    if cam_name.lower().startswith('iiwi'):
+        tmux_name = 'iiwi_ctrl'
+    else:
+        tmux_name = f"{cam_name.lower()}_ctrl"
+
     print(f"Starting {cam_name} in tmux session {tmux_name}")
 
     if (required_machine is None or force_local or
