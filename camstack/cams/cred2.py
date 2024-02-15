@@ -377,6 +377,11 @@ class IiwiButItsGLINT(GLINT):
     # yapf: enable
     MODES.update(CRED2.MODES)
     EDTTAKE_EMBEDMICROSECOND = False
+    
+    def _thermal_init_commands(self) -> None:
+        super()._thermal_init_commands()
+        logg.debug('_thermal_init_commands @ IiwiButItsGlint')
+        self.send_command('set imagetags off')
 
     def _fill_keywords(self) -> None:
         GLINT._fill_keywords(self)
@@ -450,6 +455,7 @@ class Palila(CRED2):
         self.send_command('set fan speed 0')
         self.send_command('set fan mode manual')
         self.set_temperature_setpoint(-40.0)
+        self.send_command('set imagetags on')
 
 
 # Quick shorthand for testing
