@@ -9,7 +9,7 @@ class FirstViewerBackend(GenericViewerBackend):
 
 class FirstViewerFrontend(GenericViewerFrontend):
 
-    WINDOW_NAME = 'FIRST camera'
+    WINDOW_NAME = "`Io camera viewer"
     CARTOON_FILE = 'io.png'
 
     def __init__(self, system_zoom: int, fps: int,

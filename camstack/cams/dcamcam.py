@@ -166,6 +166,7 @@ class OrcaQuest(DCAMCamera):
             "FIRSTPL",
             "WFS",
             "FPWFS",
+            "FIRSTPLSMF",
             "set_tint",
             "get_tint",
             "get_temperature",
@@ -173,12 +174,14 @@ class OrcaQuest(DCAMCamera):
             "set_external_trigger",
     ] + DCAMCamera.INTERACTIVE_SHELL_METHODS
 
-    WFS, FPWFS, FIRST, FULL, FIRSTPL = 'WFS', 'FPWFS', 'FIRST', 'FULL', 'FIRSTPL'
+    WFS, FPWFS = 'WFS'
+    FIRST, FULL, FIRSTPL, FIRSTPLSMF, DICHROIC = 'FIRST', 'FULL', 'FIRSTPL', 'FIRSTPLSMF', 'DICHROIC'
     # yapf: disable
     MODES = {
-            FIRST: util.CameraMode(x0=0, x1=4095, y0=1004, y1=2303, tint=0.001),
+            FIRST: util.CameraMode(x0=0, x1=2795, y0=4, y1=1663, tint=0.001),
             FULL: util.CameraMode(x0=0, x1=4095, y0=0, y1=2103, tint=0.001),
-            FIRSTPL: util.CameraMode(x0=1500, x1=3395, y0=1580, y1=1983, tint=0.001),
+            FIRSTPL: util.CameraMode(x0=1500, x1=3395, y0=1572, y1=1983, tint=0.001),
+            FIRSTPLSMF: util.CameraMode(x0=1000, x1=2895, y0=1752, y1=1895, tint=0.001),
             0: util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),  # Also full
             WFS: util.CameraMode(x0=1352, x1=2127, y0=944, y1=1119, tint=0.001),    # Kyohoon is Using for WFS mode
             2: util.CameraMode(x0=800, x1=3295, y0=876, y1=1531, tint=0.001),      # Kyohoon is Using for WFS align

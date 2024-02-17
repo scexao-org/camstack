@@ -10,8 +10,9 @@ if __name__ == "__main__":
     os.makedirs(os.environ['HOME'] + "/logs", exist_ok=True)
     init_camstack_logger(os.environ['HOME'] + "/logs/camstack-firstcam.log")
 
-    # mode = OrcaQuest.FIRST
+    # mode = FIRSTOrcam.FIRST
     mode = FIRSTOrcam.FIRSTPL
+    # mode = FIRSTOrcam.FULL
     # mode = OrcaQuest.FULL
 
     cam = FIRSTOrcam('orcam', 'orcam', dcam_number=0, mode_id=mode,
