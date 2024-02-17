@@ -3,14 +3,30 @@ import os
 from camstack.core.utilities import DependentProcess, RemoteDependentProcess
 from camstack.cams.cred2 import GLINT
 from camstack.core.logger import init_camstack_logger
+import logging
 
 import scxconf
 from scxkw.config import MAGIC_HW_STR
+
+from serial import Serial
 
 if __name__ == "__main__":
 
     os.makedirs(os.environ['HOME'] + "/logs", exist_ok=True)
     init_camstack_logger(os.environ['HOME'] + "/logs/camstack-glint.log")
+
+    ## Init the Kaya boxes
+    logg = logging.warning('Resetting KAYA box over serial')
+
+    KAYA_DEV = "/dev/serial/by-id/usb-Silicon_Labs_CP2101_USB_to_UART_Bridge_Controller_0001-if00-port0"
+    assert os.path.exists(KAYA_DEV), "Kaya serial port seems to be absent."
+
+    with Serial(KAYA_DEV, 115200, timeout=0.5) as kaya_ser:
+        kaya_ser.write(b'FORMAT 3 1\r')
+        kaya_ser.write(b'UARTBAUD 0 4\r')
+        kaya_ser.write(b'FORMAT 3 1\r')
+        kaya_ser.write(b'UARTBAUD 0 4\r')
+    #os.system('stty -F ${DEV} 115200 raw -echo -echoe -echok -echoctl -echoke')
 
     mode = 12  #12
 

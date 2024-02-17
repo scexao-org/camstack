@@ -72,7 +72,6 @@ def main_acquire_flycapture(api_cam_num_or_serial: int, stream_name: str,
         else:  # It's a serial
             uid = fly_bus.getCameraFromSerialNumber(api_cam_num_or_serial)
 
-
         fly_cam.connect(uid)
         fly_cam.setConfiguration(numBuffers=10,
                                  grabMode=PC2.GRAB_MODE.DROP_FRAMES,
@@ -107,9 +106,14 @@ def main_acquire_flycapture(api_cam_num_or_serial: int, stream_name: str,
         mfrate_gain = 0.01
 
         while True:
-            fly_image = fly_cam.retrieveBuffer()
-
-            data_arr = nparray_from_flyimage(fly_image)
+            try:
+                fly_image = fly_cam.retrieveBuffer()
+                data_arr = nparray_from_flyimage(fly_image)
+            except PC2.Fc2error as ex:
+                if ex.args[0] == 32:  # Isochronous transfer not started
+                    continue
+                else:
+                    raise
 
             fly_image = None
 
@@ -128,7 +132,9 @@ def main_acquire_flycapture(api_cam_num_or_serial: int, stream_name: str,
 
     except Exception as ex:
         print('Error: %s' % ex)
-        print('Bus Master Failure may mean that no cameras are detected / serial is wrong.')
+        print('Bus Master Failure may mean that no cameras are detected / serial is wrong.'
+              )
+        print(f'Error {ex.args[0]}: {str(ex)[2:-1]}')
     finally:
         # Graceful cleanup?
         # How much do we have to clean?
@@ -136,9 +142,9 @@ def main_acquire_flycapture(api_cam_num_or_serial: int, stream_name: str,
             if fly_cam is not None and fly_cam.isConnected:
                 fly_cam.disconnect()
                 del fly_cam
+            print('\nGraceful cleanup successful. Maybe.\n')
         except PC2.Fc2error as ex:
-            print('Error C: %s' % ex)
-        print('\nGraceful cleanup successful. Maybe.\n')
+            print(f'Error during cam close: {ex.args[0]}: {str(ex)[2:-1]}')
 
 
 if __name__ == "__main__":
