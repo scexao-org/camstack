@@ -160,13 +160,16 @@ class DCAMCamera(ParamsSHMCamera):
 
 class OrcaQuest(DCAMCamera):
 
+    WFS, FPWFS = 'WFS', 'FPWFS'
+    FIRST, FULL, FIRSTPL, FIRSTPLSMF, DICHROIC = 'FIRST', 'FULL', 'FIRSTPL', 'FIRSTPLSMF', 'DICHROIC'
+
     INTERACTIVE_SHELL_METHODS = [
-            "FIRST",
-            "FULL",
-            "FIRSTPL",
-            "WFS",
-            "FPWFS",
-            "FIRSTPLSMF",
+            FIRST,
+            FULL,
+            FIRSTPL,
+            WFS,
+            FPWFS,
+            FIRSTPLSMF,
             "set_tint",
             "get_tint",
             "get_temperature",
@@ -174,8 +177,6 @@ class OrcaQuest(DCAMCamera):
             "set_external_trigger",
     ] + DCAMCamera.INTERACTIVE_SHELL_METHODS
 
-    WFS, FPWFS = 'WFS'
-    FIRST, FULL, FIRSTPL, FIRSTPLSMF, DICHROIC = 'FIRST', 'FULL', 'FIRSTPL', 'FIRSTPLSMF', 'DICHROIC'
     # yapf: disable
     MODES = {
             FIRST: util.CameraMode(x0=0, x1=2795, y0=4, y1=1663, tint=0.001),

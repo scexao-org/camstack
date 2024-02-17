@@ -24,26 +24,26 @@ class WrappingVerboseRLock:
         self.rlock = threading.RLock()
 
     def acquire(self, *args, **kwargs):
-        print(f'{threading.current_thread()} acquiring RLock...', end='')
+        #print(f'{threading.current_thread()} acquiring RLock...', end='')
         r = self.rlock.acquire(*args, **kwargs)
-        print(('DENIED.', 'acquired.')[r])
+        #print(('DENIED.', 'acquired.')[r])
         return r
 
     def release(self, *args, **kwargs):
-        print(f'{threading.current_thread()} releasing RLock...', end='')
+        #print(f'{threading.current_thread()} releasing RLock...', end='')
         self.rlock.release(*args, **kwargs)
-        print('released.')
+        #print('released.')
 
     def __enter__(self):
-        print(f'{threading.current_thread()} entering RLock...', end='')
+        #print(f'{threading.current_thread()} entering RLock...', end='')
         self.rlock.__enter__()
-        print('entered.')
+        #print('entered.')
 
     def __exit__(self, t: type[BaseException] | None, v: BaseException | None,
                  tb: TracebackType | None) -> None:
-        print(f'{threading.current_thread()} exiting RLock...', end='')
+        #print(f'{threading.current_thread()} exiting RLock...', end='')
         self.rlock.__exit__(t, v, tb)
-        print('exited.')
+        #print('exited.')
 
 
 class ParamsSHMCamera(BaseCamera):
