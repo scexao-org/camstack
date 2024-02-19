@@ -6,6 +6,7 @@ import os
 import time
 import subprocess
 import logging
+
 logg = logging.getLogger(__name__)
 
 from camstack.core import tmux
@@ -37,7 +38,9 @@ Typ_tuple_cset_prio: typ.TypeAlias = typ.Tuple[str, typ.Optional[int]]
 Typ_shm_kw: typ.TypeAlias = typ.Union[bool, int, float, str]
 Typ_shm_kw_nobool: typ.TypeAlias = typ.Union[int, float, str]
 
-def keyword_camstack_to_pyMilk(value: Typ_shm_kw, format: str) -> Typ_shm_kw_nobool:
+
+def keyword_camstack_to_pyMilk(value: Typ_shm_kw,
+                               format: str) -> Typ_shm_kw_nobool:
     val = value
     try:
         if format == 'BOOLEAN':
@@ -58,19 +61,21 @@ def keyword_camstack_to_pyMilk(value: Typ_shm_kw, format: str) -> Typ_shm_kw_nob
                 f"keyword_camstack_to_pyMilk: formatting error on {value}, {format}"
         )
         raise
-        
+
     return val
 
-def keyword_dictionary_camstack_to_pyMilk(cam_keyword_dict: dict[str, tuple[Typ_shm_kw, str, str, str]]
-                              ) -> dict[str, tuple[Typ_shm_kw_nobool, str]]:
+
+def keyword_dictionary_camstack_to_pyMilk(
+        cam_keyword_dict: dict[str, tuple[Typ_shm_kw, str, str, str]]
+) -> dict[str, tuple[Typ_shm_kw_nobool, str]]:
     '''
     Used to convert from the Camera.KEYWORDS dictionary down to the pyMilk compliant
     keyword dictionary, including boolean magic.
     '''
     return {
-        key: (keyword_camstack_to_pyMilk(tup[0], tup[2]), tup[1]) for key, tup in cam_keyword_dict.items()
+            key: (keyword_camstack_to_pyMilk(tup[0], tup[2]), tup[1])
+            for key, tup in cam_keyword_dict.items()
     }
-    
 
 
 class CameraMode:
@@ -104,6 +109,9 @@ class CameraMode:
         s += f' - bin {self.binx} x {self.biny} - FGsize {self.fgsize}'
 
         return s
+
+    def __repr__(self):
+        return self.__str__()
 
 
 class DependentProcess:
