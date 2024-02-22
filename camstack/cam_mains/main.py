@@ -101,7 +101,7 @@ def main(
 
     # initiating this camera's main method
     print(f"DEBUG: using {cam_pyinvocationstring}")
-    send_keys(tmux, f"ipython -i -m {cam_pyinvocationstring}")
+    send_keys(tmux, f"python -i -m {cam_pyinvocationstring}")
 
     # all done. no cleanup
     print(f"Finished initiating camera. Inspect {tmux_name} "
