@@ -302,3 +302,13 @@ def enforce_whichcomp(comp: str, err: bool = True) -> bool:
         )
 
     return this_comp == comp
+
+
+def process_ordering_start(processes: list[DependentProcess]):
+    for k, proc in enumerate(processes):
+        proc.start_order = k
+
+
+def process_ordering_stop(processes: list[DependentProcess]):
+    for k, proc in enumerate(processes):
+        proc.kill_order = k
