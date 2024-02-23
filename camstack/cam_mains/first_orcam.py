@@ -1,6 +1,6 @@
 import os
 
-from camstack.core.utilities import DependentProcess, RemoteDependentProcess
+from camstack.core import utilities as util
 from camstack.cams.dcamcam import FIRSTOrcam
 
 from scxkw.config import MAGIC_HW_STR
@@ -19,7 +19,7 @@ if __name__ == "__main__":
     # mode = OrcaQuest.FULL
 
     # Prepare dependent processes
-    tcp_recv = RemoteDependentProcess(
+    tcp_recv = util.RemoteDependentProcess(
             tmux_name=f'streamTCPreceive_{scxconf.TCPPORT_FIRST_ORCA}',
             # Urrrrrh this is getting messy
             cli_cmd='creashmim %s %u %u --kw=300; shmimTCPreceive -c tcprecv1 '
@@ -28,10 +28,8 @@ if __name__ == "__main__":
             remote_host='scexao@' + scxconf.IPLAN_SC6,
             kill_upon_create=False,
     )
-    tcp_recv.start_order = 1
-    tcp_recv.kill_order = 1
 
-    tcp_send = DependentProcess(
+    tcp_send = util.DependentProcess(
             tmux_name='first_tcp',
             cli_cmd='sleep 3; OMP_NUM_THREADS=1 shmimTCPtransmit %s %s %u',
             cli_args=('orcam', scxconf.IPLAN_SC6, scxconf.TCPPORT_FIRST_ORCA),
@@ -41,12 +39,32 @@ if __name__ == "__main__":
             cset='system',
             rtprio=45,
     )
-    tcp_send.start_order = 2
-    tcp_send.kill_order = 0
+
+    zmq_recv = util.RemoteDependentProcess(
+            tmux_name=f'orcam_zmq',
+            # Urrrrrh this is getting messy
+            cli_cmd='zmq_recv.py %s:%u %s',
+            cli_args=(scxconf.IPLAN_KAMUA, scxconf.TCPPORT_FIRST_ORCA, 'orcam'),
+            remote_host='scexao@' + scxconf.IP_SC6,
+            kill_upon_create=False,
+    )
+
+    zmq_send = util.DependentProcess(
+            tmux_name='orcam_zmq',
+            cli_cmd='zmq_send.py %s:%u %s',
+            cli_args=(scxconf.IPLAN_KAMUA, scxconf.TCPPORT_APAPANE, 'orcam'),
+            # Sender is kill_upon_create - rather than when starting. that ensures it dies well before the receiver
+            # Which is better for flushing TCP sockets
+            kill_upon_create=True,
+            cset='user/1',
+            rtprio=45)
+
+    util.process_ordering_start([tcp_recv, tcp_send, zmq_recv, zmq_send])
+    util.process_ordering_stop([zmq_recv, zmq_send, tcp_recv, tcp_send])
 
     cam = FIRSTOrcam('orcam', 'orcam', dcam_number=0, mode_id=mode,
                      taker_cset_prio=('user', 42),
-                     dependent_processes=[tcp_recv, tcp_send])
+                     dependent_processes=[zmq_recv, zmq_send])
 
     from camstack.core.utilities import shellify_methods
     shellify_methods(cam, globals())

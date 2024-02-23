@@ -225,7 +225,7 @@ class RemoteDependentProcess(DependentProcess):
 
     def start(self):
         try:
-            tmux.send_keys(self.tmux_pane, self.cli_cmd % self.cli_args)
+            tmux.send_keys(self.tmux_pane, self.cli_cmd % tuple(self.cli_args))
         except subprocess.CalledProcessError as err:
             print(f"Remote {self.tmux_name} on {self.remote_host} tmux may be dead - attempting re-initialize"
                   )
