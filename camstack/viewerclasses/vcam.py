@@ -1,33 +1,33 @@
-from typing import Optional as Op, Tuple
-from camstack.viewertools.generic_viewer_backend import GenericViewerBackend
-from camstack.viewertools.generic_viewer_frontend import GenericViewerFrontend
-from swmain.network.pyroclient import connect
-from camstack.viewertools import backend_utils as buts
-import camstack.viewertools.frontend_utils as futs
-import pygame.constants as pgmc
-from functools import partial
+from __future__ import annotations
+
 import logging
+import numpy as np
+import pygame.constants as pgmc
+
 from rich.live import Live
 from rich.logging import RichHandler
-from skimage.transform import rescale
-import numpy as np
-from camstack.cams.vampires import VCAM1, VCAM2
+
 from swmain.redis import RDB, get_values
+from swmain.network.pyroclient import connect
+
+from ..viewertools import backend_utils as buts
+from ..viewertools import frontend_utils as futs
+from ..viewertools.generic_viewer_backend import GenericViewerBackend
+from ..viewertools.generic_viewer_frontend import GenericViewerFrontend
+from ..cams.vampires import VCAM1, VCAM2
 
 stream_handler = RichHandler(level=logging.INFO, show_level=False,
                              show_path=False, log_time_format="%H:%M:%S")
 
 
-class VAMPIRESBaseViewerBackend(GenericViewerBackend):
+class IiwiViewerBackend(GenericViewerBackend):
     HELP_MSG = """
-VAMPIRES Camera Viewer
+IIwi Camera Viewer
 =======================================
 h           : display this help message
 x, ESC      : quit viewer
 
-Camera controls:
-(Note: these get applied to both cameras.
- if you press ALT, will only apply to one camera)
+Camera controls:2024-02-15 14.25.23
 --------------------------------------------------
 CTRL  + j         : Increase exposure time
 CTRL  + k         : Decrease exposure time
@@ -128,9 +128,6 @@ CTRL  + ;     : Nudge 0.05 mm in focus
 CTRL  + o     : Offset fieldstop 0.5 mm; press again to return
 CTRL  + s     : Save current position to last configuration"""
 
-    # CTRL+S:  Save current position to preset
-    # CTRL+F:  Change preset file
-    # add additional shortcuts
     def __init__(self, cam_num, name_shm, cam_name=None):
         if cam_name is None:
             cam_name = f"VCAM{cam_num}"
@@ -147,6 +144,7 @@ CTRL  + s     : Save current position to last configuration"""
         self.logger.addHandler(stream_handler)
         super().__init__(name_shm=name_shm)
 
+        from functools import partial
         self.SHORTCUTS.update({
                 buts.Shortcut(pgmc.K_f, pgmc.KMOD_LCTRL):
                         partial(self.set_readout_mode, mode="SLOW", both=True),
@@ -176,6 +174,9 @@ CTRL  + s     : Save current position to last configuration"""
 
         # variables to carry state
         self.hwtrig_enabled = None
+
+    def whois_camera(self):
+        pass
 
     def set_readout_mode(self, mode: str, both: bool = False):
         self.logger.info(
@@ -341,7 +342,7 @@ class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):
 
     def _init_labels(self) -> int:
         self.fonts = futs.FontBook(self.fonts_zoom)
-        r = self.data_disp_size[1] + 1.5 * self.fonts_zoom
+        r = int(self.data_disp_size[1] + 1.5 * self.fonts_zoom)
         c = 5 * self.fonts_zoom
 
         # Generic camera viewer
