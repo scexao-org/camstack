@@ -20,14 +20,16 @@ stream_handler = RichHandler(level=logging.INFO, show_level=False,
                              show_path=False, log_time_format="%H:%M:%S")
 
 
-class IiwiViewerBackend(GenericViewerBackend):
+class VAMPIRESBaseViewerBackend(GenericViewerBackend):
     HELP_MSG = """
-IIwi Camera Viewer
+VAMPIRES Camera Viewer
 =======================================
 h           : display this help message
 x, ESC      : quit viewer
 
-Camera controls:2024-02-15 14.25.23
+Camera controls:
+(Note: these get applied to both cameras.
+ if you press ALT, will only apply to one camera)
 --------------------------------------------------
 CTRL  + j         : Increase exposure time
 CTRL  + k         : Decrease exposure time
@@ -128,6 +130,9 @@ CTRL  + ;     : Nudge 0.05 mm in focus
 CTRL  + o     : Offset fieldstop 0.5 mm; press again to return
 CTRL  + s     : Save current position to last configuration"""
 
+    # CTRL+S:  Save current position to preset
+    # CTRL+F:  Change preset file
+    # add additional shortcuts
     def __init__(self, cam_num, name_shm, cam_name=None):
         if cam_name is None:
             cam_name = f"VCAM{cam_num}"
