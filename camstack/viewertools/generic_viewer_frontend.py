@@ -51,7 +51,6 @@ class GenericViewerFrontend:
         self.has_backend = False
         self.backend_obj: Op[GenericViewerBackend] = None
 
-        self.fps_val = fps
         self.system_zoom = system_zoom  # Former z1
         self.fonts_zoom = self.system_zoom if fonts_zoom is None else fonts_zoom
 
@@ -66,6 +65,12 @@ class GenericViewerFrontend:
         # Data area width x height, after window scale
         self.data_disp_size = (self.data_disp_basesize[0] * self.system_zoom,
                                self.data_disp_basesize[1] * self.system_zoom)
+
+        # Cap the fps at 256*256*30 pixels/sec
+        self.fps_val = min(
+                fps, 256 * 256 * 30 / self.data_disp_size[0] /
+                self.data_disp_size[1])
+
         self.data_blit_staging = np.zeros((*self.data_disp_size, 3),
                                           dtype=np.uint8)
         # Total window size
