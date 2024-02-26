@@ -461,10 +461,12 @@ class BaseCamera:
         # These are pretty much defaults - we don't know anything about this
         # basic abstract camera
         preex_keywords = self.camera_shm.get_keywords(True)
-        preex_keywords.update(util.keyword_dictionary_camstack_to_pyMilk(self.KEYWORDS))
+        preex_keywords.update(
+                util.keyword_dictionary_camstack_to_pyMilk(self.KEYWORDS))
         for i in range(self.N_WCS):
             wcs_dict = wcs_dummy_dict(i)
-            preex_keywords.update(util.keyword_dictionary_camstack_to_pyMilk(wcs_dict))
+            preex_keywords.update(
+                    util.keyword_dictionary_camstack_to_pyMilk(wcs_dict))
             self.KEYWORDS.update(wcs_dict)
         self.camera_shm.set_keywords(preex_keywords)  # Initialize comments
         # Second pass to enforce formatting...
@@ -562,20 +564,23 @@ class BaseCamera:
             if event_count % 10 > 0:
                 continue
 
-            if not self.is_taker_running():
-                logg.critical('take_tmux_pane contains no live PID.')
+            self.auxiliary_thread_inner_function()
 
-            # Dependents cset + RTprio checking
-            for proc in self.dependent_processes:
-                proc.make_children_rt()
+    def auxiliary_thread_inner_function(self) -> None:
+        if not self.is_taker_running():
+            logg.critical('take_tmux_pane contains no live PID.')
 
-            # Camera specifics !
-            try:
-                self.poll_camera_for_keywords()
-            except Exception as e:
-                logg.error(f"Polling thread: error [{e!r}]")
+        # Dependents cset + RTprio checking
+        for proc in self.dependent_processes:
+            proc.make_children_rt()
 
-            try:
-                self.redis_push_values()
-            except Exception as e:
-                logg.error(f"Polling thread: error [{e!r}]")
+        # Camera specifics !
+        try:
+            self.poll_camera_for_keywords()
+        except Exception as e:
+            logg.error(f"Polling thread: error [{e!r}]")
+
+        try:
+            self.redis_push_values()
+        except Exception as e:
+            logg.error(f"Polling thread: error [{e!r}]")
