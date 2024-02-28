@@ -32,7 +32,7 @@ import numpy as np
 from PIL import Image
 
 
-class GenericViewerFrontend:
+class PygameViewerFrontend:
 
     # A couple numeric constants, can be overriden by subclasses
     BOTTOM_PX_PAD = 140
@@ -364,6 +364,6 @@ if __name__ == "__main__":
     backend = GenericViewerBackend('prout')
     #backend.assign_shortcuts should have been called?
 
-    frontend = GenericViewerFrontend(int(sys.argv[1]), 20, backend.shm_shape)
+    frontend = PygameViewerFrontend(int(sys.argv[1]), 20, backend.shm_shape)
     frontend.register_backend(backend)
     frontend.run()

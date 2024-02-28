@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Dict, Callable, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .generic_viewer_frontend import GenericViewerFrontend
+    from .pygame_viewer_frontend import PygameViewerFrontend
     from .generic_viewer_backend import GenericViewerBackend
 
 import os
@@ -13,6 +13,7 @@ import pygame
 import pygame.constants as pgmc
 
 os.sched_setaffinity(0, _CORES)  # AMD fix
+
 from skimage.measure import centroid
 from . import backend_utils as buts
 from . import frontend_utils as futs
@@ -24,7 +25,7 @@ import re
 # Dummy template
 class PupilMode(OnOffPlugin):  # Fuck I desire double inheritance now.
 
-    def __init__(self, frontend_obj: GenericViewerFrontend,
+    def __init__(self, frontend_obj: PygameViewerFrontend,
                  key_onoff: int = pgmc.K_p, modifier_and: int = pgmc.KMOD_LCTRL,
                  textbox: Optional[futs.LabelMessage] = None) -> None:
 
@@ -65,7 +66,7 @@ class PupilMode(OnOffPlugin):  # Fuck I desire double inheritance now.
 
 class SaturationPlugin(BasePlugin):
 
-    def __init__(self, frontend_obj: GenericViewerFrontend, sat_value,
+    def __init__(self, frontend_obj: PygameViewerFrontend, sat_value,
                  nonlin_value=None,
                  textbox: Optional[futs.LabelMessage] = None) -> None:
         super().__init__(frontend_obj)
@@ -102,7 +103,7 @@ class SaturationPlugin(BasePlugin):
 
 class CrossHairPlugin(OnOffPlugin):
 
-    def __init__(self, frontend_obj: GenericViewerFrontend,
+    def __init__(self, frontend_obj: PygameViewerFrontend,
                  key_onoff: int = pgmc.K_c, modifier_and: int = 0x0,
                  color: str = futs.Colors.GREEN) -> None:
         super().__init__(frontend_obj, key_onoff, modifier_and)
@@ -168,7 +169,7 @@ class CrossHairPlugin(OnOffPlugin):
 
 class CenteredCrossHairPlugin(OnOffPlugin):
 
-    def __init__(self, frontend_obj: GenericViewerFrontend,
+    def __init__(self, frontend_obj: PygameViewerFrontend,
                  key_onoff: int = pgmc.K_c,
                  modifier_and: int = pgmc.KMOD_LSHIFT,
                  color: str = futs.Colors.RED) -> None:
@@ -201,7 +202,7 @@ class CenteredCrossHairPlugin(OnOffPlugin):
 
 class BullseyePlugin(OnOffPlugin):
 
-    def __init__(self, frontend_obj: GenericViewerFrontend,
+    def __init__(self, frontend_obj: PygameViewerFrontend,
                  key_onoff: int = pgmc.K_o, modifier_and: int = 0x0,
                  color: str = futs.Colors.GREEN) -> None:
         super().__init__(frontend_obj, key_onoff, modifier_and)

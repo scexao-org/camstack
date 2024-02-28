@@ -13,7 +13,7 @@ from swmain.network.pyroclient import connect
 from ..viewertools import backend_utils as buts
 from ..viewertools import frontend_utils as futs
 from ..viewertools.generic_viewer_backend import GenericViewerBackend
-from ..viewertools.generic_viewer_frontend import GenericViewerFrontend
+from ..viewertools.pygame_viewer_frontend import PygameViewerFrontend
 from ..cams.vampires import VCAM1, VCAM2
 
 stream_handler = RichHandler(level=logging.INFO, show_level=False,
@@ -333,7 +333,7 @@ CTRL  + s     : Save current position to last configuration"""
                 self.data_debias = np.fliplr(self.data_debias)
 
 
-class VAMPIRESBaseViewerFrontend(GenericViewerFrontend):
+class VAMPIRESBaseViewerFrontend(PygameViewerFrontend):
     WINDOW_NAME = "VCAM"
     CARTOON_FILE = "opeapea1.png"
     BOTTOM_PX_PAD = 175

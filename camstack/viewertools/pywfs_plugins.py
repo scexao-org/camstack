@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Callable, Optional, TYPE_CHECKING
-if TYPE_CHECKING:
-    from .generic_viewer_frontend import GenericViewerFrontend
-    from .generic_viewer_backend import GenericViewerBackend
+import typing as typ
 
 import os
 
@@ -15,15 +12,20 @@ os.sched_setaffinity(0, _CORES)  # AMD fix
 
 import numpy as np
 
+from swmain import redis
+
+if typ.TYPE_CHECKING:
+    from .pygame_viewer_frontend import PygameViewerFrontend
+
 from . import backend_utils as buts
 from . import frontend_utils as futs
 
-from .plugin_arch import OnOffPlugin
+from .plugin_arch import OnOffPlugin, JoystickActionPlugin
 
 
 class PyWFSFluxPlugin(OnOffPlugin):
 
-    def __init__(self, frontend_obj: GenericViewerFrontend,
+    def __init__(self, frontend_obj: PygameViewerFrontend,
                  key_onoff: int = pgmc.K_f, modifier_and: int = 0x0) -> None:
         super().__init__(frontend_obj, key_onoff, modifier_and)
 
@@ -100,3 +102,62 @@ class PyWFSFluxPlugin(OnOffPlugin):
         self.diffy = (flux3 + flux4 - flux2 - flux1) / fluxtot
 
         self.diffr = max(1e-3, (self.diffx**2 + self.diffy**2)**.5)
+
+
+class VisPyWFSTipTiltPlugin(JoystickActionPlugin):
+
+    def dispatch_modlevel(self, dir: buts.JoyKeyDirEnum,
+                          mod_index: int) -> None:
+
+        tt_push = [0.05, 0.2, 0.5][mod_index]
+
+        push_xy = {
+                buts.JoyKeyDirEnum.UP: (-.707, .707),
+                buts.JoyKeyDirEnum.DOWN: (.707, -.707),
+                buts.JoyKeyDirEnum.LEFT: (-.707, -.707),
+                buts.JoyKeyDirEnum.RIGHT: (.707, .707),
+        }[dir]
+
+        val_cd = redis.get_values(['X_ANALGC', 'X_ANALGD'])
+
+        new_c = val_cd[0] + push_xy[0] * tt_push
+        new_d = val_cd[1] + push_xy[1] * tt_push
+        # BLEUARGH - whatever works yo.
+        os.system(f'ssh sc2 "analog_output.py voltage C {new_c}"')
+        # No detach the first one - they'll collide and one will be ignored.
+        os.system(f'ssh sc2 "analog_output.py voltage D {new_d}" &')
+
+    def frontend_action(self):
+        pass
+
+    def backend_action(self):
+        pass
+
+
+class VisPyWFSPupilSteerPlugin(JoystickActionPlugin):
+
+    def dispatch_modlevel(self, dir: buts.JoyKeyDirEnum,
+                          mod_index: int) -> None:
+        pup_push = [500, 3000, 10000][mod_index]
+
+        push_xy = {
+                buts.JoyKeyDirEnum.UP: (0.0, 1.0),
+                buts.JoyKeyDirEnum.DOWN: (0.0, -1.0),
+                buts.JoyKeyDirEnum.LEFT: (-1.0, 0.0),
+                buts.JoyKeyDirEnum.RIGHT: (1.0, 0.0),
+        }[dir]
+
+        val_cd = redis.get_values(['X_PYWPPX', 'X_PYWPPY'])
+
+        new_c = int(round(val_cd[0] + push_xy[0] * pup_push))
+        new_d = int(round(val_cd[1] + push_xy[1] * pup_push))
+        # BLEUARGH - whatever works yo.
+        # Technically since the axes are decoupled we only need to fire one of these.
+        os.system(f'ssh sc2 "pywfs_pup x goto {new_c}"')
+        os.system(f'ssh sc2 "pywfs_pup y goto {new_d}"')
+
+    def frontend_action(self):
+        pass
+
+    def backend_action(self):
+        pass

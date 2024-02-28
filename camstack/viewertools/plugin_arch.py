@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from typing import Dict, Callable, Optional as Op, TYPE_CHECKING
-if TYPE_CHECKING:
-    from .generic_viewer_frontend import GenericViewerFrontend
+import typing as typ
+
+from camstack.viewertools.pygame_viewer_frontend import PygameViewerFrontend
+if typ.TYPE_CHECKING:
+    from .pygame_viewer_frontend import PygameViewerFrontend
     from .generic_viewer_backend import GenericViewerBackend
 
 from . import backend_utils as buts
@@ -10,6 +12,8 @@ from . import frontend_utils as futs
 
 from abc import ABC, abstractmethod
 import os
+
+from functools import partial
 
 _CORES = os.sched_getaffinity(0)  # AMD fix
 import pygame.constants as pgmc
@@ -19,26 +23,26 @@ os.sched_setaffinity(0, _CORES)  # AMD fix
 
 class BasePlugin(ABC):
 
-    def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
+    def __init__(self, frontend_obj: PygameViewerFrontend) -> None:
 
         # The enabled flag is stored internally but not used internally
         # It's for the sake of the frontend & backend to know what to call.
         self.enabled: bool = False
 
-        self.frontend_obj: GenericViewerFrontend = frontend_obj
+        self.frontend_obj: PygameViewerFrontend = frontend_obj
 
-        self.backend_obj: Op[GenericViewerBackend] = None
+        self.backend_obj: GenericViewerBackend | None = None
         self.has_backend: bool = False
 
-        self.shortcut_map: Dict[buts.Shortcut, Callable] = {}
+        self.shortcut_map: buts.T_ShortcutCbMap = {}
 
     def register_backend(self, backend_obj: GenericViewerBackend) -> None:
 
         self.has_backend = True
         self.backend_obj = backend_obj
 
-    def _append_shortcuts(self, subclass_shortcuts: Dict[buts.Shortcut,
-                                                         Callable]) -> None:
+    def _append_shortcuts(self,
+                          subclass_shortcuts: buts.T_ShortcutCbMap) -> None:
         '''
         don't subclass this. We're actually gonna be checking that subclass shortcuts don't collide
         with superclass shortcuts.
@@ -68,9 +72,81 @@ class BasePlugin(ABC):
 
 
 # Warning: abstract
+class OneAxisBackForthPlugin(BasePlugin):
+
+    def __init__(self, frontend_obj: PygameViewerFrontend, left: int,
+                 right: int, modlevels: list[int]) -> None:
+
+        super().__init__(frontend_obj)
+
+        self.left, self.right = left, right
+        self.mod_levels = modlevels
+
+        this_shortcuts: buts.T_ShortcutCbMap = {}
+
+        Sc = buts.Shortcut
+        for kk, mod_keys in enumerate(self.mod_levels):
+            this_shortcuts[Sc(self.left, mod_keys)] =\
+                partial(self.dispatch_modlevel, buts.BackForthDirEnum.LEFT, kk)
+            this_shortcuts[Sc(self.right, mod_keys)] =\
+                partial(self.dispatch_modlevel, buts.BackForthDirEnum.RIGHT, kk)
+
+        self._append_shortcuts(this_shortcuts)
+
+    @abstractmethod
+    def dispatch_modlevel(self, dir: buts.BackForthDirEnum,
+                          mod_index: int) -> None:
+        '''
+            Dispatch depending on key direction and modlevel.
+            One approach would be to pass the dir to various funcs depending on the mod_level
+            to functions with signature Callable[[buts.JoyKeyDirEnum], None]
+        '''
+        pass
+
+
+# Warning: abstract
+class JoystickActionPlugin(BasePlugin):
+
+    def __init__(self, frontend_obj: PygameViewerFrontend,
+                 joystick_udlr: buts.T_JoystickUDLR,
+                 modlevels: list[int]) -> None:
+
+        super().__init__(frontend_obj)
+
+        self.joystick_udlr = joystick_udlr
+        self.joy_up, self.joy_down, self.joy_left, self.joy_right = self.joystick_udlr
+        self.mod_levels = modlevels
+
+        this_shortcuts: buts.T_ShortcutCbMap = {}
+
+        Sc = buts.Shortcut
+        for kk, mod_keys in enumerate(self.mod_levels):
+            this_shortcuts[Sc(self.joy_up, mod_keys)] =\
+                partial(self.dispatch_modlevel, buts.JoyKeyDirEnum.UP, kk)
+            this_shortcuts[Sc(self.joy_down, mod_keys)] =\
+                partial(self.dispatch_modlevel, buts.JoyKeyDirEnum.DOWN, kk)
+            this_shortcuts[Sc(self.joy_left, mod_keys)] =\
+                partial(self.dispatch_modlevel, buts.JoyKeyDirEnum.LEFT, kk)
+            this_shortcuts[Sc(self.joy_right, mod_keys)] =\
+                partial(self.dispatch_modlevel, buts.JoyKeyDirEnum.RIGHT, kk)
+
+        self._append_shortcuts(this_shortcuts)
+
+    @abstractmethod
+    def dispatch_modlevel(self, dir: buts.JoyKeyDirEnum,
+                          mod_index: int) -> None:
+        '''
+            Dispatch depending on key direction and modlevel.
+            One approach would be to pass the dir to various funcs depending on the mod_level
+            to functions with signature Callable[[buts.JoyKeyDirEnum], None]
+        '''
+        pass
+
+
+# Warning: abstract
 class OneShotActionPlugin(BasePlugin):
 
-    def __init__(self, frontend_obj: GenericViewerFrontend, key_action: int,
+    def __init__(self, frontend_obj: PygameViewerFrontend, key_action: int,
                  modifier_and: int = 0x0) -> None:
         super().__init__(frontend_obj)
 
@@ -103,7 +179,7 @@ class OneShotActionPlugin(BasePlugin):
 
 class OnOffPlugin(BasePlugin):
 
-    def __init__(self, frontend_obj: GenericViewerFrontend, key_onoff: int,
+    def __init__(self, frontend_obj: PygameViewerFrontend, key_onoff: int,
                  modifier_and: int = 0x0) -> None:
 
         super().__init__(frontend_obj)

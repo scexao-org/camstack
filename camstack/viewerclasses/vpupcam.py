@@ -1,9 +1,15 @@
-from camstack.viewertools.generic_viewer_frontend import GenericViewerFrontend
-from swmain.network.pyroclient import connect
-from camstack.viewertools.generic_viewer_backend import GenericViewerBackend
+from __future__ import annotations
+
+import typing as typ
+
 import logging
 from rich.logging import RichHandler
-import camstack.viewertools.frontend_utils as futs
+
+from swmain.network.pyroclient import connect
+
+from ..viewertools import frontend_utils as futs
+from ..viewertools.pygame_viewer_frontend import PygameViewerFrontend
+from ..viewertools.generic_viewer_backend import GenericViewerBackend
 
 logger = logging.getLogger("vpupcam")
 stream_handler = RichHandler(level=logging.INFO, show_level=False,
@@ -11,7 +17,7 @@ stream_handler = RichHandler(level=logging.INFO, show_level=False,
 logger.addHandler(stream_handler)
 
 
-class VAMPIRESPupilCamViewerFrontend(GenericViewerFrontend):
+class VAMPIRESPupilCamViewerFrontend(PygameViewerFrontend):
     WINDOW_NAME = "VPUPCAM"
     CARTOON_FILE = "opeapea2.png"
 

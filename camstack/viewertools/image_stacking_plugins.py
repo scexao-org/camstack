@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, Callable, Optional as Op, TYPE_CHECKING
 if TYPE_CHECKING:
-    from .generic_viewer_frontend import GenericViewerFrontend
+    from .pygame_viewer_frontend import PygameViewerFrontend
     from .generic_viewer_backend import GenericViewerBackend
 
 from abc import abstractmethod
@@ -24,7 +24,7 @@ import numpy as np
 
 class RefImageAcquirePlugin(OneShotActionPlugin):
 
-    def __init__(self, frontend_obj: GenericViewerFrontend,
+    def __init__(self, frontend_obj: PygameViewerFrontend,
                  key_onoff: int = pgmc.K_r, modifier_and: int = pgmc.KMOD_LCTRL,
                  textbox: Op[futs.LabelMessage] = None):
 
@@ -96,8 +96,8 @@ class RefImageAcquirePlugin(OneShotActionPlugin):
 # Warning - abstract
 class DarkAcquirePlugin(RefImageAcquirePlugin):
 
-    def __init__(self, frontend_obj: GenericViewerFrontend,
-                 key_onoff: int = pgmc.K_d, modifier_and: int = pgmc.KMOD_LCTRL,
+    def __init__(self, frontend_obj: PygameViewerFrontend,
+                 key_onoff: int = pgmc.K_b, modifier_and: int = pgmc.KMOD_LCTRL,
                  **kwargs):
 
         super().__init__(frontend_obj, key_onoff, modifier_and, **kwargs)
@@ -145,3 +145,10 @@ class ApapanePalilaDarkAcquirePlugin(DarkAcquirePlugin):
     def move_appropriate_block(self, in_true: bool) -> None:
         # FIXME
         os.system('ssh sc2 ircam_block')
+
+
+class IiwiDarkAcquirePlugin(DarkAcquirePlugin):
+
+    def move_appropriate_block(self, in_true: bool) -> None:
+        in_out = 'in' if in_true else 'out'
+        os.system(f'ssh aorts irwfs {in_out}')

@@ -22,7 +22,7 @@ if args['--nohack']:
     os.environ["GLHACK_FORCENOT"] = "1"
 # We use the environment to manipulate the libGL hack that's happening
 # At the top of the import of generic_viewer_frontend
-from camstack.viewertools.generic_viewer_frontend import GenericViewerFrontend
+from camstack.viewertools.pygame_viewer_frontend import PygameViewerFrontend
 from camstack.viewertools.generic_viewer_backend import GenericViewerBackend
 
 zoom = int(args['-z'])
@@ -39,8 +39,8 @@ backend = GenericViewerBackend(shm_name)
 binned_backend_shape = (backend.shm_shape[0] // binn,
                         backend.shm_shape[1] // binn)
 
-frontend = GenericViewerFrontend(zoom, 20, binned_backend_shape,
-                                 fonts_zoom=fonts_zoom)
+frontend = PygameViewerFrontend(zoom, 20, binned_backend_shape,
+                                fonts_zoom=fonts_zoom)
 frontend.register_backend(backend)
 frontend.run()  # Perpetual while True:
 

@@ -1,23 +1,37 @@
-from typing import Optional as Op, Optional, Tuple
-from camstack.viewertools.generic_viewer_frontend import GenericViewerFrontend
-from swmain.network.pyroclient import connect
-from camstack.viewertools.generic_viewer_backend import GenericViewerBackend
-from camstack.viewertools import backend_utils as buts
-from camstack.viewertools import frontend_utils as futs
-from camstack.viewertools.plugin_arch import BasePlugin, OnOffPlugin
-from camstack.viewertools.image_stacking_plugins import DarkAcquirePlugin
-from camstack.viewertools.plugins import PupilMode, CrossHairPlugin, BullseyePlugin
-import pygame.constants as pgmc
-from functools import partial
+from __future__ import annotations
+
+import typing as typ
+
+import os
+
+_CORES = os.sched_getaffinity(0)  # AMD fix
 import pygame
+import pygame.constants as pgmc
+
+os.sched_setaffinity(0, _CORES)  # AMD fix
+
 import logging
-from swmain.redis import get_values
+import numpy as np
+
+from functools import partial
+
 from rich.panel import Panel
 from rich.live import Live
 from rich.logging import RichHandler
-import numpy as np
 
 from scxconf.pyrokeys import VAMPIRES
+
+from swmain.redis import get_values
+from swmain.network.pyroclient import connect
+
+from .pygame_viewer_frontend import PygameViewerFrontend
+from ..viewertools.generic_viewer_backend import GenericViewerBackend
+
+from . import backend_utils as buts
+from . import frontend_utils as futs
+from .plugin_arch import BasePlugin, OnOffPlugin
+from .image_stacking_plugins import DarkAcquirePlugin
+from .plugins import PupilMode, CrossHairPlugin, BullseyePlugin
 
 logger = logging.getLogger()
 
@@ -37,7 +51,7 @@ class MaskWheelPlugin(DeviceMixin, BasePlugin):
 
     DEVICE_NAME = VAMPIRES.MASK
 
-    def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
+    def __init__(self, frontend_obj: PygameViewerFrontend) -> None:
         super().__init__(frontend_obj)
         zoom = self.frontend_obj.fonts_zoom
         font = pygame.font.SysFont("default", 20 * zoom)
@@ -165,7 +179,7 @@ class FilterWheelPlugin(DeviceMixin, BasePlugin):
 
     DEVICE_NAME = VAMPIRES.FILT
 
-    def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
+    def __init__(self, frontend_obj: PygameViewerFrontend) -> None:
         super().__init__(frontend_obj)
         zoom = self.frontend_obj.fonts_zoom
         font = pygame.font.SysFont("default", 15 * zoom)
@@ -223,7 +237,7 @@ class DiffFilterWheelPlugin(DeviceMixin, BasePlugin):
 
     DEVICE_NAME = VAMPIRES.DIFF
 
-    def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
+    def __init__(self, frontend_obj: PygameViewerFrontend) -> None:
         super().__init__(frontend_obj)
         zoom = self.frontend_obj.fonts_zoom
         font = pygame.font.SysFont("default", 10 * zoom)
@@ -292,7 +306,7 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
 
     DEVICE_NAME = VAMPIRES.FIELDSTOP
 
-    def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
+    def __init__(self, frontend_obj: PygameViewerFrontend) -> None:
         super().__init__(frontend_obj)
         zoom = self.frontend_obj.fonts_zoom
         font = pygame.font.SysFont("default", 15 * zoom)
@@ -438,7 +452,7 @@ class MBIWheelPlugin(DeviceMixin, BasePlugin):
     DEVICE_NAME = VAMPIRES.MBI
     FIELDS = "F610", "F720", "F670", "F760"
 
-    def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
+    def __init__(self, frontend_obj: PygameViewerFrontend) -> None:
         super().__init__(frontend_obj)
         self.status = None
         self.current_index = None
@@ -544,7 +558,7 @@ class FocusPlugin(DeviceMixin, BasePlugin):
 
     DEVICE_NAME = VAMPIRES.FOCUS
 
-    def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
+    def __init__(self, frontend_obj: PygameViewerFrontend) -> None:
         super().__init__(frontend_obj)
         self.status = None
         self.current_index = None
@@ -583,7 +597,7 @@ class CamFocusPlugin(DeviceMixin, BasePlugin):
 
     DEVICE_NAME = VAMPIRES.CAMFCS
 
-    def __init__(self, frontend_obj: GenericViewerFrontend) -> None:
+    def __init__(self, frontend_obj: PygameViewerFrontend) -> None:
         super().__init__(frontend_obj)
         self.status = None
         self.current_index = None
@@ -785,7 +799,7 @@ class MBIBullseyePlugin(BullseyePlugin):
 
 class VCAMCompassPlugin(OnOffPlugin):
 
-    def __init__(self, frontend_obj: GenericViewerFrontend,
+    def __init__(self, frontend_obj: PygameViewerFrontend,
                  key_onoff: int = pgmc.K_p, modifier_and: int = 0,
                  color=futs.Colors.GREEN, color2=futs.Colors.CYAN,
                  imrpad_offset=None) -> None:
@@ -891,7 +905,7 @@ def rotation_matrix(angle: float):
 
 class VCAMScalePlugin(OnOffPlugin):
 
-    def __init__(self, frontend_obj: GenericViewerFrontend,
+    def __init__(self, frontend_obj: PygameViewerFrontend,
                  key_onoff: int = pgmc.K_i, modifier_and: int = 0,
                  color: str = futs.Colors.GREEN, platescale=5.64) -> None:
         super().__init__(frontend_obj, key_onoff, modifier_and)

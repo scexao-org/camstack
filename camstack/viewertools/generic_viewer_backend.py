@@ -4,7 +4,7 @@ from typing import (Tuple, Dict, List, Optional as Op, Callable,
                     TYPE_CHECKING)  # For type hints
 
 if TYPE_CHECKING:  # this type hint would cause a circular import
-    from .generic_viewer_frontend import GenericViewerFrontend
+    from .pygame_viewer_frontend import PygameViewerFrontend
     from .plugin_arch import BasePlugin
 
 import os
@@ -118,7 +118,7 @@ class GenericViewerBackend:
             print(self.frontend_obj.HELP_MSG)
         print(self.HELP_MSG)
 
-    def register_frontend(self, frontend: GenericViewerFrontend) -> None:
+    def register_frontend(self, frontend: PygameViewerFrontend) -> None:
 
         self.frontend_obj = frontend
         self.has_frontend = True
