@@ -3,7 +3,7 @@
     pygame SHM viewer - generic basic version
 
     Usage:
-        anycam.py <shm_name> [-z <zoom>] [-b <binn>] [-w] [--hack] [--nohack]
+        anycam.py <shm_name> [-z <zoom>] [-b <binn>] [-w]
 
     Options:
         -z <zoom>    Graphics windows factor [default: 1]
@@ -12,14 +12,8 @@
 '''
 
 import docopt
-import os
 
 args = docopt.docopt(__doc__)
-
-if args['--hack']:
-    os.environ["GLHACK_FORCE"] = "1"
-if args['--nohack']:
-    os.environ["GLHACK_FORCENOT"] = "1"
 # We use the environment to manipulate the libGL hack that's happening
 # At the top of the import of generic_viewer_frontend
 from camstack.viewertools.pygame_viewer_frontend import PygameViewerFrontend

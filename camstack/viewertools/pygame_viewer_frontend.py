@@ -6,20 +6,6 @@ if TYPE_CHECKING:  # this type hint would cause an unecessary import.
     from .generic_viewer_backend import GenericViewerBackend
     from .plugin_arch import BasePlugin
 
-# X forwarding hijack of libGL.so
-# Goal is to supersede the system's libGL.so by a Mesa libGL and avoid
-# conflicts between nvidia and non-nvidia machines over x forwarding
-# the underlying is equivalent to changing the LD_LIBRARY_PATH at runtime.
-# https://stackoverflow.com/questions/1178094/change-current-process-environments-ld-library-path
-# Only if X forwarding. Detecting "localhost" in $DISPLAY
-'''
-if (('localhost:' in os.environ.get('DISPLAY', '') or
-     "GLHACK_FORCE" in os.environ) and not "GLHACK_FORCENOT" in os.environ):
-    import ctypes
-    ctypes.cdll.LoadLibrary(os.environ["HOME"] + "/src/camstack/lib/libGL.so.1")
-    print('Activated libGL.so.1 hijack.')
-'''
-
 # Affinity fix for pygame messing up
 _CORES = os.sched_getaffinity(0)
 import pygame
