@@ -346,7 +346,6 @@ class VAMPIRESBaseViewerFrontend(PygameViewerFrontend):
         super().__init__(*args, **kwargs)
 
     def _init_labels(self) -> int:
-        self.fonts = futs.FontBook(self.fonts_zoom)
         r = int(self.data_disp_size[1] + 1.5 * self.fonts_zoom)
         c = 5 * self.fonts_zoom
 
@@ -373,7 +372,7 @@ class VAMPIRESBaseViewerFrontend(PygameViewerFrontend):
         r += int(self.lbl_times.em_size)
 
         self.lbl_trig = futs.LabelMessage("trigger: %3s / readout: %4s",
-                                          futs.Fonts.MONO, topleft=(c, r))
+                                          self.fonts.MONO, topleft=(c, r))
         self.lbl_trig.blit(self.pg_screen)
         r += int(self.lbl_trig.em_size)
 

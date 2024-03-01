@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import typing as typ
 
-from camstack.viewertools.pygame_viewer_frontend import PygameViewerFrontend
 if typ.TYPE_CHECKING:
     from .pygame_viewer_frontend import PygameViewerFrontend
     from .generic_viewer_backend import GenericViewerBackend

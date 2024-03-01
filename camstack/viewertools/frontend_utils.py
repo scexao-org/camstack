@@ -49,30 +49,6 @@ class FontBook:
             pygame.font.SysFont("monospace", 7 * system_zoom, bold=True)
 
 
-# Dynamic generation of fonts with the system zoom
-class Fonts:
-    # Cannot initialize from the get go, cause we need pygame to be initialized.
-    DEFAULT_25 = None
-    DEFAULT_16 = None
-    MONO_5 = None
-    MONO = None
-    MONOBOLD = None
-
-    @classmethod
-    def init_zoomed_fonts(cls, system_zoom: int) -> None:
-
-        Fonts.DEFAULT_25 = \
-            pygame.font.SysFont("default", 20 * system_zoom)
-        Fonts.DEFAULT_16 = \
-            pygame.font.SysFont("default", 10 * system_zoom)
-        Fonts.MONO_5 = \
-            pygame.font.SysFont("monospace", 5 * system_zoom)
-        Fonts.MONO = \
-            pygame.font.SysFont("monospace", 8 * system_zoom)
-        Fonts.MONOBOLD = \
-            pygame.font.SysFont("monospace", 7 * system_zoom, bold=True)
-
-
 class LabelMessage:
 
     def __init__(self, template_str: str, font: pygame.font.Font,
@@ -93,8 +69,7 @@ class LabelMessage:
         self.fg_col = fg_col
         self.bg_col = bg_col
 
-        self.rectangle = None
-        self.label: Op[pygame.surface.Surface] = None
+        self.label: pygame.surface.Surface | None = None
         self.render(tuple(0 for _ in range(self.n_args)))
 
         assert self.label  # mypy happy - self.label assigned inside self.render.

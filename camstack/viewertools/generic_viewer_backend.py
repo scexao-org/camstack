@@ -1,9 +1,8 @@
 from __future__ import annotations  # For type hints that would otherwise induce circular imports.
 
-from typing import (Tuple, Dict, List, Optional as Op, Callable,
-                    TYPE_CHECKING)  # For type hints
+import typing as typ
 
-if TYPE_CHECKING:  # this type hint would cause a circular import
+if typ.TYPE_CHECKING:  # this type hint would cause a circular import
     from .pygame_viewer_frontend import PygameViewerFrontend
     from .plugin_arch import BasePlugin
 
@@ -41,11 +40,11 @@ class GenericViewerBackend:
 
     COLORMAPS = COLORMAPS_A
 
-    CROP_CENTER_SPOT: Op[Tuple[float, float]] = None
+    CROP_CENTER_SPOT: tuple[float, float] | None = None
     MAX_ZOOM_LEVEL = 5  # Power of 2, 4 is 16x, 3 is 8x
 
-    SHORTCUTS: Dict[buts.Shortcut,
-                    Callable] = {}  # Do not subclass this, see constructor
+    SHORTCUTS: buts.T_ShortcutCbMap = {
+    }  # Do not subclass this, see constructor
 
     def __init__(self, name_shm: str) -> None:
 
@@ -56,15 +55,15 @@ class GenericViewerBackend:
 
         ### DATA Pipeline
         # yapf: disable
-        self.data_raw_uncrop: Op[np.ndarray] = None  # Fresh out of SHM
-        self.data_debias_uncrop: Op[np.ndarray] = None  # Debiased (ref, bias, badpix)
-        self.data_debias: Op[np.ndarray] = None  # Cropped
-        self.data_zmapped: Op[np.ndarray] = None  # Apply Z scaling
-        self.data_rgbimg: Op[np.ndarray] = None  # Apply colormap / convert to RGB
-        self.data_output: Op[np.ndarray] = None  # Interpolate to frontend display size
+        self.data_raw_uncrop: np.ndarray | None = None  # Fresh out of SHM
+        self.data_debias_uncrop: np.ndarray | None = None  # Debiased (ref, bias, badpix)
+        self.data_debias: np.ndarray | None = None  # Cropped
+        self.data_zmapped: np.ndarray | None = None  # Apply Z scaling
+        self.data_rgbimg: np.ndarray | None = None  # Apply colormap / convert to RGB
+        self.data_output: np.ndarray | None = None  # Interpolate to frontend display size
 
-        self.data_for_sub_dark: Op[np.ndarray] = None
-        self.data_for_sub_ref: Op[np.ndarray] = None
+        self.data_for_sub_dark: np.ndarray | None = None
+        self.data_for_sub_ref: np.ndarray | None = None
         #yapf: enable
 
         ### Clipping for pipeline
@@ -93,7 +92,7 @@ class GenericViewerBackend:
         ### Colors
 
         # yapf: disable
-        this_shortcuts: Dict[buts.Shortcut, Callable] = {
+        this_shortcuts: buts.T_ShortcutCbMap = {
                 buts.Shortcut(pgmc.K_h, 0x0): self.print_help,
                 buts.Shortcut(pgmc.K_m, 0x0): self.toggle_cmap,
                 buts.Shortcut(pgmc.K_l, 0x0): self.toggle_scaling,

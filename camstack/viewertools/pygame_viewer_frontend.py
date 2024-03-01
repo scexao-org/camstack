@@ -12,11 +12,13 @@ if TYPE_CHECKING:  # this type hint would cause an unecessary import.
 # the underlying is equivalent to changing the LD_LIBRARY_PATH at runtime.
 # https://stackoverflow.com/questions/1178094/change-current-process-environments-ld-library-path
 # Only if X forwarding. Detecting "localhost" in $DISPLAY
+'''
 if (('localhost:' in os.environ.get('DISPLAY', '') or
      "GLHACK_FORCE" in os.environ) and not "GLHACK_FORCENOT" in os.environ):
     import ctypes
     ctypes.cdll.LoadLibrary(os.environ["HOME"] + "/src/camstack/lib/libGL.so.1")
     print('Activated libGL.so.1 hijack.')
+'''
 
 # Affinity fix for pygame messing up
 _CORES = os.sched_getaffinity(0)
@@ -92,7 +94,7 @@ class PygameViewerFrontend:
         pygame.font.init()
 
         # Prep the fonts.
-        futs.Fonts.init_zoomed_fonts(self.fonts_zoom)
+        self.fonts = futs.FontBook(self.fonts_zoom)
 
         self.pg_screen = pygame.display.set_mode(self.pygame_win_size,
                                                  flags=0x0, depth=16)
@@ -140,30 +142,30 @@ class PygameViewerFrontend:
 
         # Generic camera viewer
         self.lbl_title = futs.LabelMessage(self.WINDOW_NAME,
-                                           futs.Fonts.DEFAULT_25, topleft=(c,
+                                           self.fonts.DEFAULT_25, topleft=(c,
                                                                            r))
         self.lbl_title.blit(self.pg_screen)
         r += int(self.lbl_title.em_size)
 
         # For help press [h]
         self.lbl_help = futs.LabelMessage("For help press [h], quit [x]",
-                                          futs.Fonts.MONO, topleft=(c, r))
+                                          self.fonts.MONO, topleft=(c, r))
         self.lbl_help.blit(self.pg_screen)
         r += int(self.lbl_help.em_size)
 
         # x0,y0 = {or}, {or} - sx,sy = {size}, {size}
         self.lbl_cropzone = futs.LabelMessage("crop = [%4d %4d %4d %4d]",
-                                              futs.Fonts.MONO, topleft=(c, r))
+                                              self.fonts.MONO, topleft=(c, r))
         r += int(self.lbl_cropzone.em_size)
 
         # t = {t} us - FPS = {fps} - NDR = {NDR}
         self.lbl_times = futs.LabelMessage("t=%6dus - fps %4.0f - NDR=%3d",
-                                           futs.Fonts.MONO, topleft=(c, r))
+                                           self.fonts.MONO, topleft=(c, r))
         r += int(self.lbl_times.em_size)
 
         # T = {t*NDR} ms - min, max = {} {}
         self.lbl_t_minmax = futs.LabelMessage("T=%3.1fms - m,M=%5.0f,%8.0f",
-                                              futs.Fonts.MONO, topleft=(c, r))
+                                              self.fonts.MONO, topleft=(c, r))
         r += int(self.lbl_times.em_size)
 
         # mouse = {},{} - flux = {}
@@ -173,7 +175,7 @@ class PygameViewerFrontend:
         # {Status message [sat, acquiring dark, acquiring ref...]}
         # At the bottom right.
         self.lbl_status = futs.LabelMessage(
-                '%s', futs.Fonts.DEFAULT_16,
+                '%s', self.fonts.DEFAULT_16,
                 topleft=(8 * self.system_zoom,
                          self.pygame_win_size[1] - 20 * self.system_zoom))
 

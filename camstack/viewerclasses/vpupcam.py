@@ -28,32 +28,32 @@ class VAMPIRESPupilCamViewerFrontend(PygameViewerFrontend):
 
         # Generic camera viewer
         self.lbl_title = futs.LabelMessage(self.WINDOW_NAME,
-                                           futs.Fonts.DEFAULT_25, topleft=(c,
+                                           self.fonts.DEFAULT_25, topleft=(c,
                                                                            r))
         self.lbl_title.blit(self.pg_screen)
         r += int(self.lbl_title.em_size)
 
         self.lbl_help = futs.LabelMessage("For help press [h], quit [x]",
-                                          futs.Fonts.MONO, topleft=(c, r))
+                                          self.fonts.MONO, topleft=(c, r))
         self.lbl_help.blit(self.pg_screen)
         r += int(self.lbl_help.em_size)
 
         self.lbl_cropzone = futs.LabelMessage("crop = [%4d %4d %4d %4d]",
-                                              futs.Fonts.MONO, topleft=(c, r))
+                                              self.fonts.MONO, topleft=(c, r))
         self.lbl_cropzone.blit(self.pg_screen)
         r += int(self.lbl_cropzone.em_size)
 
         self.lbl_times = futs.LabelMessage("t=%5.03f ms - fps= %4.0f",
-                                           futs.Fonts.MONO, topleft=(c, r))
+                                           self.fonts.MONO, topleft=(c, r))
         r += int(self.lbl_times.em_size)
 
         self.lbl_data_val = futs.LabelMessage("m,M=(%5.0f, %5.0f) mu=%5.0f",
-                                              futs.Fonts.MONO, topleft=(c, r))
+                                              self.fonts.MONO, topleft=(c, r))
         r += int(1.5 * self.lbl_data_val.em_size)
 
         # {Status message [sat, acquiring dark, acquiring ref...]}
         # At the bottom right.
-        self.lbl_status = futs.LabelMessage("%28s", futs.Fonts.MONO,
+        self.lbl_status = futs.LabelMessage("%28s", self.fonts.MONO,
                                             topleft=(c, r))
         r += int(self.lbl_status.em_size)
         return r
