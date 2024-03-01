@@ -9,7 +9,7 @@ import pygame.constants as pgmc
 
 os.sched_setaffinity(0, _CORES)  # AMD fix
 
-from ..viewerclasses import PueoViewerBackend, PueoViewerFrontend
+from ..viewerclasses.pueo import PueoViewerFrontend, PueoViewerBackend
 
 from ..viewertools.plugins import SaturationPlugin
 from ..viewertools.image_stacking_plugins import PueoDarkAcquirePlugin
@@ -18,18 +18,18 @@ from ..viewertools import pywfs_plugins as pplugs
 from ..viewertools import backend_utils as buts
 
 
-@click.command("pueo.py")
+@click.command("pueo")
 @click.option("-z", "--zoom", type=int, default=1,
               help="Graphics window zoom factor", show_default=True)
 @click.option("-b", "--bin", "binn", type=int, default=1,
               help="SHM binning factor", show_default=True)
 def main(zoom: int, binn: int):
-    backend = PueoViewerBackend(1, "ocam2d")
+    backend = PueoViewerBackend("ocam2d")
 
     # Native is 160x160. Giving ourselves 1.5 over
     binned_backend_shape = (240 // binn, 240 // binn)
 
-    frontend = PueoViewerFrontend(1, zoom, 20, binned_backend_shape,
+    frontend = PueoViewerFrontend(zoom, 20, binned_backend_shape,
                                   fonts_zoom=2 * zoom // binn)
     plugins = (
             # TODO: help messages
@@ -52,3 +52,7 @@ def main(zoom: int, binn: int):
     frontend.register_backend(backend)
     backend.register_frontend(frontend)
     frontend.run()
+
+
+if __name__ == "__main__":
+    main()
