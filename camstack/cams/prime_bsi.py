@@ -47,12 +47,12 @@ class PVCAMCamera(ParamsSHMCamera):
         )
 
     if typ.TYPE_CHECKING:
-        T_params_inj = typ.Optional[typ.Dict[int, typ.Union[int, float]]]
+        T_params_inj = dict[int, int]
 
     def prepare_camera_for_size(
             self,
-            mode_id: typ.Optional[util.Typ_mode_id] = None,
-            params_injection: T_params_inj = None,
+            mode_id: util.Typ_mode_id | None = None,
+            params_injection: T_params_inj | None = None,
     ) -> None:
         # TODO
         assert self.control_shm is not None
@@ -115,8 +115,14 @@ class PVCAMCamera(ParamsSHMCamera):
 
     def _params_shm_return_raw_to_fits_val(self, pvcam_key: int, value: float):
         key_to_cast_from: str = 'd' if type(value) is float else 'q'
-        key_to_cast_to: str = pvcam.STRUCT_KEY_DICT[pvcam.extract_type_byte(
-                pvcam_key)]
+        key_to_cast_to: str | None = pvcam.STRUCT_KEY_DICT[
+                pvcam.extract_type_byte(pvcam_key)]
+
+        if key_to_cast_to is None:
+            raise ValueError(
+                    f'key_to_cast_from: {key_to_cast_from}; key_to_cast_to: None - Illegal state.'
+            )
+
         value_reinterpret = struct.unpack(key_to_cast_to,
                                           struct.pack(key_to_cast_from,
                                                       value))[0]
@@ -208,7 +214,9 @@ class JensPrimeBSI(PVCAMCamera):
         return temp_C + 273.15
 
     def get_fan_speed(self) -> pvcam.EN_FAN_SPEED:
-        return self._prm_getvalue(None, pvcam.PARAM_FAN_SPEED_SETPOINT)
+        return pvcam.EN_FAN_SPEED(
+                self._prm_getvalue(None, pvcam.PARAM_FAN_SPEED_SETPOINT))
 
     def set_fan_speed(self, speed: pvcam.EN_FAN_SPEED) -> pvcam.EN_FAN_SPEED:
-        return self._prm_setvalue(speed, None, pvcam.PARAM_FAN_SPEED_SETPOINT)
+        return pvcam.EN_FAN_SPEED(
+                self._prm_setvalue(speed, None, pvcam.PARAM_FAN_SPEED_SETPOINT))
