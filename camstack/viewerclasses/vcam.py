@@ -221,21 +221,6 @@ CTRL  + s     : Save current position to last configuration"""
         if both:
             self.other_cam.set_tint(tint)
 
-    def _get_crop_slice(self, center, shape):
-        cr, cc = center
-        halfside = (shape[0] / 2**(self.crop_lvl_id + 1),
-                    shape[1] / 2**(self.crop_lvl_id + 1))
-        # Adjust, in case we've just zoomed-out from a crop spot that's too close to the edge!
-        cr_temp = min(max(cr, halfside[0]), self.shm_shape[0] - halfside[0])
-        cc_temp = min(max(cc, halfside[1]), self.shm_shape[1] - halfside[1])
-
-        cr_low = int(cr_temp - halfside[0])
-        cc_low = int(cc_temp - halfside[1])
-        cr_high = cr_low + int(2 * halfside[0])
-        cc_high = cc_low + int(2 * halfside[1])
-        crop_slice = np.s_[cr_low:cr_high, cc_low:cc_high]
-        return crop_slice
-
     def toggle_crop(self, *args, **kwargs) -> None:
         super().toggle_crop(*args, **kwargs)
 

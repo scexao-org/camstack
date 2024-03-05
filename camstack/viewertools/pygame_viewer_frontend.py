@@ -1,10 +1,11 @@
 from __future__ import annotations  # For TYPE_CHECKING
 
-import os, sys
-from typing import List, Tuple, Any, Dict, TYPE_CHECKING, Optional as Op
-if TYPE_CHECKING:  # this type hint would cause an unecessary import.
+import typing as typ
+if typ.TYPE_CHECKING:  # this type hint would cause an unecessary import.
     from .generic_viewer_backend import GenericViewerBackend
     from .plugin_arch import BasePlugin
+
+import os, sys
 
 # Affinity fix for pygame messing up
 _CORES = os.sched_getaffinity(0)
@@ -30,14 +31,14 @@ class PygameViewerFrontend:
     HELP_MSG = """
     """
 
-    CARTOON_FILE: Op[str] = None
+    CARTOON_FILE: str | None = None
 
     def __init__(self, system_zoom: int, fps: int,
-                 display_base_size: Tuple[int, int],
-                 fonts_zoom: Op[int] = None) -> None:
+                 display_base_size: tuple[int, int],
+                 fonts_zoom: int | None = None) -> None:
 
         self.has_backend = False
-        self.backend_obj: Op[GenericViewerBackend] = None
+        self.backend_obj: GenericViewerBackend | None = None
 
         self.system_zoom = system_zoom  # Former z1
         self.fonts_zoom = self.system_zoom if fonts_zoom is None else fonts_zoom
@@ -69,7 +70,7 @@ class PygameViewerFrontend:
         # Prep plugins
         #####
         # Probs don't do this? Cuz inheritance problems?
-        self.plugins: List[BasePlugin] = []
+        self.plugins: list[BasePlugin] = []
 
         #####
         # Prepare the pygame stuff (prefix pygame objects with "pg_")
@@ -98,8 +99,15 @@ class PygameViewerFrontend:
         self.pg_data_rect = self.pg_datasurface.get_rect()
         self.pg_data_rect.topleft = (0, 0)
 
-        self.pg_updated_rects: List[pygame.rect.Rect] = [
+        self.pg_updated_rects: list[pygame.rect.Rect] = [
         ]  # For processing in the loop
+
+        #####
+        # Mouse
+        #####
+
+        self.pos_mouse = (0.0, 0.0)
+        self.value_mouse = -1.0
 
         #####
         # Labels
@@ -155,6 +163,10 @@ class PygameViewerFrontend:
         r += int(self.lbl_times.em_size)
 
         # mouse = {},{} - flux = {}
+        # Not writing X and Y - we don't have them in data coords at this point.
+        self.lbl_mouse = futs.LabelMessage("mouse () = %6d", self.fonts.MONO,
+                                           topleft=(c, r))
+        r += int(self.lbl_mouse.em_size)
 
         # {scaling type} - {has bias sub}
 
@@ -214,11 +226,13 @@ class PygameViewerFrontend:
         self.lbl_t_minmax.render((tint_ms * ndr, self.backend_obj.data_min,
                                   self.backend_obj.data_max),
                                  blit_onto=self.pg_screen)
+        self.lbl_mouse.render((self.value_mouse, ), blit_onto=self.pg_screen)
 
         self.pg_updated_rects += [
                 self.lbl_cropzone.rectangle,
                 self.lbl_times.rectangle,
                 self.lbl_t_minmax.rectangle,
+                self.lbl_mouse.rectangle,
         ]
 
     def _inloop_plugin_modes(self) -> None:
@@ -278,16 +292,25 @@ class PygameViewerFrontend:
         assert self.backend_obj
 
         self.pg_updated_rects = []
-
+        '''
+        Call the backend loop iteration and get RGB data.
+        '''
         self.backend_obj.data_iter()
 
         data_output = self.backend_obj.data_rgbimg
         assert data_output is not None  # backend is init, data_output is not None
-
+        '''
+        Resize the data, possibly using black edge padding.
+        '''
         img = Image.fromarray(data_output)
+        data_size_T = (self.data_disp_size[1], self.data_disp_size[0])
 
         # Rescale and pad if necessary - using PIL is much faster than scipy.ndimage
         # Embedding the system zoom through PIL is also more efficient than doing it in numpy
+
+        # Offset coordinate of the plotted array vs the data_disp region
+        # We'll need them for the mouse.
+
         if data_output.shape[:2] != self.data_disp_basesize:
             row_fac = data_output.shape[0] / self.data_disp_basesize[0]
             col_fac = data_output.shape[1] / self.data_disp_basesize[1]
@@ -295,7 +318,10 @@ class PygameViewerFrontend:
             if abs(row_fac / col_fac - 1) < 0.05:
                 # Rescale both to size, no pad, even if that means a little distortion
                 self.data_blit_staging = np.asarray(
-                        img.resize(self.data_disp_size[::-1], Image.NEAREST))
+                        img.resize(data_size_T, Image.NEAREST))
+                self.last_transform = futs.DrawingTransform(
+                        0, self.system_zoom / row_fac, 0,
+                        self.system_zoom / col_fac)
 
             elif row_fac > col_fac:
                 # Rescale based on rows, pad columns
@@ -309,6 +335,10 @@ class PygameViewerFrontend:
                 # This is gonna be trouble with odd sizes, but we should be OK.
                 self.data_blit_staging[:, -cskip:, :] = 0
 
+                self.last_transform = futs.DrawingTransform(
+                        0, self.system_zoom / row_fac, cskip,
+                        self.system_zoom / row_fac)
+
             elif col_fac >= row_fac:
                 # Rescale based on columns, pad rows
                 rsize = self.system_zoom *\
@@ -319,16 +349,27 @@ class PygameViewerFrontend:
                                    Image.NEAREST))
                 self.data_blit_staging[:rskip, :, :] = 0
                 self.data_blit_staging[-rskip:, :, :] = 0
+
+                self.last_transform = futs.DrawingTransform(
+                        rskip, self.system_zoom / col_fac, 0,
+                        self.system_zoom / col_fac)
             else:
                 raise ValueError("row_fac / col_fac calculation messed up.")
 
-        else:  # Data is the native display size.
+        else:  # Data is the native display size. One would wonder why we resize at all?
             self.data_blit_staging = np.asarray(
-                    img.resize((self.data_disp_size[::-1]), Image.NEAREST))
+                    img.resize(data_size_T, Image.NEAREST))
+            self.last_transform = futs.DrawingTransform(0, self.system_zoom, 0,
+                                                        self.system_zoom)
 
         pygame.surfarray.blit_array(self.pg_datasurface, self.data_blit_staging)
-
-        # blit background and png for viewer
+        '''
+        Process the mouse
+        '''
+        self._process_mouse_position()
+        '''
+        Blit background and cute image
+        '''
         self.pg_background.fill(futs.Colors.CLEAR)
         self.pg_background.set_alpha(255)
         self.pg_screen.blit(self.pg_background, self.pg_background_rect,
@@ -337,13 +378,58 @@ class PygameViewerFrontend:
         if self.CARTOON_FILE is not None:
             self.pg_screen.blit(self.cartoon_img_scaled, self.pg_cartoon_rect)
             self.pg_updated_rects.append(self.pg_cartoon_rect)
-        # Drawing for toggled modes
+        '''
+        Plugins
+        '''
         self._inloop_plugin_modes()
-        # Manage labels
+        '''
+        Labels
+        '''
         self._inloop_update_labels()
-        # Finally
+        '''
+        Finish it all.
+        '''
         self.pg_screen.blit(self.pg_datasurface, self.pg_data_rect)
         self.pg_updated_rects += [self.pg_data_rect]
+
+    def _process_mouse_position(self) -> None:
+        '''
+        There is actually a more generic case of coordinate conversion...
+
+        - We get the position of the mouse within data_blit_staging.
+        - Convert it to coords in the data_crop of the backend
+        - Convert it to coords in the data_raw_uncrop of the backend
+
+        This function ought to set self.pos_mouse and self.value_mouse
+        '''
+        pos_mouse = pygame.mouse.get_pos()
+
+        # Check the cursor is within the data area.
+        # We still assert here the data area starts at the top left corner.
+        if not (pos_mouse[0] < self.data_blit_staging.shape[0] and
+                pos_mouse[1] < self.data_blit_staging.shape[1]):
+            self.value_mouse = -1
+            return
+
+        lt = self.last_transform
+
+        # Convert coords to the data_output of the backend.
+        row_crop = (pos_mouse[0] - lt.r_offset) / lt.r_scale
+        col_crop = (pos_mouse[1] - lt.c_offset) / lt.c_scale
+
+        # Ask backend for a conversion into the uncropped
+        assert self.backend_obj is not None
+        row_uncrop, col_uncrop = self.backend_obj.uncrop_coordinates(
+                row_crop, col_crop)
+
+        self.pos_mouse = (row_uncrop, col_uncrop)
+        # print(self.last_transform)
+        # print(pos_mouse, self.pos_mouse)
+
+        r_uc, c_uc = int(row_uncrop), int(col_uncrop)
+        if (r_uc >= 0 and r_uc < self.backend_obj.shm_shape[0] and c_uc >= 0 and
+                    c_uc < self.backend_obj.shm_shape[1]):
+            self.value_mouse = self.backend_obj.data_debias_uncrop[r_uc, c_uc]
 
 
 if __name__ == "__main__":

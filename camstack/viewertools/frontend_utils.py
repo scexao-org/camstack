@@ -7,9 +7,9 @@ _CORES = os.sched_getaffinity(0)  # AMD fix
 import pygame.event
 import pygame.font
 
-import pygame.constants as pgm_ct
-
 os.sched_setaffinity(0, _CORES)  # AMD fix
+
+from dataclasses import dataclass
 
 # COLORS
 
@@ -117,3 +117,11 @@ class LabelMessage:
         assert self.label  # mypy happy, label initialized.
 
         pg_screen.blit(self.label, self.rectangle)
+
+
+@dataclass
+class DrawingTransform:
+    r_offset: float
+    r_scale: float
+    c_offset: float
+    c_scale: float

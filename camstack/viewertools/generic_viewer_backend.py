@@ -9,7 +9,7 @@ if typ.TYPE_CHECKING:  # this type hint would cause a circular import
 import os
 
 _CORES = os.sched_getaffinity(0)  # AMD fix
-import pygame.constants as pgmc
+import pygame.constants as pgmc  # For shortcuts
 
 os.sched_setaffinity(0, _CORES)  # AMD fix
 
@@ -17,6 +17,7 @@ from astropy.io import fits
 from pyMilk.interfacing.shm import SHM
 
 from . import backend_utils as buts
+from .backend_utils import Shortcut as Sc
 
 from astropy.io import fits
 from pyMilk.interfacing.shm import SHM
@@ -32,11 +33,20 @@ from functools import partial
 
 
 class GenericViewerBackend:
+    '''
+    Generic Backend class
+
+    Contains various types of functions:
+        Initialization functions
+        Keyboard shortcut callbacks.
+        Graphicsloop
+    '''
+
     HELP_MSG = """
     """
 
-    COLORMAPS_A = [cm.gray, cm.inferno, cm.magma, cm.viridis]
-    COLORMAPS_B = [cm.gray, cm.seismic, cm.Spectral]
+    COLORMAPS_A = [cm.gray, cm.inferno, cm.magma, cm.viridis]  # type: ignore
+    COLORMAPS_B = [cm.gray, cm.seismic, cm.Spectral]  # type: ignore
 
     COLORMAPS = COLORMAPS_A
 
@@ -67,8 +77,8 @@ class GenericViewerBackend:
         #yapf: enable
 
         ### Clipping for pipeline
-        self.low_clip: Op[float] = None
-        self.high_clip: Op[float] = None
+        self.low_clip: float | None = None
+        self.high_clip: float | None = None
 
         ### Various flags
         self.flag_subref_on: bool = False
@@ -93,19 +103,19 @@ class GenericViewerBackend:
 
         # yapf: disable
         this_shortcuts: buts.T_ShortcutCbMap = {
-                buts.Shortcut(pgmc.K_h, 0x0): self.print_help,
-                buts.Shortcut(pgmc.K_m, 0x0): self.toggle_cmap,
-                buts.Shortcut(pgmc.K_l, 0x0): self.toggle_scaling,
-                buts.Shortcut(pgmc.K_z, 0x0): partial(self.toggle_crop, incr=1),
-                buts.Shortcut(pgmc.K_z, pgmc.KMOD_LSHIFT): partial(self.toggle_crop, incr=-1),
-                buts.Shortcut(pgmc.K_z, pgmc.KMOD_LCTRL): self.reset_crop,
-                buts.Shortcut(pgmc.K_v, 0x0): self.toggle_averaging,
-                buts.Shortcut(pgmc.K_UP, 0x0): partial(self.steer_crop, pgmc.K_UP),
-                buts.Shortcut(pgmc.K_DOWN, 0x0): partial(self.steer_crop, pgmc.K_DOWN),
-                buts.Shortcut(pgmc.K_LEFT, 0x0): partial(self.steer_crop, pgmc.K_LEFT),
-                buts.Shortcut(pgmc.K_RIGHT, 0x0): partial(self.steer_crop, pgmc.K_RIGHT),
-                buts.Shortcut(pgmc.K_d, 0x0): self.toggle_sub_dark,
-                buts.Shortcut(pgmc.K_r, 0x0): self.toggle_sub_ref,
+                Sc(pgmc.K_h, 0x0): self.print_help,
+                Sc(pgmc.K_m, 0x0): self.toggle_cmap,
+                Sc(pgmc.K_l, 0x0): self.toggle_scaling,
+                Sc(pgmc.K_z, 0x0): partial(self.toggle_crop, incr=1),
+                Sc(pgmc.K_z, pgmc.KMOD_LSHIFT): partial(self.toggle_crop, incr=-1),
+                Sc(pgmc.K_z, pgmc.KMOD_LCTRL): self.reset_crop,
+                Sc(pgmc.K_v, 0x0): self.toggle_averaging,
+                Sc(pgmc.K_UP, 0x0): partial(self.steer_crop, pgmc.K_UP),
+                Sc(pgmc.K_DOWN, 0x0): partial(self.steer_crop, pgmc.K_DOWN),
+                Sc(pgmc.K_LEFT, 0x0): partial(self.steer_crop, pgmc.K_LEFT),
+                Sc(pgmc.K_RIGHT, 0x0): partial(self.steer_crop, pgmc.K_RIGHT),
+                Sc(pgmc.K_d, 0x0): self.toggle_sub_dark,
+                Sc(pgmc.K_r, 0x0): self.toggle_sub_ref,
         }
         # yapf: enable
         # Note escape and X are reserved for quitting
@@ -113,17 +123,31 @@ class GenericViewerBackend:
         self.SHORTCUTS.update(this_shortcuts)
 
     def print_help(self):
+        '''
+        Callback function.
+        Print the frontend's HELP_MSG, then self's.
+        '''
         if self.frontend_obj:
             print(self.frontend_obj.HELP_MSG)
         print(self.HELP_MSG)
 
     def register_frontend(self, frontend: PygameViewerFrontend) -> None:
-
+        '''
+        Initialization function.
+        Pair this object with a graphical frontend at runtime
+        Future use: bind to a frontend object that may not be based on pygame.
+        '''
         self.frontend_obj = frontend
         self.has_frontend = True
         # Now there's the problem of the reverse-bind of text boxes to mode objects
 
-    def cross_register_plugins(self, plugins: List[BasePlugin]) -> None:
+    def cross_register_plugins(self, plugins: list[BasePlugin]) -> None:
+        '''
+        Initialization function.
+        Reveive a list of plugins, register self to each and every one.
+
+        Check all shorcuts for redundancies.
+        '''
         self.plugin_objs = plugins
 
         key_set = set(self.SHORTCUTS.keys())
@@ -141,17 +165,29 @@ class GenericViewerBackend:
             self.SHORTCUTS.update(plugin.shortcut_map)
 
     def _inloop_plugin_action(self) -> None:
+        '''
+        In-graphicsloop function.
+        Toggle a backend (computational) action for each and every plugin.
+        '''
         for plugin in self.plugin_objs:
             plugin.backend_action()
 
-    def toggle_cmap(self, which: Op[int] = None) -> None:
+    def toggle_cmap(self, which: int | None = None) -> None:
+        '''
+        Callback function.
+        Change colormap.
+        '''
         if which is None:
             self.cmap_id = (self.cmap_id + 1) % len(self.COLORMAPS)
         else:
             self.cmap_id = which
         self.cmap = self.COLORMAPS[self.cmap_id]
 
-    def toggle_sub_dark(self, state: Op[bool] = None):
+    def toggle_sub_dark(self, state: bool | None = None):
+        '''
+        Callback function.
+        Toggle dark subtraction.
+        '''
         if state is None:
             state = not self.flag_subdark_on
         if state and self.data_for_sub_dark is not None:
@@ -160,7 +196,11 @@ class GenericViewerBackend:
         if not state:
             self.flag_subdark_on = False
 
-    def toggle_sub_ref(self, state: Op[bool] = None):
+    def toggle_sub_ref(self, state: bool | None = None):
+        '''
+        Callback function.
+        Toggle reference image subtraction.
+        '''
         if state is None:
             state = not self.flag_subref_on
         if state and self.data_for_sub_ref is not None:
@@ -169,13 +209,21 @@ class GenericViewerBackend:
         if not state:
             self.flag_subref_on = False
 
-    def toggle_scaling(self, value: Op[int] = None) -> None:
+    def toggle_scaling(self, value: int | None = None) -> None:
+        '''
+        Callback function.
+        Toggle scaling (linear -> power root -> log).
+        '''
         if value is None:
             self.flag_non_linear = (self.flag_non_linear + 1) % 3
         else:
             self.flag_non_linear = value
 
-    def toggle_crop(self, which: Op[int] = None, incr: int = 1) -> None:
+    def toggle_crop(self, which: int | None = None, incr: int = 1) -> None:
+        '''
+        Callback function.
+        Toggle zoomed ROI.
+        '''
         if which is None:
             self.crop_lvl_id = (self.crop_lvl_id + incr) % \
                         (self.MAX_ZOOM_LEVEL)
@@ -191,25 +239,39 @@ class GenericViewerBackend:
             self.crop_slice = np.s_[:, :]
 
     def reset_crop(self) -> None:
+        '''
+        Callback function.
+        Reset croplevel to full frame
+        '''
         self.crop_lvl_id = -1
         self.CROP_CENTER_SPOT = self.shm_shape[0] / 2, self.shm_shape[1] / 2
         self.toggle_crop()
 
     def _get_crop_slice(self, center, shape):
+        '''
+        Internal function.
+        Compute the numpy slice that goes from raw data -> displayed data that
+        is used for cropping / zooming.
+        '''
         cr, cc = center
         halfside = (shape[0] / 2**(self.crop_lvl_id + 1),
                     shape[1] / 2**(self.crop_lvl_id + 1))
         # Adjust, in case we've just zoomed-out from a crop spot that's too close to the edge!
-        cr_temp = min(max(cr, halfside[0]), shape[0] - halfside[0])
-        cc_temp = min(max(cc, halfside[1]), shape[1] - halfside[1])
-        crop_slice = np.s_[
-                int(round(cr_temp -
-                          halfside[0])):int(round(cr_temp + halfside[0])),
-                int(round(cc_temp -
-                          halfside[1])):int(round(cc_temp + halfside[1]))]
-        return crop_slice
+        cr_temp = min(max(cr, halfside[0]), self.shm_shape[0] - halfside[0])
+        cc_temp = min(max(cc, halfside[1]), self.shm_shape[1] - halfside[1])
+
+        cr_low = int(round(cr_temp - halfside[0]))
+        cc_low = int(round(cc_temp - halfside[1]))
+        cr_high = cr_low + int(2 * halfside[0])
+        cc_high = cc_low + int(2 * halfside[1])
+
+        return np.s_[cr_low:cr_high, cc_low:cc_high]
 
     def steer_crop(self, direction: int) -> None:
+        '''
+        Callback function.
+        In cropped/zoomed mode, steer the center of the zoom over the data buffer.
+        '''
         assert self.CROP_CENTER_SPOT
         assert self.crop_offset
 
@@ -239,14 +301,28 @@ class GenericViewerBackend:
         self.toggle_crop(which=self.crop_lvl_id)
 
     def toggle_averaging(self) -> None:
+        '''
+        Callback function.
+        Toggle continuous frame averaging for display.
+        '''
         self.flag_averaging = not self.flag_averaging
         self.count_averaging = 0
 
     def set_clipping_values(self, low: float, high: float) -> None:
+        '''
+        Unused?
+        '''
         self.low_clip = low
         self.high_clip = high
 
     def data_iter(self) -> None:
+        '''
+        MAIN In-graphicsloop function.
+        Acquires and processes the data and calls the plugin in-loop function.
+
+        It's the GUI's framerating loop that will call this function
+        in short, the frontend shall call this during its own loop_iter().
+        '''
         self._data_grab()
         self._data_referencing()
         self._data_crop()
@@ -259,6 +335,7 @@ class GenericViewerBackend:
 
     def _data_grab(self) -> None:
         '''
+        Data function.
         SHM -> self.data_raw_uncrop
         '''
         if self.flag_averaging and self.flag_data_init:
@@ -273,6 +350,7 @@ class GenericViewerBackend:
 
     def _data_referencing(self) -> None:
         '''
+        Data function.
         self.data_raw_uncropped -> self.data_debias_uncrop
 
         Subtract dark, ref, etc
@@ -288,10 +366,10 @@ class GenericViewerBackend:
 
     def _data_crop(self) -> None:
         '''
+        Data function.
         SHM -> self.data_debias_uncrop -> self.data_debias
 
-        Crop, but also compute some uncropped stats
-        that will be useful further down the pipeline
+        Crop, but also compute some uncropped stats.
         '''
         assert self.data_raw_uncrop is not None
         assert self.data_debias_uncrop is not None
@@ -304,6 +382,8 @@ class GenericViewerBackend:
 
     def _data_zscaling(self) -> None:
         '''
+        Data function.
+
         self.data_debias -> self.data_zmapped
         '''
         assert self.data_debias is not None
@@ -320,37 +400,39 @@ class GenericViewerBackend:
             low_clip = np.nanpercentile(self.data_debias[1:, 1:], 0.8)
 
         if low_clip:
-            m = low_clip
+            low = low_clip
         else:
-            m = self.data_plot_min
+            low = self.data_plot_min
 
         if high_clip:
-            M = high_clip
+            high = high_clip
         else:
-            M = self.data_plot_max
+            high = self.data_plot_max
 
         if low_clip or high_clip:
-            data = np.clip(self.data_debias, m, M)
+            data = np.clip(self.data_debias, low, high)
         else:
             data = self.data_debias.copy()
 
         if self.flag_non_linear == buts.ZScaleEnum.LIN:  # linear
             op = lambda x: x
         elif self.flag_non_linear == buts.ZScaleEnum.ROOT3:  # pow .33
-            op = lambda x: (x - m)**0.3
+            op = lambda x: (x - low)**0.3
         elif self.flag_non_linear == buts.ZScaleEnum.LOG:  # log
-            op = lambda x: np.log10(x - m + 1)
+            op = lambda x: np.log10(x - low + 1)
         else:
             raise AssertionError(
                     f"self.flag_non_linear {self.flag_non_linear} is invalid")
 
         data = op(data)
-        m, M = op(m), op(M)
+        low, high = op(low), op(high)
 
-        self.data_zmapped = (data - m) / (M - m)
+        self.data_zmapped = (data - low) / (high - low)
 
     def _data_coloring(self) -> None:
         '''
+        Data function.
+
         self.data_zmapped -> self.data_rgbimg
         '''
         # Coloring with cmap, 0-255 uint8, discard alpha channel
@@ -358,10 +440,12 @@ class GenericViewerBackend:
 
     def process_shortcut(self, mods: int, key: int) -> None:
         '''
-            Called from the frontend with the pygame modifiers and the key
-            We built self.SHORTCUTS as a (mods, key) using pygame hex values, so
-            should be OK.
-            Or we can import pygame constants...
+        Main callback dispatch function.
+
+        Called from the frontend with the pygame modifiers and the key
+        We built self.SHORTCUTS as a (mods, key) using pygame hex values, so
+        should be OK.
+        Or we can import pygame constants...
         '''
 
         # Willfully ignore numlock
@@ -372,3 +456,18 @@ class GenericViewerBackend:
         if this_shortcut in self.SHORTCUTS:
             # Call the mapped callable
             self.SHORTCUTS[this_shortcut]()
+
+    def uncrop_coordinates(self, row_coord: float,
+                           col_coord: float) -> tuple[float, float]:
+        row_slice, col_slice = self.crop_slice
+
+        assert row_slice.step is None and col_slice.step is None
+
+        row_out, col_out = row_coord, col_coord
+
+        if row_slice.start is not None:
+            row_out = row_coord + row_slice.start
+        if col_slice.start is not None:
+            col_out = col_coord + col_slice.start
+
+        return row_out, col_out

@@ -84,9 +84,9 @@ class PyWFSFluxPlugin(OnOffPlugin):
         flux1 = max(1e-3,
                     np.sum(self.backend_obj.data_debias_uncrop[:xh_be, :yh_be]))
         flux2 = max(1e-3,
-                    np.sum(self.backend_obj.data_debias_uncrop[:xh_be, yh_be:]))
-        flux3 = max(1e-3,
                     np.sum(self.backend_obj.data_debias_uncrop[xh_be:, :yh_be]))
+        flux3 = max(1e-3,
+                    np.sum(self.backend_obj.data_debias_uncrop[:xh_be, yh_be:]))
         flux4 = max(1e-3,
                     np.sum(self.backend_obj.data_debias_uncrop[xh_be:, yh_be:]))
 
