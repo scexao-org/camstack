@@ -184,8 +184,8 @@ class PygameViewerFrontend:
             return
 
         # FIXME $CAMSTACK_ROOT instead of $HOME/src/camstack
-        path_cartoon = os.environ[
-                'HOME'] + f"/src/camstack/conf/{self.CARTOON_FILE}"
+        path_cartoon = os.environ['HOME'] +\
+            f"/src/camstack/conf/{self.CARTOON_FILE}"
         cartoon_img = pygame.image.load(path_cartoon).convert_alpha()
 
         w, h = cartoon_img.get_size()

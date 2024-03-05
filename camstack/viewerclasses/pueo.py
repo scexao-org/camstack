@@ -14,7 +14,7 @@ class PueoViewerFrontend(PygameViewerFrontend):
     HELP_MSG = """
     """
 
-    CARTOON_FILE = 'Pueo4.png'
+    CARTOON_FILE = 'Pueo2.png'
 
     def _init_labels(self) -> int:
 

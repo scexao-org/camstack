@@ -26,7 +26,7 @@ from ..viewertools import backend_utils as buts
 def main(zoom: int, binn: int):
     backend = PueoViewerBackend("ocam2d")
 
-    # Native is 160x160. Giving ourselves 1.5 over
+    # Native is 120x120. Giving ourselves 2x
     binned_backend_shape = (240 // binn, 240 // binn)
 
     frontend = PueoViewerFrontend(zoom, 20, binned_backend_shape,
