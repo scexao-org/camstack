@@ -16,8 +16,8 @@ os.sched_setaffinity(0, _CORES)  # AMD fix
 from astropy.io import fits
 from pyMilk.interfacing.shm import SHM
 
-from . import backend_utils as buts
-from .backend_utils import Shortcut as Sc
+from . import utils_backend as buts
+from .utils_backend import Shortcut as Sc
 
 from astropy.io import fits
 from pyMilk.interfacing.shm import SHM
@@ -25,11 +25,6 @@ from pyMilk.interfacing.shm import SHM
 import numpy as np
 from matplotlib import cm
 from functools import partial
-
-# class BasicCamViewer:
-# More basic, with less text lines at the bottom.
-
-# TODO: a batched Redis query.
 
 
 class GenericViewerBackend:
@@ -43,6 +38,20 @@ class GenericViewerBackend:
     '''
 
     HELP_MSG = """
+Display controls:
+--------------------------------------------------
+c         : display cross
+k         : display camera SHM keywords
+d         : subtract dark frame
+r         : subtract reference frame
+l         : cycle scaling (lin, root, log)
+m         : cycle colormaps
+v         : start/stop averaging frames
+SPACE     : freeze frame
+z         : zoom on the center of the image
+SHIFT + z : unzoom image (cycle backwards)
+CTRL + z  : reset zoom and crop
+ARROWS    : steer crop
     """
 
     COLORMAPS_A = [cm.gray, cm.inferno, cm.magma, cm.viridis]  # type: ignore
@@ -81,11 +90,12 @@ class GenericViewerBackend:
         self.high_clip: float | None = None
 
         ### Various flags
+        self.flag_frozenframe: bool = False
         self.flag_subref_on: bool = False
         self.flag_subdark_on: bool = False
         self.flag_data_init: bool = False
         self.flag_averaging: bool = False
-        self.flag_non_linear: int = 0
+        self.idx_zscaling: int = 0
 
         ### COLORING
         self.cmap_id = 1
@@ -110,17 +120,31 @@ class GenericViewerBackend:
                 Sc(pgmc.K_z, pgmc.KMOD_LSHIFT): partial(self.toggle_crop, incr=-1),
                 Sc(pgmc.K_z, pgmc.KMOD_LCTRL): self.reset_crop,
                 Sc(pgmc.K_v, 0x0): self.toggle_averaging,
+                Sc(pgmc.K_SPACE, 0x0): self.toggle_freeze,
                 Sc(pgmc.K_UP, 0x0): partial(self.steer_crop, pgmc.K_UP),
                 Sc(pgmc.K_DOWN, 0x0): partial(self.steer_crop, pgmc.K_DOWN),
                 Sc(pgmc.K_LEFT, 0x0): partial(self.steer_crop, pgmc.K_LEFT),
                 Sc(pgmc.K_RIGHT, 0x0): partial(self.steer_crop, pgmc.K_RIGHT),
                 Sc(pgmc.K_d, 0x0): self.toggle_sub_dark,
                 Sc(pgmc.K_r, 0x0): self.toggle_sub_ref,
+                Sc(pgmc.K_k, 0x0): self.print_keywords,
         }
         # yapf: enable
         # Note escape and X are reserved for quitting
 
         self.SHORTCUTS.update(this_shortcuts)
+
+    def str_status_report(self) -> str:
+        ll: list[str] = [('lin.', '1/3', 'log.')[self.idx_zscaling]]
+        if self.flag_averaging:
+            ll += ['Ave.']
+        if self.flag_frozenframe:
+            ll += ['Frozen']
+        if self.flag_subdark_on:
+            ll += ['-bias']
+        if self.flag_subref_on:
+            ll += ['-ref']
+        return ' | '.join(ll)
 
     def print_help(self):
         '''
@@ -162,6 +186,7 @@ class GenericViewerBackend:
                         f'Shortcut collision with {type(plugin)} {plugin}.')
 
             key_set = key_set.union(plugin_keys)
+
             self.SHORTCUTS.update(plugin.shortcut_map)
 
     def _inloop_plugin_action(self) -> None:
@@ -215,9 +240,9 @@ class GenericViewerBackend:
         Toggle scaling (linear -> power root -> log).
         '''
         if value is None:
-            self.flag_non_linear = (self.flag_non_linear + 1) % 3
+            self.idx_zscaling = (self.idx_zscaling + 1) % 3
         else:
-            self.flag_non_linear = value
+            self.idx_zscaling = value
 
     def toggle_crop(self, which: int | None = None, incr: int = 1) -> None:
         '''
@@ -306,7 +331,36 @@ class GenericViewerBackend:
         Toggle continuous frame averaging for display.
         '''
         self.flag_averaging = not self.flag_averaging
+        if self.flag_averaging:
+            self.flag_frozenframe = False
         self.count_averaging = 0
+
+    def toggle_freeze(self) -> None:
+        '''
+        Callback function.
+        Toggle freeze frame
+        '''
+        self.flag_frozenframe = not self.flag_frozenframe
+        if self.flag_frozenframe:
+            self.flag_averaging = False
+
+    def print_keywords(self) -> None:
+        '''
+        Callback function.
+        Print all keywords from SHM to terminal
+        '''
+        kws = self.input_shm.get_keywords()
+        nn = len(kws)
+        to_print: list[str] = []
+        for kk, (key, val) in enumerate(kws.items()):
+            if kk < nn // 2:
+                to_print += [f'| {key:<8s} = {val:<16} | ']
+            else:
+                to_print[kk - nn // 2] += f'{key:<8s} = {val:<16} |'
+
+        print('╭' + '-' * 59 + '╮')
+        print('\n'.join(to_print))
+        print('╰' + '-' * 59 + '╯')
 
     def set_clipping_values(self, low: float, high: float) -> None:
         '''
@@ -323,7 +377,8 @@ class GenericViewerBackend:
         It's the GUI's framerating loop that will call this function
         in short, the frontend shall call this during its own loop_iter().
         '''
-        self._data_grab()
+        if not self.flag_frozenframe:
+            self._data_grab()
         self._data_referencing()
         self._data_crop()
         self._data_zscaling()
@@ -395,7 +450,7 @@ class GenericViewerBackend:
         # Against persistent, user-set clipping
         low_clip, high_clip = self.low_clip, self.high_clip
 
-        if low_clip is None and self.flag_non_linear != buts.ZScaleEnum.LIN:
+        if low_clip is None and self.idx_zscaling != buts.ZScaleEnum.LIN:
             # Clip to the 80-th percentile (for log modes by default
             low_clip = np.nanpercentile(self.data_debias[1:, 1:], 0.8)
 
@@ -414,15 +469,15 @@ class GenericViewerBackend:
         else:
             data = self.data_debias.copy()
 
-        if self.flag_non_linear == buts.ZScaleEnum.LIN:  # linear
+        if self.idx_zscaling == buts.ZScaleEnum.LIN:  # linear
             op = lambda x: x
-        elif self.flag_non_linear == buts.ZScaleEnum.ROOT3:  # pow .33
+        elif self.idx_zscaling == buts.ZScaleEnum.ROOT3:  # pow .33
             op = lambda x: (x - low)**0.3
-        elif self.flag_non_linear == buts.ZScaleEnum.LOG:  # log
+        elif self.idx_zscaling == buts.ZScaleEnum.LOG:  # log
             op = lambda x: np.log10(x - low + 1)
         else:
             raise AssertionError(
-                    f"self.flag_non_linear {self.flag_non_linear} is invalid")
+                    f"self.flag_non_linear {self.idx_zscaling} is invalid")
 
         data = op(data)
         low, high = op(low), op(high)
@@ -452,7 +507,6 @@ class GenericViewerBackend:
         mods = mods & (~pgmc.KMOD_NUM)
 
         this_shortcut = buts.Shortcut(key=key, modifier_mask=mods)
-
         if this_shortcut in self.SHORTCUTS:
             # Call the mapped callable
             self.SHORTCUTS[this_shortcut]()

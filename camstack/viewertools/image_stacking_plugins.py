@@ -14,8 +14,8 @@ import pygame.constants as pgmc
 
 os.sched_setaffinity(0, _CORES)  # AMD fix
 
-from . import backend_utils as buts
-from . import frontend_utils as futs
+from . import utils_backend as buts
+from . import utils_frontend as futs
 
 from .plugin_arch import OneShotActionPlugin
 
@@ -23,6 +23,8 @@ import numpy as np
 
 
 class RefImageAcquirePlugin(OneShotActionPlugin):
+    HELP_MSG = """:
+"""
 
     def __init__(self, frontend_obj: PygameViewerFrontend,
                  key_onoff: int = pgmc.K_r, modifier_and: int = pgmc.KMOD_LCTRL,
@@ -88,13 +90,19 @@ class RefImageAcquirePlugin(OneShotActionPlugin):
                 self._complete_action()
             return
 
-        # Don't use backend_obj.data_raw_uncrop cause it is subject to 'v' flag averaging.
-        self.averaged_data += self.backend_obj.input_shm.get_data(False)
+        # Don't use backend_obj.data_raw_uncrop cause it is subject to averaging/freezing.
+        # But we kinda want the ref to be what we're seeing??
+        self.averaged_data += self.backend_obj.data_raw_uncrop
+        #self.averaged_data += self.backend_obj.input_shm.get_data(False)
         self.averaging_counter += 1
 
 
 # Warning - abstract
 class DarkAcquirePlugin(RefImageAcquirePlugin):
+
+    HELP_MSG = """Dark acquisition:
+--- abstract class ---
+"""
 
     def __init__(self, frontend_obj: PygameViewerFrontend,
                  key_onoff: int = pgmc.K_b, modifier_and: int = pgmc.KMOD_LCTRL,
@@ -135,12 +143,20 @@ class DarkAcquirePlugin(RefImageAcquirePlugin):
 
 class PueoDarkAcquirePlugin(DarkAcquirePlugin):
 
+    HELP_MSG = """Dark acquisition:
+using     pywfs_fcs_pickoff
+    """
+
     def move_appropriate_block(self, in_true: bool) -> None:
         # FIXME
         os.system('ssh sc2 pywfs_fcs_pickoff')
 
 
 class ApapanePalilaDarkAcquirePlugin(DarkAcquirePlugin):
+
+    HELP_MSG = """Dark acquisition:
+using     ircam_block
+"""
 
     def move_appropriate_block(self, in_true: bool) -> None:
         # FIXME
@@ -149,6 +165,10 @@ class ApapanePalilaDarkAcquirePlugin(DarkAcquirePlugin):
 
 class IiwiDarkAcquirePlugin(DarkAcquirePlugin):
 
+    HELP_MSG = """Dark acquisition:
+using   irwfs_pickoff (in|out)
+"""
+
     def move_appropriate_block(self, in_true: bool) -> None:
         in_out = 'in' if in_true else 'out'
-        os.system(f'ssh aorts irwfs {in_out}')
+        os.system(f'ssh aorts irwfs_pickoff {in_out}')

@@ -7,7 +7,7 @@ from rich.logging import RichHandler
 
 from swmain.network.pyroclient import connect
 
-from ..viewertools import frontend_utils as futs
+from ..viewertools import utils_frontend as futs
 from ..viewertools.pygame_viewer_frontend import PygameViewerFrontend
 from ..viewertools.generic_viewer_backend import GenericViewerBackend
 

@@ -15,11 +15,11 @@ from ..viewertools.plugins import SaturationPlugin
 from ..viewertools.image_stacking_plugins import PueoDarkAcquirePlugin
 from ..viewertools import camera_control_plugins as cplugs
 from ..viewertools import pywfs_plugins as pplugs
-from ..viewertools import backend_utils as buts
+from ..viewertools import utils_backend as buts
 
 
 @click.command("pueo")
-@click.option("-z", "--zoom", type=int, default=1,
+@click.option("-z", "--zoom", type=int, default=2,
               help="Graphics window zoom factor", show_default=True)
 @click.option("-b", "--bin", "binn", type=int, default=1,
               help="SHM binning factor", show_default=True)
@@ -30,12 +30,16 @@ def main(zoom: int, binn: int):
     binned_backend_shape = (240 // binn, 240 // binn)
 
     frontend = PueoViewerFrontend(zoom, 20, binned_backend_shape,
-                                  fonts_zoom=2 * zoom // binn)
+                                  fonts_zoom=zoom // binn)
     plugins = (
-            # TODO: help messages
-            SaturationPlugin(frontend, sat_value=40_000,
+            # TODO: x,y position of tip-tilt - modulation amplitude
+            # TODO: x,y position of PIL
+            # TODO: which filter
+            # TODO: which pickoff
+            # TODO: fcs pickoff as block
+            SaturationPlugin(frontend, sat_value=12_000, nonlin_value=10_000,
                              textbox=frontend.lbl_saturation),
-            PueoDarkAcquirePlugin(frontend),
+            PueoDarkAcquirePlugin(frontend, textbox=frontend.lbl_status),
             cplugs.PueoProxyControl(frontend),
             pplugs.PyWFSFluxPlugin(frontend),
             pplugs.VisPyWFSTipTiltPlugin(frontend, buts.JoyKeys.ARROWS, [
@@ -47,6 +51,8 @@ def main(zoom: int, binn: int):
                     pgmc.KMOD_RCTRL | pgmc.KMOD_RSHIFT
             ]),
     )
+
+    frontend.HELP_MSG += cplugs.PueoProxyControl.HELP_MSG
 
     frontend.plugins.extend(plugins)
     frontend.register_backend(backend)

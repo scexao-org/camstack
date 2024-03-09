@@ -14,7 +14,7 @@ if typ.TYPE_CHECKING:
     from .pygame_viewer_frontend import PygameViewerFrontend
 
 from .plugin_arch import BasePlugin
-from . import backend_utils as buts
+from . import utils_backend as buts
 
 Sc = buts.Shortcut
 
@@ -46,6 +46,18 @@ class PyroProxyControl(BasePlugin):
 
 
 class PueoProxyControl(PyroProxyControl):
+    HELP_MSG = '''
+Pueo control:
+--------------------------------------------------
+CTRL + t       : Toggle trigger on
+CTRL + ALT + t : Toggle trigger off
+CTRL + g       : decrease EM gain
+CTRL + SH + g  : increase EM gain
+CTRL + ALT + g : EM gain protection reset
+CTRL + l       : Decrease FPS
+CTRL + o       : Increase FPS
+CTRL + SHIFT + NUMBER: Set EM gain to 2**NUMBER
+    '''
 
     MAX_GAIN = 600
     SHORT_GAINS = [1, 2, 4, 8, 16, 32, 75, 150, 300, 600]
@@ -60,31 +72,31 @@ class PueoProxyControl(PyroProxyControl):
 
         this_shortcuts: buts.T_ShortcutCbMap = {
                 # Ctrl + T          Set extrig ON
-                Sc(pgmc.K_t, pgmc.K_LCTRL):
+                Sc(pgmc.K_t, pgmc.KMOD_LCTRL):
                         partial(self.pyro_proxy.set_synchro, True),
                 # Ctrl + Alt + T    Set extrig OFF
-                Sc(pgmc.K_t, pgmc.K_LCTRL | pgmc.K_LALT):
+                Sc(pgmc.K_t, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
                         partial(self.pyro_proxy.set_synchro, False),
                 # Ctrl + g: decrease gain
-                Sc(pgmc.K_g, pgmc.K_LCTRL):
+                Sc(pgmc.K_g, pgmc.KMOD_LCTRL):
                         self.decrease_gain,
                 # Ctrl + Shift + G: increase gain
-                Sc(pgmc.K_g, pgmc.K_LCTRL | pgmc.K_LSHIFT):
+                Sc(pgmc.K_g, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT):
                         self.increase_gain,
                 # Ctrl + Alt + g: gain reset
-                Sc(pgmc.K_g, pgmc.K_LCTRL | pgmc.K_LALT):
+                Sc(pgmc.K_g, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
                         self.pyro_proxy.gain_protection_reset,
                 # Ctrl + l: decrease fps
-                Sc(pgmc.K_l, pgmc.K_LCTRL):
+                Sc(pgmc.K_l, pgmc.KMOD_LCTRL):
                         self.decrease_fps,
                 # Ctrl + o: increase fps
-                Sc(pgmc.K_o, pgmc.K_LCTRL):
+                Sc(pgmc.K_o, pgmc.KMOD_LCTRL):
                         self.increase_fps,
         }
 
         # Ctrl + Shift + [0-9]: set direct EM gain
         for ii, key in enumerate(buts.NUMKEYS_0_9):
-            this_shortcuts[Sc(key, pgmc.K_LCTRL | pgmc.K_LSHIFT)] =\
+            this_shortcuts[Sc(key, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT)] =\
                 partial(self.pyro_proxy.set_gain, 2**ii)
 
         # That's all we need for Pueo for now...

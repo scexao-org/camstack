@@ -6,8 +6,8 @@ if typ.TYPE_CHECKING:
     from .pygame_viewer_frontend import PygameViewerFrontend
     from .generic_viewer_backend import GenericViewerBackend
 
-from . import backend_utils as buts
-from . import frontend_utils as futs
+from . import utils_backend as buts
+from . import utils_frontend as futs
 
 from abc import ABC, abstractmethod
 import os

@@ -1,7 +1,8 @@
-# Will this remain useful??
+from __future__ import annotations
+
+import typing as typ
 
 import os
-from typing import Tuple, Any, Optional as Op
 
 _CORES = os.sched_getaffinity(0)  # AMD fix
 import pygame.event
@@ -13,7 +14,7 @@ from dataclasses import dataclass
 
 # COLORS
 
-RGBType = Tuple[int, int, int]
+RGBType = tuple[int, int, int]
 
 
 class Colors:
@@ -32,30 +33,37 @@ COLOR_SATURATION = Colors.VERY_RED  # saturation color (text)
 COLOR_BACKGROUND = Colors.BLACK  # background color
 COLOR_BUTTON = Colors.BLUE  # button color
 
+T_t5i = tuple[int, int, int, int, int]
+
 
 class FontBook:
 
-    def __init__(self, system_zoom: int) -> None:
+    def __init__(self, system_zoom: int,
+                 override_fontsize: T_t5i | None = None) -> None:
+
+        if override_fontsize is None:
+            override_fontsize = (20, 10, 5, 8, 7)
+        a, b, c, d, e = override_fontsize
 
         self.DEFAULT_25 = \
-            pygame.font.SysFont("default", 20 * system_zoom)
+            pygame.font.SysFont("default", a * system_zoom)
         self.DEFAULT_16 = \
-            pygame.font.SysFont("default", 10 * system_zoom)
+            pygame.font.SysFont("default", b * system_zoom)
         self.MONO_5 = \
-            pygame.font.SysFont("monospace", 5 * system_zoom)
+            pygame.font.SysFont("monospace", c * system_zoom)
         self.MONO = \
-            pygame.font.SysFont("monospace", 8 * system_zoom)
+            pygame.font.SysFont("monospace", d * system_zoom)
         self.MONOBOLD = \
-            pygame.font.SysFont("monospace", 7 * system_zoom, bold=True)
+            pygame.font.SysFont("monospace", e * system_zoom, bold=True)
 
 
 class LabelMessage:
 
     def __init__(self, template_str: str, font: pygame.font.Font,
-                 topleft: Op[Tuple[int, int]] = None,
-                 topright: Op[Tuple[int, int]] = None,
-                 center: Op[Tuple[int,
-                                  int]] = None, fg_col: RGBType = Colors.WHITE,
+                 topleft: tuple[int, int] | None = None,
+                 topright: tuple[int, int] | None = None,
+                 center: tuple[int, int] | None = None,
+                 fg_col: RGBType = Colors.WHITE,
                  bg_col: RGBType = COLOR_BACKGROUND) -> None:
 
         self.template_str = template_str
@@ -85,9 +93,9 @@ class LabelMessage:
             raise AssertionError(
                     'Either of topleft, center, topright required.')
 
-    def render(self, format_args: Tuple[Any, ...], fg_col: Op[RGBType] = None,
-               bg_col: Op[RGBType] = None,
-               blit_onto: Op[pygame.surface.Surface] = None) -> None:
+    def render(self, format_args: tuple[typ.Any, ...],
+               fg_col: RGBType | None = None, bg_col: RGBType | None = None,
+               blit_onto: pygame.surface.Surface | None = None) -> None:
 
         fg_col = self.fg_col if fg_col is None else fg_col
         bg_col = self.bg_col if bg_col is None else bg_col
@@ -98,8 +106,8 @@ class LabelMessage:
         if blit_onto is not None:
             self.blit(blit_onto)
 
-    def render_whitespace(self,
-                          blit_onto: Op[pygame.surface.Surface] = None) -> None:
+    def render_whitespace(self, blit_onto: pygame.surface.Surface | None = None
+                          ) -> None:
         # Because not all our fonts are monospaced:
         how_big_last_rendered = sum([
                 c[-1] for c in self.font.metrics(self.last_rendered)

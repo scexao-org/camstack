@@ -10,8 +10,8 @@ from rich.logging import RichHandler
 from swmain.redis import RDB, get_values
 from swmain.network.pyroclient import connect
 
-from ..viewertools import backend_utils as buts
-from ..viewertools import frontend_utils as futs
+from ..viewertools import utils_backend as buts
+from ..viewertools import utils_frontend as futs
 from ..viewertools.generic_viewer_backend import GenericViewerBackend
 from ..viewertools.pygame_viewer_frontend import PygameViewerFrontend
 from ..cams.vampires import VCAM1, VCAM2

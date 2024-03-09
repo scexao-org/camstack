@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ..viewertools import frontend_utils as futs
+from ..viewertools import utils_frontend as futs
 from ..viewertools.generic_viewer_backend import GenericViewerBackend
 from ..viewertools.pygame_viewer_frontend import PygameViewerFrontend
 

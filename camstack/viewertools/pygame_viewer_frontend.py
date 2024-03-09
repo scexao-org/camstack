@@ -14,7 +14,7 @@ import pygame.constants as pgmc
 
 os.sched_setaffinity(0, _CORES)
 
-from . import frontend_utils as futs
+from . import utils_frontend as futs
 from . import plugins, image_stacking_plugins
 
 import numpy as np
@@ -32,6 +32,8 @@ class PygameViewerFrontend:
     """
 
     CARTOON_FILE: str | None = None
+
+    FONTSIZE_OVERRIDE = None  # For overriding the fontbook initialization in subclasses.
 
     def __init__(self, system_zoom: int, fps: int,
                  display_base_size: tuple[int, int],
@@ -81,7 +83,7 @@ class PygameViewerFrontend:
         pygame.font.init()
 
         # Prep the fonts.
-        self.fonts = futs.FontBook(self.fonts_zoom)
+        self.fonts = futs.FontBook(self.fonts_zoom, self.FONTSIZE_OVERRIDE)
 
         self.pg_screen = pygame.display.set_mode(self.pygame_win_size,
                                                  flags=0x0, depth=16)
@@ -139,13 +141,14 @@ class PygameViewerFrontend:
                                            self.fonts.DEFAULT_25, topleft=(c,
                                                                            r))
         self.lbl_title.blit(self.pg_screen)
-        r += int(self.lbl_title.em_size)
+        r += int(1.2 * self.lbl_title.em_size)
 
         # For help press [h]
-        self.lbl_help = futs.LabelMessage("For help press [h], quit [x]",
-                                          self.fonts.MONO, topleft=(c, r))
+        self.lbl_help = futs.LabelMessage("Help press [h], quit [x]",
+                                          self.fonts.DEFAULT_25, topleft=(c * 2,
+                                                                          r))
         self.lbl_help.blit(self.pg_screen)
-        r += int(self.lbl_help.em_size)
+        r += int(1.2 * self.lbl_help.em_size)
 
         # x0,y0 = {or}, {or} - sx,sy = {size}, {size}
         self.lbl_cropzone = futs.LabelMessage("crop = [%4d %4d %4d %4d]",
@@ -164,9 +167,14 @@ class PygameViewerFrontend:
 
         # mouse = {},{} - flux = {}
         # Not writing X and Y - we don't have them in data coords at this point.
-        self.lbl_mouse = futs.LabelMessage("mouse () = %6d", self.fonts.MONO,
-                                           topleft=(c, r))
+        self.lbl_mouse = futs.LabelMessage("mouse (%4d, %4d) = %6d",
+                                           self.fonts.MONO, topleft=(c, r))
         r += int(self.lbl_mouse.em_size)
+
+        # Backend report (bias, ref, zscale, av, freeze)
+        self.lbl_backend = futs.LabelMessage("%-32s", self.fonts.MONO,
+                                             topleft=(c, r))
+        r += int(self.lbl_backend.em_size)
 
         # {scaling type} - {has bias sub}
 
@@ -226,14 +234,21 @@ class PygameViewerFrontend:
         self.lbl_t_minmax.render((tint_ms * ndr, self.backend_obj.data_min,
                                   self.backend_obj.data_max),
                                  blit_onto=self.pg_screen)
-        self.lbl_mouse.render((self.value_mouse, ), blit_onto=self.pg_screen)
+        self.lbl_mouse.render((
+                *self.pos_mouse,
+                self.value_mouse,
+        ), blit_onto=self.pg_screen)
+        self.lbl_backend.render((self.backend_obj.str_status_report(), ),
+                                blit_onto=self.pg_screen)
 
         self.pg_updated_rects += [
                 self.lbl_cropzone.rectangle,
                 self.lbl_times.rectangle,
                 self.lbl_t_minmax.rectangle,
                 self.lbl_mouse.rectangle,
+                self.lbl_backend.rectangle,
         ]
+        #import pdb; pdb.set_trace()
 
     def _inloop_plugin_modes(self) -> None:
         for plugin in self.plugins:

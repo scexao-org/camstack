@@ -17,8 +17,8 @@ from swmain import redis
 if typ.TYPE_CHECKING:
     from .pygame_viewer_frontend import PygameViewerFrontend
 
-from . import backend_utils as buts
-from . import frontend_utils as futs
+from . import utils_backend as buts
+from . import utils_frontend as futs
 
 from .plugin_arch import OnOffPlugin, JoystickActionPlugin
 
@@ -120,8 +120,8 @@ class VisPyWFSTipTiltPlugin(JoystickActionPlugin):
 
         val_cd = redis.get_values(['X_ANALGC', 'X_ANALGD'])
 
-        new_c = val_cd[0] + push_xy[0] * tt_push
-        new_d = val_cd[1] + push_xy[1] * tt_push
+        new_c = val_cd['X_ANALGC'] + push_xy[0] * tt_push
+        new_d = val_cd['X_ANALGD'] + push_xy[1] * tt_push
         # BLEUARGH - whatever works yo.
         os.system(f'ssh sc2 "analog_output.py voltage C {new_c}"')
         # No detach the first one - they'll collide and one will be ignored.
@@ -147,10 +147,10 @@ class VisPyWFSPupilSteerPlugin(JoystickActionPlugin):
                 buts.JoyKeyDirEnum.RIGHT: (1.0, 0.0),
         }[dir]
 
-        val_cd = redis.get_values(['X_PYWPPX', 'X_PYWPPY'])
+        val_xy = redis.get_values(['X_PYWPPX', 'X_PYWPPY'])
 
-        new_c = int(round(val_cd[0] + push_xy[0] * pup_push))
-        new_d = int(round(val_cd[1] + push_xy[1] * pup_push))
+        new_c = int(round(val_xy['X_PYWPPX'] + push_xy[0] * pup_push))
+        new_d = int(round(val_xy['X_PYWPPY'] + push_xy[1] * pup_push))
         # BLEUARGH - whatever works yo.
         # Technically since the axes are decoupled we only need to fire one of these.
         os.system(f'ssh sc2 "pywfs_pup x goto {new_c}"')

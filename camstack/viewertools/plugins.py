@@ -15,8 +15,8 @@ import pygame.constants as pgmc
 os.sched_setaffinity(0, _CORES)  # AMD fix
 
 from skimage.measure import centroid
-from . import backend_utils as buts
-from . import frontend_utils as futs
+from . import utils_backend as buts
+from . import utils_frontend as futs
 
 from .plugin_arch import BasePlugin, OnOffPlugin
 import re
@@ -65,9 +65,13 @@ class PupilMode(OnOffPlugin):  # Fuck I desire double inheritance now.
 
 
 class SaturationPlugin(BasePlugin):
+    HELP_MSG = """Saturation parameters:
+Nonlinear: %.1f
+Saturation: %.1f
+    """
 
-    def __init__(self, frontend_obj: PygameViewerFrontend, sat_value,
-                 nonlin_value=None,
+    def __init__(self, frontend_obj: PygameViewerFrontend, sat_value: float,
+                 nonlin_value: float | None = None,
                  textbox: Optional[futs.LabelMessage] = None) -> None:
         super().__init__(frontend_obj)
         self.sat_value = sat_value
@@ -76,6 +80,8 @@ class SaturationPlugin(BasePlugin):
         self.nonlin_value = nonlin_value
         self.enabled = True
         self.textbox = textbox
+
+        self.HELP_MSG = self.HELP_MSG % (self.nonlin_value, self.sat_value)
 
     def backend_action(self) -> None:
         if not self.enabled or self.textbox is None:

@@ -27,8 +27,8 @@ from swmain.network.pyroclient import connect
 from .pygame_viewer_frontend import PygameViewerFrontend
 from ..viewertools.generic_viewer_backend import GenericViewerBackend
 
-from . import backend_utils as buts
-from . import frontend_utils as futs
+from . import utils_backend as buts
+from . import utils_frontend as futs
 from .plugin_arch import BasePlugin, OnOffPlugin
 from .image_stacking_plugins import DarkAcquirePlugin
 from .plugins import PupilMode, CrossHairPlugin, BullseyePlugin
