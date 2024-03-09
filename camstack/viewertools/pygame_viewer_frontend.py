@@ -24,7 +24,7 @@ from PIL import Image
 class PygameViewerFrontend:
 
     # A couple numeric constants, can be overriden by subclasses
-    BOTTOM_PX_PAD = 140
+    BOTTOM_PX_PAD = 100
 
     WINDOW_NAME = 'Generic viewer'
 
@@ -66,7 +66,7 @@ class PygameViewerFrontend:
                                           dtype=np.uint8)
         # Total window size
         self.pygame_win_size = (self.data_disp_size[0], self.data_disp_size[1] +
-                                self.BOTTOM_PX_PAD * self.system_zoom)
+                                self.BOTTOM_PX_PAD * self.fonts_zoom)
 
         #####
         # Prep plugins
