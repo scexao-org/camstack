@@ -178,7 +178,7 @@ font3 = pygame.font.SysFont("monospace", 4 * zoom)
 font5 = pygame.font.SysFont("monospace", 4 * zoom)
 font5.set_bold(True)
 
-path_cartoon = "/home/scexao/conf/pueo_aux/Pueo%d.png" % (zoom, )
+path_cartoon = os.environ['HOME'] + "/src/camstack/conf/Pueo%d.png" % (zoom, )
 cartoon1 = pygame.image.load(path_cartoon).convert_alpha()
 
 lbl = font1.render("PUEO camera viewer", True, WHITE, BGCOL)

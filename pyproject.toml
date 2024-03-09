@@ -68,6 +68,7 @@ anycam = "camstack.viewermains.anycam:dud_main"
 firstcam = "camstack.viewermains.firstcam:main"
 apapane = "camstack.viewermains.apapane:dud_main"
 palila = "camstack.viewermains.palila:dud_main"
+pueo_old = "camstack.viewermains.pueo_old:dud_main"
 
 # @Miles is this what's supposed to happen?
 pueo = "camstack.viewermains.pueo:main" # WARNING IN TRANSITION
