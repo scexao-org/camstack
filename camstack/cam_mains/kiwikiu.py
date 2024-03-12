@@ -11,7 +11,7 @@ if __name__ == "__main__":
     os.makedirs(os.environ['HOME'] + "/logs", exist_ok=True)
     init_camstack_logger(os.environ['HOME'] + "/logs/camstack-kiwikiu.log")
 
-    mode = 0
+    mode = 'LLOWFS'
 
     # Prepare dependent processes
     tcp_recv = RemoteDependentProcess(

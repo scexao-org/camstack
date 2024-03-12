@@ -307,7 +307,10 @@ class CRED2(EDTCamera):
 
 class Kiwikiu(CRED2):
 
-    MODES = {}
+    MODES = {
+            # 64x64 offside - LLOWFS March 2024
+            'LLOWFS': util.CameraMode(x0=256, x1=319, y0=220, y1=283, fps=2000),
+    }
     MODES.update(CRED2.MODES)
     EDTTAKE_EMBEDMICROSECOND = True
 
@@ -377,7 +380,7 @@ class IiwiButItsGLINT(GLINT):
     # yapf: enable
     MODES.update(CRED2.MODES)
     EDTTAKE_EMBEDMICROSECOND = False
-    
+
     def _thermal_init_commands(self) -> None:
         super()._thermal_init_commands()
         logg.debug('_thermal_init_commands @ IiwiButItsGlint')
