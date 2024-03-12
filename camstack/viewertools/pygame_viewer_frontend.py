@@ -182,7 +182,7 @@ class PygameViewerFrontend:
         # At the bottom right.
         self.lbl_status = futs.LabelMessage(
                 '%s', self.fonts.DEFAULT_16,
-                topleft=(8 * self.system_zoom,
+                topleft=(8 * self.fonts_zoom,
                          self.pygame_win_size[1] - 20 * self.system_zoom))
 
         return r
@@ -331,14 +331,17 @@ class PygameViewerFrontend:
             col_fac = data_output.shape[1] / self.data_disp_basesize[1]
 
             if abs(row_fac / col_fac - 1) < 0.05:
+
                 # Rescale both to size, no pad, even if that means a little distortion
-                self.data_blit_staging = np.asarray(
-                        img.resize(data_size_T, Image.NEAREST))
+                # Not self.data_blit_staging - this is a disposable PIL array.
+                data_to_blit = np.asarray(img.resize(data_size_T,
+                                                     Image.NEAREST))
                 self.last_transform = futs.DrawingTransform(
                         0, self.system_zoom / row_fac, 0,
                         self.system_zoom / col_fac)
 
             elif row_fac > col_fac:
+
                 # Rescale based on rows, pad columns
                 csize = self.system_zoom *\
                                 int(round(data_output.shape[1] / row_fac))
@@ -354,7 +357,10 @@ class PygameViewerFrontend:
                         0, self.system_zoom / row_fac, cskip,
                         self.system_zoom / row_fac)
 
+                data_to_blit = self.data_blit_staging  # Pointer to the internal buffer
+
             elif col_fac >= row_fac:
+
                 # Rescale based on columns, pad rows
                 rsize = self.system_zoom *\
                     int(round(data_output.shape[0] / col_fac))
@@ -368,16 +374,18 @@ class PygameViewerFrontend:
                 self.last_transform = futs.DrawingTransform(
                         rskip, self.system_zoom / col_fac, 0,
                         self.system_zoom / col_fac)
+
+                data_to_blit = self.data_blit_staging  # Pointer to the internal buffer
+
             else:
                 raise ValueError("row_fac / col_fac calculation messed up.")
 
         else:  # Data is the native display size. One would wonder why we resize at all?
-            self.data_blit_staging = np.asarray(
-                    img.resize(data_size_T, Image.NEAREST))
+            data_to_blit = np.asarray(img.resize(data_size_T, Image.NEAREST))
             self.last_transform = futs.DrawingTransform(0, self.system_zoom, 0,
                                                         self.system_zoom)
 
-        pygame.surfarray.blit_array(self.pg_datasurface, self.data_blit_staging)
+        pygame.surfarray.blit_array(self.pg_datasurface, data_to_blit)
         '''
         Process the mouse
         '''

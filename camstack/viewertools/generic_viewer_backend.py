@@ -15,6 +15,7 @@ os.sched_setaffinity(0, _CORES)  # AMD fix
 
 from astropy.io import fits
 from pyMilk.interfacing.shm import SHM
+import pyMilk.errors
 
 from . import utils_backend as buts
 from .utils_backend import Shortcut as Sc
@@ -70,6 +71,7 @@ ARROWS    : steer crop
         self.has_frontend = False
 
         ### SHM
+        self.name_shm = name_shm
         self.input_shm = SHM(name_shm, symcode=0)
 
         ### DATA Pipeline
@@ -325,22 +327,24 @@ ARROWS    : steer crop
         self.crop_offset = cr - og_ctr[0], cc - og_ctr[1]
         self.toggle_crop(which=self.crop_lvl_id)
 
-    def toggle_averaging(self) -> None:
+    def toggle_averaging(self, set_av: bool | None = None) -> None:
         '''
         Callback function.
         Toggle continuous frame averaging for display.
         '''
-        self.flag_averaging = not self.flag_averaging
+        self.flag_averaging = not self.flag_averaging if set_av is None else set_av
+
         if self.flag_averaging:
             self.flag_frozenframe = False
         self.count_averaging = 0
 
-    def toggle_freeze(self) -> None:
+    def toggle_freeze(self, set_freeze: bool | None = None) -> None:
         '''
         Callback function.
         Toggle freeze frame
         '''
-        self.flag_frozenframe = not self.flag_frozenframe
+        self.flag_frozenframe = not self.flag_frozenframe if set_freeze is None else set_freeze
+
         if self.flag_frozenframe:
             self.flag_averaging = False
 
@@ -378,7 +382,23 @@ ARROWS    : steer crop
         in short, the frontend shall call this during its own loop_iter().
         '''
         if not self.flag_frozenframe:
-            self._data_grab()
+            try:
+                self._data_grab()
+            except pyMilk.errors.AutoRelinkError:
+                # Disable zoom, averaging and freeze
+                # We're litteraly changing the data size so there's
+                # A LOT of housekeeping to do.
+                self.toggle_averaging(False)
+                self.toggle_freeze(False)
+                self.toggle_sub_dark(False)
+                self.data_for_sub_dark = None
+                self.data_for_sub_ref = None
+                self.toggle_sub_ref(False)
+                self.toggle_crop(0)
+                self.input_shm = SHM(self.name_shm, symcode=0)
+                self.shm_shape = self.input_shm.shape
+
+                self._data_grab()  # If this one crashes we're in danger.
         self._data_referencing()
         self._data_crop()
         self._data_zscaling()
@@ -392,6 +412,9 @@ ARROWS    : steer crop
         '''
         Data function.
         SHM -> self.data_raw_uncrop
+
+        Can raise AutoRelinkErrors from pyMilk
+        These are grabber in data_iter
         '''
         if self.flag_averaging and self.flag_data_init:
             assert self.data_raw_uncrop is not None  # from self.flag_data_init
@@ -511,17 +534,14 @@ ARROWS    : steer crop
             # Call the mapped callable
             self.SHORTCUTS[this_shortcut]()
 
+    def _uncrop_coordinates_anyslice(self, coord: float, slice: slice) -> float:
+        assert slice.step is None
+
+        return coord if slice.start is None else coord + slice.start
+
     def uncrop_coordinates(self, row_coord: float,
                            col_coord: float) -> tuple[float, float]:
         row_slice, col_slice = self.crop_slice
 
-        assert row_slice.step is None and col_slice.step is None
-
-        row_out, col_out = row_coord, col_coord
-
-        if row_slice.start is not None:
-            row_out = row_coord + row_slice.start
-        if col_slice.start is not None:
-            col_out = col_coord + col_slice.start
-
-        return row_out, col_out
+        return (self._uncrop_coordinates_anyslice(row_coord, row_slice),
+                self._uncrop_coordinates_anyslice(col_coord, col_slice))
