@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import typing as typ
+
 import logging
 import numpy as np
 import pygame.constants as pgmc
@@ -11,6 +13,7 @@ from swmain.redis import RDB, get_values
 from swmain.network.pyroclient import connect
 
 from ..viewertools import utils_backend as buts
+from ..viewertools.utils_backend import Shortcut as Sc
 from ..viewertools import utils_frontend as futs
 from ..viewertools.generic_viewer_backend import GenericViewerBackend
 from ..viewertools.pygame_viewer_frontend import PygameViewerFrontend
@@ -140,8 +143,13 @@ CTRL  + s     : Save current position to last configuration"""
         self.cam_num = cam_num
         self.other_cam_num = (cam_num % 2) + 1
         self.other_cam_name = f"VCAM{self.other_cam_num}"
-        self.cam = connect(self.cam_name)
-        self.other_cam = connect(self.other_cam_name)
+
+        if typ.TYPE_CHECKING:
+            self.cam: VCAM1
+            self.other_cam: VCAM2
+
+        self.cam = connect(self.cam_name)  # type: ignore
+        self.other_cam = connect(self.other_cam_name)  # type: ignore
 
         self.live = Live()
         self.logger = logging.getLogger(name_shm)
@@ -151,30 +159,28 @@ CTRL  + s     : Save current position to last configuration"""
 
         from functools import partial
         self.SHORTCUTS.update({
-                buts.Shortcut(pgmc.K_f, pgmc.KMOD_LCTRL):
+                Sc(pgmc.K_f, pgmc.KMOD_LCTRL):
                         partial(self.set_readout_mode, mode="SLOW", both=True),
-                buts.Shortcut(pgmc.K_f, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
+                Sc(pgmc.K_f, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
                         partial(self.set_readout_mode, mode="SLOW"),
-                buts.Shortcut(pgmc.K_f, pgmc.KMOD_LSHIFT):
+                Sc(pgmc.K_f, pgmc.KMOD_LSHIFT):
                         partial(self.set_readout_mode, mode="FAST", both=True),
-                buts.Shortcut(pgmc.K_f, pgmc.KMOD_LSHIFT | pgmc.KMOD_LALT):
+                Sc(pgmc.K_f, pgmc.KMOD_LSHIFT | pgmc.KMOD_LALT):
                         partial(self.set_readout_mode, mode="FAST"),
-                buts.Shortcut(pgmc.K_j, pgmc.KMOD_LCTRL):
+                Sc(pgmc.K_j, pgmc.KMOD_LCTRL):
                         partial(self.increase_exposure_time, both=True),
-                buts.Shortcut(pgmc.K_j, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
+                Sc(pgmc.K_j, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
                         partial(self.increase_exposure_time, both=False),
-                buts.Shortcut(pgmc.K_k, pgmc.KMOD_LCTRL):
+                Sc(pgmc.K_k, pgmc.KMOD_LCTRL):
                         partial(self.decrease_exposure_time, both=True),
-                buts.Shortcut(pgmc.K_k, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
+                Sc(pgmc.K_k, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
                         partial(self.decrease_exposure_time, both=False),
         })
         # flip steering direction on cam2 to compensate
         if self.cam_num == 2:
             self.SHORTCUTS.update({
-                    buts.Shortcut(pgmc.K_UP, 0x0):
-                            partial(self.steer_crop, pgmc.K_DOWN),
-                    buts.Shortcut(pgmc.K_DOWN, 0x0):
-                            partial(self.steer_crop, pgmc.K_UP),
+                    Sc(pgmc.K_UP, 0x0): partial(self.steer_crop, pgmc.K_DOWN),
+                    Sc(pgmc.K_DOWN, 0x0): partial(self.steer_crop, pgmc.K_UP),
             })
 
         # variables to carry state
@@ -316,6 +322,78 @@ CTRL  + s     : Save current position to last configuration"""
             ## flip camera 2 on y-axis
             if self.cam_num == 2:
                 self.data_debias = np.fliplr(self.data_debias)
+
+    def uncrop_coordinates(self, row_coord: float,
+                           col_coord: float) -> tuple[float, float]:
+        assert self.data_debias is not None
+
+        rsize, csize = self.data_debias.shape
+
+        if self.mode in ["PUPIL", "STANDARD"]:
+            if self.cam_num == 1:
+                return super().uncrop_coordinates(row_coord, col_coord)
+            else:
+                return super().uncrop_coordinates(rsize - row_coord,
+                                                  csize - col_coord)
+        else:
+            # First, find which MBI field we're in.
+            rs2, cs2 = rsize / 2, csize / 2
+            if row_coord < rs2 and col_coord < cs2:
+                # Field 625, slice [3]
+                if self.mode == 'MBI_REDUCED':
+                    return 0, 0
+                slc = self.mbi_slices[3]
+                if self.cam_num == 1:
+                    return (self._uncrop_coordinates_anyslice(
+                            row_coord, slc[0]),
+                            self._uncrop_coordinates_anyslice(
+                                    col_coord, slc[1]))
+                else:
+                    return (self._uncrop_coordinates_anyslice(
+                            rs2 - row_coord, slc[0]),
+                            self._uncrop_coordinates_anyslice(
+                                    cs2 - col_coord, slc[1]))
+            elif row_coord < rsize / 2 and col_coord >= csize / 2:
+                # Field 725, slice [1]
+                slc = self.mbi_slices[1]
+                if self.cam_num == 1:
+                    return (self._uncrop_coordinates_anyslice(
+                            row_coord, slc[0]),
+                            self._uncrop_coordinates_anyslice(
+                                    col_coord - cs2, slc[1]))
+                else:
+                    return (self._uncrop_coordinates_anyslice(
+                            rs2 - row_coord, slc[0]),
+                            self._uncrop_coordinates_anyslice(
+                                    2 * cs2 - col_coord, slc[1]))
+            elif row_coord >= rsize / 2 and col_coord < csize / 2:
+                # Field 675, slice [2]
+                slc = self.mbi_slices[2]
+                if self.cam_num == 1:
+                    return (self._uncrop_coordinates_anyslice(
+                            row_coord - rs2, slc[0]),
+                            self._uncrop_coordinates_anyslice(
+                                    col_coord, slc[1]))
+                else:
+                    return (self._uncrop_coordinates_anyslice(
+                            2 * rs2 - row_coord, slc[0]),
+                            self._uncrop_coordinates_anyslice(
+                                    cs2 - col_coord, slc[1]))
+            elif row_coord >= rsize / 2 and col_coord >= csize / 2:
+                # Field 775, slice [0]
+                slc = self.mbi_slices[0]
+                if self.cam_num == 1:
+                    return (self._uncrop_coordinates_anyslice(
+                            row_coord - rs2, slc[0]),
+                            self._uncrop_coordinates_anyslice(
+                                    col_coord - cs2, slc[1]))
+                else:
+                    return (self._uncrop_coordinates_anyslice(
+                            2 * rs2 - row_coord, slc[0]),
+                            self._uncrop_coordinates_anyslice(
+                                    2 * cs2 - col_coord, slc[1]))
+            else:
+                raise ValueError('All Fubar at MBI uncrop_coordinates.')
 
 
 class VAMPIRESBaseViewerFrontend(PygameViewerFrontend):
