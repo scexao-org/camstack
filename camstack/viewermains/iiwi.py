@@ -1,33 +1,56 @@
+from __future__ import annotations
+
+import os
+
 import click
 
-from ..viewerclasses.iiwi import IiwiViewerBackend, IiwiViewerFrontend
+_CORES = os.sched_getaffinity(0)  # AMD fix
+import pygame.constants as pgmc
+
+os.sched_setaffinity(0, _CORES)  # AMD fix
+
+from ..viewerclasses.iiwi import IiwiViewerFrontend, IiwiViewerBackend
 
 from ..viewertools.plugins import SaturationPlugin
 from ..viewertools.image_stacking_plugins import IiwiDarkAcquirePlugin
-from ..viewertools import iiwi_plugins as iplugs
+from ..viewertools import camera_control_plugins as cplugs
+from ..viewertools import pywfs_plugins as pplugs
+from ..viewertools import utils_backend as buts
 
 
-@click.command("iiwi.py")
+@click.command("iiwi")
 @click.option("-z", "--zoom", type=int, default=1,
               help="Graphics window zoom factor", show_default=True)
 @click.option("-b", "--bin", "binn", type=int, default=1,
               help="SHM binning factor", show_default=True)
 def main(zoom: int, binn: int):
-    backend = IiwiViewerBackend(1, "iiwi")
+    backend = IiwiViewerBackend("iiwi")
 
-    # Native is 160x160. Giving ourselves 1.5 over
+    # Native is 120x120. Giving ourselves 2x
     binned_backend_shape = (240 // binn, 240 // binn)
 
-    frontend = IiwiViewerFrontend(1, zoom, 20, binned_backend_shape,
-                                  fonts_zoom=2 * zoom // binn)
+    frontend = IiwiViewerFrontend(zoom, 20, binned_backend_shape,
+                                  fonts_zoom=zoom // binn)
     plugins = (
-            SaturationPlugin(frontend, sat_value=40_000,
+            # TODO: x,y position of tip-tilt - modulation amplitude
+            # TODO: x,y position of PIL
+            # TODO: which filter
+            # TODO: which pickoff
+            # TODO: fcs pickoff as block
+            SaturationPlugin(frontend, sat_value=40_000, nonlin_value=30_000,
                              textbox=frontend.lbl_saturation),
-            IiwiDarkAcquirePlugin(frontend),
-            iiwiplugs.DAC40TTPlugin(frontend),
+            IiwiDarkAcquirePlugin(frontend, textbox=frontend.lbl_status),
+            cplugs.IiwiProxyControl(frontend),
+            pplugs.PyWFSFluxPlugin(frontend),
     )
+
+    frontend.HELP_MSG += cplugs.IiwiProxyControl.HELP_MSG
 
     frontend.plugins.extend(plugins)
     frontend.register_backend(backend)
     backend.register_frontend(frontend)
     frontend.run()
+
+
+if __name__ == "__main__":
+    main()

@@ -19,7 +19,7 @@ from ..viewertools import utils_backend as buts
 
 
 @click.command("pueo")
-@click.option("-z", "--zoom", type=int, default=2,
+@click.option("-z", "--zoom", type=int, default=1,
               help="Graphics window zoom factor", show_default=True)
 @click.option("-b", "--bin", "binn", type=int, default=1,
               help="SHM binning factor", show_default=True)

@@ -152,6 +152,17 @@ using     pywfs_fcs_pickoff
         os.system('ssh sc2 pywfs_fcs_pickoff')
 
 
+class KiwikiuDarkAcquirePlugin(DarkAcquirePlugin):
+
+    HELP_MSG = """Dark acquisition:
+using     lowfs_block
+    """
+
+    def move_appropriate_block(self, in_true: bool) -> None:
+        # FIXME
+        os.system('ssh sc2 lowfs_pickoff')
+
+
 class ApapanePalilaDarkAcquirePlugin(DarkAcquirePlugin):
 
     HELP_MSG = """Dark acquisition:
