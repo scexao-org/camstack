@@ -199,7 +199,9 @@ class PygameViewerFrontend:
         w, h = cartoon_img.get_size()
 
         self.cartoon_img_scaled = pygame.transform.scale(
-                cartoon_img, (w * self.system_zoom, h * self.system_zoom))
+                cartoon_img,
+                (int(w / h * self.BOTTOM_PX_PAD * self.system_zoom),
+                 self.BOTTOM_PX_PAD * self.system_zoom))
 
         # Move to bottom right, blit once.
         self.pg_cartoon_rect = self.cartoon_img_scaled.get_rect()

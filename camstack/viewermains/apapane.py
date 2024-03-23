@@ -13,6 +13,7 @@ import os, sys
 
 _CORES = os.sched_getaffinity(0)  # Go around pygame import
 
+import skimage  # This force linking MKL, which somehow fixes the GLXBadRenderRequest
 import pygame, sys
 from pygame.locals import *
 

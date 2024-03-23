@@ -95,8 +95,8 @@ def open_shm(shm_name: str, dims: Tuple[int, int] = (1, 1),
 
 def open_shm_fullpath(shm_name: str, dims: Tuple[int, int] = (1, 1),
                       check: bool = False) -> SHM:
-    data = np.zeros((dims[1], dims[0]), dtype=np.float32).squeeze()
     if not os.path.isfile(shm_name):
+        data = np.zeros(dims[::-1], dtype=np.float32)
         shm_data = SHM(shm_name, data=data, verbose=False)
     else:
         shm_data = SHM(shm_name)

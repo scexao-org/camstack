@@ -47,6 +47,8 @@ RCTRL + RALT + ARROWS   : same, but smaller
 
     CARTOON_FILE = 'Pueo2.png'
 
+    FONTSIZE_OVERRIDE = (20, 15, 5, 10, 10)
+
     def _init_labels(self) -> int:
         '''
         # So, now we have a problem: there are some labels from the superclass that we don't want.
@@ -79,29 +81,29 @@ RCTRL + RALT + ARROWS   : same, but smaller
 
         # Gain and MFRATE
         self.lbl_gain_mfrate = futs.LabelMessage("EMGain = %3d - Mfps = % 4.2f",
-                                                 self.fonts.MONO, topleft=(c,
-                                                                           r))
+                                                 self.fonts.MONOBOLD,
+                                                 topleft=(c, r))
         r += int(1.2 * self.lbl_gain_mfrate.em_size)
 
         # XxY - m,M = {} {}
         self.lbl_size_minmax = futs.LabelMessage("%dx%d - m,M = %3.0f,%5.0f",
-                                                 self.fonts.MONO, topleft=(c,
-                                                                           r))
+                                                 self.fonts.MONOBOLD,
+                                                 topleft=(c, r))
         r += int(self.lbl_size_minmax.em_size)
 
         # mouse = {},{} - flux = {}
         # Not writing X and Y - we don't have them in data coords at this point.
         self.lbl_mouse = futs.LabelMessage("mouse (%4d, %4d) = %6d",
-                                           self.fonts.MONO, topleft=(c, r))
+                                           self.fonts.MONOBOLD, topleft=(c, r))
         r += int(self.lbl_mouse.em_size)
 
         # Backend report (bias, ref, zscale, av, freeze)
-        self.lbl_backend = futs.LabelMessage("%-32s", self.fonts.MONO,
+        self.lbl_backend = futs.LabelMessage("%-32s", self.fonts.MONOBOLD,
                                              topleft=(c, r))
         r += int(self.lbl_backend.em_size)
 
         # {scaling type} - {has bias sub}
-        self.lbl_saturation = futs.LabelMessage("%28s", self.fonts.MONO,
+        self.lbl_saturation = futs.LabelMessage("%28s", self.fonts.MONOBOLD,
                                                 topleft=(c, r))
         r += int(1.2 * self.lbl_saturation.em_size)
 

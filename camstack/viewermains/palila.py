@@ -24,7 +24,7 @@ import os, sys
 _CORES = os.sched_getaffinity(0)  # Go around pygame import
 
 signal.signal(signal.SIGTTIN, print_linenum)
-
+import skimage  # This force linking MKL, which somehow fixes the GLXBadRenderRequest
 import pygame
 from pygame.locals import *
 
@@ -477,7 +477,7 @@ pygame.font.init()
 fpsClock = pygame.time.Clock()  # start the pygame clock!
 XW, YW = xsize * z1, (ysize + 100) * z1
 
-screen = pygame.display.set_mode((XW, YW), 0, 32)
+screen = pygame.display.set_mode((XW, YW), 0, 16)
 pygame.display.set_caption('PALILA camera display!')
 
 tmux_ircam_ctrl = tmuxlib.find_or_create_remote(
@@ -563,7 +563,7 @@ else:
     fps = cam.get_fps()
     delay = 0
 ndr = int(cam.get_ndr())
-crop = cam.get_crop().astype(int)
+crop = np.asarray(cam.get_crop()).astype(int)
 etimet = etime * ndr
 
 (fpss2, nfps2, findex) = whatfps(fps, crop)
@@ -919,7 +919,7 @@ while True:  # the main game loop
                 shmreload = True
                 continue
         ndrn = int(cam.get_ndr())
-        cropn = cam.get_crop().astype(int)
+        cropn = np.asarray(cam.get_crop()).astype(int)
         if ppin:
             cor = cort[:, 0]
         else:
