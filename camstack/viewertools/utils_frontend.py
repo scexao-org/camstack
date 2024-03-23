@@ -13,8 +13,9 @@ os.sched_setaffinity(0, _CORES)  # AMD fix
 from dataclasses import dataclass
 
 # COLORS
-
-RGBType = tuple[int, int, int]
+if typ.TYPE_CHECKING:
+    RGBType = tuple[int, int, int]
+    T_t5i = tuple[int, int, int, int, int]
 
 
 class Colors:
@@ -32,8 +33,6 @@ COLOR_FOREGROUND = Colors.WHITE  # foreground color (text)
 COLOR_SATURATION = Colors.VERY_RED  # saturation color (text)
 COLOR_BACKGROUND = Colors.BLACK  # background color
 COLOR_BUTTON = Colors.BLUE  # button color
-
-T_t5i = tuple[int, int, int, int, int]
 
 
 class FontBook:

@@ -71,6 +71,7 @@ palila = "camstack.viewermains.palila:dud_main"
 pueo_old = "camstack.viewermains.pueo_old:dud_main"
 
 # @Miles is this what's supposed to happen?
+iiwi = "camstack.viewermains.iiwi:main" # WARNING IN TRANSITION
 pueo = "camstack.viewermains.pueo:main" # WARNING IN TRANSITION
 vcam1 = "camstack.viewermains.vcam:main1"
 vcam2 = "camstack.viewermains.vcam:main2"
