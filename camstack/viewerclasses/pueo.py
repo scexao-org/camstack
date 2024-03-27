@@ -86,7 +86,7 @@ RCTRL + RALT + ARROWS   : same, but smaller
         r += int(1.2 * self.lbl_gain_mfrate.em_size)
 
         # XxY - m,M = {} {}
-        self.lbl_size_minmax = futs.LabelMessage("%dx%d - m,M = %3.0f,%5.0f",
+        self.lbl_size_minmax = futs.LabelMessage("%dx%d - m,M = %4.0f,%5.0f ",
                                                  self.fonts.MONOBOLD,
                                                  topleft=(c, r))
         r += int(self.lbl_size_minmax.em_size)

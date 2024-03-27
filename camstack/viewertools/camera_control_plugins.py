@@ -62,7 +62,7 @@ CTRL + o       : Increase FPS
     SHORT_FPS = [125, 250, 500, 1000, 2000]
 
     def __init__(self, frontend_obj: PygameViewerFrontend) -> None:
-        super().__init__(frontend_obj, 'PUEO')
+        super().__init__(frontend_obj, 'IIWI')
 
         if typ.TYPE_CHECKING:
             from ..cams.ocam import OCAM2K
@@ -81,9 +81,6 @@ CTRL + o       : Increase FPS
                 # Ctrl + Shift + G: increase gain
                 Sc(pgmc.K_g, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT):
                         self.increase_gain,
-                # Ctrl + Alt + g: gain reset
-                Sc(pgmc.K_g, pgmc.KMOD_LCTRL | pgmc.KMOD_LALT):
-                        self.pyro_proxy.gain_protection_reset,
                 # Ctrl + l: decrease fps
                 Sc(pgmc.K_l, pgmc.KMOD_LCTRL):
                         self.decrease_fps,

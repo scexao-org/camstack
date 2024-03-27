@@ -154,7 +154,10 @@ def RDB_pull(rdb: Redis, rdb_alive: bool, cam_apapane: bool,
 
             try:
                 values = pipe.execute()
-                status = {k: v for k, v in zip(fits_keys_to_pull, values)}
+                if values is None:
+                    rdb_alive = False
+                else:
+                    status = {k: v for k, v in zip(fits_keys_to_pull, values)}
             except redis.exceptions.TimeoutError:
                 rdb_alive = False
 

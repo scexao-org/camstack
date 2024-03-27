@@ -452,9 +452,9 @@ ARROWS    : steer crop
         assert self.data_raw_uncrop is not None
         assert self.data_debias_uncrop is not None
 
-        self.data_min = self.data_raw_uncrop[1:, 1:].min()
-        self.data_max = self.data_raw_uncrop[1:, 1:].max()
-        self.data_mean = np.mean(self.data_raw_uncrop[1:])
+        self.data_min = self.data_debias_uncrop[1:, 1:].min()
+        self.data_max = self.data_debias_uncrop[1:, 1:].max()
+        self.data_mean = np.mean(self.data_debias_uncrop[1:])
 
         self.data_debias = self.data_debias_uncrop[self.crop_slice]
 
