@@ -115,9 +115,13 @@ class APDAcquisition(BaseCamera):
 if __name__ == "__main__":
 
     doc = '''
-        APD camstack starter
-        
-        Usage: camstack.cams.ao_apd [tmux] -u <channel>
+    APD camstack starter
+
+    Usage:
+        camstack.cams.ao_apd [tmux] -u <channel>
+
+    Options:
+        -u <channel>        FPDP channel to use [default: 0]
     '''
     from docopt import docopt
 
@@ -134,7 +138,7 @@ if __name__ == "__main__":
                 f'python -im camstack.cams.ao_apd -u {args["<channel>"]}', [])
         tmux.initialize_tmux(True)
         tmux.start_command_line()
-        
+
         exit(0)
     else:
 

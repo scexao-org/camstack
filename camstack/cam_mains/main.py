@@ -14,6 +14,7 @@ import scxconf
 # which cameras map to which python modules/files
 CAM_INVOCATION: dict[str | None, tuple[str | None, str | None]] = {
         "ALALA": ("camstack.cam_mains.alala_orcam", 'AORTS'),  # nlcwfs?
+        "APD": ("camstack.cams.ao_apd", 'AORTS'),  # nlcwfs?
         "APAPANE": ("camstack.cam_mains.apapane", '5'),
         "FIRST": ("camstack.cam_mains.first_orcam", 'K'),
         "FIRST_PUPIL": ("camstack.cam_mains.first_pupil", 'K'),
