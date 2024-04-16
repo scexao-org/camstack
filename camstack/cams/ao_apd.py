@@ -117,11 +117,11 @@ if __name__ == "__main__":
     doc = '''
     APD camstack starter
 
-    Usage:
-        camstack.cams.ao_apd [tmux] -u <channel>
+Usage:
+    camstack.cams.ao_apd [tmux] [-u <channel>]
 
-    Options:
-        -u <channel>        FPDP channel to use [default: 0]
+Options:
+    -u <channel>        FPDP channel to use [default: 0]
     '''
     from docopt import docopt
 
@@ -135,14 +135,14 @@ if __name__ == "__main__":
         from camstack.core.utilities import DependentProcess
         tmux = DependentProcess(
                 'apd_ctrl',
-                f'python -im camstack.cams.ao_apd -u {args["<channel>"]}', [])
+                f'python -im camstack.cams.ao_apd -u {args["-u"]}', [])
         tmux.initialize_tmux(True)
         tmux.start_command_line()
 
         exit(0)
     else:
 
-        apd = APDAcquisition('apd', 'apd', args['<channel>'],
+        apd = APDAcquisition('apd', 'apd', args['-u'],
                              taker_cset_prio=('fpdp_recv',
                                               45), dependent_processes=[])
 
