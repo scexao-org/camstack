@@ -134,8 +134,8 @@ Options:
 
         from camstack.core.utilities import DependentProcess
         tmux = DependentProcess(
-                'apd_ctrl',
-                f'python -im camstack.cams.ao_apd -u {args["-u"]}', [])
+                'apd_ctrl', f'python -im camstack.cams.ao_apd -u {args["-u"]}',
+                [])
         tmux.initialize_tmux(True)
         tmux.start_command_line()
 
@@ -148,3 +148,12 @@ Options:
 
         from camstack.core.utilities import shellify_methods
         shellify_methods(apd, globals())
+
+        import scxconf
+        import scxconf.pyrokeys as pk
+        from swmain.network.pyroserver_registerable import PyroServer
+        server = PyroServer(
+                bindTo=(scxconf.IP_AORTS_SUMMIT, 0),
+                nsAddress=(scxconf.PYRONSAO_HOST, scxconf.PYRONSAO_PORT))
+        server.add_device(apd, pk.APD, add_oneway_callables=True)
+        server.start()

@@ -176,6 +176,12 @@ def main():
     server.add_device(cam, pk.IIWI, add_oneway_callables=True)
     server.start()
 
+    server2 = PyroServer(
+            bindTo=(IP_ACQSERVER, 0),
+            nsAddress=(scxconf.PYRONSAO_HOST, scxconf.PYRONSAO_PORT))
+    server2.add_device(cam, pk.IIWI, add_oneway_callables=True)
+    server2.start()
+
 
 if __name__ == "__main__":
     main()
