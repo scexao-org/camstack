@@ -171,16 +171,11 @@ def main():
 
     shellify_methods(cam, globals())
 
-    server = PyroServer(bindTo=(IP_ACQSERVER, 0),
-                        nsAddress=(scxconf.PYRONS3_HOST, scxconf.PYRONS3_PORT))
-    server.add_device(cam, pk.IIWI, add_oneway_callables=True)
-    server.start()
-
-    server2 = PyroServer(
+    server = PyroServer(
             bindTo=(IP_ACQSERVER, 0),
             nsAddress=(scxconf.PYRONSAO_HOST, scxconf.PYRONSAO_PORT))
-    server2.add_device(cam, pk.IIWI, add_oneway_callables=True)
-    server2.start()
+    server.add_device(cam, pk.IIWI, add_oneway_callables=True)
+    server.start()
 
 
 if __name__ == "__main__":

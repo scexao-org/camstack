@@ -181,5 +181,6 @@ using   irwfs_pickoff (in|out)
 """
 
     def move_appropriate_block(self, in_true: bool) -> None:
-        in_out = 'in' if in_true else 'out'
+        # Block in == pickoff out
+        in_out = 'out' if in_true else 'in'
         os.system(f'ssh aorts irwfs_pickoff {in_out}')

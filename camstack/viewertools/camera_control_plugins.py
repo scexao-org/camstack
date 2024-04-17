@@ -18,7 +18,7 @@ from . import utils_backend as buts
 
 Sc = buts.Shortcut
 
-from swmain.network.pyroclient import connect
+from swmain.network.pyroclient import connect, connect_aorts
 
 
 class PyroProxyControl(BasePlugin):
@@ -28,7 +28,14 @@ class PyroProxyControl(BasePlugin):
         super().__init__(frontend_obj)
 
         self.pyro_key = pyro_key
-        self.pyro_proxy = connect(pyro_key)
+        import Pyro4
+        try:
+            self.pyro_proxy = connect(pyro_key)
+            self.pyro_proxy.alive
+        except Pyro4.errors.CommunicationError:
+            self.pyro_proxy = connect_aorts(pyro_key)
+        except AttributeError:
+            pass
 
     def frontend_action(self) -> None:
         '''
