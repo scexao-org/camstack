@@ -404,13 +404,16 @@ class PygameViewerFrontend:
             self.pg_screen.blit(self.cartoon_img_scaled, self.pg_cartoon_rect)
             self.pg_updated_rects.append(self.pg_cartoon_rect)
         '''
+        Labels
+        We do labels before plugins, so that
+        Plugin-controlled labels render on TOP
+        of Frontend-controlled labels.
+        '''
+        self._inloop_update_labels()
+        '''
         Plugins
         '''
         self._inloop_plugin_modes()
-        '''
-        Labels
-        '''
-        self._inloop_update_labels()
         '''
         Finish it all.
         '''

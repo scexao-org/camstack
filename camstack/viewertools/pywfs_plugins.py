@@ -3,6 +3,9 @@ from __future__ import annotations
 import typing as typ
 
 import os
+import subprocess
+
+from camstack.viewertools.pygame_viewer_frontend import PygameViewerFrontend
 
 _CORES = os.sched_getaffinity(0)  # AMD fix
 import pygame
@@ -123,9 +126,11 @@ class VisPyWFSTipTiltPlugin(JoystickActionPlugin):
         new_c = val_cd['X_ANALGC'] + push_xy[0] * tt_push
         new_d = val_cd['X_ANALGD'] + push_xy[1] * tt_push
         # BLEUARGH - whatever works yo.
-        os.system(f'ssh sc2 "analog_output.py voltage C {new_c}"')
         # No detach the first one - they'll collide and one will be ignored.
-        os.system(f'ssh sc2 "analog_output.py voltage D {new_d}" &')
+        subprocess.run(['ssh', 'sc2', f"analog_output.py voltage C {new_c}"])
+        subprocess.Popen(['ssh', 'sc2', f"analog_output.py voltage D {new_d}"])
+
+        # This action is much faster than the PIL move, so we don't need to use the same trick for movement mgmt
 
     def frontend_action(self):
         pass
@@ -136,8 +141,18 @@ class VisPyWFSTipTiltPlugin(JoystickActionPlugin):
 
 class VisPyWFSPupilSteerPlugin(JoystickActionPlugin):
 
+    processes: list[subprocess.Popen] = []
+
     def dispatch_modlevel(self, dir: buts.JoyKeyDirEnum,
                           mod_index: int) -> None:
+
+        # Cleanup actions from before:
+        self.processes = [p for p in self.processes if p.poll() is None]
+
+        if len(self.processes) > 0:
+            print('VisPyWFSPupilSteerPlugin: action still ongoing. Skip.')
+            return
+
         pup_push = [500, 3000, 10000][mod_index]
 
         push_xy = {
@@ -153,8 +168,150 @@ class VisPyWFSPupilSteerPlugin(JoystickActionPlugin):
         new_d = int(round(val_xy['X_PYWPPY'] + push_xy[1] * pup_push))
         # BLEUARGH - whatever works yo.
         # Technically since the axes are decoupled we only need to fire one of these.
-        os.system(f'ssh sc2 "pywfs_pup x goto {new_c}"')
-        os.system(f'ssh sc2 "pywfs_pup y goto {new_d}"')
+        # AND ACTUALLY IT MATTERS CUZ THE ZABERS CAN ONLY HAVE ONE SERIAL COMMAND FOR THE CHAIN
+        # If we eventually MUST do that, look there:
+        # https://stackoverflow.com/questions/72278333/run-one-subprocess-after-another-in-a-single-call-that-works-in-the-background
+        if push_xy[0] != 0:
+            self.processes = [
+                    subprocess.Popen([
+                            'ssh', 'sc2', f"pywfs_pup x goto {new_c}"
+                    ])
+            ]
+        else:
+            self.processes = [
+                    subprocess.Popen([
+                            'ssh', 'sc2', f"pywfs_pup y goto {new_d}"
+                    ])
+            ]
+
+    def frontend_action(self):
+        pass
+
+    def backend_action(self):
+        pass
+
+
+class NIRWFSSteeringMirrorPlugin(JoystickActionPlugin):
+
+    processes: list[subprocess.Popen] = []
+
+    def dispatch_modlevel(self, dir: buts.JoyKeyDirEnum,
+                          mod_index: int) -> None:
+
+        tt_push = [0.005, 0.02][mod_index]
+
+        push_xy = {
+                buts.JoyKeyDirEnum.UP: (1.0, 0.0),
+                buts.JoyKeyDirEnum.DOWN: (-1.0, 0.0),
+                buts.JoyKeyDirEnum.LEFT: (0.0, -1.0),
+                buts.JoyKeyDirEnum.RIGHT: (0.0, 1.0),
+        }[dir]
+
+        incr_theta = push_xy[0] * tt_push
+        incr_phi = push_xy[1] * tt_push
+        # BLEUARGH - whatever works yo.
+        # No detach the first one - they'll collide and one will be ignored.
+        self.processes += [
+                subprocess.Popen([
+                        'irwfs_steering', 'theta', 'push', f'{incr_theta:.4f}'
+                ]),
+                subprocess.Popen([
+                        'irwfs_steering', 'phi', 'push', f'{incr_phi:.4f}'
+                ])
+        ]
+
+    def frontend_action(self):
+        pass
+
+    def backend_action(self):
+        pass
+
+
+class AO188TipTiltPlugin(JoystickActionPlugin):
+
+    def __init__(self, frontend_obj: PygameViewerFrontend,
+                 joystick_udlr: tuple[int, int, int,
+                                      int], modlevels: list[int]) -> None:
+        super().__init__(frontend_obj, joystick_udlr, modlevels)
+
+        from pyMilk.interfacing.shm import SHM
+
+        self.tt_ch04 = SHM('dm01disp04')
+
+    def dispatch_modlevel(self, dir: buts.JoyKeyDirEnum,
+                          mod_index: int) -> None:
+
+        tt_push = [0.02, 0.1, 1.0][mod_index]
+
+        push_xy = {
+                buts.JoyKeyDirEnum.UP: (1.0, 0.0),
+                buts.JoyKeyDirEnum.DOWN: (-1.0, 0.0),
+                buts.JoyKeyDirEnum.LEFT: (0.0, -1.0),
+                buts.JoyKeyDirEnum.RIGHT: (0.0, 1.0),
+        }[dir]
+
+        tt_vals = self.tt_ch04.get_data(copy=True)
+
+        tt_vals[0] += push_xy[0] * tt_push
+        tt_vals[1] += push_xy[1] * tt_push
+
+        self.tt_ch04.set_data(tt_vals)
+
+    def frontend_action(self):
+        pass
+
+    def backend_action(self):
+        pass
+
+
+class NIRWFSPupilSteerPlugin(JoystickActionPlugin):
+
+    processes: list[subprocess.Popen] = []
+
+    def dispatch_modlevel(self, dir: buts.JoyKeyDirEnum,
+                          mod_index: int) -> None:
+
+        # Cleanup actions from before:
+        self.processes = [p for p in self.processes if p.poll() is None]
+
+        if len(self.processes) > 0:
+            print('VisPyWFSPupilSteerPlugin: action still ongoing. Skip.')
+            return
+
+        pup_push = [500, 3000, 10000][mod_index]
+
+        push_xy = {
+                buts.JoyKeyDirEnum.UP: (0.0, 1.0),
+                buts.JoyKeyDirEnum.DOWN: (0.0, -1.0),
+                buts.JoyKeyDirEnum.LEFT: (-1.0, 0.0),
+                buts.JoyKeyDirEnum.RIGHT: (1.0, 0.0),
+        }[dir]
+
+        import re
+
+        try:
+            if push_xy[0] != 0:
+                p = subprocess.run(['irwfs_pup', 'x', 'status'],
+                                   stdout=subprocess.PIPE)
+                val = int(re.findall('Position = (\d+)', p.stdout.decode())[0])
+                new_x = int(val + push_xy[0] * pup_push)
+                self.processes = [
+                        subprocess.Popen(['irwfs_pup', 'x'
+                                          'goto'
+                                          f'{new_x}'])
+                ]
+            else:
+                p = subprocess.run(['irwfs_pup', 'y', 'status'],
+                                   stdout=subprocess.PIPE)
+                val = int(re.findall('Position = (\d+)', p.stdout.decode())[0])
+                new_y = int(val + push_xy[1] * pup_push)
+                self.processes = [
+                        subprocess.Popen(['irwfs_pup', 'y'
+                                          'goto'
+                                          f'{new_y}'])
+                ]
+        except:
+            print('Error polling irwfs_pup status')
 
     def frontend_action(self):
         pass

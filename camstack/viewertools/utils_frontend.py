@@ -76,21 +76,23 @@ class LabelMessage:
         self.fg_col = fg_col
         self.bg_col = bg_col
 
-        self.label: pygame.surface.Surface | None = None
-        self.render(tuple(0 for _ in range(self.n_args)))
-
-        assert self.label  # mypy happy - self.label assigned inside self.render.
-        self.rectangle: pygame.Rect = self.label.get_rect()
-
         if topleft is not None:
-            self.rectangle.topleft = topleft
+            self.rect_alignment = 'topleft'
+            self.rect_align_point = topleft
         elif center is not None:
-            self.rectangle.center = center
+            self.rect_alignment = 'center'
+            self.rect_align_point = center
         elif topright is not None:
-            self.rectangle.topright = topright
+            self.rect_alignment = 'topright'
+            self.rect_align_point = topright
         else:
             raise AssertionError(
                     'Either of topleft, center, topright required.')
+
+        self.label: pygame.surface.Surface | None = None
+        self.rectangle: pygame.Rect | None = None
+
+        self.render(tuple(0 for _ in range(self.n_args)))
 
     def render(self, format_args: tuple[typ.Any, ...],
                fg_col: RGBType | None = None, bg_col: RGBType | None = None,
@@ -101,6 +103,19 @@ class LabelMessage:
 
         self.last_rendered = self.template_str % format_args
         self.label = self.font.render(self.last_rendered, True, fg_col, bg_col)
+
+        # Good time to check if the new rectangle is smaller than the old one.
+
+        # Realign in case the width changed or something.
+        if self.rectangle is None:
+            self.rectangle = self.label.get_rect()
+
+        # Will perform the actual move of the rectangle top-left point in case the
+        # Rectangle has changed width and is anchored by the right side.
+        nu_r = self.label.get_rect()
+        self.rectangle.update(nu_r.left, nu_r.top, nu_r.width, nu_r.height)
+
+        setattr(self.rectangle, self.rect_alignment, self.rect_align_point)
 
         if blit_onto is not None:
             self.blit(blit_onto)

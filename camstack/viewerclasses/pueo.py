@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import time
+from math import nan
+from swmain import redis
+
 from ..viewertools import utils_frontend as futs
 from ..viewertools.generic_viewer_backend import GenericViewerBackend
 from ..viewertools.pygame_viewer_frontend import PygameViewerFrontend
@@ -7,7 +11,7 @@ from ..viewertools.pygame_viewer_frontend import PygameViewerFrontend
 
 class PueoViewerFrontend(PygameViewerFrontend):
 
-    BOTTOM_PX_PAD = 100
+    BOTTOM_PX_PAD = 120
 
     WINDOW_NAME = 'Pueo PyWFS'
 
@@ -62,6 +66,22 @@ RCTRL + RALT + ARROWS   : same, but smaller
         '''
 
         sz = self.system_zoom  # Shorthandy
+
+        self.lbl_block = futs.LabelMessage(
+                "%s", self.fonts.DEFAULT_25, fg_col=futs.Colors.RED,
+                bg_col=futs.Colors.BLACK,
+                center=(int(self.pygame_win_size[0] // 2), 7 * sz))
+
+        self.lbl_whatfilt = futs.LabelMessage(
+                "%s", self.fonts.DEFAULT_16, fg_col=futs.Colors.BLUE,
+                bg_col=None, center=(int(self.pygame_win_size[0] * 3 // 4),
+                                     self.data_disp_size[1] - 7 * sz))
+        self.lbl_whatpickoff = futs.LabelMessage(
+                "%s", self.fonts.DEFAULT_16, fg_col=futs.Colors.GREEN,
+                bg_col=None, center=(int(self.pygame_win_size[0] * 1 // 4),
+                                     self.data_disp_size[1] - 7 * sz))
+
+        # r, c used to count line increments in bottom region
         r = self.data_disp_size[1] + 3 * sz
         c = 10 * sz
 
@@ -107,12 +127,26 @@ RCTRL + RALT + ARROWS   : same, but smaller
                                                 topleft=(c, r))
         r += int(1.2 * self.lbl_saturation.em_size)
 
+        # tip-tilt + PIL
+        self.lbl_tt = futs.LabelMessage("TT[%.2f, %.2f]", self.fonts.MONO,
+                                        topleft=(c, r))
+        r += int(1.2 * self.lbl_tt.em_size)
+        self.lbl_pil = futs.LabelMessage("PIL[%6d, %6d]", self.fonts.MONO,
+                                         topleft=(c, r))
+        r += int(1. * self.lbl_pil.em_size)
+
+        # Warning at top: NO REDIS
+        self.lbl_no_redis = futs.LabelMessage("%8s", self.fonts.DEFAULT_25,
+                                              fg_col=futs.Colors.WHITE,
+                                              bg_col=futs.Colors.RED,
+                                              topleft=(3 * sz, 3 * sz))
+
         # {Status message [sat, acquiring dark, acquiring ref...]}
         # At the bottom right.
         self.lbl_status = futs.LabelMessage(
                 '%s', self.fonts.DEFAULT_16,
-                topleft=(8 * self.system_zoom,
-                         self.pygame_win_size[1] - 20 * self.system_zoom))
+                topright=(self.pygame_win_size[0] - 3 * self.system_zoom,
+                          self.pygame_win_size[1] - 10 * self.system_zoom))
 
         return r
 
@@ -135,13 +169,57 @@ RCTRL + RALT + ARROWS   : same, but smaller
         self.lbl_backend.render((self.backend_obj.str_status_report(), ),
                                 blit_onto=self.pg_screen)
 
+        if self.backend_obj.redis_status:
+            rd = self.backend_obj.redis_dict
+            self.lbl_tt.render((rd['X_ANALGC'], rd['X_ANALGD']),
+                               blit_onto=self.pg_screen)
+            self.lbl_pil.render((rd['X_PYWPPX'], rd['X_PYWPPY']),
+                                blit_onto=self.pg_screen)
+            if rd['X_PYWFPK'] == 'IN':
+                self.lbl_block.render(('BLOCK', ),
+                                      blit_onto=self.pg_datasurface)
+            self.lbl_whatfilt.render((rd['X_PYWFLT'], ),
+                                     blit_onto=self.pg_datasurface)
+            self.lbl_whatpickoff.render((rd['X_PYWPKO'], ),
+                                        blit_onto=self.pg_datasurface)
+        else:
+            self.lbl_tt.render((nan, nan), blit_onto=self.pg_screen)
+            self.lbl_pil.render((-1, -1), blit_onto=self.pg_screen)
+            self.lbl_no_redis.render(('NO REDIS', ),
+                                     blit_onto=self.pg_datasurface)
+
         self.pg_updated_rects += [
-                self.lbl_gain_mfrate.rectangle,
-                self.lbl_size_minmax.rectangle,
-                self.lbl_mouse.rectangle,
-                self.lbl_backend.rectangle,
+                getattr(obj, 'rectangle') for obj in [
+                        self.lbl_gain_mfrate, self.lbl_size_minmax,
+                        self.lbl_mouse, self.lbl_backend, self.lbl_tt,
+                        self.lbl_pil, self.lbl_no_redis, self.lbl_block,
+                        self.lbl_whatfilt, self.lbl_whatpickoff
+                ]
         ]
 
 
 class PueoViewerBackend(GenericViewerBackend):
-    pass
+
+    def __init__(self, name_shm: str) -> None:
+        super().__init__(name_shm)
+
+        self.redis_status: bool = False
+        self.redis_dict: dict[str, redis.ScxkwValueType] = {}
+        self.redis_last_time: float = time.time()
+
+    def redis_fetch(self) -> None:
+        try:
+            self.redis_dict = redis.get_values([
+                    'X_ANALGC', 'X_ANALGD', 'X_PYWPPX', 'X_PYWPPY', 'X_PYWFPK',
+                    'X_PYWPKO', 'X_PYWFLT'
+            ])
+            self.redis_status = True
+        except:
+            self.redis_status = False
+        self.redis_last_time = time.time()
+
+    def data_iter(self) -> None:
+        if time.time() - self.redis_last_time > 0.5:
+            self.redis_fetch()
+
+        return super().data_iter()
