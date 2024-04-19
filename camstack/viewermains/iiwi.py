@@ -39,7 +39,11 @@ def main(zoom: int, binn: int):
             # TODO: fcs pickoff as block
             SaturationPlugin(frontend, sat_value=40_000, nonlin_value=30_000,
                              textbox=frontend.lbl_saturation),
-            IiwiDarkAcquirePlugin(frontend, textbox=frontend.lbl_status),
+            # Normal dark taking with the pickoff moving
+            IiwiDarkAcquirePlugin(frontend, textbox=frontend.lbl_status,
+                                  modifier_and=pgmc.KMOD_LCTRL | pgmc.KMOD_LALT,
+                                  modifier_no_block=pgmc.KMOD_LCTRL),
+            # Dumb dark taking AND post to SHM
             cplugs.IiwiProxyControl(frontend),
             pplugs.PyWFSFluxPlugin(frontend),
     )

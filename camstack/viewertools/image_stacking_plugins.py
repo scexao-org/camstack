@@ -68,7 +68,9 @@ class RefImageAcquirePlugin(OneShotActionPlugin):
     def _complete_action(self) -> None:
         assert self.backend_obj is not None
         assert self.averaged_data is not None
-        self.backend_obj.data_for_sub_ref = self.averaged_data / self.averaging_counter
+        self.averaged_data /= self.averaging_counter
+
+        self.backend_obj.data_for_sub_ref = self.averaged_data
         self.averaging_counter = 0  # Mark for reset.
 
         if self.textbox:
@@ -106,29 +108,44 @@ class DarkAcquirePlugin(RefImageAcquirePlugin):
 
     def __init__(self, frontend_obj: PygameViewerFrontend,
                  key_onoff: int = pgmc.K_b, modifier_and: int = pgmc.KMOD_LCTRL,
-                 **kwargs):
+                 modifier_no_block: int | None = None, **kwargs):
 
         super().__init__(frontend_obj, key_onoff, modifier_and, **kwargs)
 
-    def do_action(self) -> None:  # abstract impl
+        self.modifier_no_block = modifier_no_block
+        self.block_was_moved_for_action: bool = False
+
+        if modifier_no_block is not None:
+            from functools import partial
+            self.shortcut_map[buts.Shortcut(key_onoff, modifier_no_block)] = \
+                partial(self.do_action, False)
+
+    def do_action(self, move_block: bool = True) -> None:  # abstract impl
         super().do_action()
 
         # Override the text box
         if self.textbox:
-            self.textbox.render(f"{'ACQUIRING DARK':^28s}",
-                                bg_col=futs.Colors.BLUE,
+            text = f"{'ACQUIRING DARK':^28s}" if move_block else f"{'ACQ. DARK (NO MOVE BLOCK)':^28s}"
+            self.textbox.render((text, ), bg_col=futs.Colors.BLUE,
                                 fg_col=futs.Colors.WHITE)
 
-        self.move_appropriate_block(True)
+        if move_block:
+            self.block_was_moved_for_action = True
+        else:
+            self.move_appropriate_block(True)
+            self.block_was_moved_for_action = False
 
     def _complete_action(
             self) -> None:  # Override because we want to write in bias_image
         assert self.backend_obj
         assert self.averaged_data is not None
 
-        self.move_appropriate_block(False)
+        if self.block_was_moved_for_action:
+            self.move_appropriate_block(False)
 
-        self.backend_obj.data_for_sub_dark = self.averaged_data / self.averaging_counter  # FIXME reference_image exists?
+        self.averaged_data /= self.averaging_counter
+
+        self.backend_obj.data_for_sub_dark = self.averaged_data  # FIXME reference_image exists?
         self.averaging_counter = 0  # Mark for reset.
 
         if self.textbox:
@@ -184,3 +201,11 @@ using   irwfs_pickoff (in|out)
         # Block in == pickoff out
         in_out = 'out' if in_true else 'in'
         os.system(f'ssh aorts irwfs_pickoff {in_out}')
+
+    def _complete_action(self) -> None:
+        super()._complete_action()
+
+        from pyMilk.interfacing.shm import SHM
+
+        SHM('iiwi_dark').set_data(self.averaged_data)
+        SHM('aol3_wfsdark').set_data(self.averaged_data)
