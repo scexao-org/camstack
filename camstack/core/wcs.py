@@ -43,7 +43,7 @@ def wcs_dict_init(
         'CRPIX2': ( pix[1], '[pixel] Reference pixel in Y', '%20.1f', 'CPX2'),
         'CD1_1': (delt_val[0] * cos(cd_rot_rad),
                   'Pixel coordinate translation matrix', '%20.8f', 'CD11'),
-        'CD1_2': (-delt_val[1] * sin(cd_rot_rad),
+        'CD1_2': (delt_val[1] * -sin(cd_rot_rad),
                   'Pixel coordinate translation matrix', '%20.8f', 'CD12'),
         'CD2_1': (delt_val[0] * sin(cd_rot_rad),
                   'Pixel coordinate translation matrix', '%20.8f', 'CD21'),

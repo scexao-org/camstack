@@ -16,6 +16,7 @@ CAM_INVOCATION: dict[str | None, tuple[str | None, str | None]] = {
         "ALALA": ("camstack.cam_mains.alala_orcam", 'AORTS'),  # nlcwfs?
         "APD": ("camstack.cams.ao_apd", 'AORTS'),  # nlcwfs?
         "APAPANE": ("camstack.cam_mains.apapane", '5'),
+        "APAPANEG": ("camstack.cam_mains.apapane -- G", '5'),
         "FIRST": ("camstack.cam_mains.first_orcam", 'K'),
         "FIRST_PUPIL": ("camstack.cam_mains.first_pupil", 'K'),
         "IIWI": ("camstack.cam_mains.iiwi", 'AORTS'),
@@ -73,6 +74,8 @@ def main(
     # Default cam name e.g. palila_ctrl
     if cam_name.lower().startswith('iiwi'):
         tmux_name = 'iiwi_ctrl'
+    elif cam_name.lower().startswith('apapane'):
+        tmux_name = 'apapane_ctrl'
     elif cam_name.lower() == 'first':
         tmux_name = 'fircam_ctrl'
     elif cam_name.lower() == 'pueo':

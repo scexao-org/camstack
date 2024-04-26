@@ -393,6 +393,32 @@ class IiwiButItsGLINT(GLINT):
         self._set_formatted_keyword('DETECTOR', 'CRED2 - IIWIGL')
 
 
+class ApapaneButItsGLINT(GLINT):
+
+    # yapf: disable
+    MODES = {
+            # Whatever you want that vaguely looks like apapane mode 3
+            # 256 x 256, centered
+            3: util.CameraMode(x0=192, x1=447, y0=128, y1=383,
+                        fps=1000, tint=1e-3),
+    }
+    # yapf: enable
+    MODES.update(CRED2.MODES)
+    EDTTAKE_EMBEDMICROSECOND = False
+
+    def _thermal_init_commands(self) -> None:
+        super()._thermal_init_commands()
+        logg.debug('_thermal_init_commands @ IiwiButItsGlint')
+        self.send_command('set imagetags on')
+        self.send_command('set rawimages on')
+
+    def _fill_keywords(self) -> None:
+        GLINT._fill_keywords(self)
+
+        # Override detector name
+        self._set_formatted_keyword('DETECTOR', 'CRED2-APAPANEGL')
+
+
 class Palila(CRED2):
 
     INTERACTIVE_SHELL_METHODS = [] + CRED2.INTERACTIVE_SHELL_METHODS

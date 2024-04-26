@@ -76,7 +76,7 @@ class BaseCamera:
             'BIN-FCT1': (1, '[pixel] Binning factor of X axis', '%20d', 'BIN1'),
             'BIN-FCT2': (1, '[pixel] Binning factor of Y axis', '%20d', 'BIN2'),
             'BSCALE': (1.0, 'Real=fits-value*BSCALE+BZERO', '%20.8f', 'BSCAL'),
-            'BUNIT': ('ADU', 'Unit of original values', '%-10s', 'BUNIT'),
+            'BUNIT': ('adu', 'Unit of original values', '%-10s', 'BUNIT'),
             'BZERO': (0.0, 'Real=fits-value*BSCALE+BZERO', '%20.8f', 'BZERO'),
             'CROPPED': (False, 'Partial Readout or cropped', 'BOOLEAN', 'CROPD'),
             'DATA-TYP': ('TEST', 'Subaru-style exp. type', '%-16s', 'DATA'),
@@ -91,7 +91,7 @@ class BaseCamera:
             'EXTTRIG': (False, 'Exposure of detector by an external trigger', 'BOOLEAN', 'TRIG'),
             'F-RATIO': (0., 'Monochromatic F-ratio of the camera', '%20.2f', 'FRTIO'),
             'FRATE': (100., '[Hz] Frame rate of the acquisition', '%16.3f', 'FRATE'),
-            'GAIN': (-1., '[e/adu] AD conversion factor', '%20.3f', 'GAIN'),
+            'GAIN': (-1., '[e-/adu] AD conversion factor', '%20.3f', 'GAIN'),
             'INST-PA': (-360., '[deg] PA offset of detector', '%20.3f', 'INSPA'),
             'OBS-MOD': ('UNDEFINED', 'Observation mode', '%-16s', 'OBMOD'),
             'PRD-MIN1': (0, '[pixel] Origin in X of the cropped window', '%16d', 'MIN1'),
@@ -224,6 +224,7 @@ class BaseCamera:
                 'Setting size for shmimTCPreceive et al.')
 
         for dep_proc in self.dependent_processes:
+
             if (MAGIC_HW_STR.HEIGHT in dep_proc.cli_original_args or
                         MAGIC_HW_STR.WIDTH in dep_proc.cli_original_args):
                 arglist: typ.List[util.Typ_shm_kw] = list(
@@ -234,12 +235,17 @@ class BaseCamera:
                         (cm.y1 - cm.y0 + 1) // cm.biny)
                 for kk, arg in enumerate(arglist):
                     if arg == MAGIC_HW_STR.HEIGHT:
+                        print(arg)
                         arglist[kk] = h
                     if arg == MAGIC_HW_STR.WIDTH:
                         arglist[kk] = w
                     # ... there might be a transpose error, ofc.
 
                 dep_proc.cli_args = arglist
+
+    def get_camera_crop(self) -> tuple:
+        shm = self._get_SHM()
+        return shm.get_crop()
 
     def prepare_camera_finalize(self,
                                 mode_id: t_Op[util.Typ_mode_id] = None) -> None:

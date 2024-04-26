@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 
 from camstack.core.utilities import DependentProcess, RemoteDependentProcess
@@ -154,11 +156,13 @@ def main():
                 'milk-exec "creashmim %s %u %u --type=u16 --kw=300"; shmimTCPreceive -c i_edt '
                 + f'{scxconf.TCPPORT_APAPANE}',
                 cli_args=('iiwi', MAGIC_HW_STR.HEIGHT, MAGIC_HW_STR.WIDTH),
-                remote_host=scxconf.IP_AORTS_SUMMIT,
+                remote_host=f'aorts@{scxconf.IP_AORTS_SUMMIT}',
                 kill_upon_create=False,
         )
         tcp_recv.start_order = 1
         tcp_recv.kill_order = 1
+
+        dependent_processes += [tcp_recv, tcp_send]
 
     if cam_flag in 'AGI':
         cam = Klass('iiwi', stream_name, unit=0, channel=0, mode_id=mode,
@@ -177,6 +181,8 @@ def main():
     server.add_device(cam, pk.IIWI, add_oneway_callables=True)
     server.start()
 
+    return cam, server
+
 
 if __name__ == "__main__":
-    main()
+    cam, server = main()

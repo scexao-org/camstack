@@ -1,19 +1,58 @@
 import os
 
 from camstack.core.utilities import DependentProcess, RemoteDependentProcess
-from camstack.cams.cred1 import Apapane
+from camstack.cams.cred1 import Apapane, CRED1
+from camstack.cams.cred2 import ApapaneButItsGLINT, CRED2
 
 from camstack.core.logger import init_camstack_logger
 
 from scxkw.config import MAGIC_HW_STR
 
+# PYROSERVER
 import scxconf
+import scxconf.pyrokeys as pk
+from swmain.network.pyroserver_registerable import PyroServer
 
-if __name__ == "__main__":
+from camstack.core.utilities import shellify_methods
+from argparse import ArgumentParser
+
+parser = ArgumentParser(
+        prog="apapanemain",
+        description="Start apapane, with Apapane or GLINT as actual camera.")
+parser.add_argument("camflag", choices=['A', 'G', 'AUTO'], type=str.upper,
+                    help="Physical camera: A Apapane | G Glint | AUTO",
+                    default='AUTO', nargs='?')
+
+
+def main():
+    args = parser.parse_args()
+    cam_flag: str = args.camflag
+
+    if cam_flag == 'AUTO':
+        # Perform a direct call to obtain the hwuid of the camera.
+        from hwmain.edt.edtinterface import EdtInterfaceSerial
+        # This cfg file will work the serial for all FLI cameras.
+        edt_serial = EdtInterfaceSerial(
+                unit=0, channel=0, config_file=os.environ['HOME'] +
+                '/src/camstack/config/cred2_single_channel.cfg')
+        uid = edt_serial.send_command(
+                'hwuid', base_timeout=1.0).removesuffix('\r\nOK\r\nfli-cli>')
+
+        cam_flag = {
+                '01-000016436d3e': 'G',
+                '01-0000190ddb96': 'A',
+                None: 'I'
+        }[uid]
 
     os.makedirs(os.environ['HOME'] + "/logs", exist_ok=True)
     init_camstack_logger(os.environ['HOME'] + "/logs/camstack-apapane.log")
 
+    type_lookup: dict[str, type[CRED1 | CRED2]] = {
+            'A': Apapane,
+            'G': ApapaneButItsGLINT,
+    }
+
+    Klass: type = type_lookup[cam_flag]
     mode = 3
 
     # Prepare dependent processes
@@ -73,10 +112,24 @@ if __name__ == "__main__":
     tcp_send.start_order = 4
     tcp_send.kill_order = 3
 
+    if cam_flag == 'A':
+        utr_cmdline = (
+                'milk-exec "mload milkimageformat;'
+                'readshmim apapane_raw; imgformat.cred_cds_utr ..procinfo 1; '
+                'imgformat.cred_cds_utr ..triggermode 3; '
+                'imgformat.cred_cds_utr ..loopcntMax -1; '
+                'imgformat.cred_cds_utr apapane_raw apapane 37000"')
+    elif cam_flag == 'G':
+        utr_cmdline = (
+                'milk-exec "mload milkimageformat;'
+                'readshmim apapane_raw; imgformat.cred_cds_utr ..procinfo 1; '
+                'imgformat.cred_cds_utr ..triggermode 3; '
+                'imgformat.cred_cds_utr ..loopcntMax -1; '
+                'imgformat.cred_cds_utr apapane_raw apapane 37000"')
+
     utr_red = DependentProcess(
             tmux_name='apapane_utr',
-            cli_cmd=
-            'milk-exec "mload milkimageformat; readshmim apapane_raw; imgformat.cred_cds_utr ..procinfo 1; imgformat.cred_cds_utr ..triggermode 3; imgformat.cred_cds_utr ..loopcntMax -1; imgformat.cred_cds_utr apapane_raw apapane 37000"',
+            cli_cmd=utr_cmdline,
             cli_args=(),
             kill_upon_create=True,
             cset='a_utr',
@@ -90,7 +143,7 @@ if __name__ == "__main__":
             tmux_name='apapane_zmq',
             cli_cmd='zmq_recv.py %s:%u %s',
             cli_args=(scxconf.IPLAN_SC5, scxconf.ZMQPORT_APAPANE, 'apapane'),
-            remote_host=f'scexao-op@{scxconf.IP_SC2}',
+            remote_host=f'scexao@{scxconf.IP_SC2}',
             kill_upon_create=False,
     )
     zmq_recv.start_order = 5
@@ -106,20 +159,21 @@ if __name__ == "__main__":
     zmq_send.start_order = 6
     zmq_send.kill_order = 5
 
-    cam = Apapane('apapane', 'apapane_raw', unit=1, channel=0, mode_id=mode,
-                  taker_cset_prio=('a_edt', 48), dependent_processes=[
-                          tcp_recv, tcp_send, utr_red, zmq_recv, zmq_send
-                  ])  #, tcp_send_raw, tcp_recv_raw])
+    cam = Klass('apapane', 'apapane_raw', unit=4, channel=0, mode_id=mode,
+                taker_cset_prio=('a_edt', 48), dependent_processes=[
+                        tcp_recv, tcp_send, utr_red, zmq_recv, zmq_send
+                ])  #, tcp_send_raw, tcp_recv_raw])
 
     from camstack.core.utilities import shellify_methods
     shellify_methods(cam, globals())
 
-    # PYROSERVER
-    from scxconf import PYRONS3_HOST, PYRONS3_PORT, IP_SC5
-    from camstack import pyro_keys as pk
-    from swmain.network.pyroserver_registerable import PyroServer
-
-    server = PyroServer(bindTo=(IP_SC5, 0),
-                        nsAddress=(PYRONS3_HOST, PYRONS3_PORT))
+    server = PyroServer(bindTo=(scxconf.IP_SC5, 0),
+                        nsAddress=(scxconf.PYRONS3_HOST, scxconf.PYRONS3_PORT))
     server.add_device(cam, pk.APAPANE, add_oneway_callables=True)
     server.start()
+
+    return cam, server
+
+
+if __name__ == "__main__":
+    cam, server = main()

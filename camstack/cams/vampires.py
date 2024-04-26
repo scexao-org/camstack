@@ -13,7 +13,9 @@ from .dcamcam import OrcaQuest
 
 class BaseVCAM(OrcaQuest):
     HOTSPOTS: typ.Dict[str, typ.Tuple[float, float]] = {}
-    PLATE_SCALE: float = 0  # deg/px, must be overridden by sub-classes
+    PLATE_SCALE: tuple[float,
+                       float] = (0, 0
+                                 )  # deg/px, must be overridden by sub-classes
     INST_PA: float = 0  # deg, must be overridden by sub-classes
 
     ## camera keywords
@@ -62,6 +64,7 @@ class BaseVCAM(OrcaQuest):
     ## camera modes
     FULL, TWOARC, ONEARC, HALFARC, STANDARD, NPBS, MBI, MBI_REDUCED, PUPIL = \
         "FULL", "TWOARC", "ONEARC", "HALFARC", "STANDARD", "NPBS", "MBI", "MBI_REDUCED", "PUPIL"
+    MBI_ONEHALF = "MBI_ONEHALF"
     MODES = {
             FULL:
                     util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
@@ -79,6 +82,7 @@ class BaseVCAM(OrcaQuest):
                                     tint=1e-3),
     }
 
+    # IS_WATER_COOLED = False  # Results in prepare_camera_for_size setting cooler to MAX.
     IS_WATER_COOLED = True  # Results in prepare_camera_for_size setting cooler to MAX.
 
     def set_readout_mode(self, mode: str) -> None:
@@ -209,7 +213,10 @@ class BaseVCAM(OrcaQuest):
                     name = "NA"
                 else:
                     name = f"F{field}"
+                # hotspots are aboslute coordinates, need to subtract crop origin
                 hx, hy = self.HOTSPOTS[field]
+                hx -= self.current_mode.x0
+                hy -= self.current_mode.y0
                 wcs_dict = wcs_dict_init(i, pix=(hx + 0.5, hy + 0.5),
                                          delt_val=self.PLATE_SCALE,
                                          cd_rot_rad=cd_angle, name=name,
@@ -238,7 +245,7 @@ class BaseVCAM(OrcaQuest):
 
 
 class VCAM1(BaseVCAM):
-    PLATE_SCALE = (-1.675e-6, -1.675e-6)  # deg / px
+    PLATE_SCALE = (-6.03 / 3.6e6, -6.03 / 3.6e6)  # deg / px
     INST_PA = -40.6  # deg
     GAINS = {"FAST": 0.103, "SLOW": 0.105}
     MODES = {
@@ -246,21 +253,29 @@ class VCAM1(BaseVCAM):
             #         util.CameraMode(x0=1764, x1=2299, y0=896, y1=1431,
             #                         tint=1e-3),
             BaseVCAM.MBI:
-                    util.CameraMode(x0=756, x1=2995, y0=632, y1=1735,
+                    util.CameraMode(x0=708, x1=2943, y0=616, y1=1719,
                                     tint=1e-3),
             BaseVCAM.MBI_REDUCED:
-                    util.CameraMode(x0=756, x1=2995, y0=1152, y1=1735,
+                    util.CameraMode(x0=720, x1=2943, y0=1160, y1=1719,
                                     tint=1e-3),
             BaseVCAM.PUPIL:
-                    util.CameraMode(x0=1608, x1=2499, y0=692, y1=1583, tint=0.1)
+                    util.CameraMode(x0=1604, x1=2491, y0=704, y1=1595,
+                                    tint=0.1),
+            BaseVCAM.MBI_ONEHALF:
+                    util.CameraMode(x0=1124, x1=3011, y0=1328, y1=1547,
+                                    tint=1e-4),
     }
     MODES.update(BaseVCAM.MODES)
     MODES[BaseVCAM.NPBS] = MODES[BaseVCAM.STANDARD]
     HOTSPOTS = {
-            "760": (1965.4, 808.2),
-            "720": (843.9, 830.0),
-            "670": (279.4, 833.5),
-            "610": (268.7, 270.7)
+            "760": (2674.2, 1430.1),
+            "720": (1552.2, 1442.9),
+            "670": (988.1, 1448.6),
+            "610": (979.2, 886.1),
+    }
+    ORIGIN = {
+            "MBI": (616, 708),
+            "MBI_REDUCED": (1160, 720),
     }
 
     REDIS_PUSH_ENABLED = True
@@ -292,7 +307,7 @@ class VCAM1(BaseVCAM):
 
 
 class VCAM2(BaseVCAM):
-    PLATE_SCALE = (-1.678e-6, 1.678e-6)  # deg / px
+    PLATE_SCALE = (-6.04 / 3.6e6, 6.04 / 3.6e6)  # deg / px
     INST_PA = -41.4  # deg
     MODES = {
             # BaseVCAM.STANDARD:
@@ -302,22 +317,30 @@ class VCAM2(BaseVCAM):
                     util.CameraMode(x0=1700, x1=2235, y0=816, y1=1351,
                                     tint=1e-3),
             BaseVCAM.MBI:
-                    util.CameraMode(x0=756, x1=2995, y0=572, y1=1675,
+                    util.CameraMode(x0=704, x1=2943, y0=572, y1=1675,
                                     tint=1e-3),
             BaseVCAM.MBI_REDUCED:
-                    util.CameraMode(x0=756, x1=2995, y0=572, y1=1155,
+                    util.CameraMode(x0=720, x1=2943, y0=572, y1=1147,
                                     tint=1e-3),
+            BaseVCAM.MBI_ONEHALF:
+                    util.CameraMode(x0=1128, x1=3015, y0=744, y1=979,
+                                    tint=1e-4),
             BaseVCAM.PUPIL:
-                    util.CameraMode(x0=1648, x1=2407, y0=772, y1=1531, tint=0.1)
+                    util.CameraMode(x0=1648, x1=2407, y0=772, y1=1531,
+                                    tint=0.1),
     }
     MODES.update(BaseVCAM.MODES)
 
     GAINS = {"FAST": 0.103, "SLOW": 0.105}
     HOTSPOTS = {
-            "760": (1970.5, 313.1),
-            "720": (850.8, 279.3),
-            "670": (286.4, 268.9),
-            "610": (269.3, 834.4)
+            "760": (2674.2, 877.3),
+            "720": (1553.8, 853.1),
+            "670": (989.9, 842.0),
+            "610": (975.0, 1406.9)
+    }
+    ORIGIN = {
+            "MBI": (575, 704),
+            "MBI_REDUCED": (572, 720),
     }
 
     REDIS_PUSH_ENABLED = True
