@@ -3,6 +3,7 @@
 # Camstack acquisition killer for scexao5
 
 tmux send-keys -t apapane_ctrl "release(); quit()" Enter
+tmux send-keys -t iiwi_ctrl "release(); quit()" Enter
 tmux send-keys -t palila_ctrl "release(); quit()" Enter
 tmux send-keys -t vcam1_ctrl "release(); quit()" Enter
 tmux send-keys -t vcam2_ctrl "release(); quit()" Enter
