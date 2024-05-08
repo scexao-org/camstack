@@ -184,8 +184,8 @@ class OrcaQuest(DCAMCamera):
             FIRSTPL: util.CameraMode(x0=1500, x1=3395, y0=1572, y1=1983, tint=0.001),
             FIRSTPLSMF: util.CameraMode(x0=1000, x1=2895, y0=1752, y1=1895, tint=0.001),
             0: util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),  # Also full
-            WFS: util.CameraMode(x0=1352, x1=2127, y0=944, y1=1119, tint=0.001),    # Kyohoon is Using for WFS mode
-            2: util.CameraMode(x0=800, x1=3295, y0=876, y1=1531, tint=0.001),      # Kyohoon is Using for WFS align
+            WFS: util.CameraMode(x0=1380, x1=2079, y0=960, y1=1087, tint=0.001),    # 4 planes
+            2: util.CameraMode(x0=1592, x1=1891, y0=960, y1=1087, tint=0.001),      # 2 planes
             3: util.CameraMode(x0=1924, x1=2723, y0=1244, y1=1443, tint=0.001),
             FPWFS: util.CameraMode(x0=1804, x1=2315, y0=796, y1=1307, tint=0.001),    # Jen is using for focal plane mode
     }
