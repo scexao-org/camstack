@@ -72,7 +72,6 @@ class BaseCamera:
             # this list CAN be figured out from a redis query.
             # but I don't want to add the dependency at this point
             # ALSO SHM caps at 16 chars for strings. The %s formats here are (some) shorter than official ones.
-            'BIAS': (0, '[adu] Bias offset', '%20.3f', 'BIAS'),
             'BIN-FCT1': (1, '[pixel] Binning factor of X axis', '%20d', 'BIN1'),
             'BIN-FCT2': (1, '[pixel] Binning factor of Y axis', '%20d', 'BIN2'),
             'BSCALE': (1.0, 'Real=fits-value*BSCALE+BZERO', '%20.8f', 'BSCAL'),
@@ -80,6 +79,7 @@ class BaseCamera:
             'BZERO': (0.0, 'Real=fits-value*BSCALE+BZERO', '%20.8f', 'BZERO'),
             'CROPPED': (False, 'Partial Readout or cropped', 'BOOLEAN', 'CROPD'),
             'DATA-TYP': ('TEST', 'Subaru-style exp. type', '%-16s', 'DATA'),
+            'DET-BIAS': (0, '[adu] Bias offset', '%20.3f', 'BIAS'),
             'DET-NSMP': (1, 'Number of non-destructive reads', '%20d', 'NDR'),
             'DET-SMPL': ('base', 'Sampling method', '%-16.16s', 'SAMPL'),
             'DET-TMP': (0.0, '[K] Detector temperature', '%20.2f', 'TEMP'),

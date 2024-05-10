@@ -718,9 +718,10 @@ class VCAMDarkAcquirePlugin(DeviceMixin, DarkAcquirePlugin):
         if in_true:
             # don't use __oneway because we don't want to start taking darks
             # until block is fully in
-            self.device.move_relative(31)
+            self.cur_posn = self.device.get_position()
+            self.device.move_configuration(7)
         else:
-            self.device.move_relative__oneway(-31)
+            self.device.move_absolute(self.cur_posn)
 
 
 class VCAMTriggerPlugin(DeviceMixin, BasePlugin):
@@ -801,16 +802,17 @@ class VCAMCompassPlugin(OnOffPlugin):
 
     def __init__(self, frontend_obj: PygameViewerFrontend,
                  key_onoff: int = pgmc.K_p, modifier_and: int = 0,
-                 color=futs.Colors.GREEN, color2=futs.Colors.CYAN,
-                 imrpad_offset=None) -> None:
+                 color=futs.Colors.GREEN, color2=futs.Colors.CYAN, flip_y: bool = False) -> None:
         super().__init__(frontend_obj, key_onoff, modifier_and)
         self.color = color
         self.color2 = color2
-        self.imrpad_offset = imrpad_offset
+        self.imrpap = 0
+        self.imrpad = 0
         self.enabled = False
         self.imrpad = None
         self.surface = self.frontend_obj.pg_datasurface
         self.zoom = self.frontend_obj.fonts_zoom
+        self.flip_y = flip_y
         font = pygame.font.SysFont("monospace", 4 * (self.zoom + 1))
         self.text_X = font.render("X", True, self.color)
         self.text_X_rect = self.text_X.get_rect()
@@ -840,12 +842,17 @@ class VCAMCompassPlugin(OnOffPlugin):
         lbl_length = 17 * self.zoom
 
         # X
-        pygame.draw.line(self.surface, self.color, ctr, (xc, yc - length), 2)
-        self.text_X_rect.center = xc, yc - lbl_length
+        pygame.draw.line(self.surface, self.color, ctr, (xc + length, yc), 2)
+        self.text_X_rect.center = xc + lbl_length, yc
         self.surface.blit(self.text_X, self.text_X_rect)
         # Y
-        pygame.draw.line(self.surface, self.color, ctr, (xc - length, yc), 2)
-        self.text_Y_rect.center = xc - lbl_length, yc
+        if self.flip_y:
+            pygame.draw.line(self.surface, self.color, ctr, (xc, yc + length), 2)
+            self.text_Y_rect.center = xc, yc + lbl_length
+        else:
+            pygame.draw.line(self.surface, self.color, ctr, (xc, yc - length), 2)
+            self.text_Y_rect.center = xc, yc - lbl_length
+
         self.surface.blit(self.text_Y, self.text_Y_rect)
         self.frontend_obj.pg_updated_rects.extend(
                 (self.text_X_rect, self.text_Y_rect))
@@ -854,14 +861,14 @@ class VCAMCompassPlugin(OnOffPlugin):
         rot_mat = rotation_matrix(self.imrpap)
 
         # El
-        offset_El = rot_mat @ np.array((0, -length)) + ctr
+        offset_El = rot_mat @ np.array((length, 0)) + ctr
         pygame.draw.line(self.surface, futs.Colors.RED, ctr, offset_El, 2)
-        self.text_El_rect.center = rot_mat @ np.array((0, -lbl_length)) + ctr
+        self.text_El_rect.center = rot_mat @ np.array((lbl_length, 0)) + ctr
         self.surface.blit(self.text_El, self.text_El_rect)
         # Az
-        offset_Az = rot_mat @ np.array((length, 0)) + ctr
+        offset_Az = rot_mat @ np.array((0, length)) + ctr
         pygame.draw.line(self.surface, futs.Colors.RED, ctr, offset_Az, 2)
-        self.text_Az_rect.center = rot_mat @ np.array((lbl_length, 0)) + ctr
+        self.text_Az_rect.center = rot_mat @ np.array((0, lbl_length)) + ctr
         self.surface.blit(self.text_Az, self.text_Az_rect)
         self.frontend_obj.pg_updated_rects.extend(
                 (self.text_El_rect, self.text_Az_rect))
@@ -870,14 +877,14 @@ class VCAMCompassPlugin(OnOffPlugin):
         rot_mat = rotation_matrix(self.imrpad)
 
         # N
-        offset_N = rot_mat @ np.array((-length, 0)) + ctr
+        offset_N = rot_mat @ np.array((0, -length)) + ctr
         pygame.draw.line(self.surface, self.color2, ctr, offset_N, 2)
-        self.text_N_rect.center = rot_mat @ np.array((-lbl_length, 0)) + ctr
+        self.text_N_rect.center = rot_mat @ np.array((0, -lbl_length)) + ctr
         self.surface.blit(self.text_N, self.text_N_rect)
         # E
-        offset_E = rot_mat @ np.array((0, length)) + ctr
+        offset_E = rot_mat @ np.array((-length, 0)) + ctr
         pygame.draw.line(self.surface, self.color2, ctr, offset_E, 2)
-        self.text_E_rect.center = rot_mat @ np.array((0, lbl_length)) + ctr
+        self.text_E_rect.center = rot_mat @ np.array((-lbl_length, 0)) + ctr
         self.surface.blit(self.text_E, self.text_E_rect)
         self.frontend_obj.pg_updated_rects.extend(
                 (self.text_N_rect, self.text_E_rect))
@@ -885,11 +892,12 @@ class VCAMCompassPlugin(OnOffPlugin):
     def backend_action(self) -> None:
         if not self.enabled:
             return
+        inst_pa = self.backend_obj.input_shm.get_keywords()["INST-PA"]
         try:
             redis_values = get_values(
                     ("D_IMRPAD", "D_IMRPAP", "ALTITUDE", "AZIMUTH"))
-            self.imrpad = redis_values["D_IMRPAD"] + self.imrpad_offset
-            self.imrpap = redis_values["D_IMRPAP"] + self.imrpad_offset
+            self.imrpad = redis_values["D_IMRPAD"] + inst_pa
+            self.imrpap = redis_values["D_IMRPAP"] + inst_pa
         except:
             pass
 
@@ -907,13 +915,13 @@ class VCAMScalePlugin(OnOffPlugin):
 
     def __init__(self, frontend_obj: PygameViewerFrontend,
                  key_onoff: int = pgmc.K_i, modifier_and: int = 0,
-                 color: str = futs.Colors.GREEN, platescale=5.64) -> None:
+                 color: str = futs.Colors.GREEN) -> None:
         super().__init__(frontend_obj, key_onoff, modifier_and)
         self.color = color
         self.surface = self.frontend_obj.pg_datasurface
         self.zoom = self.frontend_obj.fonts_zoom
         font = pygame.font.SysFont("monospace", 5 * (self.zoom + 1), bold=True)
-        self.platescale = self.eff_plate_scale = platescale  # mas / px
+        self.platescale = self.eff_plate_scale = (0, 0)  # mas / px
         xtot_fe, ytot_fe = self.frontend_obj.data_disp_size
         self.length = 0.38 * xtot_fe
         self.xc = 7 * self.zoom
@@ -933,9 +941,9 @@ class VCAMScalePlugin(OnOffPlugin):
         if not self.enabled:  # OK maybe this responsibility could be handled to the caller.
             return
 
-        self.lbl_y.render(self.eff_plate_scale * self.length / 1e3,
+        self.lbl_y.render(self.eff_plate_scale[1] * self.length / 1e3,
                           blit_onto=self.surface)
-        self.lbl_x.render(self.eff_plate_scale * self.length / 1e3,
+        self.lbl_x.render(self.eff_plate_scale[0] * self.length / 1e3,
                           blit_onto=self.surface)
         self.frontend_obj.pg_updated_rects.extend(
                 (self.lbl_y.rectangle, self.lbl_x.rectangle))
@@ -964,6 +972,9 @@ class VCAMScalePlugin(OnOffPlugin):
     def backend_action(self) -> None:
         if not self.enabled:
             return
+        cam_kwds = self.backend_obj.input_shm.get_keywords()
+        pxscale = np.array((cam_kwds["CDELT1"], cam_kwds["CDELT2"])) * 3.6e6 # deg -> mas
+        self.platescale = np.abs(pxscale)
         self.eff_plate_scale = self.platescale / 2**self.backend_obj.crop_lvl_id
         if "MBI" in self.backend_obj.mode:
             self.eff_plate_scale *= 2

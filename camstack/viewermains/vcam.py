@@ -10,34 +10,37 @@ import camstack.viewertools.vampires_plugins as vplugs
               help="Graphics window zoom factor", show_default=True)
 @click.option("-b", "--bin", "binn", type=int, default=1,
               help="SHM binning factor", show_default=True)
-def main1(zoom, binn):
+@click.option("-d", "--debug", "debug", is_flag=True)
+def main1(zoom, binn, debug=False):
     backend = VAMPIRESBaseViewerBackend(1, "vcam1")
     binned_backend_shape = (560 // binn, 560 // binn)
 
     frontend = VAMPIRESBaseViewerFrontend(1, zoom, 20, binned_backend_shape,
                                           fonts_zoom=2 * zoom // binn)
-    plugins = (
-            SaturationPlugin(frontend, sat_value=65535,
-                             textbox=frontend.lbl_saturation),
-            vplugs.FieldstopPlugin(frontend),
-            vplugs.FilterWheelPlugin(frontend),
-            vplugs.MBIWheelPlugin(frontend),
-            vplugs.VAMPIRESPupilMode(frontend),
-            vplugs.VCAMDarkAcquirePlugin(frontend, textbox=frontend.lbl_status),
-            vplugs.VCAMTriggerPlugin(frontend),
-            vplugs.DiffFilterWheelPlugin(frontend),
-            vplugs.VCAMCompassPlugin(
-                    frontend,
-                    imrpad_offset=180 - 138.67683627632385  # deg
-            ),
-            vplugs.VCAMScalePlugin(frontend, platescale=6.018378804429752),
-            vplugs.DiffWheelBlockPlugin(frontend),
-            vplugs.FocusPlugin(frontend))
+    plugins = (SaturationPlugin(frontend, sat_value=65535,
+                                textbox=frontend.lbl_saturation),
+               vplugs.FieldstopPlugin(frontend),
+               vplugs.FilterWheelPlugin(frontend),
+               vplugs.MBIWheelPlugin(frontend),
+               vplugs.VAMPIRESPupilMode(frontend),
+               vplugs.VCAMDarkAcquirePlugin(frontend,
+                                            textbox=frontend.lbl_status),
+               vplugs.VCAMTriggerPlugin(frontend),
+               vplugs.DiffFilterWheelPlugin(frontend),
+               vplugs.VCAMCompassPlugin(frontend, flip_y=True),
+               vplugs.VCAMScalePlugin(frontend),
+               vplugs.DiffWheelBlockPlugin(frontend),
+               vplugs.FocusPlugin(frontend), vplugs.CamFocusPlugin(frontend))
 
     frontend.plugins.extend(plugins)
     frontend.register_backend(backend)
     backend.register_frontend(frontend)
+
     frontend.run()
+
+    if debug:
+        import pdb
+        pdb.set_trace()
 
 
 @click.command("vcam2.py")
@@ -61,11 +64,10 @@ def main2(zoom, binn):
                                             textbox=frontend.lbl_status),
                vplugs.VCAMTriggerPlugin(frontend),
                vplugs.DiffFilterWheelPlugin(frontend),
-               vplugs.VCAMCompassPlugin(frontend,
-                                        imrpad_offset=180 - 138.67683627632385),
-               vplugs.VCAMScalePlugin(frontend, platescale=6.018378804429752),
+               vplugs.VCAMCompassPlugin(frontend),
+               vplugs.VCAMScalePlugin(frontend),
                vplugs.DiffWheelBlockPlugin(frontend),
-               vplugs.FocusPlugin(frontend))
+               vplugs.FocusPlugin(frontend), vplugs.CamFocusPlugin(frontend))
 
     frontend.plugins.extend(plugins)
     frontend.register_backend(backend)

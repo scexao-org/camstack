@@ -232,18 +232,19 @@ CTRL  + s     : Save current position to last configuration"""
         else:
             raise ValueError(f"Unknown camera number {self.cam_num}")
 
-        _mbi_shape = 520, 520
+        x0, _, y0, _ = self.cam.get_camera_crop()
+        _mbi_shape = 536, 536
         mbi_centers = {}
         mbir_centers = {}
         for key, hotspot in hotspots.items():
-            cr = hotspot[0] + self.crop_offset[0]
-            cc = hotspot[1] + self.crop_offset[1]
+            cr = hotspot[0] + self.crop_offset[0] - x0
+            cc = hotspot[1] + self.crop_offset[1] - y0
             mbi_centers[key] = cr, cc
             # reduced mode
             if cr >= self.shm_shape[0]:
-                cr -= 520
+                cr -= _mbi_shape[0]
             if cc >= self.shm_shape[1]:
-                cc -= 520
+                cc -= _mbi_shape[1]
             mbir_centers[key] = cr, cc
         self.mbi_slices = (
                 self._get_crop_slice(center=mbi_centers["760"],
@@ -261,8 +262,6 @@ CTRL  + s     : Save current position to last configuration"""
                 self._get_crop_slice(center=mbir_centers["720"],
                                      shape=_mbi_shape),
                 self._get_crop_slice(center=mbir_centers["670"],
-                                     shape=_mbi_shape),
-                self._get_crop_slice(center=mbir_centers["610"],
                                      shape=_mbi_shape),
         )
 

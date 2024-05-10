@@ -245,18 +245,18 @@ class BaseVCAM(OrcaQuest):
 
 
 class VCAM1(BaseVCAM):
-    PLATE_SCALE = (-6.03 / 3.6e6, -6.03 / 3.6e6)  # deg / px
-    INST_PA = -40.6  # deg
+    PLATE_SCALE = (-5.910 / 3.6e6, -5.910 / 3.6e6)  # deg / px
+    INST_PA = -38.40  # deg
     GAINS = {"FAST": 0.103, "SLOW": 0.105}
     MODES = {
             # BaseVCAM.STANDARD:
             #         util.CameraMode(x0=1764, x1=2299, y0=896, y1=1431,
             #                         tint=1e-3),
             BaseVCAM.MBI:
-                    util.CameraMode(x0=708, x1=2943, y0=616, y1=1719,
+                    util.CameraMode(x0=704, x1=2931, y0=608, y1=1711,
                                     tint=1e-3),
             BaseVCAM.MBI_REDUCED:
-                    util.CameraMode(x0=720, x1=2943, y0=1160, y1=1719,
+                    util.CameraMode(x0=708, x1=2931, y0=1168, y1=1711,
                                     tint=1e-3),
             BaseVCAM.PUPIL:
                     util.CameraMode(x0=1604, x1=2491, y0=704, y1=1595,
@@ -268,14 +268,14 @@ class VCAM1(BaseVCAM):
     MODES.update(BaseVCAM.MODES)
     MODES[BaseVCAM.NPBS] = MODES[BaseVCAM.STANDARD]
     HOTSPOTS = {
-            "760": (2674.2, 1430.1),
-            "720": (1552.2, 1442.9),
-            "670": (988.1, 1448.6),
-            "610": (979.2, 886.1),
+            "760": (2662.1, 1438.0),
+            "720": (1540.1, 1440.7),
+            "670": (979.4, 1440.7),
+            "610": (974.2, 878.1),
     }
     ORIGIN = {
-            "MBI": (616, 708),
-            "MBI_REDUCED": (1160, 720),
+            "MBI": (608, 704),
+            "MBI_REDUCED": (1168, 708),
     }
 
     REDIS_PUSH_ENABLED = True
@@ -307,8 +307,8 @@ class VCAM1(BaseVCAM):
 
 
 class VCAM2(BaseVCAM):
-    PLATE_SCALE = (-6.04 / 3.6e6, 6.04 / 3.6e6)  # deg / px
-    INST_PA = -41.4  # deg
+    PLATE_SCALE = (-5.895 / 3.6e6, 5.895 / 3.6e6)  # deg / px
+    INST_PA = -38.58  # deg
     MODES = {
             # BaseVCAM.STANDARD:
             #         util.CameraMode(x0=1768, x1=2303, y0=892, y1=1427,
@@ -317,10 +317,10 @@ class VCAM2(BaseVCAM):
                     util.CameraMode(x0=1700, x1=2235, y0=816, y1=1351,
                                     tint=1e-3),
             BaseVCAM.MBI:
-                    util.CameraMode(x0=704, x1=2943, y0=572, y1=1675,
+                    util.CameraMode(x0=700, x1=2931, y0=576, y1=1679,
                                     tint=1e-3),
             BaseVCAM.MBI_REDUCED:
-                    util.CameraMode(x0=720, x1=2943, y0=572, y1=1147,
+                    util.CameraMode(x0=712, x1=2931, y0=576, y1=1131,
                                     tint=1e-3),
             BaseVCAM.MBI_ONEHALF:
                     util.CameraMode(x0=1128, x1=3015, y0=744, y1=979,
@@ -333,14 +333,14 @@ class VCAM2(BaseVCAM):
 
     GAINS = {"FAST": 0.103, "SLOW": 0.105}
     HOTSPOTS = {
-            "760": (2674.2, 877.3),
-            "720": (1553.8, 853.1),
-            "670": (989.9, 842.0),
-            "610": (975.0, 1406.9)
+            "760": (2662.9, 860.0),
+            "720": (1541.6, 849.0),
+            "670": (981.2, 845.2),
+            "610": (971.7, 1412.0)
     }
     ORIGIN = {
-            "MBI": (575, 704),
-            "MBI_REDUCED": (572, 720),
+            "MBI": (576, 700),
+            "MBI_REDUCED": (576, 712),
     }
 
     REDIS_PUSH_ENABLED = True

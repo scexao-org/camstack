@@ -223,12 +223,13 @@ class OrcaQuest(DCAMCamera):
         self._set_formatted_keyword("DETECTOR", "Orca Quest")
         self._set_formatted_keyword("CROPPED", self.current_mode_id
                                     != self.FULL)
+        # pixel pitch is 4.6 micron
         self._set_formatted_keyword("DETPXSZ1", 0.0046)
         self._set_formatted_keyword("DETPXSZ2", 0.0046)
 
         # Detector specs from instruction manual
         self._prm_getvalue("GAIN", dcamprop.EProp.CONVERSIONFACTOR_COEFF)
-        self._prm_getvalue("BIAS", dcamprop.EProp.CONVERSIONFACTOR_OFFSET)
+        self._prm_getvalue("DET-BIAS", dcamprop.EProp.CONVERSIONFACTOR_OFFSET)
 
     def poll_camera_for_keywords(self) -> None:
         self.get_temperature()
