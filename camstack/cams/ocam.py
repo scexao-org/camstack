@@ -35,6 +35,7 @@ class OCAM2K(EDTCamera):
     KEYWORDS = {
             'FILTER01': ('UNKNOWN', 'PyWFS filter state', '%-16s', 'FILTR'),
             'PICKOFF1': ('UNKNOWN', 'PyWFS pickoff state', '%-16s', 'PICKO'),
+            'DET-SMPL': ('', 'Sampling method', '%-16.16s', 'SAMPL'),
     }
     KEYWORDS.update(EDTCamera.KEYWORDS)
 

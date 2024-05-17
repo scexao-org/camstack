@@ -75,6 +75,8 @@ class CRED1(EDTCamera):
 
     KEYWORDS = {
             "DET-PRES": (0.0, "Detector pressure (mbar)", "%20.8f", "PRESR"),
+            'DET-NSMP': (1, 'Number of non-destructive reads', '%20d', 'NDR'),
+            'DET-SMPL': ('', 'Sampling method', '%-16.16s', 'SAMPL'),
     }
     KEYWORDS.update(EDTCamera.KEYWORDS)
 

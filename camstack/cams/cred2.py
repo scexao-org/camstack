@@ -55,7 +55,10 @@ class CRED2(EDTCamera):
     }
     # yapf: enable
 
-    KEYWORDS = {}
+    KEYWORDS = {
+            'DET-NSMP': (1, 'Number of non-destructive reads', '%20d', 'NDR'),
+            'DET-SMPL': ('', 'Sampling method', '%-16.16s', 'SAMPL'),
+    }
     KEYWORDS.update(EDTCamera.KEYWORDS)
 
     EDTTAKE_UNSIGNED = False
