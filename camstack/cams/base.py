@@ -80,11 +80,8 @@ class BaseCamera:
             'CROPPED': (False, 'Partial Readout or cropped', 'BOOLEAN', 'CROPD'),
             'DATA-TYP': ('TEST', 'Subaru-style exp. type', '%-16s', 'DATA'),
             'DET-BIAS': (0, '[adu] Bias offset', '%20.3f', 'BIAS'),
-            'DET-NSMP': (1, 'Number of non-destructive reads', '%20d', 'NDR'),
-            'DET-SMPL': ('', 'Sampling method', '%-16.16s', 'SAMPL'),
             'DET-TMP': (0.0, '[K] Detector temperature', '%20.2f', 'TEMP'),
             'DETECTOR': ('DET', 'Name of the detector', '%-16s', 'NAME'),
-            'DETGAIN': (1, 'Detector multiplication factor', '%16d', 'GAIN'),
             'DETPXSZ1': (0, '[mm] Detector pixel size in axis 1', '%20.6f', 'PXSZ1'),
             'DETPXSZ2': (0, '[mm] Detector pixel size in axis 2', '%20.6f', 'PXSZ2'),
             'EXPTIME': (0.001, '[s] Total integration time of the frame', '%20.8f', 'EXPO'),
@@ -235,7 +232,6 @@ class BaseCamera:
                         (cm.y1 - cm.y0 + 1) // cm.biny)
                 for kk, arg in enumerate(arglist):
                     if arg == MAGIC_HW_STR.HEIGHT:
-                        print(arg)
                         arglist[kk] = h
                     if arg == MAGIC_HW_STR.WIDTH:
                         arglist[kk] = w

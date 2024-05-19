@@ -39,6 +39,64 @@ Typ_shm_kw: typ.TypeAlias = typ.Union[bool, int, float, str]
 Typ_shm_kw_nobool: typ.TypeAlias = typ.Union[int, float, str]
 
 
+class FormattedFloat(float):
+    # https://subarutelescope.org/Observing/fits/howto/floatformat/
+    """
+    A class used to represent a FormattedFloat, which is a subclass of float.
+
+    ...
+
+    Attributes
+    ----------
+    formatstr : str
+        a formatted string that is used to represent the float value
+
+    Methods
+    -------
+    __str__():
+        Returns the float value as a formatted string.
+    """
+
+    def __new__(cls, value, formatstr=None):
+        """
+        Constructs a new instance of the FormattedFloat class.
+
+        Parameters
+        ----------
+        value : float
+            the float value to be formatted
+        formatstr : str, optional
+            the format string to be used (default is None)
+        """
+        return super().__new__(cls, value)
+
+    def __init__(self, value, formatstr=None):
+        """
+        Initializes the FormattedFloat instance.
+
+        Parameters
+        ----------
+        value : float
+            the float value to be formatted
+        formatstr : str, optional
+            the format string to be used (default is None)
+        """
+        if formatstr is not None:
+            # remove the leading % if present to be compatible with the f-string format
+            self.formatstr = formatstr
+
+    def __str__(self):
+        """
+        Returns the float value as a formatted string.
+
+        Returns
+        -------
+        str
+            the formatted string representation of the float value
+        """
+        return self.formatstr % self.__float__()
+
+
 def keyword_camstack_to_pyMilk(value: Typ_shm_kw,
                                format: str) -> Typ_shm_kw_nobool:
     val = value
@@ -53,7 +111,10 @@ def keyword_camstack_to_pyMilk(value: Typ_shm_kw,
         elif format[-1] == 'd':
             val = int(format % value)
         elif format[-1] == 'f':
-            val = float(format % value)
+            # not really in control here, at the end of the day
+            # milk gets to decide how to write it. Make sure to
+            # format it to round to correct precision
+            val = FormattedFloat(format % value, format)
         elif format[-1] == 's':  # string
             val = format % value
     except:  # Sometime garbage values cannot be formatted properly...
@@ -61,7 +122,6 @@ def keyword_camstack_to_pyMilk(value: Typ_shm_kw,
                 f"keyword_camstack_to_pyMilk: formatting error on {value}, {format}"
         )
         raise
-
     return val
 
 

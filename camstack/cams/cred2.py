@@ -58,6 +58,7 @@ class CRED2(EDTCamera):
     KEYWORDS = {
             'DET-NSMP': (1, 'Number of non-destructive reads', '%20d', 'NDR'),
             'DET-SMPL': ('', 'Sampling method', '%-16.16s', 'SAMPL'),
+            'DETGAIN': (1, 'Detector multiplication factor', '%16d', 'GAIN'),
     }
     KEYWORDS.update(EDTCamera.KEYWORDS)
 
