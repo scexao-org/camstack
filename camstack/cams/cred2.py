@@ -452,7 +452,7 @@ class Palila(CRED2):
     KEYWORDS = {
             'FILTER01': ('UNKNOWN', 'IRCAMs filter state', '%-16s', 'FILTR')
     }
-    KEYWORDS.update(EDTCamera.KEYWORDS)
+    KEYWORDS.update(CRED2.KEYWORDS)
     EDTTAKE_EMBEDMICROSECOND = True
 
     REDIS_PUSH_ENABLED = True
