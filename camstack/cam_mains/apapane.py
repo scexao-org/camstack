@@ -33,16 +33,28 @@ def main():
         from hwmain.edt.edtinterface import EdtInterfaceSerial
         # This cfg file will work the serial for all FLI cameras.
         edt_serial = EdtInterfaceSerial(
-                unit=0, channel=0, config_file=os.environ['HOME'] +
+                unit=1, channel=0, config_file=os.environ['HOME'] +
                 '/src/camstack/config/cred2_single_channel.cfg')
-        uid = edt_serial.send_command(
-                'hwuid', base_timeout=1.0).removesuffix('\r\nOK\r\nfli-cli>')
 
-        cam_flag = {
-                '01-000016436d3e': 'G',
-                '01-0000190ddb96': 'A',
-                None: 'I'
-        }[uid]
+        success = False
+        for _ in range(3):
+            try:
+                uid = edt_serial.send_command(
+                        'hwuid',
+                        base_timeout=5.0).removesuffix('\r\nOK\r\nfli-cli>')
+
+                cam_flag = {
+                        '01-000016436d3e': 'G',
+                        '01-0000190ddb96': 'A',
+                        None: 'I'
+                }[uid]
+                success = True
+            except Exception as exc:
+                pass
+
+        if not success:
+            print('Serial buffer is probably borked.')
+            raise exc
 
     os.makedirs(os.environ['HOME'] + "/logs", exist_ok=True)
     init_camstack_logger(os.environ['HOME'] + "/logs/camstack-apapane.log")
@@ -159,7 +171,7 @@ def main():
     zmq_send.start_order = 6
     zmq_send.kill_order = 5
 
-    cam = Klass('apapane', 'apapane_raw', unit=4, channel=0, mode_id=mode,
+    cam = Klass('apapane', 'apapane_raw', unit=1, channel=0, mode_id=mode,
                 taker_cset_prio=('a_edt', 48), dependent_processes=[
                         tcp_recv, tcp_send, utr_red, zmq_recv, zmq_send
                 ])  #, tcp_send_raw, tcp_recv_raw])

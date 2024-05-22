@@ -49,7 +49,7 @@ if __name__ == "__main__":
                     "readshmim palila_raw; imgformat.cred_cds_utr ..procinfo 1; "
                     "imgformat.cred_cds_utr ..triggermode 3; "
                     "imgformat.cred_cds_utr ..loopcntMax -1; "
-                    'imgformat.cred_cds_utr apapane_raw apapane 5000"'),
+                    'imgformat.cred_cds_utr palila_raw palila 5000"'),
             cli_args=(),
             kill_upon_create=True,
             cset="p_utr",
