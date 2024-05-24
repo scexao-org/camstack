@@ -81,7 +81,9 @@ class FlyCaptureUSBCamera(BaseCamera):
             FULL_FL: util.CameraMode(x0=0, x1=1327, y0=0, y1=1047),
     }
 
-    KEYWORDS = {}
+    KEYWORDS = {
+            'DETGAIN': (1, 'Detector multiplication factor', '%16d', 'GAIN'),
+    }
     KEYWORDS.update(BaseCamera.KEYWORDS)
 
     MAX_GAIN = 0.
