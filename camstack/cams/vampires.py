@@ -245,8 +245,8 @@ class BaseVCAM(OrcaQuest):
 
 
 class VCAM1(BaseVCAM):
-    PLATE_SCALE = (-5.893 / 3.6e6, -5.893 / 3.6e6)  # deg / px
-    INST_PA = -39.90  # deg
+    PLATE_SCALE = (-5.908 / 3.6e6, -5.908 / 3.6e6)  # deg / px
+    INST_PA = -38.90  # deg
     GAINS = {"FAST": 0.103, "SLOW": 0.105}
     MODES = {
             # BaseVCAM.STANDARD:
