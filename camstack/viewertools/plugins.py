@@ -261,3 +261,41 @@ class BullseyePlugin(OnOffPlugin):
 #         self.mx_im = int(mx / zg + xmin - xshift)
 #         self.my_im = int(my / zg + ymin - yshift)
 #         self.flux = self.backend_obj.data_debias[my_im, mx_im]
+
+
+class PupilOverlayPlugin(OnOffPlugin):
+
+    def __init__(self, frontend_obj: PygameViewerFrontend,
+                 key_onoff: int = pgmc.K_p, modifier_and: int = 0x0,
+                 color: str = futs.Colors.GREEN, scale=None, angle=0) -> None:
+        super().__init__(frontend_obj, key_onoff, modifier_and)
+        self.color = color
+        if scale is None:
+            msg = "Must provide pupil `scale` in pixels per aperture"
+            raise ValueError(msg)
+        self.scale = scale
+        self.angle = angle
+
+    def frontend_action(self) -> None:
+        assert self.backend_obj  # mypy happy
+
+        if not self.enabled:  # OK maybe this responsibility could be handled to the caller.
+            return
+
+        xtot_fe, ytot_fe = self.frontend_obj.data_disp_size
+        # get center of frame
+        xc = xtot_fe / 2
+        yc = ytot_fe / 2
+
+        # determine inner and outer radii
+        outer_rad = self.scale * xtot_fe
+        inner_rad = outer_rad * (2.3 / 7.92)
+
+        # draw inner and outer circle
+        pygame.draw.circle(self.frontend_obj.pg_datasurface, self.color, (xc, yc), radius=inner_rad, width=1)
+        pygame.draw.circle(self.frontend_obj.pg_datasurface, self.color, (xc, yc), radius=outer_rad, width=1)
+
+    def backend_action(self) -> None:
+
+        if not self.enabled:
+            return

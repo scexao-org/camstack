@@ -21,7 +21,7 @@ __doc__ = f"""
 """
 from camstack.viewerclasses.vpupcam import VAMPIRESPupilCamViewerBackend, VAMPIRESPupilCamViewerFrontend
 from camstack.viewertools.vampires_plugins import MaskWheelPlugin
-from camstack.viewertools.plugins import SaturationPlugin
+from camstack.viewertools.plugins import SaturationPlugin, PupilOverlayPlugin
 import docopt
 
 
@@ -41,7 +41,8 @@ def main():
     frontend = VAMPIRESPupilCamViewerFrontend(zoom, 20, binned_backend_shape,
                                               fonts_zoom=2 * zoom)
     frontend.plugins.extend((MaskWheelPlugin(frontend),
-                             SaturationPlugin(frontend, sat_value=65520)))
+                             SaturationPlugin(frontend, sat_value=65520))
+                             PupilOverlayPlugin(frontend, scale=486, angle=44.9))
     frontend.register_backend(backend)
     backend.register_frontend(frontend)
     frontend.run()
