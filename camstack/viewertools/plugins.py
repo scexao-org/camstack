@@ -14,6 +14,7 @@ import pygame.constants as pgmc
 
 os.sched_setaffinity(0, _CORES)  # AMD fix
 
+import numpy as np
 from skimage.measure import centroid
 from . import utils_backend as buts
 from . import utils_frontend as futs
@@ -281,19 +282,72 @@ class PupilOverlayPlugin(OnOffPlugin):
 
         if not self.enabled:  # OK maybe this responsibility could be handled to the caller.
             return
-
         xtot_fe, ytot_fe = self.frontend_obj.data_disp_size
         # get center of frame
         xc = xtot_fe / 2
         yc = ytot_fe / 2
 
         # determine inner and outer radii
-        outer_rad = self.scale * xtot_fe
+        viewer_zoom = self.backend_obj.crop_lvl_id + 1
+        outer_rad = self.scale * viewer_zoom / 2
         inner_rad = outer_rad * (2.3 / 7.92)
 
         # draw inner and outer circle
-        pygame.draw.circle(self.frontend_obj.pg_datasurface, self.color, (xc, yc), radius=inner_rad, width=1)
-        pygame.draw.circle(self.frontend_obj.pg_datasurface, self.color, (xc, yc), radius=outer_rad, width=1)
+        pygame.draw.circle(self.frontend_obj.pg_datasurface, self.color,
+                           (xc, yc), radius=inner_rad, width=2)
+        pygame.draw.circle(self.frontend_obj.pg_datasurface, self.color,
+                           (xc, yc), radius=outer_rad, width=2)
+
+        # determine spider offset
+        spider_offset = self.scale * viewer_zoom * (0.639 / 7.92)
+        spider_angle = 51.75  # deg
+        spider_sint = np.sin(np.deg2rad(spider_angle))
+        spider_cost = np.cos(np.deg2rad(spider_angle))
+        spider_rad = -spider_offset * spider_cost + np.sqrt(outer_rad**2 -
+                                                            (spider_offset *
+                                                             spider_sint)**2)
+        pupil_sint = np.sin(np.deg2rad(self.angle))
+        pupil_cost = np.cos(np.deg2rad(self.angle))
+
+        # spider quadrant 1
+        sx_start = xc + spider_offset * pupil_cost
+        sy_start = yc - spider_offset * pupil_sint
+        sx_end = sx_start + (spider_cost * pupil_cost -
+                             spider_sint * pupil_sint) * spider_rad
+        sy_end = sy_start - (spider_sint * pupil_cost +
+                             spider_cost * pupil_sint) * spider_rad
+        pygame.draw.line(self.frontend_obj.pg_datasurface, self.color,
+                         (sx_start, sy_start), (sx_end, sy_end), width=2)
+
+        # spider quadrant 4
+        sx_start = xc + spider_offset * pupil_cost
+        sy_start = yc - spider_offset * pupil_sint
+        sx_end = sx_start + (spider_cost * pupil_cost +
+                             spider_sint * pupil_sint) * spider_rad
+        sy_end = sy_start - (-spider_sint * pupil_cost +
+                             spider_cost * pupil_sint) * spider_rad
+        pygame.draw.line(self.frontend_obj.pg_datasurface, self.color,
+                         (sx_start, sy_start), (sx_end, sy_end), width=2)
+
+        # spider quandrant 2
+        sx_start = xc - spider_offset * pupil_cost
+        sy_start = yc + spider_offset * pupil_sint
+        sx_end = sx_start - (spider_cost * pupil_cost -
+                             spider_sint * pupil_sint) * spider_rad
+        sy_end = sy_start + (spider_sint * pupil_cost +
+                             spider_cost * pupil_sint) * spider_rad
+        pygame.draw.line(self.frontend_obj.pg_datasurface, self.color,
+                         (sx_start, sy_start), (sx_end, sy_end), width=2)
+
+        # spider quadrant 3
+        sx_start = xc - spider_offset * pupil_cost
+        sy_start = yc + spider_offset * pupil_sint
+        sx_end = sx_start - (spider_cost * pupil_cost +
+                             spider_sint * pupil_sint) * spider_rad
+        sy_end = sy_start - (spider_sint * pupil_cost -
+                             spider_cost * pupil_sint) * spider_rad
+        pygame.draw.line(self.frontend_obj.pg_datasurface, self.color,
+                         (sx_start, sy_start), (sx_end, sy_end), width=2)
 
     def backend_action(self) -> None:
 
