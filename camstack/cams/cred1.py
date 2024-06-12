@@ -514,7 +514,16 @@ class Apapane(CRED1):
         # Because the stream keywords WILL supersede.
 
         'FILTER01': ('UNKNOWN', 'IRCAMs filter state', '%-16s', 'FILT1'),
-        'RET-ANG1': (0.0, 'Position angle of first retarder plate (deg)', '%20.2f', 'HWPAG'),
+        ## polarization terms managed by HWP daemon
+        "RET-ANG1": (-1, "[deg] Polarization angle of first retarder plate",
+                        "%20.2f", "HWPAG"),
+        "RET-ANG2":
+                (-1, "[deg] Polarization angle of second retarder plate",
+                    "%20.2f", "RTAN2"),
+        "RET-POS1": (-1, "[deg] Stage angle of first retarder plate",
+                        "%20.2f", "RTPS1"),
+        "RET-POS2": (-1, "[deg] Stage angle of second retarder plate",
+                        "%20.2f", "RTPS2"),
     }
     # yapf: enable
     KEYWORDS.update(CRED1.KEYWORDS)
