@@ -35,8 +35,8 @@ def wcs_dict_init(
     wcs_kw_basedict: t.Dict[str, t.Tuple[Typ_shm_kw, str, str, str]] = {
         'CDELT1': (delt_val[0], 'X Scale projected on detector (#/pix)', '%20.8f', 'CDE1'),
         'CDELT2': (delt_val[1], 'Y Scale projected on detector (#/pix)', '%20.8f', 'CDE2'),
-        'CUNIT1': ('DEGREE    ', 'Units used in both CRVAL1 and CDELT1', '%-10s', 'CUN1'),
-        'CUNIT2': ('DEGREE    ', 'Units used in both CRVAL2 and CDELT2', '%-10s', 'CUN2'),
+        'CUNIT1': ('deg    ', 'Units used in both CRVAL1 and CDELT1', '%-10s', 'CUN1'),
+        'CUNIT2': ('deg    ', 'Units used in both CRVAL2 and CDELT2', '%-10s', 'CUN2'),
         'CTYPE1': ('RA---TAN  ', 'Pixel coordinate system', '%-10s', 'CTP1'),
         'CTYPE2': ('DEC--TAN  ', 'Pixel coordinate system', '%-10s', 'CTP2'),
         'CRPIX1': ( pix[0], '[pixel] Reference pixel in X', '%20.1f', 'CPX1'),
