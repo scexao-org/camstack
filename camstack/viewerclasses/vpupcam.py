@@ -85,7 +85,22 @@ class VAMPIRESPupilCamViewerBackend(GenericViewerBackend):
 h           : display this help message
 x, ESC      : quit vpupcam
 
-pupil wheel alignment:
+Display controls:
+---------------------------------------
+c         : display cross
+SHIFT + c : display centered cross
+r         : subtract reference frame
+CTRL + r  : take reference frame
+p         : display pupil overlay
+l         : linear/non-linear display
+m         : cycle colormaps
+v         : start/stop accumulating and averaging frames
+z         : zoom/unzoom on the center of the image
+SHIFT + z : unzoom image (cycle backwards)
+ARROW     : steer crop
+CTRL + z  : reset zoom and crop
+
+Pupil wheel alignment:
 -----------------------------------------------------
 CTRL  + ARROW : Nudge wheel 0.01 mm in x (left/right)
                                    and y (up/down)
@@ -95,22 +110,22 @@ CTRL  + []    : Nudge wheel 0.1 deg in theta (ccw/cw)
 SHIFT + []    : Nudge wheel 1 deg in theta (ccw/cw)
 CTRL  + S     : Save position to the last configuration
 
-pupil wheel masks:
+Pupil wheel masks:
 ----------------------------------
 CTRL  + 1         : Open (0 deg)
 CTRL  + 2         : SAM-7
 CTRL  + 3         : SAM-9
 CTRL  + 4         : Open (73 deg)
-CTRL  + 5         : SAM-18-Nudged
-CTRL  + 6         : SAM-Ann-Nudged
+CTRL  + 5         : SAM-18
+CTRL  + 6         : SAM-Ann
 CTRL  + 7         : Mirror
 CTRL  + 8         : Open (164 deg)
-CTRL  + 9         : LyotStop
+CTRL  + 9         : LyotStop-L
 CTRL  + 0         : RAP
 CTRL  + -         : ND10
 CTRL  + =         : ND25
-CTRL  + SHIFT + 7 : LyotOpt
-CTRL  + SHIFT + 8 : PupilRef"""
+CTRL  + SHIFT + 7 : LyotStop-M
+CTRL  + SHIFT + 8 : LyotStop-S"""
 
     # CTRL+S:  Save current position to preset
     # CTRL+F:  Change preset file

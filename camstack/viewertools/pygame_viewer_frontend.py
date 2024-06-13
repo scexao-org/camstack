@@ -65,8 +65,9 @@ class PygameViewerFrontend:
         self.data_blit_staging = np.zeros((*self.data_disp_size, 3),
                                           dtype=np.uint8)
         # Total window size
-        self.pygame_win_size = (self.data_disp_size[0], self.data_disp_size[1] +
-                                self.BOTTOM_PX_PAD * self.fonts_zoom)
+        self.pygame_win_size = (self.data_disp_size[0],
+                                self.data_disp_size[1] + self.BOTTOM_PX_PAD
+                                )  # * self.fonts_zoom)  # UNCLEAR
 
         #####
         # Prep plugins
