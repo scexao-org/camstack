@@ -22,7 +22,6 @@ os.sched_setaffinity(0, _CORES)  # Fix the CPU affinity
 
 import numpy as np
 import matplotlib.cm as cm
-import struct
 from PIL import Image
 import time
 import math as m
@@ -30,9 +29,6 @@ import copy
 import datetime as dt
 from astropy.io import fits as pf
 import subprocess
-
-from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT
-from scxkw.redisutil.typed_db import Redis
 
 from pyMilk.interfacing.isio_shmlib import SHM
 
@@ -943,8 +939,8 @@ while True:  # the main game loop
         else:
             temp2 = copy.deepcopy(temp)
             cnta = 0
-        imax = np.max(temp2[1:])
-        imin = np.min(temp2[1:])
+        imax = np.nanmax(temp2[1:])
+        imin = np.nanmin(temp2[1:])
         (myim, z3, xmin, xmax, ymin, ymax, xshift,
          yshift) = arr2im(temp2, pwr=pwr0, subt_ref=subt_ref,
                           lin_scale=lin_scale, pos=pos2, pdi=pdi)
@@ -1761,7 +1757,7 @@ while True:  # the main game loop
                     while ((imax < 4000) & (tindex < net2 - 1)):
                         tindex += 1
                         etime = etimes2[tindex]
-                        cam_cmd("tint %d" % (etime), False)
+                        apapane_pyro.set_tint__oneway(int(etime))
                         (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
                         logexpt = True
                         time.sleep(2)
@@ -1775,7 +1771,7 @@ while True:  # the main game loop
                     while ((isat > 11000) & (tindex > 0)):
                         tindex -= 1
                         etime = etimes2[tindex]
-                        cam_cmd("tint %d" % (etime), False)
+                        apapane_pyro.set_tint__oneway(int(etime))
                         (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
                         logexpt = True
                         time.sleep(2)
@@ -1800,7 +1796,7 @@ while True:  # the main game loop
                             etime2 = copy.deepcopy(etime)
                             tindex += 1
                             etime = etimes2[tindex]
-                            cam_cmd("tint %d" % (etime), False)
+                            apapane_pyro.set_tint__oneway(int(etime))
                             (badpixmap, bias, bpmhere,
                              biashere) = updatebiasbpm()
                             logexpt = True
@@ -1824,7 +1820,7 @@ while True:  # the main game loop
                     savepath = '/media/data/' + timestamp + '/apapanelog/'
                     pf.writeto(savepath + 'apapane_hdr_' + timestamp2 + '.fits',
                                hdim / hdim.max(), overwrite=True)
-                    cam_cmd("tint %d" % (etimetmp), False)
+                    apapane_pyro.set_tint__oneway(int(etimetmp))
 
                 else:
                     subt_bias = not subt_bias
