@@ -95,22 +95,21 @@ def open_shm(shm_name: str, dims: Tuple[int, int] = (1, 1),
 
 def open_shm_fullpath(shm_name: str, dims: Tuple[int, int] = (1, 1),
                       check: bool = False) -> SHM:
+    # SHM doesn't exist at all
     if not os.path.isfile(shm_name):
-        data = np.zeros(dims[::-1], dtype=np.float32)
-        shm_data = SHM(shm_name, data=data, verbose=False)
-    else:
-        shm_data = SHM(shm_name)
-    if check:
-        tmp = shm_data.shape_c
-        if tmp != dims:
-            #if shm_data.mtdata['size'][:2] != dims:
+        _data = np.zeros(dims[::-1], dtype=np.float32)
+        shm = SHM(shm_name, data=_data, verbose=False)
+        return shm
 
-            # TODO THIS WON'T PASS IF OTHER USER OWNS THE SHM
-            # os.system("rm %s/%s.im.shm" % (MILK_SHM_DIR, shm_name, ))
-            shm_data = SHM(shm_name, data=data,
-                           verbose=False)  # This will overwrite
+    # SHM exists
+    shm = SHM(shm_name)
 
-    return shm_data
+    if check and (shm.shape_c != dims):
+        # SHM is the wrong size.
+        _data = np.zeros(dims[::-1], dtype=np.float32)
+        shm = SHM(shm_name, data=_data, verbose=False)  # This will overwrite
+
+    return shm
 
 
 # ------------------------------------------------------------------
