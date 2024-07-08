@@ -31,6 +31,7 @@ from astropy.io import fits as pf
 import subprocess
 
 from pyMilk.interfacing.isio_shmlib import SHM
+from pyMilk.errors import AutoRelinkError
 
 import camstack.viewertools.viewer_common as cvc
 
@@ -753,7 +754,7 @@ seeing = False
 seeing_plot = False
 plot_pa = False
 clr_scale = 1  # flag for the display color scale
-shmreload = 0
+shmreload = False
 keeprpin = False
 wait_for_archive_datatype = False
 
@@ -1936,14 +1937,16 @@ while True:  # the main game loop
                         cam_paused.set_data(ONES_NODIM)
                         apapane_pyro.set_camera_mode__oneway(mode_id)
                         # Wait until we're confident the edttake has stopped
-                        time.sleep(5.0)
+                        time.sleep(2.0)
                         # This will return once the SHM has been overwritten...
                         # and hopefully recreated near-immediately after
                         print('Hi! Waiting on semaphore til SHM is recreated.')
-                        ret = cam.non_block_wait_semaphore()
-                        time.sleep(0.1)  # Safe
-                        print('Got it.')
-                        time.sleep(3.0)  # Safe
+
+                        try:
+                            ret = cam.non_block_wait_semaphore()
+                        except AutoRelinkError:
+                            time.sleep(0.3)
+
                         cam_paused.set_data(ZERO_NODIM)
                         shmreload = True
 
