@@ -79,7 +79,7 @@ class BaseCamera:
             'BZERO': (0.0, 'Real=fits-value*BSCALE+BZERO', '%20.8f', 'BZERO'),
             'CROPPED': (False, 'Partial Readout or cropped', 'BOOLEAN', 'CROPD'),
             'DATA-TYP': ('TEST', 'Subaru-style exp. type', '%-16s', 'DATA'),
-            'DETBIAS': (0, '[adu] Bias offset', '%20.3f', 'BIAS'),
+            'DETBIAS': (0, '[adu] Detector bias offset', '%20.3f', 'BIAS'),
             'DET-TMP': (0.0, '[K] Detector temperature', '%20.2f', 'TEMP'),
             'DETECTOR': ('DET', 'Name of the detector', '%-16s', 'NAME'),
             'DETPXSZ1': (0, '[mm] Detector pixel size in axis 1', '%20.6f', 'PXSZ1'),
