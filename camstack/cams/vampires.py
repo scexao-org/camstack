@@ -253,10 +253,10 @@ class VCAM1(BaseVCAM):
             #         util.CameraMode(x0=1764, x1=2299, y0=896, y1=1431,
             #                         tint=1e-3),
             BaseVCAM.MBI:
-                    util.CameraMode(x0=704, x1=2931, y0=608, y1=1711,
+                    util.CameraMode(x0=924, x1=3151, y0=608, y1=1707,
                                     tint=1e-3),
             BaseVCAM.MBI_REDUCED:
-                    util.CameraMode(x0=708, x1=2931, y0=1168, y1=1711,
+                    util.CameraMode(x0=924, x1=3151, y0=1168, y1=1707,
                                     tint=1e-3),
             BaseVCAM.PUPIL:
                     util.CameraMode(x0=1604, x1=2491, y0=704, y1=1595,
@@ -268,14 +268,14 @@ class VCAM1(BaseVCAM):
     MODES.update(BaseVCAM.MODES)
     MODES[BaseVCAM.NPBS] = MODES[BaseVCAM.STANDARD]
     HOTSPOTS = {
-            "760": (2662.1, 1438.0),
-            "720": (1540.1, 1440.7),
-            "670": (979.4, 1440.7),
-            "610": (974.2, 878.1),
+            "760": (2881.6, 1436.9),
+            "720": (1758.9, 1436.9),
+            "670": (1195.6, 1438.0),
+            "610": (1194.3, 878.0),
     }
     ORIGIN = {
-            "MBI": (608, 704),
-            "MBI_REDUCED": (1168, 708),
+            "MBI": (608, 924),
+            "MBI_REDUCED": (1168, 924),
     }
 
     REDIS_PUSH_ENABLED = True
@@ -317,10 +317,10 @@ class VCAM2(BaseVCAM):
                     util.CameraMode(x0=1700, x1=2235, y0=816, y1=1351,
                                     tint=1e-3),
             BaseVCAM.MBI:
-                    util.CameraMode(x0=700, x1=2931, y0=576, y1=1679,
+                    util.CameraMode(x0=924, x1=3151, y0=592, y1=1695,
                                     tint=1e-3),
             BaseVCAM.MBI_REDUCED:
-                    util.CameraMode(x0=712, x1=2931, y0=576, y1=1131,
+                    util.CameraMode(x0=928, x1=3151, y0=592, y1=1139,
                                     tint=1e-3),
             BaseVCAM.MBI_ONEHALF:
                     util.CameraMode(x0=1128, x1=3015, y0=744, y1=979,
@@ -333,14 +333,14 @@ class VCAM2(BaseVCAM):
 
     GAINS = {"FAST": 0.103, "SLOW": 0.105}
     HOTSPOTS = {
-            "760": (2662.9, 860.0),
-            "720": (1541.6, 849.0),
-            "670": (981.2, 845.2),
-            "610": (971.7, 1412.0)
+            "760": (2882.7, 870.2),
+            "720": (1761.1, 865.5),
+            "670": (1198.0, 861.9),
+            "610": (1194.6, 1425.6)
     }
     ORIGIN = {
-            "MBI": (576, 700),
-            "MBI_REDUCED": (576, 712),
+            "MBI": (592, 924),
+            "MBI_REDUCED": (592, 928),
     }
 
     REDIS_PUSH_ENABLED = True
