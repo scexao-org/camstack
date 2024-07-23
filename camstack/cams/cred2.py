@@ -7,9 +7,12 @@ import os
 import time
 import logging as logg
 
+import numpy as np
+
 from camstack.cams.edtcam import EDTCamera
 
 from camstack.core import utilities as util
+from camstack.core.wcs import wcs_dict_init
 
 
 class CRED2_GAINENUM:
@@ -354,6 +357,8 @@ class GLINT(CRED2):
     REDIS_PUSH_ENABLED = True
     REDIS_PREFIX = 'x_G'  # LOWERCASE x to not get mixed with the SCExAO keys
 
+    INST_PA = 0.0  # deg
+
     def _fill_keywords(self) -> None:
         CRED2._fill_keywords(self)
 
@@ -409,6 +414,25 @@ class ApapaneButItsGLINT(GLINT):
     # yapf: enable
     MODES.update(CRED2.MODES)
     EDTTAKE_EMBEDMICROSECOND = False
+    # yapf: disable
+    KEYWORDS = {
+        # Warning: this means that the two following keywords
+        # CANNOT be set anymore by gen2/auxfitsheader
+        # Because the stream keywords WILL supersede.
+
+        'FILTER01': ('UNKNOWN', 'IRCAMs filter state', '%-16s', 'FILT1'),
+        ## polarization terms managed by HWP daemon
+        "RET-ANG1": (-1, "[deg] Polarization angle of first retarder plate",
+                        "%20.2f", "HWPAG"),
+        "RET-ANG2":
+                (-1, "[deg] Polarization angle of second retarder plate",
+                    "%20.2f", "RTAN2"),
+        "RET-POS1": (-1, "[deg] Stage angle of first retarder plate",
+                        "%20.2f", "RTPS1"),
+        "RET-POS2": (-1, "[deg] Stage angle of second retarder plate",
+                        "%20.2f", "RTPS2"),
+    }
+    KEYWORDS.update(GLINT.KEYWORDS)
 
     def _thermal_init_commands(self) -> None:
         super()._thermal_init_commands()
@@ -416,11 +440,52 @@ class ApapaneButItsGLINT(GLINT):
         self.send_command('set imagetags on')
         self.send_command('set rawimages on')
 
+    def poll_camera_for_keywords(self) -> None:
+        super().poll_camera_for_keywords()
+
+
+        filter01 = "H Band"
+        wollaston = "OUT"
+        flc_on = "OFF"
+        flc_in = "OUT"
+
+        if self.HAS_REDIS:
+            try:
+                with self.RDB.pipeline() as pipe:
+                    pipe.hget("X_IRCFLT", "value")
+                    pipe.hget("X_IRCWOL", "value")
+                    pipe.hget("X_IFLCST", "value")
+                    pipe.hget("X_IRCFLC", "value")
+                    filter01, wollaston, flc_on, flc_in = pipe.execute()
+            except:
+                msg = f"REDIS unavailable @ _fill_keywords @ {__class__.__name__}"
+                logg.error(msg)
+
+        self._set_formatted_keyword("FILTER01", filter01)
+        # FIXME decision clause for the spectro???
+        if ("IN" in wollaston) and ("ON" in flc_on) and ("IN" in flc_in):
+            obs_mod = "IPOL_FPDI"
+        elif wollaston:
+            obs_mod = "IPOL_SLOW"
+        else:
+            obs_mod = "IMAG"
+
+        self._set_formatted_keyword("OBS-MOD", obs_mod)
+
+
     def _fill_keywords(self) -> None:
+        # Call superclass - in BaseCamera, this will allocate the WCS dictionary
+        # With kw spots, comments, etc, but default values.
         GLINT._fill_keywords(self)
 
         # Override detector name
         self._set_formatted_keyword('DETECTOR', 'CRED2-APAPANEGL')
+        # Override detector name
+        self._set_formatted_keyword("INST-PA", self.INST_PA)  # FIXME
+        self._set_formatted_keyword("F-RATIO", 0.0)  # FIXME
+
+        # Note: RET-ANG1 is set externally by a call to "updatekw apapane RET-ANG1" from HWP scripts.
+        # This avoids latency in reporting HWP states.
 
 
 class Palila(CRED2):
