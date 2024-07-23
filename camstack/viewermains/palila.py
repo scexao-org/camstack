@@ -353,6 +353,7 @@ CRTL+o      : increase frame rate
 CTRL+l      : decrease frame rate
 CTRL+h      : hotspotalign
 CTRL+p      : camera to pupil plane/focus plane
+CTRL+c      : switch between apapane/palila
 CTRL+i      : REACH mode in/out
 CTRL+b      : take new darks
 CTRL+SHIFT+b: take new dark for current exp

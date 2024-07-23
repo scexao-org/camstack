@@ -347,7 +347,7 @@ CTRL+a      : decrease number of NDR
 CTRL+SHIFT+<number>: jump to NDR 2**<number>
 CTRL+o      : increase frame rate
 CTRL+l      : decrease frame rate
-CTRL+h      : hotspotalign
+CTRL+c      : switch between apapane/palila
 CTRL+i      : REACH mode in/out
 CTRL+b      : take new darks
 CTRL+SHIFT+b: take new dark for current exp
