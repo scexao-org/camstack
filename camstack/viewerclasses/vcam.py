@@ -226,9 +226,9 @@ CTRL  + s     : Save current position to last configuration"""
 
         # calculate crops for each window
         if self.cam_num == 1:
-            hotspots = VCAM1.HOTSPOTS
+            hotspots = VCAM1.MODES["MBI"].hotspots
         elif self.cam_num == 2:
-            hotspots = VCAM2.HOTSPOTS
+            hotspots = VCAM2.MODES["MBI"].hotspots
         else:
             raise ValueError(f"Unknown camera number {self.cam_num}")
 
@@ -247,21 +247,21 @@ CTRL  + s     : Save current position to last configuration"""
                 cc -= _mbi_shape[1]
             mbir_centers[key] = cr, cc
         self.mbi_slices = (
-                self._get_crop_slice(center=mbi_centers["760"],
+                self._get_crop_slice(center=mbi_centers["F760"],
                                      shape=_mbi_shape),
-                self._get_crop_slice(center=mbi_centers["720"],
+                self._get_crop_slice(center=mbi_centers["F720"],
                                      shape=_mbi_shape),
-                self._get_crop_slice(center=mbi_centers["670"],
+                self._get_crop_slice(center=mbi_centers["F670"],
                                      shape=_mbi_shape),
-                self._get_crop_slice(center=mbi_centers["610"],
+                self._get_crop_slice(center=mbi_centers["F610"],
                                      shape=_mbi_shape),
         )
         self.mbir_slices = (
-                self._get_crop_slice(center=mbir_centers["760"],
+                self._get_crop_slice(center=mbir_centers["F760"],
                                      shape=_mbi_shape),
-                self._get_crop_slice(center=mbir_centers["720"],
+                self._get_crop_slice(center=mbir_centers["F720"],
                                      shape=_mbi_shape),
-                self._get_crop_slice(center=mbir_centers["670"],
+                self._get_crop_slice(center=mbir_centers["F670"],
                                      shape=_mbi_shape),
         )
 

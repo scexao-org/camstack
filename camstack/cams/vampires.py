@@ -249,15 +249,12 @@ class VCAM1(BaseVCAM):
     INST_PA = -38.90  # deg
     GAINS = {"FAST": 0.103, "SLOW": 0.105}
     MODES = {
-            # BaseVCAM.STANDARD:
-            #         util.CameraMode(x0=1764, x1=2299, y0=896, y1=1431,
-            #                         tint=1e-3),
             BaseVCAM.MBI:
-                    util.CameraMode(x0=924, x1=3151, y0=608, y1=1707,
-                                    tint=1e-3),
+                    util.CameraMode.from_file(util.MODES_DIR / "vampires" /
+                                              "vcam1_mbi_crop.toml"),
             BaseVCAM.MBI_REDUCED:
-                    util.CameraMode(x0=924, x1=3151, y0=1168, y1=1707,
-                                    tint=1e-3),
+                    util.CameraMode.from_file(util.MODES_DIR / "vampires" /
+                                              "vcam1_mbir_crop.toml"),
             BaseVCAM.PUPIL:
                     util.CameraMode(x0=1604, x1=2491, y0=704, y1=1595,
                                     tint=0.1),
@@ -268,14 +265,10 @@ class VCAM1(BaseVCAM):
     MODES.update(BaseVCAM.MODES)
     MODES[BaseVCAM.NPBS] = MODES[BaseVCAM.STANDARD]
     HOTSPOTS = {
-            "760": (2881.6, 1436.9),
-            "720": (1758.9, 1436.9),
-            "670": (1195.6, 1438.0),
-            "610": (1194.3, 878.0),
-    }
-    ORIGIN = {
-            "MBI": (608, 924),
-            "MBI_REDUCED": (1168, 924),
+            "760": (2894.5, 1433.0),
+            "720": (1769.9, 1438.1),
+            "670": (1206.4, 1437.4),
+            "610": (1203.7, 876.8),
     }
 
     REDIS_PUSH_ENABLED = True
@@ -310,21 +303,18 @@ class VCAM2(BaseVCAM):
     PLATE_SCALE = (-5.895 / 3.6e6, 5.895 / 3.6e6)  # deg / px
     INST_PA = -38.58  # deg
     MODES = {
-            # BaseVCAM.STANDARD:
-            #         util.CameraMode(x0=1768, x1=2303, y0=892, y1=1427,
-            #                         tint=1e-3),
-            BaseVCAM.NPBS:
-                    util.CameraMode(x0=1700, x1=2235, y0=816, y1=1351,
-                                    tint=1e-3),
             BaseVCAM.MBI:
-                    util.CameraMode(x0=924, x1=3151, y0=592, y1=1695,
-                                    tint=1e-3),
+                    util.CameraMode.from_file(util.MODES_DIR / "vampires" /
+                                              "vcam2_mbi_crop.toml"),
             BaseVCAM.MBI_REDUCED:
-                    util.CameraMode(x0=928, x1=3151, y0=592, y1=1139,
-                                    tint=1e-3),
+                    util.CameraMode.from_file(util.MODES_DIR / "vampires" /
+                                              "vcam2_mbir_crop.toml"),
             BaseVCAM.MBI_ONEHALF:
                     util.CameraMode(x0=1128, x1=3015, y0=744, y1=979,
                                     tint=1e-4),
+            BaseVCAM.NPBS:
+                    util.CameraMode(x0=1700, x1=2235, y0=816, y1=1351,
+                                    tint=1e-3),
             BaseVCAM.PUPIL:
                     util.CameraMode(x0=1648, x1=2407, y0=772, y1=1531,
                                     tint=0.1),
@@ -333,14 +323,10 @@ class VCAM2(BaseVCAM):
 
     GAINS = {"FAST": 0.103, "SLOW": 0.105}
     HOTSPOTS = {
-            "760": (2882.7, 870.2),
-            "720": (1761.1, 865.5),
-            "670": (1198.0, 861.9),
-            "610": (1194.6, 1425.6)
-    }
-    ORIGIN = {
-            "MBI": (592, 924),
-            "MBI_REDUCED": (592, 928),
+            "760": (2893.6, 872.7),
+            "720": (1770.2, 862.7),
+            "670": (1206.9, 860.9),
+            "610": (1202.3, 1425.3)
     }
 
     REDIS_PUSH_ENABLED = True

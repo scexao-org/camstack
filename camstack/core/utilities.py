@@ -7,10 +7,17 @@ import time
 import subprocess
 import logging
 
-logg = logging.getLogger(__name__)
+from typing import Optional, Tuple, Dict
+from pydantic import BaseModel
+from pathlib import Path
+import tomli
+import tomli_w
 
 from camstack.core import tmux
 from scxkw.config import MAGIC_BOOL_STR
+
+MODES_DIR = Path(__file__).parent.parent.parent / "conf" / "modes"
+logg = logging.getLogger(__name__)
 
 
 class CamstackStateException(Exception):
@@ -138,30 +145,24 @@ def keyword_dictionary_camstack_to_pyMilk(
     }
 
 
-class CameraMode:
+class CameraMode(BaseModel):
+    x0: int  # First COLUMN
+    x1: int  # Last COLUMN (inclusive)
+    y0: int  # First ROW
+    y1: int  # Last ROW (inclusive)
+    binx: int = 1
+    biny: int = 1
+    fps: Optional[float] = None
+    tint: Optional[float] = None
+    fgsize: Optional[Tuple[int, int]] = None
+    hotspots: Optional[Dict[str, Tuple[float, float]]] = None
 
-    def __init__(self, *, x0: int, x1: int, y0: int, y1: int,
-                 fps: typ.Optional[float] = None,
-                 tint: typ.Optional[float] = None, binx: int = 1, biny: int = 1,
-                 fgsize: typ.Optional[typ.Tuple[int, int]] = None):
-
-        self.x0 = x0  # First COLUMN
-        self.x1 = x1  # Last COLUMN (inclusive)
-        self.y0 = y0  # First ROW
-        self.y1 = y1  # Last ROW (inclusive)
-        self.fps = fps
-        self.tint = tint
-        self.binx = binx  # Future use ?
-        self.biny = biny
-
-        # fgsize: COLUMNS, then ROWS
-        if fgsize is not None:
-            self.fgsize = fgsize
-        else:
+    def model_post_init(self, __context) -> None:
+        if self.fgsize is None:
             self.fgsize = (self.x1 - self.x0 + 1, self.y1 - self.y0 + 1)
 
     def __str__(self):
-        s = f'Camera Mode: {self.x0}-{self.x1}, {self.y0}-{self.y1} ({self.x1 - self.x0 + 1} x {self.y1 - self.y0 + 1})'
+        s = f'CameraMode: {self.x0}-{self.x1}, {self.y0}-{self.y1} ({self.x1 - self.x0 + 1} x {self.y1 - self.y0 + 1})'
         if self.fps is not None:
             s += f' - {self.fps:.2f} Hz'
         if self.tint is not None:
@@ -171,7 +172,42 @@ class CameraMode:
         return s
 
     def __repr__(self):
-        return self.__str__()
+        return str(self)
+
+    @classmethod
+    def from_file(cls, filename):
+        """Load configuration from TOML file
+
+        Parameters
+        ----------
+        filename:
+            Path to TOML file with configuration settings.
+        """
+        with Path(filename).open("rb") as fh:
+            config = tomli.load(fh)
+        return cls.model_validate(config)
+
+    def to_toml(self) -> str:
+        """Create serializable TOML string"""
+        # get serializable output using pydantic
+        model_dict = self.model_dump(exclude_none=True, mode="json",
+                                     round_trip=True)
+        return tomli_w.dumps(model_dict)
+
+    def save(self, filename):
+        """Save configuration settings to TOML file
+
+        Parameters
+        ----------
+        filename:
+            Output filename
+        """
+        # get serializable output using pydantic
+        model_dict = self.model_dump(exclude_none=True, mode="json",
+                                     round_trip=True)
+        # save output TOML
+        with Path(filename).open("wb") as fh:
+            tomli_w.dump(model_dict, fh)
 
 
 class DependentProcess:

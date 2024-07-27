@@ -15,7 +15,9 @@ dependencies = [
   "numpy",
   "pydantic",
   "tqdm",
-
+  "pydantic",
+  "tomli",
+  "tomli-w"
 ]
 description = "SCExAO camera codebase"
 name = "camstack"
