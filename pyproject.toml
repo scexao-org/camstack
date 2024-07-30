@@ -13,6 +13,7 @@ dependencies = [
   "pygame",
   #"pyMilk", DO NOT - there is a pyMilk on pipy which is a completely different thing.
   "numpy",
+  "pydantic",
   "tqdm",
 
 ]
