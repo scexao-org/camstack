@@ -25,3 +25,7 @@ __*
 dump/
 build/
 .idea
+
+
+conf/**/backup*.toml
+conf/**/*.toml.bak
