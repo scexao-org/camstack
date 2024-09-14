@@ -20,7 +20,7 @@ __doc__ = f"""
         -p, --preset <file> Preset file used for pupil wheel positions [default: {DEFAULT_PUPIL_CONFIG}]
 """
 from camstack.viewerclasses.vpupcam import VAMPIRESPupilCamViewerBackend, VAMPIRESPupilCamViewerFrontend
-from camstack.viewertools.vampires_plugins import MaskWheelPlugin
+from camstack.viewertools.vampires_plugins import MaskWheelPlugin, VisBlockPlugin
 from camstack.viewertools.plugins import SaturationPlugin, PupilOverlayPlugin
 import docopt
 
@@ -42,6 +42,7 @@ def main():
                                               fonts_zoom=2 * zoom)
     frontend.plugins.extend((MaskWheelPlugin(frontend),
                              SaturationPlugin(frontend, sat_value=65520),
+                             VisBlockPlugin(frontend),
                              PupilOverlayPlugin(frontend, scale=486,
                                                 angle=-33.82)))
     frontend.register_backend(backend)

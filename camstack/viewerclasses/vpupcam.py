@@ -100,6 +100,10 @@ SHIFT + z : unzoom image (cycle backwards)
 ARROW     : steer crop
 CTRL + z  : reset zoom and crop
 
+Block controls:
+--------------------------------------------------
+CTRL + b : Insert/remove vis block
+
 Pupil wheel alignment:
 -----------------------------------------------------
 CTRL  + ARROW : Nudge wheel 0.01 mm in x (left/right)

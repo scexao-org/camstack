@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+import os
+
 import logging
 import numpy as np
-import pygame.constants as pgmc
+
+_CORES = os.sched_getaffinity(0)  # MKL weirdo affinity fix
+import pygame.constants as pgmc  # For shortcuts
+
+os.sched_setaffinity(0, _CORES)  # MKL weirdo affinity fix
 
 from rich.live import Live
 from rich.logging import RichHandler
@@ -84,19 +90,6 @@ CTRL  + m  : Insert MBI dichroics
 SHIFT + m  : Remove MBI dichroics
 ALT   + m  : Save current angle to last configuration
 
-Field stop controls:
---------------------------------------------------
-CTRL  + 7     : Fieldstop
-CTRL  + 8     : CLC-2
-CTRL  + 9     : CLC-3
-CTRL  + 0     : CLC-5
-CTRL  + -     : CLC-7
-CTRL  + =     : DGVVC
-CTRL  + ARROW : Nudge 0.001 mm in x (left/right) and y (up/down)
-SHIFT + ARROW : Nudge 0.05 mm in x (left/right) and y (up/down)
-CTRL  + o     : Offset fieldstop 0.5 mm; press again to return
-CTRL  + s     : Save current position to last configuration
-
 Filter controls:
 --------------------------------------------------
 CTRL + 1 : Open
@@ -114,6 +107,11 @@ CTRL + SHIFT + 9 : Ha-Cont / Halpha
 CTRL + SHIFT + 0 : Open / Open
 CTRL + SHIFT + - : SII / SII-Cont
 CTRL + SHIFT + = : Halpha / Ha-Cont
+
+Block controls:
+--------------------------------------------------
+CTRL + b : Insert/remove vis block
+CTRL + d : Insert vis block and take dark frame
 
 Field stop controls:
 --------------------------------------------------

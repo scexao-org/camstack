@@ -226,9 +226,12 @@ class FilterWheelPlugin(DeviceMixin, BasePlugin):
             return
         # Warning: this is called every time the window refreshes, i.e. ~20Hz.
         try:
-            filter_dict = get_values(("U_FILTER", ))
+            filter_dict = get_values(("U_FILTER", "X_VISBLK"))
             if self.label:
-                self.label.render(f"{filter_dict['U_FILTER'].upper():>7s}")
+                if filter_dict["X_VISBLK"] == "IN":
+                    self.label.render(f"{'BLOCK':>7s}")
+                else:
+                    self.label.render(f"{filter_dict['U_FILTER'].upper():>7s}")
         except:
             pass
 
@@ -685,24 +688,21 @@ class VAMPIRESPupilMode(DeviceMixin, PupilMode):
         self.device.move_configuration_name__oneway("out")
 
 
-class DiffWheelBlockPlugin(DeviceMixin, OnOffPlugin):
-    DEVICE_NAME = VAMPIRES.DIFF
+class VisBlockPlugin(DeviceMixin, OnOffPlugin):
+    DEVICE_NAME = "VIS_BLOCK"
 
-    def __init__(self, *args, key_onoff=pgmc.K_d,
-                 modifier_and=pgmc.K_LCTRL | pgmc.K_LSHIFT, **kwargs) -> None:
-        super().__init__(*args, key_onoff=key_onoff, modifier_and=modifier_and,
-                         **kwargs)
-        self.curr_posn = None
+    def __init__(self, *args, key_onoff=pgmc.K_b, modifier_and=pgmc.KMOD_LCTRL, **kwargs) -> None:
+        super().__init__(*args, key_onoff=key_onoff, modifier_and=modifier_and, **kwargs)
 
     def enable(self) -> None:
         super().enable()
-        self.curr_posn = self.device.get_position()
-        self.device.move_configuration(7)
+        self.backend_obj.logger.info(f"Inserting vis bench block.")
+        self.device.move_configuration_name__oneway("IN")
 
     def disable(self) -> None:
         super().disable()
-        if self.curr_posn is not None:
-            self.device.move_absolute(self.curr_posn)
+        self.backend_obj.logger.info(f"Removing vis bench block.")
+        self.device.move_configuration_name__oneway("OUT")
 
     def frontend_action(self) -> None:
         return super().frontend_action()
@@ -712,16 +712,14 @@ class DiffWheelBlockPlugin(DeviceMixin, OnOffPlugin):
 
 
 class VCAMDarkAcquirePlugin(DeviceMixin, DarkAcquirePlugin):
-    DEVICE_NAME = VAMPIRES.DIFF
+    DEVICE_NAME = "VIS_BLOCK"
+
+    def __init__(self, *args, key_onoff=pgmc.K_d, **kwargs) -> None:
+        super().__init__(*args, key_onoff=key_onoff, **kwargs)
 
     def move_appropriate_block(self, in_true: bool) -> None:
-        if in_true:
-            # don't use __oneway because we don't want to start taking darks
-            # until block is fully in
-            self.cur_posn = self.device.get_position()
-            self.device.move_configuration(7)
-        else:
-            self.device.move_absolute(self.cur_posn)
+        config = "IN" if in_true else "OUT"
+        self.device.move_configuration_name(config)
 
 
 class VCAMTriggerPlugin(DeviceMixin, BasePlugin):

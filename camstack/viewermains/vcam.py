@@ -29,18 +29,14 @@ def main1(zoom, binn, debug=False):
                vplugs.DiffFilterWheelPlugin(frontend),
                vplugs.VCAMCompassPlugin(frontend, flip_y=True),
                vplugs.VCAMScalePlugin(frontend),
-               vplugs.DiffWheelBlockPlugin(frontend),
-               vplugs.FocusPlugin(frontend), vplugs.CamFocusPlugin(frontend))
+               vplugs.VisBlockPlugin(frontend), vplugs.FocusPlugin(frontend),
+               vplugs.CamFocusPlugin(frontend))
 
     frontend.plugins.extend(plugins)
     frontend.register_backend(backend)
     backend.register_frontend(frontend)
 
     frontend.run()
-
-    if debug:
-        import pdb
-        pdb.set_trace()
 
 
 @click.command("vcam2.py")
@@ -66,8 +62,8 @@ def main2(zoom, binn):
                vplugs.DiffFilterWheelPlugin(frontend),
                vplugs.VCAMCompassPlugin(frontend),
                vplugs.VCAMScalePlugin(frontend),
-               vplugs.DiffWheelBlockPlugin(frontend),
-               vplugs.FocusPlugin(frontend), vplugs.CamFocusPlugin(frontend))
+               vplugs.VisBlockPlugin(frontend), vplugs.FocusPlugin(frontend),
+               vplugs.CamFocusPlugin(frontend))
 
     frontend.plugins.extend(plugins)
     frontend.register_backend(backend)
