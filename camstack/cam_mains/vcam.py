@@ -73,60 +73,60 @@ def main():
         tcp_send.start_order = 1
         tcp_send.kill_order = 0
 
-        ## SC5 -> VAMPIRES zmq
-        # PIPE over ZMQ into the LAN until we find a better solution (receiver)
-        zmq_recv = RemoteDependentProcess(
-                tmux_name=f'vcam{cam}_zmq',
-                cli_cmd='zmq_recv.py %s:%u %s',
-                cli_args=(scxconf.IP_SC5, ZMQ_PORT, stream_name),
-                remote_host=f'lestat@{scxconf.IP_VAMPIRES}',
-                kill_upon_create=False,
-        )
-        zmq_recv.start_order = 2
-        zmq_recv.kill_order = 3
+    # SC5 -> VAMPIRES zmq
+    # PIPE over ZMQ into the LAN until we find a better solution (receiver)
+    zmq_recv = RemoteDependentProcess(
+            tmux_name=f'vcam{cam}_zmq',
+            cli_cmd='zmq_recv.py %s:%u %s',
+            cli_args=(scxconf.IP_SC5, ZMQ_PORT, stream_name),
+            remote_host=f'lestat@{scxconf.IP_VAMPIRES}',
+            kill_upon_create=False,
+    )
+    zmq_recv.start_order = 2
+    zmq_recv.kill_order = 3
 
-        # PIPE over ZMQ into the LAN until we find a better solution (sender)
-        zmq_send = DependentProcess(
-                tmux_name=f'vcam{cam}_zmq',
-                cli_cmd='zmq_send.py %s:%u %s -f 10',
-                cli_args=(scxconf.IP_SC5, ZMQ_PORT, stream_name),
-                kill_upon_create=True,
-        )
-        zmq_send.start_order = 3
-        zmq_send.kill_order = 2
+    # PIPE over ZMQ into the LAN until we find a better solution (sender)
+    zmq_send = DependentProcess(
+            tmux_name=f'vcam{cam}_zmq',
+            cli_cmd='zmq_send.py %s:%u %s -f 10',
+            cli_args=(scxconf.IP_SC5, ZMQ_PORT, stream_name),
+            kill_upon_create=True,
+    )
+    zmq_send.start_order = 3
+    zmq_send.kill_order = 2
 
-        ## DARKS SC5 -> VAMPIRES zmq
-        # PIPE over ZMQ into the LAN until we find a better solution (receiver)
-        darkzmq_recv_vampires = RemoteDependentProcess(
-                tmux_name=f'vcam{cam}_dark_zmq',
-                cli_cmd='zmq_recv.py %s:%u %s',
-                cli_args=(scxconf.IP_SC5, DARKZMQ_PORT, dark_stream_name),
-                remote_host=f'lestat@{scxconf.IP_VAMPIRES}',
-                kill_upon_create=False,
-        )
-        darkzmq_recv_vampires.start_order = 4
-        darkzmq_recv_vampires.kill_order = 6
-        ## DARKS SC5 -> SC6
-        # PIPE over ZMQ into the LAN until we find a better solution (receiver)
-        darkzmq_recv_sc6 = RemoteDependentProcess(
-                tmux_name=f'vcam{cam}_dark_zmq',
-                cli_cmd='zmq_recv.py %s:%u %s',
-                cli_args=(scxconf.IP_SC5, DARKZMQ_PORT, dark_stream_name),
-                remote_host=f'scexao@{scxconf.IP_SC6}',
-                kill_upon_create=False,
-        )
-        darkzmq_recv_sc6.start_order = 5
-        darkzmq_recv_sc6.kill_order = 5
+    ## DARKS SC5 -> VAMPIRES zmq
+    # PIPE over ZMQ into the LAN until we find a better solution (receiver)
+    darkzmq_recv_vampires = RemoteDependentProcess(
+            tmux_name=f'vcam{cam}_dark_zmq',
+            cli_cmd='zmq_recv.py %s:%u %s',
+            cli_args=(scxconf.IP_SC5, DARKZMQ_PORT, dark_stream_name),
+            remote_host=f'lestat@{scxconf.IP_VAMPIRES}',
+            kill_upon_create=False,
+    )
+    darkzmq_recv_vampires.start_order = 4
+    darkzmq_recv_vampires.kill_order = 6
+    ## DARKS SC5 -> SC6
+    # PIPE over ZMQ into the LAN until we find a better solution (receiver)
+    darkzmq_recv_sc6 = RemoteDependentProcess(
+            tmux_name=f'vcam{cam}_dark_zmq',
+            cli_cmd='zmq_recv.py %s:%u %s',
+            cli_args=(scxconf.IP_SC5, DARKZMQ_PORT, dark_stream_name),
+            remote_host=f'scexao@{scxconf.IP_SC6}',
+            kill_upon_create=False,
+    )
+    darkzmq_recv_sc6.start_order = 5
+    darkzmq_recv_sc6.kill_order = 5
 
-        # PIPE over ZMQ into the LAN until we find a better solution (sender)
-        darkzmq_send = DependentProcess(
-                tmux_name=f'vcam{cam}_dark_zmq',
-                cli_cmd='zmq_send.py %s:%u %s -f 10',
-                cli_args=(scxconf.IP_SC5, DARKZMQ_PORT, dark_stream_name),
-                kill_upon_create=True,
-        )
-        darkzmq_send.start_order = 6
-        darkzmq_send.kill_order = 4
+    # PIPE over ZMQ into the LAN until we find a better solution (sender)
+    darkzmq_send = DependentProcess(
+            tmux_name=f'vcam{cam}_dark_zmq',
+            cli_cmd='zmq_send.py %s:%u %s -f 10',
+            cli_args=(scxconf.IP_SC5, DARKZMQ_PORT, dark_stream_name),
+            kill_upon_create=True,
+    )
+    darkzmq_send.start_order = 6
+    darkzmq_send.kill_order = 4
 
     vcam = Klass(
             stream_name,
