@@ -12,7 +12,6 @@ from .dcamcam import OrcaQuest
 
 
 class BaseVCAM(OrcaQuest):
-    HOTSPOTS: typ.Dict[str, typ.Tuple[float, float]] = {}
     PLATE_SCALE: tuple[float,
                        float] = (0, 0
                                  )  # deg/px, must be overridden by sub-classes
@@ -214,7 +213,9 @@ class BaseVCAM(OrcaQuest):
                 else:
                     name = f"F{field}"
                 # hotspots are aboslute coordinates, need to subtract crop origin
-                hx, hy = self.HOTSPOTS[field]
+
+        # calculate crops for each window
+                hx, hy = self.MODES["MBI"].hotspots[field]
                 hx -= self.current_mode.x0
                 hy -= self.current_mode.y0
                 wcs_dict = wcs_dict_init(i, pix=(hx + 0.5, hy + 0.5),
@@ -264,12 +265,6 @@ class VCAM1(BaseVCAM):
     }
     MODES.update(BaseVCAM.MODES)
     MODES[BaseVCAM.NPBS] = MODES[BaseVCAM.STANDARD]
-    HOTSPOTS = {
-            "760": (2894.5, 1433.0),
-            "720": (1769.9, 1438.1),
-            "670": (1206.4, 1437.4),
-            "610": (1203.7, 876.8),
-    }
 
     REDIS_PUSH_ENABLED = True
     REDIS_PREFIX = "u_V"  # LOWERCASE x to not get mixed with the SCExAO keys
@@ -325,12 +320,6 @@ class VCAM2(BaseVCAM):
     MODES.update(BaseVCAM.MODES)
 
     GAINS = {"FAST": 0.103, "SLOW": 0.105}
-    HOTSPOTS = {
-            "760": (2893.6, 872.7),
-            "720": (1770.2, 862.7),
-            "670": (1206.9, 860.9),
-            "610": (1202.3, 1425.3)
-    }
 
     REDIS_PUSH_ENABLED = True
     REDIS_PREFIX = "u_W"  # LOWERCASE x to not get mixed with the SCExAO keys
