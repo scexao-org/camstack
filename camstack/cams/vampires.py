@@ -318,6 +318,9 @@ class VCAM2(BaseVCAM):
             BaseVCAM.PUPIL:
                     util.CameraMode(x0=1648, x1=2407, y0=772, y1=1531,
                                     tint=0.1),
+            BaseVCAM.NPBS:
+                    util.CameraMode(x0=1700, x1=2235, y0=816, y1=1351,
+                                    tint=1e-3),
     }
     MODES.update(BaseVCAM.MODES)
 
