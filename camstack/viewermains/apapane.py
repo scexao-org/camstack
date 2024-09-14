@@ -1396,6 +1396,12 @@ while True:  # the main game loop
                     print('\n', '\n'.join([f'{k:8.8s}:\t{kws[k]}'
                                            for k in kws]))
 
+            # Camera to Pupil/Focus//Display of parallactic angle
+            #----------------------
+            if event.key == K_p:
+                mmods = pygame.key.get_mods()
+                plot_pa = not plot_pa
+
             # Decrease exposure time/NDR
             #---------------------------
             if event.key == K_a:
