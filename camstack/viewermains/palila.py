@@ -2165,11 +2165,9 @@ while True:  # the main game loop
                         time.sleep(5.0)
                         # This will return once the SHM has been overwritten...
                         # and hopefully recreated near-immediately after
-                        print('Hi')
-                        ret = cam.non_block_wait_semaphore()
-                        time.sleep(0.1)  # Safe
-                        print('Hi again')
-                        time.sleep(3.0)  # Safe
+                        print('Hi! Waiting on semaphore til SHM is recreated.')
+                        ret = cam.non_block_wait_until_recreation()
+
                         cam_paused.set_data(ZERO_NODIM)
                         shmreload = True
 

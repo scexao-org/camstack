@@ -99,6 +99,10 @@ def open_shm_fullpath(shm_name: str, dims: Tuple[int, int] = (1, 1),
     if not os.path.isfile(shm_name):
         _data = np.zeros(dims[::-1], dtype=np.float32)
         shm = SHM(shm_name, data=_data, verbose=False)
+        if dims == (1, 1):
+            # The lack of autosqueeze tends to cause problems if the SHM was created in this sesssion.
+            # We re-open.
+            shm = SHM(shm_name)
         return shm
 
     # SHM exists

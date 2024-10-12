@@ -1943,15 +1943,12 @@ while True:  # the main game loop
                         cam_paused.set_data(ONES_NODIM)
                         apapane_pyro.set_camera_mode__oneway(mode_id)
                         # Wait until we're confident the edttake has stopped
-                        time.sleep(2.0)
+                        time.sleep(5.0)
                         # This will return once the SHM has been overwritten...
                         # and hopefully recreated near-immediately after
                         print('Hi! Waiting on semaphore til SHM is recreated.')
 
-                        try:
-                            ret = cam.non_block_wait_semaphore()
-                        except AutoRelinkError:
-                            time.sleep(0.3)
+                        ret = cam.non_block_wait_until_recreation()
 
                         cam_paused.set_data(ZERO_NODIM)
                         shmreload = True
