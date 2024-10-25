@@ -665,6 +665,8 @@ class IiwiButItsApapane(Apapane):
 
     EDTTAKE_EMBEDMICROSECOND = False
 
+    BADSYSTEMD_ENABLED = True
+
     def _constructor_finalize(self) -> None:
         # Constructor finalize is in mode 3.
         self.send_command('set imagetags off')
@@ -715,6 +717,8 @@ class Iiwi(CRED1):
     REDIS_PREFIX = "x_I"  # LOWERCASE x to not get mixed with the SCExAO keys
 
     EDTTAKE_EMBEDMICROSECOND = False
+
+    BADSYSTEMD_ENABLED = True
 
     def _constructor_finalize(self) -> None:
         self.send_command("set imagetags off")

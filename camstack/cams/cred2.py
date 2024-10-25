@@ -390,6 +390,8 @@ class IiwiButItsGLINT(GLINT):
     MODES.update(CRED2.MODES)
     EDTTAKE_EMBEDMICROSECOND = False
 
+    BADSYSTEMD_ENABLED = True
+
     def _thermal_init_commands(self) -> None:
         super()._thermal_init_commands()
         logg.debug('_thermal_init_commands @ IiwiButItsGlint')
