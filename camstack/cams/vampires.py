@@ -64,6 +64,7 @@ class BaseVCAM(OrcaQuest):
     FULL, TWOARC, ONEARC, HALFARC, STANDARD, NPBS, MBI, MBI_REDUCED, PUPIL = \
         "FULL", "TWOARC", "ONEARC", "HALFARC", "STANDARD", "NPBS", "MBI", "MBI_REDUCED", "PUPIL"
     MBI_ONEHALF = "MBI_ONEHALF"
+    MBI_JEWEL = "MBI_JEWEL"
     MODES = {
             FULL:
                     util.CameraMode(x0=0, x1=4095, y0=0, y1=2303, tint=0.001),
@@ -172,7 +173,7 @@ class BaseVCAM(OrcaQuest):
         sdi = dfl1.upper() not in nonsdi_flts and dfl2.upper() not in nonsdi_flts
         if sdi:
             obs_mod = f"{base_mode}_SDI"
-        elif self.current_mode_id == "MBI":
+        elif self.current_mode_id == "MBI" or self.current_mode_id == "MBI_JEWEL":
             obs_mod = f"{base_mode}_MBI"
         elif self.current_mode_id == "MBI_REDUCED":
             obs_mod = f"{base_mode}_MBIR"
@@ -210,12 +211,14 @@ class BaseVCAM(OrcaQuest):
             for i, field in enumerate(("760", "720", "670", "610")):
                 if field == "610" and obs_mod.endswith("MBIR"):
                     name = "NA"
+                    hx, hy = 0, 0
+                    # should we continue???
                 else:
                     name = f"F{field}"
+                    hx, hy = self.MODES["MBI"].hotspots[name]
                 # hotspots are aboslute coordinates, need to subtract crop origin
 
-        # calculate crops for each window
-                hx, hy = self.MODES["MBI"].hotspots[field]
+                # calculate crops for each window
                 hx -= self.current_mode.x0
                 hy -= self.current_mode.y0
                 wcs_dict = wcs_dict_init(i, pix=(hx + 0.5, hy + 0.5),
@@ -256,6 +259,9 @@ class VCAM1(BaseVCAM):
             BaseVCAM.MBI_REDUCED:
                     util.CameraMode.from_file(util.MODES_DIR / "vampires" /
                                               "vcam1_mbir_crop.toml"),
+            BaseVCAM.MBI_JEWEL:
+                    util.CameraMode.from_file(util.MODES_DIR / "vampires" /
+                                              "vcam1_mbi_jewel_crop.toml"),
             BaseVCAM.PUPIL:
                     util.CameraMode(x0=1604, x1=2491, y0=704, y1=1595,
                                     tint=0.1),
@@ -304,6 +310,9 @@ class VCAM2(BaseVCAM):
             BaseVCAM.MBI_REDUCED:
                     util.CameraMode.from_file(util.MODES_DIR / "vampires" /
                                               "vcam2_mbir_crop.toml"),
+            BaseVCAM.MBI_JEWEL:
+                    util.CameraMode.from_file(util.MODES_DIR / "vampires" /
+                                              "vcam2_mbi_jewel_crop.toml"),
             BaseVCAM.MBI_ONEHALF:
                     util.CameraMode(x0=1128, x1=3015, y0=744, y1=979,
                                     tint=1e-4),
