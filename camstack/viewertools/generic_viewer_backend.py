@@ -8,10 +8,10 @@ if typ.TYPE_CHECKING:  # this type hint would cause a circular import
 
 import os
 
-_CORES = os.sched_getaffinity(0)  # AMD fix
+_CORES = os.sched_getaffinity(0)  # MKL weirdo affinity fix
 import pygame.constants as pgmc  # For shortcuts
 
-os.sched_setaffinity(0, _CORES)  # AMD fix
+os.sched_setaffinity(0, _CORES)  # MKL weirdo affinity fix
 
 from astropy.io import fits
 from pyMilk.interfacing.shm import SHM
@@ -73,6 +73,10 @@ ARROWS    : steer crop
         ### SHM
         self.name_shm = name_shm
         self.input_shm = SHM(name_shm, symcode=0)
+        try:
+            self.dark_shm = SHM(f"{name_shm}_dark", symcode=0)
+        except FileNotFoundError:
+            self.dark_shm = None
 
         ### DATA Pipeline
         # yapf: disable
@@ -84,6 +88,9 @@ ARROWS    : steer crop
         self.data_output: np.ndarray | None = None  # Interpolate to frontend display size
 
         self.data_for_sub_dark: np.ndarray | None = None
+        if self.dark_shm is not None:
+            self.data_for_sub_dark = self.dark_shm.get_data()
+
         self.data_for_sub_ref: np.ndarray | None = None
         #yapf: enable
 
@@ -217,11 +224,33 @@ ARROWS    : steer crop
         '''
         if state is None:
             state = not self.flag_subdark_on
-        if state and self.data_for_sub_dark is not None:
+
+        if state:
             self.flag_subdark_on = True
             self.flag_subref_on = False
-        if not state:
+        elif not state:
             self.flag_subdark_on = False
+
+        if self.flag_subdark_on:
+            self.flag_subdark_on = self.reinit_dark_shm()
+
+    def reinit_dark_shm(self) -> bool:
+        try:
+            print('Try open SHM f{self.name_shm}_dark...')
+            self.dark_shm = SHM(f"{self.name_shm}_dark", symcode=0)
+            print('Success!')
+        except FileNotFoundError:
+            self.dark_shm = None
+            print('Failure.')
+            return False
+
+        if self.dark_shm.shape != self.shm_shape:
+            self.dark_shm.close()  # For what it's worth...
+            return False
+
+        self.data_for_sub_dark = self.dark_shm.get_data()
+
+        return True
 
     def toggle_sub_ref(self, state: bool | None = None):
         '''

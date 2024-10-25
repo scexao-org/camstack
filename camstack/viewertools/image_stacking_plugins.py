@@ -146,8 +146,9 @@ class DarkAcquirePlugin(RefImageAcquirePlugin):
         self.averaged_data /= self.averaging_counter
 
         self.backend_obj.data_for_sub_dark = self.averaged_data  # FIXME reference_image exists?
-        self.averaging_counter = 0  # Mark for reset.
 
+        self.averaging_counter = 0  # Mark for reset.
+        self.backend_obj.dark_shm.set_data(dark_frame)
         if self.textbox:
             self.textbox.render_whitespace()
             self.textbox.blit(self.frontend_obj.pg_screen)
