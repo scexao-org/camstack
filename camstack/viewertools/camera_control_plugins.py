@@ -54,7 +54,7 @@ class PyroProxyControl(BasePlugin):
 
 class IiwiProxyControl(PyroProxyControl):
     HELP_MSG = '''
-Pueo control:
+Iiwi control:
 --------------------------------------------------
 CTRL + t       : Toggle trigger on
 CTRL + ALT + t : Toggle trigger off
@@ -65,8 +65,10 @@ CTRL + o       : Increase FPS
     '''
 
     MAX_GAIN = 600
-    SHORT_GAINS = [1, 2, 4, 8, 16, 32, 64, 121]
-    SHORT_FPS = [125, 250, 500, 1000, 2000]
+    SHORT_GAINS: list[int] = [
+            1, 2, 4, 8, 16, 32, 64, 121
+    ]  # FIXME actually change those when we have the IIWI CRED1
+    SHORT_FPS: list[int] = [125, 250, 500, 1000, 2000]
 
     def __init__(self, frontend_obj: PygameViewerFrontend) -> None:
         super().__init__(frontend_obj, 'IIWI')
@@ -120,16 +122,20 @@ CTRL + o       : Increase FPS
         fps = self.pyro_proxy.get_fps()
         # Find and set first index > 1.05 * fps (avoid roundoff problems)
         for f in self.SHORT_FPS:
+            # Iterate til we find the 1st one above
             if f > 1.05 * fps:
                 self.pyro_proxy.set_fps(f)
+                os.system(f'irwfs_modulator setmode {f:d}')
                 break
 
     def decrease_fps(self):
         fps = self.pyro_proxy.get_fps()
         # Find and set last index < 0.95 * fps
         for f in self.SHORT_FPS[::-1]:
+            # Iterate til we find the 1st one below
             if f < 0.95 * fps:
                 self.pyro_proxy.set_fps(f)
+                os.system(f'irwfs_modulator setmode {f:d}')
                 break
 
 
@@ -148,8 +154,8 @@ CTRL + SHIFT + NUMBER: Set EM gain to 2**NUMBER
     '''
 
     MAX_GAIN = 600
-    SHORT_GAINS = [1, 2, 4, 8, 16, 32, 75, 150, 300, 600]
-    SHORT_FPS = [125, 250, 500, 1000, 2000, 3000, 3600]
+    SHORT_GAINS: list[int] = [1, 2, 4, 8, 16, 32, 75, 150, 300, 600]
+    SHORT_FPS: list[int] = [125, 250, 500, 1000, 2000, 3000, 3600]
 
     def __init__(self, frontend_obj: PygameViewerFrontend) -> None:
         super().__init__(frontend_obj, 'PUEO')

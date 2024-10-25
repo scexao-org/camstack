@@ -73,10 +73,12 @@ ARROWS    : steer crop
         ### SHM
         self.name_shm = name_shm
         self.input_shm = SHM(name_shm, symcode=0)
-        try:
-            self.dark_shm = SHM(f"{name_shm}_dark", symcode=0)
-        except FileNotFoundError:
-            self.dark_shm = None
+
+        self.dark_shm = None
+        if not self.reinit_dark_shm():
+            print('Dark has wrong size or does not exist. Recreating.')
+            self.dark_shm = SHM(self.name_shm + '_dark',
+                                ((self.input_shm.shape), np.float32), symcode=0)
 
         ### DATA Pipeline
         # yapf: disable
@@ -90,8 +92,6 @@ ARROWS    : steer crop
         self.data_for_sub_dark: np.ndarray | None = None
         if self.dark_shm is not None:
             self.data_for_sub_dark = self.dark_shm.get_data()
-
-        self.data_for_sub_ref: np.ndarray | None = None
         #yapf: enable
 
         ### Clipping for pipeline
@@ -228,7 +228,7 @@ ARROWS    : steer crop
         if state:
             self.flag_subdark_on = True
             self.flag_subref_on = False
-        elif not state:
+        else:
             self.flag_subdark_on = False
 
         if self.flag_subdark_on:
@@ -420,7 +420,9 @@ ARROWS    : steer crop
                 self.toggle_averaging(False)
                 self.toggle_freeze(False)
                 self.toggle_sub_dark(False)
-                self.data_for_sub_dark = None
+                self.dark_shm = SHM(self.name_shm + '_dark',
+                                    ((self.input_shm.shape), np.float32),
+                                    symcode=0)
                 self.data_for_sub_ref = None
                 self.toggle_sub_ref(False)
                 self.toggle_crop(0)
@@ -467,7 +469,9 @@ ARROWS    : steer crop
         if self.flag_subref_on:
             self.data_debias_uncrop = self.data_raw_uncrop - self.data_for_sub_ref
         elif self.flag_subdark_on:
-            self.data_debias_uncrop = self.data_raw_uncrop - self.data_for_sub_dark
+            assert self.dark_shm is not None  # type guard happy
+            self.data_debias_uncrop = self.data_raw_uncrop - self.dark_shm.get_data(
+            )
         else:
             self.data_debias_uncrop = self.data_raw_uncrop
 

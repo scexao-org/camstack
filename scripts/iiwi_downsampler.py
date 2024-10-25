@@ -9,3 +9,4 @@ iiwi_160 = SHM('iiwi', ((160, 160), np.uint16))
 while True:
     iiwi_160.set_data(
             cv2.resize(iiwi_cred2.get_data(True), (160, 160)).astype(np.uint16))
+    iiwi_160.set_keywords(iiwi_cred2.get_keywords())

@@ -20,11 +20,14 @@ from . import utils_frontend as futs
 from .plugin_arch import OneShotActionPlugin
 
 import numpy as np
+from astropy.io import fits
 
 
 class RefImageAcquirePlugin(OneShotActionPlugin):
     HELP_MSG = """:
 """
+
+    NAME_FOR_FITS_SAVING = 'ref'
 
     def __init__(self, frontend_obj: PygameViewerFrontend,
                  key_onoff: int = pgmc.K_r, modifier_and: int = pgmc.KMOD_LCTRL,
@@ -71,6 +74,18 @@ class RefImageAcquirePlugin(OneShotActionPlugin):
         self.averaged_data /= self.averaging_counter
 
         self.backend_obj.data_for_sub_ref = self.averaged_data
+
+        # Save to disk
+        file = os.environ[
+                'HOME'] + f'/conf/{self.backend_obj.name_shm}_aux/{self.NAME_FOR_FITS_SAVING}_img.fits'
+        print(f'Saving ref to {file}')
+        if self.backend_obj.dark_shm is not None:  # Dark subtracted if can
+            fits.writeto(
+                    file, self.averaged_data -
+                    self.backend_obj.dark_shm.get_data(), overwrite=True)
+        else:
+            fits.writeto(file, self.averaged_data, overwrite=True)
+
         self.averaging_counter = 0  # Mark for reset.
 
         if self.textbox:
@@ -106,6 +121,8 @@ class DarkAcquirePlugin(RefImageAcquirePlugin):
 --- abstract class ---
 """
 
+    NAME_FOR_FITS_SAVING = 'dark'
+
     def __init__(self, frontend_obj: PygameViewerFrontend,
                  key_onoff: int = pgmc.K_b, modifier_and: int = pgmc.KMOD_LCTRL,
                  modifier_no_block: int | None = None, **kwargs):
@@ -130,9 +147,9 @@ class DarkAcquirePlugin(RefImageAcquirePlugin):
                                 fg_col=futs.Colors.WHITE)
 
         if move_block:
+            self.move_appropriate_block(True)
             self.block_was_moved_for_action = True
         else:
-            self.move_appropriate_block(True)
             self.block_was_moved_for_action = False
 
     def _complete_action(
@@ -145,7 +162,17 @@ class DarkAcquirePlugin(RefImageAcquirePlugin):
 
         self.averaged_data /= self.averaging_counter
 
-        self.backend_obj.data_for_sub_dark = self.averaged_data  # FIXME reference_image exists?
+        self.backend_obj.dark_shm.set_data(
+                self.averaged_data)  # FIXME reference_image exists?
+        self.averaging_counter = 0  # Mark for reset.
+
+        # Save to disk
+        conf_folder = os.environ[
+                'HOME'] + f'/conf/{self.backend_obj.name_shm}_aux'
+        if os.path.isdir(conf_folder):
+            file = conf_folder + f'{self.NAME_FOR_FITS_SAVING}_img.fits'
+            print(f'Saving ref to {file}')
+            fits.writeto(file, self.averaged_data, overwrite=True)
 
         self.averaging_counter = 0  # Mark for reset.
         self.backend_obj.dark_shm.set_data(dark_frame)
@@ -202,11 +229,20 @@ using   irwfs_pickoff (in|out)
         # Block in == pickoff out
         in_out = 'out' if in_true else 'in'
         os.system(f'ssh aorts irwfs_pickoff {in_out}')
+        # Sleep some more to wash out some persistence
+        time.sleep(1.0)
 
     def _complete_action(self) -> None:
         super()._complete_action()
 
         from pyMilk.interfacing.shm import SHM
 
-        SHM('iiwi_dark').set_data(self.averaged_data)
-        SHM('aol3_wfsdark').set_data(self.averaged_data)
+        SHM('iiwi_dark', symcode=0).set_data(self.averaged_data)
+        try:
+            SHM('aol3_wfsdark', symcode=0).set_data(self.averaged_data)
+        except FileNotFoundError as exc:
+            print('Warning: ' + repr(exc))
+        try:
+            SHM('aol7_wfsdark', symcode=0).set_data(self.averaged_data)
+        except FileNotFoundError as exc:
+            print('Warning: ' + repr(exc))
