@@ -53,8 +53,8 @@ def main():
                 pass
 
         if not success:
-            print('Serial buffer is probably borked.')
-            raise exc
+            msg = 'Serial buffer is probably borked -- could not get camera UID.'
+            raise ValueError(msg)
 
     os.makedirs(os.environ['HOME'] + "/logs", exist_ok=True)
     init_camstack_logger(os.environ['HOME'] + "/logs/camstack-apapane.log")
