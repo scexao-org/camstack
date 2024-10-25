@@ -232,7 +232,7 @@ class ParamsSHMCamera(BaseCamera):
             on owning the lock... non-blockingly! So we can loop-out and join.
         '''
 
-        assert self.event is not None  # mypy happy assert
+        assert self.event is not None  # type guard
 
         event_count = 0
         while True:
@@ -244,26 +244,12 @@ class ParamsSHMCamera(BaseCamera):
             if event_count % 10 > 0:
                 continue
 
+            # This is the bit specific to the subclass
             if not self.control_shm_lock.acquire(blocking=False):
                 continue
 
+            # And the additional try/finally is also subclass specific.
             try:
-                if not self.is_taker_running():
-                    logg.critical('take_tmux_pane contains no live PID.')
-
-                # Dependents cset + RTprio checking
-                for proc in self.dependent_processes:
-                    proc.make_children_rt()
-
-                # Camera specifics !
-                try:
-                    self.poll_camera_for_keywords()
-                except Exception as e:
-                    logg.error(f"Polling thread: error [{e}]")
-
-                try:
-                    self.redis_push_values()
-                except Exception as e:
-                    logg.error(f"Polling thread: error [{e}]")
+                self.auxiliary_thread_inner_function()
             finally:
                 self.control_shm_lock.release()

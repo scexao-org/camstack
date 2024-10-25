@@ -1,4 +1,5 @@
-from typing import Union, Tuple, List, Any, Optional as Op, Dict
+from __future__ import annotations
+import typing as typ
 
 import os
 import logging as logg
@@ -7,9 +8,6 @@ from camstack.cams.params_shm_backend import ParamsSHMCamera
 from camstack.core import utilities as util
 
 from hwmain.dcam import dcamprop
-
-from pyMilk.interfacing.shm import SHM
-import numpy as np
 
 from camstack.core.wcs import wcs_dict_init
 
@@ -36,7 +34,7 @@ class DCAMCamera(ParamsSHMCamera):
             dcam_number: int,
             no_start: bool = False,
             taker_cset_prio: util.Typ_tuple_cset_prio = ("system", None),
-            dependent_processes: List[util.DependentProcess] = [],
+            dependent_processes: list[util.DependentProcess] = [],
     ) -> None:
 
         # Do basic stuff
@@ -52,20 +50,19 @@ class DCAMCamera(ParamsSHMCamera):
 
     def prepare_camera_for_size(
             self,
-            mode_id: Op[util.Typ_mode_id] = None,
-            params_injection: Op[Dict[dcamprop.EProp, Union[int,
-                                                            float]]] = None,
+            mode_id: None | util.Typ_mode_id = None,
+            params_injection: None | dict[dcamprop.EProp, int | float] = None,
     ) -> None:
         assert self.control_shm is not None
 
         logg.debug("prepare_camera_for_size @ DCAMCamera")
 
-        super().prepare_camera_for_size(mode_id=None)
+        super().prepare_camera_for_size(mode_id=mode_id)
 
         x0, x1 = self.current_mode.x0, self.current_mode.x1
         y0, y1 = self.current_mode.y0, self.current_mode.y1
 
-        params: Dict[dcamprop.EProp, Union[int, float]] = {
+        params: dict[dcamprop.EProp, int | float] = {
                 dcamprop.EProp.SUBARRAYHPOS:
                         x0,
                 dcamprop.EProp.SUBARRAYVPOS:
@@ -120,7 +117,7 @@ class DCAMCamera(ParamsSHMCamera):
         ):  # semflush the post we just made.
             pass
 
-    def abort_exposure(self) -> None:
+    def abort_exposure(self, injected_tint: float = 0.1) -> None:
         # Basically restart the stack. Hacky way to abort a very long exposure.
         # This will kill the fgrab process, and re-init
         # We're reinjecting a short exposure time to reset a potentially very long exposure mode.
@@ -131,8 +128,9 @@ class DCAMCamera(ParamsSHMCamera):
         with self.control_shm_lock:
             self._kill_taker_no_dependents()
             self.prepare_camera_for_size(
-                    self.current_mode_id,
-                    params_injection={dcamprop.EProp.EXPOSURETIME: 0.1})
+                    self.current_mode_id, params_injection={
+                            dcamprop.EProp.EXPOSURETIME: injected_tint
+                    })
             self._start_taker_no_dependents(reuse_shm=True)
 
     def _prepare_backend_cmdline(self, reuse_shm: bool = False) -> None:
@@ -204,7 +202,7 @@ class OrcaQuest(DCAMCamera):
             dcam_number: int,
             no_start: bool = False,
             taker_cset_prio: util.Typ_tuple_cset_prio = ("system", None),
-            dependent_processes: List[util.DependentProcess] = [],
+            dependent_processes: list[util.DependentProcess] = [],
     ) -> None:
         super().__init__(
                 name,
@@ -350,7 +348,7 @@ class OrcaQuest(DCAMCamera):
         return ext_trig
 
     def set_output_trigger_options(self, kind: str, polarity: str,
-                                   num: int = 1) -> List[float]:
+                                   num: int = 1) -> list[float]:
         if num < 1 or num > 3:
             raise ValueError(
                     f"Output trigger number must be between 1 and 3 (got {num})"

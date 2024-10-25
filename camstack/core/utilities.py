@@ -7,11 +7,9 @@ import time
 import subprocess
 import logging
 
-from typing import Optional, Tuple, Dict
 from pydantic import BaseModel
 from pathlib import Path
-import tomli
-import tomli_w
+import tomli, tomli_w
 
 from camstack.core import tmux
 from scxkw.config import MAGIC_BOOL_STR
@@ -152,10 +150,10 @@ class CameraMode(BaseModel):
     y1: int  # Last ROW (inclusive)
     binx: int = 1
     biny: int = 1
-    fps: Optional[float] = None
-    tint: Optional[float] = None
-    fgsize: Optional[Tuple[int, int]] = None
-    hotspots: Optional[Dict[str, Tuple[float, float]]] = None
+    fps: float | None = None
+    tint: float | None = None
+    fgsize: tuple[int, int] | None = None
+    hotspots: dict[str, tuple[float, float]] | None = None
 
     def model_post_init(self, __context) -> None:
         if self.fgsize is None:
@@ -306,7 +304,7 @@ class DependentProcess:
 class RemoteDependentProcess(DependentProcess):
 
     def __init__(self, tmux_name, cli_cmd, cli_args, remote_host,
-                 cset: str = 'system', rtprio: typ.Optional[int] = None,
+                 cset: str = 'system', rtprio: int | None = None,
                  kill_upon_create: bool = True):
 
         self.remote_host = remote_host
@@ -335,7 +333,7 @@ class RemoteDependentProcess(DependentProcess):
 class DependentMultiManager:
     # The only point is to batch all the sleeping... that piles up quite a bit with lots of dependents.
 
-    def __init__(self, dependents: typ.List[DependentProcess]) -> None:
+    def __init__(self, dependents: list[DependentProcess]) -> None:
         self.dependent_list = dependents
 
     def initialize_tmux(self):
