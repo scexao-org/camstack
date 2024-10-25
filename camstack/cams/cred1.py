@@ -666,6 +666,7 @@ class IiwiButItsApapane(Apapane):
     EDTTAKE_EMBEDMICROSECOND = False
 
     BADSYSTEMD_ENABLED = True
+    BADSYSTEMD_KEY = 'IA_CAM'
 
     def _constructor_finalize(self) -> None:
         # Constructor finalize is in mode 3.
@@ -719,6 +720,7 @@ class Iiwi(CRED1):
     EDTTAKE_EMBEDMICROSECOND = False
 
     BADSYSTEMD_ENABLED = True
+    BADSYSTEMD_KEY = 'I_CAM'
 
     def _constructor_finalize(self) -> None:
         self.send_command("set imagetags off")

@@ -53,6 +53,7 @@ class BaseCamera:
 
     # Mixin optional feature: Badsystemd
     BADSYSTEMD_ENABLED: bool = False
+    BADSYSTEMD_KEY: str | None = None
 
     INTERACTIVE_SHELL_METHODS = [
             'close',
@@ -129,7 +130,8 @@ class BaseCamera:
         #=======================
         if self.BADSYSTEMD_ENABLED:
             from swmain.infra.badsystemd import aux
-            aux.auto_register_to_watchers(self.NAME, self.NAME, None)
+            assert self.BADSYSTEMD_KEY is not None
+            aux.auto_register_to_watchers(self.BADSYSTEMD_KEY, self.NAME, None)
 
         if isinstance(mode_id_or_hw, tuple):  # Allow (width, height) fallback
             width, height = mode_id_or_hw
@@ -569,8 +571,9 @@ class BaseCamera:
         if self.BADSYSTEMD_ENABLED:
             # Re-register, but with the polling thread PID, not the main thread of the control shell.
             from swmain.infra.badsystemd import aux
+            assert self.BADSYSTEMD_KEY is not None
             aux.auto_register_to_watchers(
-                    self.NAME,
+                    self.BADSYSTEMD_KEY,
                     self.NAME,
                     # Careful, get_native_id is fairly recent. 3.8?
                     threading.get_native_id())
@@ -618,7 +621,7 @@ class BaseCamera:
             )
 
     def badsystemd_default_report(self):
-        assert self.BADSYSTEMD_ENABLED
+        assert self.BADSYSTEMD_ENABLED and self.BADSYSTEMD_KEY is not None
         from swmain.infra.badsystemd import aux
         dm = self.dependent_processes_manager
 
@@ -634,7 +637,7 @@ class BaseCamera:
         elif time_since_last < 10:
             main_message = f'{time_since_last:.1f} s'
         else:
-            main_message = f'{time_since_last:0f} s'
+            main_message = f'{time_since_last:1f} s'
 
         dependent_statuses = {
                 p.tmux_name.split('_')[-1]: int(p.is_running())
@@ -643,5 +646,5 @@ class BaseCamera:
         dependent_statuses['fgrab'] = int(self.is_taker_running())
 
         aux.push_message(
-                self.NAME, None,
+                self.BADSYSTEMD_KEY, None,
                 aux.MessageAboutSubprocesses(main_message, dependent_statuses))

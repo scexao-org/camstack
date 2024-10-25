@@ -5,9 +5,6 @@ import os
 import libtmux as tmux
 
 import typing as typ
-if typ.TYPE_CHECKING:
-    Pane_T: typ.TypeAlias = typ.Union[tmux.pane.Pane, 'RemotePanePatch',
-                                      'DeprecatedPanePatch']
 
 import time
 import subprocess
@@ -17,6 +14,22 @@ if not TMUX_SERVER.is_alive():
     # There's probably better...
     import os
     os.system('tmux new -d -s startup')
+
+from dataclasses import dataclass
+
+
+@dataclass
+class tmux_cmd_patch:
+    cmd: str
+    retcode: int
+    stdout: list[str]
+    stderr: list[str]
+
+
+if typ.TYPE_CHECKING:
+    Pane_T: typ.TypeAlias = tmux.pane.Pane | RemotePanePatch | DeprecatedPanePatch
+    import libtmux.common
+    tmux_cmd_T: typ.TypeAlias = libtmux.common.tmux_cmd | tmux_cmd_patch
 
 
 def find_or_create_(session_name: str) -> Pane_T:
@@ -157,11 +170,17 @@ class RemotePanePatch:
         subprocess.check_call(['ssh', self.host] + cmdstring,
                               stdout=subprocess.PIPE)
 
-    def cmd(self, command: str,
-            args: str = '') -> subprocess.CompletedProcess[bytes]:
+    def cmd(self, command: str, args: str = '') -> tmux_cmd_patch:
         '''
             Carefully mind the single and double quotes
         '''
         cmdstring = ['tmux', command, '-t', self.session_name, args]
-        return subprocess.run(['ssh', self.host] + cmdstring,
+        proc = subprocess.run(['ssh', self.host] + cmdstring,
                               stdout=subprocess.PIPE)
+
+        return tmux_cmd_patch(
+                ' '.join(cmdstring), proc.returncode,
+                proc.stdout.decode('utf8').rstrip().split('\n')
+                if proc.stdout else [],
+                proc.stderr.decode('utf8').rstrip().split('\n')
+                if proc.stderr else [])

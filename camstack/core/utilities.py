@@ -228,7 +228,7 @@ class DependentProcess:
         self.tmux_pane = None
         self.cli_cmd = cli_cmd
         self.cli_original_args = cli_args  # Can hold magic replace-me placeholders, e.g. #HEIGHT#
-        self.cli_args: typ.List[Typ_shm_kw] = [t for t in cli_args]  # Deepcopy
+        self.cli_args: list[Typ_shm_kw] = [t for t in cli_args]  # Deepcopy
 
         self.start_order = 0
         self.kill_order = 0

@@ -391,6 +391,7 @@ class IiwiButItsGLINT(GLINT):
     EDTTAKE_EMBEDMICROSECOND = False
 
     BADSYSTEMD_ENABLED = True
+    BADSYSTEMD_KEY = 'IG_CAM'
 
     def _thermal_init_commands(self) -> None:
         super()._thermal_init_commands()
