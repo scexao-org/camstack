@@ -101,10 +101,18 @@ def main(
             enforce_whichcomp(required_machine, err=True)
 
     assert tmux is not None  # typing is happy.
+
+    # Basically this is to ensure bashrc has finished loading in the tmux we just created.
+    # Important for environment + bashrc == conda loaded == can change virtualenv
+    import time
+    time.sleep(2.0)
+
     kill_running(tmux)
 
     # initiating this camera's main method
     print(f"DEBUG: using {cam_pyinvocationstring}")
+    if cam_name == 'VPUPCAM':
+        send_keys(tmux, f"conda activate pycapture")
     send_keys(tmux, f"python -i -m {cam_pyinvocationstring}")
 
     # all done. no cleanup

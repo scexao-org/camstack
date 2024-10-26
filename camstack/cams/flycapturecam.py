@@ -110,9 +110,12 @@ class FlyCaptureUSBCamera(BaseCamera):
         logg.debug('init_framegrab_backend @ FlyCaptureUSBCamera')
 
         if self.is_taker_running():
-            msg = 'Cannot change camera config while camera is running'
-            logg.error(msg)
-            raise AssertionError(msg)
+            # Eh sometimes it gets quirky, second chance!
+            time.sleep(3.0)
+            if self.is_taker_running():
+                msg = 'Cannot change camera config while camera is running'
+                logg.error(msg)
+                raise AssertionError(msg)
 
         if self.fly_bus is None:
             self.fly_bus = PC2.BusManager()
