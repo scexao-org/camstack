@@ -1,6 +1,5 @@
 from __future__ import annotations
 import typing as typ
-from typing import Optional as t_Op
 
 import os
 import atexit
@@ -20,7 +19,7 @@ try:
 except:
     logg.error('Import error upon trying to import scxkw.config.')
 
-    def redis_check_enabled() -> typ.Tuple[typ.Any, bool]:
+    def redis_check_enabled() -> tuple[typ.Any, bool]:
         return None, False
 
 
@@ -48,8 +47,13 @@ class BaseCamera:
         And implements the server side management of the imgtake
     '''
 
+    # Mixin optional feature: Redis
     REDIS_PUSH_ENABLED: bool = False
-    REDIS_PREFIX: t_Op[str] = None
+    REDIS_PREFIX: str | None = None
+
+    # Mixin optional feature: Badsystemd
+    BADSYSTEMD_ENABLED: bool = False
+    BADSYSTEMD_KEY: str | None = None
 
     INTERACTIVE_SHELL_METHODS = [
             'close',
@@ -107,8 +111,7 @@ class BaseCamera:
                  mode_id_or_hw: util.Typ_mode_id_or_heightwidth,
                  no_start: bool = False,
                  taker_cset_prio: util.Typ_tuple_cset_prio = ('system', None),
-                 dependent_processes: typ.List[util.DependentProcess] = []
-                 ) -> None:
+                 dependent_processes: list[util.DependentProcess] = []) -> None:
 
         #=======================
         # COPYING ARGS
@@ -118,9 +121,17 @@ class BaseCamera:
         self.STREAMNAME = stream_name
 
         #=======================
-        # HIT REDIS DB?
+        # CAN HIT REDIS DB?
         #=======================
         self.RDB, self.HAS_REDIS = redis_check_enabled()
+
+        #=======================
+        # BADSYSTEMD?
+        #=======================
+        if self.BADSYSTEMD_ENABLED:
+            from swmain.infra.badsystemd import aux
+            assert self.BADSYSTEMD_KEY is not None
+            aux.auto_register_to_watchers(self.BADSYSTEMD_KEY, self.NAME, None)
 
         if isinstance(mode_id_or_hw, tuple):  # Allow (width, height) fallback
             width, height = mode_id_or_hw
@@ -141,8 +152,8 @@ class BaseCamera:
         self.taker_cset_prio = taker_cset_prio
 
         # Thread:
-        self.event: t_Op[threading.Event] = None
-        self.thread: t_Op[threadutil.HackedExitJoinThread] = None
+        self.event: threading.Event | None = None
+        self.thread: threadutil.HackedExitJoinThread | None = None
 
         # LIFO... we first close the daemonized thread, then release all.
         # (which will also try to re-join... but we'd rather that goes fast).
@@ -155,8 +166,8 @@ class BaseCamera:
         # The taker tmux name will be allocated in the call to kill_taker_and_dependents
         # The tmux will also be created if it doesn't exist
         # If this session dies, we'll have to call this again
-        self.take_tmux_name: t_Op[str] = None
-        self.taker_tmux_command: t_Op[str] = None
+        self.take_tmux_name: str | None = None
+        self.taker_tmux_command: str | None = None
         self.kill_taker_and_dependents()
 
         #============================================
@@ -187,7 +198,7 @@ class BaseCamera:
         # =================
         # ALLOCATE KEYWORDS
         # =================
-        self.camera_shm: t_Op[SHM] = None
+        self.camera_shm: SHM | None = None
         self.grab_shm_fill_keywords()
         self.redis_push_values()
         # Maybe we can use a class variable as well to define what the expected keywords are ?
@@ -209,8 +220,8 @@ class BaseCamera:
         # TODO: and what must be done for every mode change (EDT size change)
         raise NotImplementedError("Must be subclassed from the base class")
 
-    def prepare_camera_for_size(self,
-                                mode_id: t_Op[util.Typ_mode_id] = None) -> None:
+    def prepare_camera_for_size(self, mode_id: None | util.Typ_mode_id = None
+                                ) -> None:
         logg.debug('prepare_camera_for_size @ BaseCamera')
         # Gets called during constructor and set_mode
         if mode_id is None:
@@ -243,8 +254,8 @@ class BaseCamera:
         shm = self._get_SHM()
         return shm.get_crop()
 
-    def prepare_camera_finalize(self,
-                                mode_id: t_Op[util.Typ_mode_id] = None) -> None:
+    def prepare_camera_finalize(self, mode_id: util.Typ_mode_id | None = None
+                                ) -> None:
         logg.debug('prepare_camera_finalize @ BaseCamera')
         # Gets called after the framegrabbing has restarted spinning
         if mode_id is None:
@@ -555,7 +566,17 @@ class BaseCamera:
             self.thread = None
 
     def auxiliary_thread_run_function(self) -> None:
-        assert self.event is not None  # mypy happy assert
+        assert self.event is not None  # type guard
+
+        if self.BADSYSTEMD_ENABLED:
+            # Re-register, but with the polling thread PID, not the main thread of the control shell.
+            from swmain.infra.badsystemd import aux
+            assert self.BADSYSTEMD_KEY is not None
+            aux.auto_register_to_watchers(
+                    self.BADSYSTEMD_KEY,
+                    self.NAME,
+                    # Careful, get_native_id is fairly recent. 3.8?
+                    threading.get_native_id())
 
         event_count = 0
         while True:
@@ -580,9 +601,50 @@ class BaseCamera:
         try:
             self.poll_camera_for_keywords()
         except Exception as e:
-            logg.error(f"Polling thread: error [{e!r}]")
+            logg.error(
+                    f"Polling thread [{self.NAME} | poll_camera_for_keywords]: [{e!r}]"
+            )
 
         try:
             self.redis_push_values()
         except Exception as e:
-            logg.error(f"Polling thread: error [{e!r}]")
+            logg.error(
+                    f"Polling thread [{self.NAME} | redis_push_values]: [{e!r}]"
+            )
+
+        try:
+            if self.BADSYSTEMD_ENABLED:
+                self.badsystemd_default_report()
+        except Exception as e:
+            logg.error(
+                    f"Polling thread [{self.NAME} | badsystemd_default_report]: [{e!r}]"
+            )
+
+    def badsystemd_default_report(self):
+        assert self.BADSYSTEMD_ENABLED and self.BADSYSTEMD_KEY is not None
+        from swmain.infra.badsystemd import aux
+        dm = self.dependent_processes_manager
+
+        from datetime import datetime
+
+        time_since_last: float = (
+                datetime.now() -
+                self.camera_shm.IMAGE.md.acqtime).total_seconds()
+        if time_since_last < 1e-3:
+            main_message = f'{time_since_last * 1e6:.0f} us'
+        elif time_since_last < 1:
+            main_message = f'{time_since_last * 1e3:.0f} ms'
+        elif time_since_last < 10:
+            main_message = f'{time_since_last:.1f} s'
+        else:
+            main_message = f'{time_since_last:1f} s'
+
+        dependent_statuses = {
+                p.tmux_name.split('_')[-1]: int(p.is_running())
+                for p in dm.dependent_list
+        }
+        dependent_statuses['fgrab'] = int(self.is_taker_running())
+
+        aux.push_message(
+                self.BADSYSTEMD_KEY, None,
+                aux.MessageAboutSubprocesses(main_message, dependent_statuses))
