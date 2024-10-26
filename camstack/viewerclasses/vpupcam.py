@@ -147,4 +147,7 @@ CTRL  + SHIFT + 8 : LyotStop-S"""
         ## hack this to crop the troublesome rows of the Flea3
         super()._data_grab()
         assert self.data_raw_uncrop is not None
-        self.data_raw_uncrop = self.data_raw_uncrop[1:, 1:]
+
+        # OVerwrite 1st row and col as copy of 2nd row and col.
+        self.data_raw_uncrop[0] = self.data_raw_uncrop[1]
+        self.data_raw_uncrop[:, 0] = self.data_raw_uncrop[:, 1]
