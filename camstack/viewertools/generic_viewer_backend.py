@@ -73,6 +73,7 @@ ARROWS    : steer crop
         ### SHM
         self.name_shm = name_shm
         self.input_shm = SHM(name_shm, symcode=0)
+        self.shm_shape = self.input_shm.shape
 
         self.dark_shm = None
         if not self.reinit_dark_shm():
@@ -111,7 +112,6 @@ ARROWS    : steer crop
         self.toggle_cmap(self.cmap_id)  # Select startup CM
 
         ### SIZING
-        self.shm_shape = self.input_shm.shape
         self.crop_lvl_id = 0
         if self.CROP_CENTER_SPOT is None:
             self.CROP_CENTER_SPOT = self.shm_shape[0] / 2., self.shm_shape[1] / 2.
@@ -236,7 +236,7 @@ ARROWS    : steer crop
 
     def reinit_dark_shm(self) -> bool:
         try:
-            print('Try open SHM f{self.name_shm}_dark...')
+            print(f'Try open SHM {self.name_shm}_dark...')
             self.dark_shm = SHM(f"{self.name_shm}_dark", symcode=0)
             print('Success!')
         except FileNotFoundError:
