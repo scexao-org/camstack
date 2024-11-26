@@ -35,7 +35,7 @@ COLOR_BACKGROUND = Colors.BLACK  # background color
 COLOR_BUTTON = Colors.BLUE  # button color
 
 
-class FontBook:
+class FontBookPygame:
 
     def __init__(self, system_zoom: int,
                  override_fontsize: T_t5i | None = None) -> None:

@@ -20,9 +20,6 @@ import pyMilk.errors
 from . import utils_backend as buts
 from .utils_backend import Shortcut as Sc
 
-from astropy.io import fits
-from pyMilk.interfacing.shm import SHM
-
 import numpy as np
 from matplotlib import cm
 from functools import partial
@@ -161,7 +158,7 @@ ARROWS    : steer crop
         Callback function.
         Print the frontend's HELP_MSG, then self's.
         '''
-        if self.frontend_obj:
+        if self.has_frontend:
             print(self.frontend_obj.HELP_MSG)
         print(self.HELP_MSG)
 
@@ -387,10 +384,10 @@ ARROWS    : steer crop
         nn = len(kws)
         to_print: list[str] = []
         for kk, (key, val) in enumerate(kws.items()):
-            if kk < nn // 2:
+            if kk < (nn + 1) // 2:
                 to_print += [f'| {key:<8s} = {val:<16} | ']
             else:
-                to_print[kk - nn // 2] += f'{key:<8s} = {val:<16} |'
+                to_print[kk - (nn + 1) // 2] += f'{key:<8s} = {val:<16} |'
 
         print('╭' + '-' * 59 + '╮')
         print('\n'.join(to_print))

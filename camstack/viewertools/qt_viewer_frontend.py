@@ -7,21 +7,19 @@ if typ.TYPE_CHECKING:  # this type hint would cause an unecessary import.
 
 import os, sys
 
-# Affinity fix for pygame messing up
-_CORES = os.sched_getaffinity(0)
-import pygame
-import pygame.constants as pgmc
-
-os.sched_setaffinity(0, _CORES)
-
+from . import qt_aux
 from . import utils_frontend as futs
 from . import plugins, image_stacking_plugins
 
 import numpy as np
 from PIL import Image
 
+import PyQt5.QtCore as qtc
+import PyQt5.QtWidgets as qtw
+import PyQt5.QtGui as qtg
 
-class PygameViewerFrontend:
+
+class QtViewerFrontend:
 
     # A couple numeric constants, can be overriden by subclasses
     BOTTOM_PX_PAD = 100
@@ -65,9 +63,9 @@ class PygameViewerFrontend:
         self.data_blit_staging = np.zeros((*self.data_disp_size, 3),
                                           dtype=np.uint8)
         # Total window size
-        self.pygame_win_size = (self.data_disp_size[0],
-                                self.data_disp_size[1] + self.BOTTOM_PX_PAD
-                                )  # * self.fonts_zoom)  # UNCLEAR
+        self.total_win_size = (self.data_disp_size[0],
+                               self.data_disp_size[1] + self.BOTTOM_PX_PAD
+                               )  # * self.fonts_zoom)  # UNCLEAR
 
         #####
         # Prep plugins
@@ -78,33 +76,36 @@ class PygameViewerFrontend:
         #####
         # Prepare the pygame stuff (prefix pygame objects with "pg_")
         #####
-        self.pg_clock = pygame.time.Clock()
 
-        pygame.display.init()
-        pygame.font.init()
+        self.qt_app = qtw.QApplication([])
+
+        # Force the style to be the same on all OSs:
+        self.qt_app.setStyle("Fusion")
+        # Now use a palette to switch to dark colors:
+        self.qt_app.setPalette(qt_aux.make_palette())
+        #self.qt_app.setStyleSheet("QLabel{font-size: 14pt;}")
+
+        self.qt_mainwindow = qtw.QMainWindow()
+        self.qt_mainwindow.setWindowTitle(self.WINDOW_NAME)
+
+        _top_level_qwidget = qtw.QWidget()
+        self.qt_mainwindow.setCentralWidget(_top_level_qwidget)
+        self.qt_main_qvbox = qtw.QVBoxLayout(_top_level_qwidget)
+
+        self.qt_main_qvbox.setContentsMargins(0, 0, 0, 0)
+
+        self.qt_img_area = qtw.QLabel()
+        self.qt_img_area.setFixedSize(*self.data_disp_size)
+        self.qt_img_area.setMouseTracking(True)
+        self.qt_img_area.mouseMoveEvent = self._mousemove_callback.__get__(
+                self.qt_img_area, type(self.qt_img_area))
+        self.last_mousemove_pos_mouse = (0, 0)
 
         # Prep the fonts.
-        self.fonts = futs.FontBookPygame(self.fonts_zoom,
-                                         self.FONTSIZE_OVERRIDE)
+        self.fonts = qt_aux.FontBookQt(self.fonts_zoom, self.FONTSIZE_OVERRIDE)
 
-        self.pg_screen = pygame.display.set_mode(self.pygame_win_size,
-                                                 flags=0x0, depth=16)
-        pygame.display.set_caption(self.WINDOW_NAME)
-
-        self.pg_background = pygame.surface.Surface(self.pg_screen.get_size(),
-                                                    pygame.SRCALPHA)
-        # Good to "convert" once-per-surface: converts data type to final one
-        self.pg_background = self.pg_background.convert()
-        self.pg_background_rect = self.pg_background.get_rect()
-
-        self.pg_datasurface = pygame.surface.Surface(self.data_disp_size)
-        self.pg_datasurface.convert()
-
-        self.pg_data_rect = self.pg_datasurface.get_rect()
-        self.pg_data_rect.topleft = (0, 0)
-
-        self.pg_updated_rects: list[pygame.rect.Rect] = [
-        ]  # For processing in the loop
+        self.qt_main_qvbox.addWidget(self.qt_img_area)
+        self.qt_main_qvbox.setSpacing(0)
 
         #####
         # Mouse
@@ -118,76 +119,64 @@ class PygameViewerFrontend:
         #####
         self._init_labels()
 
-        self._init_cartoon()
+        #TODO AM HERE
+        #self._init_cartoon()
 
         #####
         # OnOff states
         #####
         # Generic syntax?
         # {Attribute: callback} dictionary?
-        self._init_onoff_modes()
+        #self._init_onoff_modes()
 
-        # TODO class variable
+        self.qt_main_qvbox.insertStretch(-1, 1)
 
-        pygame.mouse.set_cursor(pygame.cursors.broken_x)
-        pygame.display.update()
+        self.qt_mainwindow.resize(self.qt_img_area.size())  # FIXME base area
 
-    def _init_labels(self) -> int:
-
-        sz = self.system_zoom  # Shorthandy
-        r = self.data_disp_size[1] + 3 * sz
-        c = 10 * sz
+    def _init_labels(self) -> None:
 
         # Generic camera viewer
-        self.lbl_title = futs.LabelMessage(self.WINDOW_NAME,
-                                           self.fonts.DEFAULT_25, topleft=(c,
-                                                                           r))
-        self.lbl_title.blit(self.pg_screen)
-        r += int(1.2 * self.lbl_title.em_size)
-
+        self.lbl_title = qt_aux.LabelMessageQt(self.WINDOW_NAME,
+                                               self.fonts.DEFAULT_25)
+        self.qt_main_qvbox.addWidget(self.lbl_title.qlabel)
         # For help press [h]
-        self.lbl_help = futs.LabelMessage("Help press [h], quit [x]",
-                                          self.fonts.DEFAULT_25, topleft=(c * 2,
-                                                                          r))
-        self.lbl_help.blit(self.pg_screen)
-        r += int(1.2 * self.lbl_help.em_size)
+        self.lbl_help = qt_aux.LabelMessageQt("Help press [h], quit [x]",
+                                              self.fonts.DEFAULT_25,
+                                              fg_col=qt_aux.Colors.GREEN,
+                                              bg_col=qt_aux.Colors.VERY_RED)
+        self.qt_main_qvbox.addWidget(self.lbl_help.qlabel)
 
         # x0,y0 = {or}, {or} - sx,sy = {size}, {size}
-        self.lbl_cropzone = futs.LabelMessage("crop = [%4d %4d %4d %4d]",
-                                              self.fonts.MONO, topleft=(c, r))
-        r += int(self.lbl_cropzone.em_size)
-
+        self.lbl_cropzone = qt_aux.LabelMessageQt("crop = [%4d %4d %4d %4d]",
+                                                  self.fonts.MONO)
+        self.qt_main_qvbox.addWidget(self.lbl_cropzone.qlabel)
         # t = {t} us - FPS = {fps} - NDR = {NDR}
-        self.lbl_times = futs.LabelMessage("t=%6dus - fps %4.0f - NDR=%3d",
-                                           self.fonts.MONO, topleft=(c, r))
-        r += int(self.lbl_times.em_size)
+        self.lbl_times = qt_aux.LabelMessageQt("t=%6dus - fps %4.0f - NDR=%3d",
+                                               self.fonts.MONO)
+        self.qt_main_qvbox.addWidget(self.lbl_times.qlabel)
 
         # T = {t*NDR} ms - min, max = {} {}
-        self.lbl_t_minmax = futs.LabelMessage("T=%3.1fms - m,M=%5.0f,%8.0f",
-                                              self.fonts.MONO, topleft=(c, r))
-        r += int(self.lbl_times.em_size)
+        self.lbl_t_minmax = qt_aux.LabelMessageQt("T=%3.1fms - m,M=%5.0f,%8.0f",
+                                                  self.fonts.MONO)
+        self.qt_main_qvbox.addWidget(self.lbl_t_minmax.qlabel)
 
         # mouse = {},{} - flux = {}
         # Not writing X and Y - we don't have them in data coords at this point.
-        self.lbl_mouse = futs.LabelMessage("mouse (%4d, %4d) = %6d",
-                                           self.fonts.MONO, topleft=(c, r))
-        r += int(self.lbl_mouse.em_size)
+        self.lbl_mouse = qt_aux.LabelMessageQt("mouse (%4d, %4d) = %6d",
+                                               self.fonts.MONO)
+        self.qt_main_qvbox.addWidget(self.lbl_mouse.qlabel)
 
         # Backend report (bias, ref, zscale, av, freeze)
-        self.lbl_backend = futs.LabelMessage("%-32s", self.fonts.MONO,
-                                             topleft=(c, r))
-        r += int(self.lbl_backend.em_size)
+        self.lbl_backend = qt_aux.LabelMessageQt("%-32s", self.fonts.MONO)
+        self.qt_main_qvbox.addWidget(self.lbl_backend.qlabel)
 
         # {scaling type} - {has bias sub}
 
         # {Status message [sat, acquiring dark, acquiring ref...]}
         # At the bottom right.
-        self.lbl_status = futs.LabelMessage(
-                '%s', self.fonts.DEFAULT_16,
-                topleft=(8 * self.fonts_zoom,
-                         self.pygame_win_size[1] - 20 * self.system_zoom))
-
-        return r
+        self.lbl_status = qt_aux.LabelMessageQt('%s', self.fonts.DEFAULT_16,
+                                                align=qtc.Qt.AlignCenter)
+        self.qt_main_qvbox.addWidget(self.lbl_status.qlabel)
 
     def _init_cartoon(self) -> None:
         if self.CARTOON_FILE is None:
@@ -232,27 +221,12 @@ class PygameViewerFrontend:
         tint_ms = tint * 1e3
         ndr = self.backend_obj.input_shm.get_ndr()
 
-        self.lbl_cropzone.render(tuple(self.backend_obj.input_shm.get_crop()),
-                                 blit_onto=self.pg_screen)
-        self.lbl_times.render((tint_us, fps, ndr), blit_onto=self.pg_screen)
+        self.lbl_cropzone.render(tuple(self.backend_obj.input_shm.get_crop()))
+        self.lbl_times.render((tint_us, fps, ndr))
         self.lbl_t_minmax.render((tint_ms * ndr, self.backend_obj.data_min,
-                                  self.backend_obj.data_max),
-                                 blit_onto=self.pg_screen)
-        self.lbl_mouse.render((
-                *self.pos_mouse,
-                self.value_mouse,
-        ), blit_onto=self.pg_screen)
-        self.lbl_backend.render((self.backend_obj.str_status_report(), ),
-                                blit_onto=self.pg_screen)
-
-        self.pg_updated_rects += [
-                self.lbl_cropzone.rectangle,
-                self.lbl_times.rectangle,
-                self.lbl_t_minmax.rectangle,
-                self.lbl_mouse.rectangle,
-                self.lbl_backend.rectangle,
-        ]
-        #import pdb; pdb.set_trace()
+                                  self.backend_obj.data_max))
+        self.lbl_mouse.render((*self.pos_mouse, self.value_mouse))
+        self.lbl_backend.render((self.backend_obj.str_status_report(), ))
 
     def _inloop_plugin_modes(self) -> None:
         for plugin in self.plugins:
@@ -265,6 +239,43 @@ class PygameViewerFrontend:
 
         self.backend_obj.cross_register_plugins(self.plugins)
 
+    def _initialize_keyboard_shortcuts_for_qt(self):
+        assert self.backend_obj is not None
+
+        # Main frontend shortcut
+        qtw.QShortcut(qtg.QKeySequence(qtc.Qt.Key_X),
+                      self.qt_mainwindow).activated.connect(self.qt_app.quit)
+        qtw.QShortcut(qtg.QKeySequence(qtc.Qt.Key_Escape),
+                      self.qt_mainwindow).activated.connect(self.qt_app.quit)
+
+        # yapf: disable
+        be = self.backend_obj
+        from functools import partial
+        from . import utils_backend as buts
+        from pygame import constants as pgmc
+        this_shortcuts: dict[str, typ.Callable] = {
+                'h': be.print_help,
+                'm': be.toggle_cmap,
+                'l': be.toggle_scaling,
+                'z': partial(be.toggle_crop, incr=1),
+                'shift+z': partial(be.toggle_crop, incr=-1),
+                'ctrl+z': be.reset_crop,
+                'v': be.toggle_averaging,
+                'space': be.toggle_freeze,
+                'up': partial(be.steer_crop, pgmc.K_UP),
+                'down': partial(be.steer_crop, pgmc.K_DOWN),
+                'left': partial(be.steer_crop, pgmc.K_LEFT),
+                'right': partial(be.steer_crop, pgmc.K_RIGHT),
+                'd': be.toggle_sub_dark,
+                'r': be.toggle_sub_ref,
+                'k': be.print_keywords,
+        }
+        # yapf: enable
+
+        for k, call in this_shortcuts.items():
+            qtw.QShortcut(qtg.QKeySequence(k),
+                          self.qt_mainwindow).activated.connect(call)
+
     def run(self) -> None:
         '''
         Post-init loop entry point
@@ -274,43 +285,32 @@ class PygameViewerFrontend:
         - Calls self.process_pygame_events and propagates quitting.
         - Timer click
         '''
-        try:
-            while True:
-                self.loop_iter()
-                pygame.display.update(self.pg_updated_rects)  # type: ignore
-                if self.process_pygame_events():
-                    break
-                self.pg_clock.tick(self.fps_val)
-        except KeyboardInterrupt:
-            pygame.quit()
-            print('Abort loop on KeyboardInterrupt')
 
-    def process_pygame_events(self) -> bool:
-        '''
-        Process pygame events (mostly keyboard shortcuts)
+        self._initialize_keyboard_shortcuts_for_qt()
 
-        Returns True if and only if quitting
-        '''
-        assert self.backend_obj
+        self.qt_mainwindow.show()
 
-        for event in pygame.event.get():
-            modifiers = pygame.key.get_mods()
+        # Should I define a QThread op here?
 
-            if (event.type == pgmc.QUIT or
-                (event.type == pgmc.KEYDOWN and
-                 event.key in [pgmc.K_ESCAPE, pgmc.K_x])):
-                pygame.quit()
-                return True
+        self.loop_iter()  # for DEBUG only
 
-            elif event.type == pgmc.KEYDOWN:
-                self.backend_obj.process_shortcut(modifiers, event.key)
+        timer = qtc.QTimer()
+        timer.setInterval(int(1000. / self.fps_val))
+        timer.timeout.connect(self.loop_iter)
+        timer.start()
 
-        return False
+        import signal
+
+        def sigint_handler(*args):
+            timer.stop()
+            self.qt_app.quit()
+
+        signal.signal(signal.SIGINT, sigint_handler)
+
+        self.qt_app.exec_()
 
     def loop_iter(self) -> None:
         assert self.backend_obj
-
-        self.pg_updated_rects = []
         '''
         Call the backend loop iteration and get RGB data.
         '''
@@ -321,8 +321,10 @@ class PygameViewerFrontend:
         '''
         Resize the data, possibly using black edge padding.
         '''
-        img = Image.fromarray(data_output)
-        data_size_T = (self.data_disp_size[1], self.data_disp_size[0])
+
+        img = Image.fromarray(np.moveaxis(data_output, 1,
+                                          0))  # transpose added for QT.
+        data_size_T = self.data_disp_size
 
         # Rescale and pad if necessary - using PIL is much faster than scipy.ndimage
         # Embedding the system zoom through PIL is also more efficient than doing it in numpy
@@ -389,7 +391,11 @@ class PygameViewerFrontend:
             self.last_transform = futs.DrawingTransform(0, self.system_zoom, 0,
                                                         self.system_zoom)
 
-        pygame.surfarray.blit_array(self.pg_datasurface, data_to_blit)
+        qpixmap = qtg.QPixmap.fromImage(
+                qtg.QImage(data_to_blit.data, data_size_T[0], data_size_T[1],
+                           3 * data_size_T[0], qtg.QImage.Format_RGB888))
+        self.qt_img_area.setPixmap(qpixmap)
+        #self.qt_pixmap = qtg.QPixmap(*self.data_disp_size)
         '''
         Process the mouse
         '''
@@ -397,14 +403,9 @@ class PygameViewerFrontend:
         '''
         Blit background and cute image
         '''
-        self.pg_background.fill(futs.Colors.CLEAR)
-        self.pg_background.set_alpha(255)
-        self.pg_screen.blit(self.pg_background, self.pg_background_rect,
-                            special_flags=(pygame.BLEND_RGBA_ADD))
-        self.pg_updated_rects.append(self.pg_background_rect)
-        if self.CARTOON_FILE is not None:
-            self.pg_screen.blit(self.cartoon_img_scaled, self.pg_cartoon_rect)
-            self.pg_updated_rects.append(self.pg_cartoon_rect)
+        #if self.CARTOON_FILE is not None:
+        #    self.pg_screen.blit(self.cartoon_img_scaled, self.pg_cartoon_rect)
+        #    self.pg_updated_rects.append(self.pg_cartoon_rect)
         '''
         Labels
         We do labels before plugins, so that
@@ -412,6 +413,7 @@ class PygameViewerFrontend:
         of Frontend-controlled labels.
         '''
         self._inloop_update_labels()
+        return
         '''
         Plugins
         '''
@@ -421,6 +423,9 @@ class PygameViewerFrontend:
         '''
         self.pg_screen.blit(self.pg_datasurface, self.pg_data_rect)
         self.pg_updated_rects += [self.pg_data_rect]
+
+    def _mousemove_callback(self, event) -> None:
+        self.last_mousemove_pos_mouse = event.x(), event.y()
 
     def _process_mouse_position(self) -> None:
         '''
@@ -432,7 +437,7 @@ class PygameViewerFrontend:
 
         This function ought to set self.pos_mouse and self.value_mouse
         '''
-        pos_mouse = pygame.mouse.get_pos()
+        pos_mouse = self.last_mousemove_pos_mouse
 
         # Check the cursor is within the data area.
         # We still assert here the data area starts at the top left corner.
@@ -465,10 +470,10 @@ class PygameViewerFrontend:
 if __name__ == "__main__":
 
     from camstack.viewertools.generic_viewer_backend import GenericViewerBackend
-    backend = GenericViewerBackend('prout')
+    backend = GenericViewerBackend('simuquest')
     #backend.assign_shortcuts should have been called?
 
-    frontend = PygameViewerFrontend(int(sys.argv[1]), 10, backend.shm_shape)
+    frontend = QtViewerFrontend(int(sys.argv[1]), 20, backend.shm_shape)
     frontend.register_backend(backend)
     backend.register_frontend(frontend)
     frontend.run()
