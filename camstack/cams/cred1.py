@@ -536,6 +536,9 @@ class Apapane(CRED1):
     # Because we may use mode 3 (160x160) both with and without the wollaston
     # Hence both with 1 and 2 WCS.
 
+    BADSYSTEMD_ENABLED = True
+    BADSYSTEMD_KEY = 'Ap_CAM'
+
     def _constructor_finalize(self) -> None:
         self.send_command("set imagetags on")
         self.send_command("set rawimages on")

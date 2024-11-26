@@ -324,6 +324,9 @@ class Kiwikiu(CRED2):
     REDIS_PUSH_ENABLED = True
     REDIS_PREFIX = 'x_R'  # LOWERCASE x to not get mixed with the SCExAO keys
 
+    BADSYSTEMD_ENABLED = True
+    BADSYSTEMD_KEY = 'Ki_CAM'
+
     def _fill_keywords(self) -> None:
         CRED2._fill_keywords(self)
 
@@ -333,8 +336,8 @@ class Kiwikiu(CRED2):
     def _thermal_init_commands(self) -> None:
         # Kiwikiu + palila: water cooling,
         logg.debug('_thermal_init_commands @ Kiwikiu')
-        self.send_command('set fan speed 0')
         self.send_command('set fan mode manual')
+        self.send_command('set fan speed 0')
         self.set_temperature_setpoint(-40.0)
 
 
@@ -358,6 +361,9 @@ class GLINT(CRED2):
     REDIS_PREFIX = 'x_G'  # LOWERCASE x to not get mixed with the SCExAO keys
 
     INST_PA = 0.0  # deg
+
+    BADSYSTEMD_ENABLED = True
+    BADSYSTEMD_KEY = 'Gl_CAM'
 
     def _fill_keywords(self) -> None:
         CRED2._fill_keywords(self)
@@ -436,6 +442,9 @@ class ApapaneButItsGLINT(GLINT):
                         "%20.2f", "RTPS2"),
     }
     KEYWORDS.update(GLINT.KEYWORDS)
+
+    BADSYSTEMD_ENABLED = True
+    BADSYSTEMD_KEY = 'AG_CAM'
 
     def _thermal_init_commands(self) -> None:
         super()._thermal_init_commands()
@@ -525,6 +534,9 @@ class Palila(CRED2):
 
     REDIS_PUSH_ENABLED = True
     REDIS_PREFIX = 'x_C'  # LOWERCASE x to not get mixed with the SCExAO keys
+
+    BADSYSTEMD_ENABLED = True
+    BADSYSTEMD_KEY = 'Pa_CAM'
 
     # Add modes 6-11 (0-5 offseted 32 pix)
     for i in range(6):

@@ -46,6 +46,9 @@ class OCAM2K(EDTCamera):
     REDIS_PUSH_ENABLED = True
     REDIS_PREFIX = 'x_P'
 
+    BADSYSTEMD_ENABLED = True
+    BADSYSTEMD_KEY = 'Po_CAM'
+
     def __init__(self, name: str, mangled_stream_name: str,
                  final_stream_name: str, binning: bool = True, unit: int = 3,
                  channel: int = 0,

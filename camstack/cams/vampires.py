@@ -275,6 +275,9 @@ class VCAM1(BaseVCAM):
     REDIS_PUSH_ENABLED = True
     REDIS_PREFIX = "u_V"  # LOWERCASE x to not get mixed with the SCExAO keys
 
+    BADSYSTEMD_ENABLED = True
+    BADSYSTEMD_KEY = 'V1_CAM'
+
     def _fill_keywords(self) -> None:
         super()._fill_keywords()
 
@@ -331,7 +334,10 @@ class VCAM2(BaseVCAM):
     GAINS = {"FAST": 0.103, "SLOW": 0.105}
 
     REDIS_PUSH_ENABLED = True
-    REDIS_PREFIX = "u_W"  # LOWERCASE x to not get mixed with the SCExAO keys
+    REDIS_PREFIX = "u_W"  # LOWERCASE u to not get mixed with the SCExAO keys
+
+    BADSYSTEMD_ENABLED = True
+    BADSYSTEMD_KEY = 'V2_CAM'
 
     def _fill_keywords(self) -> None:
         super()._fill_keywords()
