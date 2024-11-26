@@ -54,14 +54,13 @@ from pyMilk.interfacing.isio_shmlib import SHM
 
 import camstack.viewertools.viewer_common as cvc
 
-home = os.getenv('HOME')  # Expected /home/scexao
-conf_dir = home + "/conf/palila_aux/"
-sys.path.append(home + '/src/lib/python/')
+HOME = os.getenv('HOME')  # Expected /home/scexao
+CONF_DIR = HOME + "src/camstack/conf/palila_aux/"
 
 MILK_SHM_DIR = os.getenv(
         'MILK_SHM_DIR')  # Expected /tmp <- MULTIVERSE FIXING NEEDED
 
-import image_processing as impro
+import camstack.image_processing as impro
 
 ZERO_NODIM = np.array(0., dtype=np.float32)
 ONES_NODIM = np.array(1., dtype=np.float32)
@@ -245,7 +244,7 @@ def whatndr(ndr):
 # ------------------------------------------------------------------
 def updatebiasbpm():
 
-    bpname = conf_dir + "badpixmap%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
+    bpname = CONF_DIR + "badpixmap%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
              % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
     try:
         badpixmap = pf.getdata(bpname)
@@ -258,7 +257,7 @@ def updatebiasbpm():
     else:
         bpmhere = True
 
-    bname = conf_dir + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
+    bname = CONF_DIR + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
             % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
     try:
         bias = pf.getdata(bname)
@@ -449,7 +448,7 @@ rdb, rdb_alive = cvc.locate_redis_db()
 
 pscale = 16.2  #mas per pixel in Palila
 
-filename = home + "/conf/palila_aux/hotspots_cor.txt"
+filename = HOME + "/conf/palila_aux/hotspots_cor.txt"
 cors = [line.rstrip('\n') for line in open(filename)]
 ncor = len(cors)
 cort = np.zeros((2, ncor))
@@ -489,7 +488,7 @@ tmux_ircam_synchro = tmuxlib.find_or_create(
         'ircam_synchro')  # start a tmux session for FLC synchro
 
 res = subprocess.check_output("ps aux | grep ircam_synchro", shell=True)
-if bytes(home, 'utf8') + b'/bin/devices/ircam_synchro' not in res:
+if bytes(HOME, 'utf8') + b'/bin/devices/ircam_synchro' not in res:
     tmux_ircam_synchro.send_keys("ircam_synchro")
 
 # ------------------------------------------------------------------
@@ -584,7 +583,7 @@ font5.set_bold(True)
 xws = xsize * z1
 yws = ysize * z1
 
-path_cartoon = conf_dir + "Palila%d.png" % (z1, )
+path_cartoon = CONF_DIR + "Palila%d.png" % (z1, )
 cartoon1 = pygame.image.load(path_cartoon).convert_alpha()
 
 lbl = font1.render("PALILA camera viewer", True, WHITE, BGCOL)
@@ -802,7 +801,7 @@ ih = 0
 coor = np.zeros((2, nhist))
 coor2 = np.zeros((2, nhist))
 
-with open(conf_dir + 'hotspots.txt') as file:
+with open(CONF_DIR + 'hotspots.txt') as file:
     pos = np.array([[float(digit) for digit in line.split()] for line in file])
 pos2 = pos[0, :]
 
@@ -859,11 +858,11 @@ while True:  # the main game loop
         ndark = int(10 * fps / float(ndr))  # 10s of dark
         ave_dark = ave_img_data(ndark, clean=False, disp=True, tint=etime,
                                 timeout=11.0)
-        bname = conf_dir + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
+        bname = CONF_DIR + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
                 % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
         pf.writeto(bname, ave_dark, overwrite=True)
 
-        bpname = conf_dir + "badpixmap%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
+        bpname = CONF_DIR + "badpixmap%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
                  % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
         badpixmap = make_badpix(ave_dark)
         pf.writeto(bpname, badpixmap, overwrite=True)
@@ -975,7 +974,7 @@ while True:  # the main game loop
                     msgsee = "x = %.2f as, y = %.2f as, t = %d deg" % (
                             se_ystd * pscale / 1000., se_xstd * pscale / 1000.,
                             np.rad2deg(se_theta))
-                    os.system(home + "/bin/log SEEING %s: %s" % (slot, msgsee))
+                    os.system(HOME + "/bin/log SEEING %s: %s" % (slot, msgsee))
                     seeing = False
                     seeing_plot = True
                 else:
@@ -995,7 +994,7 @@ while True:  # the main game loop
                                     savepath=savepath, timestamp=timestamp2,
                                     target=target)
                             msgstr = "Strehl = %.2f" % (strehlv)
-                            os.system(home + "/bin/log STREHL %s: %s" %
+                            os.system(HOME + "/bin/log STREHL %s: %s" %
                                       (slot, msgstr))
                             strehl = False
                             strehl_plot = True
@@ -1007,7 +1006,7 @@ while True:  # the main game loop
                                     pad=pad, nst=nst - int(rpin), a=a, rm=rm,
                                     flt=flt, savepath=savepath,
                                     timestamp=timestamp2, retroinj=rpin)
-                            os.system(home + "/bin/log BINARY %s: %i-star fit" %
+                            os.system(HOME + "/bin/log BINARY %s: %i-star fit" %
                                       (slot, nst))
                             binary = False
                             binary_plot = True
@@ -1428,7 +1427,7 @@ while True:  # the main game loop
             timeexpt = np.append(timeexpt, time.time())
             time.sleep(0.1)
             if timeexpt[-1] - timeexpt[0] > 4:
-                os.system(home +
+                os.system(HOME +
                           "/bin/log Palila: changing exposure time to %d" %
                           etime)
                 timeexpt = []
@@ -1438,7 +1437,7 @@ while True:  # the main game loop
             timendr = np.append(timendr, time.time())
             time.sleep(0.1)
             if timendr[-1] - timendr[0] > 4:
-                os.system(home +
+                os.system(HOME +
                           "/bin/log Palila: changing exposure time to %d" %
                           etime)
                 timendr = []
@@ -1716,11 +1715,11 @@ while True:  # the main game loop
 
                         ave_dark = ave_img_data(None, clean=False, disp=True,
                                                 tint=etime, timeout=11.0)
-                        bname = conf_dir + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
+                        bname = CONF_DIR + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
                                 % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
                         pf.writeto(bname, ave_dark, overwrite=True)
 
-                        bpname = conf_dir + "badpixmap%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
+                        bpname = CONF_DIR + "badpixmap%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
                                 % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
                         badpixmap = make_badpix(ave_dark)
                         pf.writeto(bpname, badpixmap, overwrite=True)
@@ -1784,10 +1783,10 @@ while True:  # the main game loop
                             ave_dark = ave_img_data(ndark, clean=False,
                                                     disp=True, tint=tint,
                                                     timeout=11.0)
-                            bname = conf_dir + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
+                            bname = CONF_DIR + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
                                     % (fps, tint, ndr, crop[0], crop[2], xsizeim, ysizeim)
                             pf.writeto(bname, ave_dark, overwrite=True)
-                            bpname = conf_dir + "badpixmap%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
+                            bpname = CONF_DIR + "badpixmap%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
                                 % (fps, tint, ndr, crop[0], crop[2], xsizeim, ysizeim)
                             badpixmapi = make_badpix(ave_dark)
                             pf.writeto(bpname, badpixmapi, overwrite=True)
@@ -1819,7 +1818,7 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 # Just r
                 if cvc.check_modifiers(mmods):
-                    rname = conf_dir + "ref.fits"
+                    rname = CONF_DIR + "ref.fits"
                     try:
                         ref_im = pf.getdata(rname) * badpixmap
                     except:
@@ -1840,7 +1839,7 @@ while True:  # the main game loop
                     nref = int(5 * fps / float(ndr))  # 5s of ref
                     ave_ref = ave_img_data(nref, bias=bias, badpixmap=badpixmap,
                                            disp=True, tint=etime, timeout=11.0)
-                    rname = conf_dir + "ref.fits"
+                    rname = CONF_DIR + "ref.fits"
                     pf.writeto(rname, ave_ref, overwrite=True)
 
                 # Ctrl + Alt + r
@@ -2012,7 +2011,7 @@ while True:  # the main game loop
                 else:
                     plot_cross = not plot_cross
                     if plot_cross:
-                        with open(conf_dir + 'hotspots.txt') as file:
+                        with open(CONF_DIR + 'hotspots.txt') as file:
                             pos = np.array([[
                                     float(digit) for digit in line.split()
                             ] for line in file])
