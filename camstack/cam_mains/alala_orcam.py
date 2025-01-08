@@ -50,11 +50,11 @@ if __name__ == "__main__":
     shellify_methods(cam, globals())
 
     # PYROSERVER
-    from scxconf import PYRONS3_HOST, PYRONS3_PORT, IP_AORTS_SUMMIT
+    from scxconf import PYRONSAO_HOST, PYRONSAO_PORT, IP_AORTS_SUMMIT
     from camstack import pyro_keys as pk
     from swmain.network.pyroserver_registerable import PyroServer
 
     server = PyroServer(bindTo=(IP_AORTS_SUMMIT, 0),
-                        nsAddress=(PYRONS3_HOST, PYRONS3_PORT))
+                        nsAddress=(PYRONSAO_HOST, PYRONSAO_PORT))
     server.add_device(cam, pk.ALALA, add_oneway_callables=True)
     server.start()
