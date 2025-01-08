@@ -142,9 +142,14 @@ Options:
         exit(0)
     else:
 
+        stats_computer = DependentProcess(
+                'apd_stats',
+                'python -m aorts.rtm_datasource.stats_compute apd lowfs_data curv_1kdouble',
+                ())
+
         apd = APDAcquisition('apd', 'apd', args['-u'],
-                             taker_cset_prio=('fpdp_recv',
-                                              45), dependent_processes=[])
+                             taker_cset_prio=('fpdp_recv', 45),
+                             dependent_processes=[stats_computer])
 
         from camstack.core.utilities import shellify_methods
         shellify_methods(apd, globals())
