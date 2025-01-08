@@ -76,6 +76,7 @@ ARROWS    : steer crop
         self.shm_shape = self.input_shm.shape
 
         self.dark_shm = None
+        self.shm_shape = self.input_shm.shape
         if not self.reinit_dark_shm():
             print('Dark has wrong size or does not exist. Recreating.')
             self.dark_shm = SHM(self.name_shm + '_dark',
