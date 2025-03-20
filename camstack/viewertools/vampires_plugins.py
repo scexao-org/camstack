@@ -592,7 +592,7 @@ class FocusPlugin(DeviceMixin, BasePlugin):
             # big step
             nudge_value = sign * 0.1
         self.backend_obj.logger.info(f"Nudging {substage} focus by {nudge_value} mm")
-        self.device.move_relative__oneway(substage nudge_value)
+        self.device.move_relative__oneway(substage, nudge_value)
 
     def frontend_action(self) -> None:
         pass
