@@ -568,16 +568,20 @@ class FocusPlugin(DeviceMixin, BasePlugin):
         self.enabled = True
         # yapf: disable
         self.shortcut_map = {
-            buts.Shortcut(pgmc.K_u, pgmc.KMOD_LCTRL): partial(self.nudge_focus, pgmc.K_u, fine=True),
-            buts.Shortcut(pgmc.K_u, pgmc.KMOD_LSHIFT): partial(self.nudge_focus, pgmc.K_u, fine=False),
-            buts.Shortcut(pgmc.K_i, pgmc.KMOD_LCTRL): partial(self.nudge_focus, pgmc.K_i, fine=True),
-            buts.Shortcut(pgmc.K_i, pgmc.KMOD_LSHIFT): partial(self.nudge_focus, pgmc.K_i, fine=False),
+            buts.Shortcut(pgmc.K_u, pgmc.KMOD_LCTRL): partial(self.nudge_focus, "lens", pgmc.K_u, fine=True),
+            buts.Shortcut(pgmc.K_u, pgmc.KMOD_LSHIFT): partial(self.nudge_focus, "lens", pgmc.K_u, fine=False),
+            buts.Shortcut(pgmc.K_i, pgmc.KMOD_LCTRL): partial(self.nudge_focus, "lens", pgmc.K_i, fine=True),
+            buts.Shortcut(pgmc.K_i, pgmc.KMOD_LSHIFT): partial(self.nudge_focus, "lens", pgmc.K_i, fine=False),
+            buts.Shortcut(pgmc.K_l, pgmc.KMOD_LCTRL): partial(self.nudge_focus, "cam", pgmc.K_l, fine=True),
+            buts.Shortcut(pgmc.K_l, pgmc.KMOD_LSHIFT): partial(self.nudge_focus, "cam", pgmc.K_l, fine=False),
+            buts.Shortcut(pgmc.K_SEMICOLON, pgmc.KMOD_LCTRL): partial(self.nudge_focus, "cam", pgmc.K_SEMICOLON, fine=True),
+            buts.Shortcut(pgmc.K_SEMICOLON, pgmc.KMOD_LSHIFT): partial(self.nudge_focus, "cam", pgmc.K_SEMICOLON, fine=False),
         }
 
-    def nudge_focus(self, key, fine=True):
-        if key == pgmc.K_u:
+    def nudge_focus(self, substage: typ.Literal["lens", "cam"], key, fine=True):
+        if key in (pgmc.K_u, pgmc.K_l):
             sign = 1
-        elif key == pgmc.K_i:
+        elif key == (pgmc.K_i, pgmc.K_SEMICOLON):
             sign = -1
         else:
             sign = 0
@@ -587,8 +591,8 @@ class FocusPlugin(DeviceMixin, BasePlugin):
         else:
             # big step
             nudge_value = sign * 0.1
-        self.backend_obj.logger.info(f"Nudging focus by {nudge_value} mm")
-        self.device.move_relative__oneway(nudge_value)
+        self.backend_obj.logger.info(f"Nudging {substage} focus by {nudge_value} mm")
+        self.device.move_relative__oneway(substage nudge_value)
 
     def frontend_action(self) -> None:
         pass
@@ -596,44 +600,6 @@ class FocusPlugin(DeviceMixin, BasePlugin):
     def backend_action(self) -> None:
         pass
 
-class CamFocusPlugin(DeviceMixin, BasePlugin):
-
-    DEVICE_NAME = VAMPIRES.CAMFCS
-
-    def __init__(self, frontend_obj: PygameViewerFrontend) -> None:
-        super().__init__(frontend_obj)
-        self.status = None
-        self.current_index = None
-        self.enabled = True
-        # yapf: disable
-        self.shortcut_map = {
-            buts.Shortcut(pgmc.K_l, pgmc.KMOD_LCTRL): partial(self.nudge_focus, pgmc.K_l, fine=True),
-            buts.Shortcut(pgmc.K_l, pgmc.KMOD_LSHIFT): partial(self.nudge_focus, pgmc.K_l, fine=False),
-            buts.Shortcut(pgmc.K_SEMICOLON, pgmc.KMOD_LCTRL): partial(self.nudge_focus, pgmc.K_SEMICOLON, fine=True),
-            buts.Shortcut(pgmc.K_SEMICOLON, pgmc.KMOD_LSHIFT): partial(self.nudge_focus, pgmc.K_SEMICOLON, fine=False),
-        }
-
-    def nudge_focus(self, key, fine=True):
-        # CCW
-        sign = 1
-        if key == pgmc.K_l:
-            sign = 1
-        # CW
-        elif key == pgmc.K_SEMICOLON:
-            sign = -1
-        if fine:
-            nudge_value = sign * 0.005
-        else:
-            # big step
-            nudge_value = sign * 0.1
-        self.backend_obj.logger.info(f"Nudging cam focus by {nudge_value} mm")
-        self.device.move_relative__oneway(nudge_value)
-
-    def frontend_action(self) -> None:
-        pass
-
-    def backend_action(self) -> None:
-        pass
 class VAMPIRESPupilMode(DeviceMixin, PupilMode):
 
     DEVICE_NAME = VAMPIRES.PUPIL

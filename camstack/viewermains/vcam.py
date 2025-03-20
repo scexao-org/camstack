@@ -29,8 +29,7 @@ def main1(zoom, binn, debug=False):
                vplugs.DiffFilterWheelPlugin(frontend),
                vplugs.VCAMCompassPlugin(frontend, flip_y=True),
                vplugs.VCAMScalePlugin(frontend),
-               vplugs.VisBlockPlugin(frontend), vplugs.FocusPlugin(frontend),
-               vplugs.CamFocusPlugin(frontend))
+               vplugs.VisBlockPlugin(frontend), vplugs.FocusPlugin(frontend))
 
     frontend.plugins.extend(plugins)
     frontend.register_backend(backend)
@@ -44,7 +43,8 @@ def main1(zoom, binn, debug=False):
               help="Graphics window zoom factor", show_default=True)
 @click.option("-b", "--bin", "binn", type=int, default=1,
               help="SHM binning factor", show_default=True)
-def main2(zoom, binn):
+@click.option("-d", "--debug", "debug", is_flag=True)
+def main2(zoom, binn, debug=False):
     backend = VAMPIRESBaseViewerBackend(2, "vcam2")
     binned_backend_shape = (560 // binn, 560 // binn)
 
@@ -62,8 +62,7 @@ def main2(zoom, binn):
                vplugs.DiffFilterWheelPlugin(frontend),
                vplugs.VCAMCompassPlugin(frontend),
                vplugs.VCAMScalePlugin(frontend),
-               vplugs.VisBlockPlugin(frontend), vplugs.FocusPlugin(frontend),
-               vplugs.CamFocusPlugin(frontend))
+               vplugs.VisBlockPlugin(frontend), vplugs.FocusPlugin(frontend))
 
     frontend.plugins.extend(plugins)
     frontend.register_backend(backend)
