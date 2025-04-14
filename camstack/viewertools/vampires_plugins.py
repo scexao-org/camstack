@@ -581,7 +581,7 @@ class FocusPlugin(DeviceMixin, BasePlugin):
     def nudge_focus(self, substage: typ.Literal["lens", "cam"], key, fine=True):
         if key in (pgmc.K_u, pgmc.K_l):
             sign = 1
-        elif key == (pgmc.K_i, pgmc.K_SEMICOLON):
+        elif key in (pgmc.K_i, pgmc.K_SEMICOLON):
             sign = -1
         else:
             sign = 0
