@@ -173,9 +173,9 @@ class BaseVCAM(OrcaQuest):
         sdi = dfl1.upper() not in nonsdi_flts and dfl2.upper() not in nonsdi_flts
         if sdi:
             obs_mod = f"{base_mode}_SDI"
-        elif self.current_mode_id == "MBI" or self.current_mode_id == "MBI_JEWEL":
+        elif self.current_mode_id in ("MBI", "MBI_JEWEL"):
             obs_mod = f"{base_mode}_MBI"
-        elif self.current_mode_id == "MBI_REDUCED":
+        elif self.current_mode_id in ("MBI_REDUCED", "MBI_ONEHALF"):
             obs_mod = f"{base_mode}_MBIR"
         elif pupil_lens.strip().upper() == "IN":
             obs_mod = f"{base_mode}_PUP"
