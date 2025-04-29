@@ -116,10 +116,10 @@ CTRL  + S     : Save position to the last configuration
 
 Pupil wheel masks:
 ----------------------------------
-CTRL  + 1         : Open (0 deg)
+CTRL  + 1         : JEWEL 4x5
 CTRL  + 2         : SAM-7
 CTRL  + 3         : SAM-9
-CTRL  + 4         : Open (73 deg)
+CTRL  + 4         : JEWEL 7x6
 CTRL  + 5         : SAM-18
 CTRL  + 6         : SAM-Ann
 CTRL  + 7         : Mirror
