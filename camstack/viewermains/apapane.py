@@ -77,16 +77,16 @@ def ave_img_data(nave, *args, **kwargs):
 
 
 def arr2im(arr, vmin=0., vmax=10000.0, pwr=1.0, subt_ref=False, lin_scale=True,
-           pos=[0, 0], pdi=False):
+           pos=[0, 0], fpdi=False):
     (ysizeim, xsizeim) = arr.shape
     ymin = xmin = 0
     ymax = ysizeim
     xmax = xsizeim
 
-    if pdi and (xsizeim // z2) >= 160:
-        pdi = False  # image is not zoomed enough to do a dual-center crop
+    if fpdi and (xsizeim // z2) >= 160:
+        fpdi = False  # image is not zoomed enough to do a dual-center crop
 
-    if not pdi:
+    if not fpdi:
         if z2 != 1:
             ymin = max(
                     128 + round(pos[1] + cor[1] - crop[2] - ysizeim / 2. / z2),
@@ -113,7 +113,7 @@ def arr2im(arr, vmin=0., vmax=10000.0, pwr=1.0, subt_ref=False, lin_scale=True,
             arr2 = arr[ymin:ymax, xmin:xmax].astype(np.float32)
         else:
             arr2 = arr.astype(np.float32)
-    else:  # if pdi, assuming centers = middle -/+ 40 of the 1st axis and middle of 2nd axis
+    else:  # if fpdi, assuming centers = middle -/+ 40 of the 1st axis and middle of 2nd axis
         cen_row = ymax // 2
         cen_cols = (xmax // 2 - 37, xmax // 2 + 37)
         half_size = int(round(ymax / z2 / 2))
@@ -124,11 +124,13 @@ def arr2im(arr, vmin=0., vmax=10000.0, pwr=1.0, subt_ref=False, lin_scale=True,
                          cen_cols[1] - quart_size:cen_cols[1] +
                          quart_size]].astype(np.float32)
 
-    lmin = np.percentile(arr2, 0.1)
+    lmin = np.percentile(arr2, 0.8)
     arr2 -= lmin
     mask = arr2 > 0
+    if z2 == 1:
+        mask[0, 0:10] = 0
     arr2 *= mask
-    lmax = np.percentile(arr2, 99.95)
+    lmax = arr2.max()
     mask = arr2 < lmax
     arr2 *= mask
     arr2 += (1 - mask) * lmax
@@ -247,12 +249,12 @@ def updatebiasbpm():
     bpname = conf_dir + "badpixmap%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
              % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
     try:
-        badpixmap = pf.getdata(bpname).astype(np.bool)
+        badpixmap = pf.getdata(bpname).astype(np.bool_)
         cam_badpixmap.set_data(badpixmap.astype(np.float32))
         print("badpixmap loaded")
     except:
         bpmhere = False
-        badpixmap = np.ones((ysizeim, xsizeim), np.bool)
+        badpixmap = np.ones((ysizeim, xsizeim), np.bool_)
         print("badpixmap NOT loaded")
     else:
         bpmhere = True
@@ -286,7 +288,7 @@ def make_badpix(bias, filt=3.5):
     ---------
     - filt (default=3.5): filters beyond this many sigmas
     ------------------------------------------------------- '''
-    bpmap = np.ones_like(bias, np.bool)
+    bpmap = np.ones_like(bias, np.bool_)
     rms = np.std(bias)
     mu = np.median(bias)
     bpmap[bias > mu + filt * rms] = False
@@ -297,36 +299,67 @@ def make_badpix(bias, filt=3.5):
 # ------------------------------------------------------------------
 #  Filter message
 # ------------------------------------------------------------------
-def whatfilter(reachphoto, slot, block):
-    if reachphoto:
-        msgwhl = "      OPEN      "
+def whatfilter(slot, block, irspmode):
+    if "OUT" not in irspmode:
+        msgwhl = irspmode
+    elif block:
+        msgwhl = "     BLOCK      "
     else:
-        if block:
-            msgwhl = "     BLOCK      "
-        else:
-            msgwhl = slot
+        msgwhl = slot
     return (msgwhl)
 
 
 # ------------------------------------------------------------------
 #  Top message
 # ------------------------------------------------------------------
-def whatmsg(reachphoto, gpin, rpin):
+def whatmsg(phmode, rpin, apin, fpdi, irspmode):
     msgtops = [
-            "                ", "     REACH      ", "REACH PHOTOMETRY",
-            "     GLINT      "
+            "                ", "  REACH PHOTO   ", "      GLINT     ",
+            " PHOTONICS INJ  ", "      FPDI      ", "     PALILA     "
     ]
-    if reachphoto:
-        msgtop = msgtops[2]
+
+    if "OUT" in irspmode:
+        if apin:
+            if fpdi:
+                msgtop = msgtops[4]
+            else:
+                msgtop = msgtops[0]
+        else:
+            msgtop = msgtops[5]
     else:
         if rpin:
             msgtop = msgtops[1]
         else:
-            if gpin:
+            if phmode == 2:
+                msgtop = msgtops[2]
+            elif phmode == 1:
                 msgtop = msgtops[3]
             else:
-                msgtop = msgtops[0]
+                msgtop = msgtops[5]
     return (msgtop)
+
+
+## Begin GLINT trace names
+def print_glint_traces():
+    tokens = [
+            "PB", "PL", "PT", "FT1", "N1", "FT2", "FT3", "N2", "FT4", "FT5",
+            "N3", "FT6"
+    ]
+    # spacing is enabled by literally adding spaces
+    delimiter = " " * 3
+    left_string = delimiter.join(tokens[:9])
+    right_string = delimiter.join(tokens[9:])
+    # now set up pygame text boxes
+    y_position = 80 * z1
+    left_label = font2.render(left_string, True, FGCOL, BGCOL)
+    left_rect = left_label.get_rect()
+    left_rect.center = (110 * z1, y_position)
+    screen.blit(left_label, left_rect)
+
+    right_label = font2.render(right_string, True, FGCOL, BGCOL)
+    right_rect = right_label.get_rect()
+    right_rect.center = (280 * z1, y_position)
+    screen.blit(right_label, right_rect)
 
 
 # ------------------------------------------------------------------
@@ -344,18 +377,17 @@ w           : increase CRED1 gain
 s           : decrease CRED1 gain
 CTRL+q      : increase number of NDR
 CTRL+a      : decrease number of NDR
-CTRL+SHIFT+<number>: jump to NDR 2**<number>
+CTRL+SFT+<N>: jump to NDR 2**<N>
 CTRL+o      : increase frame rate
 CTRL+l      : decrease frame rate
 CTRL+c      : switch between apapane/palila
 CTRL+i      : REACH mode in/out
-CTRL+b      : take new darks
-CTRL+SHIFT+b: take new dark for current exp
+CTRL+b      : take new dark for current exp
 CTRL+r      : save a reference image
 CTRL+s      : start/stop logging images
 CTRL+SHIFT+s: start/stop archiving images
-CTRL+d      : save a HDR image
-CTRL+n      : switch to external/internal trigger
+CTRL+n      : switch to internal trigger
+CTRL+ALT+n  : switch to internal trigger
 CTRL+1-6    : change filter wheel slot:
               1. OPEN
               2. y-band
@@ -421,9 +453,16 @@ xsizeim, ysizeim = cam.shape_c
 
 (xsize, ysize) = (320, 256)  #Force size of apapane for the display
 
-cam_dark = cvc.open_shm("apapane_dark", dims=(xsizeim, ysizeim), check=True)
-cam_badpixmap = cvc.open_shm("apapane_badpixmap", dims=(xsizeim, ysizeim),
-                             check=True)
+try:
+    cam_dark = cvc.open_shm("apapane_dark", dims=(xsizeim, ysizeim))
+except Exception as e:
+    cam_dark = np.zeros((xsize, ysize), dtype="f32")
+    print("Could not open dark, creating dummy")
+try:
+    cam_badpixmap = cvc.open_shm("apapane_badpixmap", dims=(xsizeim, ysizeim))
+except Exception as e:
+    cam_dark = np.zeros((xsize, ysize), dtype=bool)
+    print("Could not open badpixmap, creating dummy")
 
 cam_paused = cvc.open_shm("apapane_paused")
 new_dark = cvc.open_shm("apapane_newdark")
@@ -435,8 +474,8 @@ ircam_retroinj = cvc.open_shm("ircam_retroinj", dims=(20, 1))
 # ------------------------------------------------------------------
 rdb, rdb_alive = cvc.locate_redis_db()
 
-(pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad, target,
- pdi) = cvc.RDB_pull(rdb, rdb_alive, True, do_defaults=True)
+(pup, phmode, rpin, apin, slot, block, pap, pad, target, fpdi,
+ irspmode) = cvc.RDB_pull(rdb, rdb_alive, True, do_defaults=True)
 
 pscale = 16.9  #mas per pixel in Apapane
 
@@ -450,7 +489,7 @@ for i in range(ncor):
     cort[1, i] = float(corparam[3])
 cort /= pscale
 cor = np.array([0, 0])
-if gpin:
+if phmode:
     cor = cort[:, 0]
 
 # ------------------------------------------------------------------
@@ -541,7 +580,7 @@ apapane_pyro.get_tint()
 apapane_pyro.get_NDR()
 apapane_pyro.get_fps()
 apapane_pyro.get_gain()
-sync_param = ircam_synchro.get_data().astype(np.int)
+sync_param = ircam_synchro.get_data().astype(np.int32)
 lag = 7
 cam_ro = 22 - lag
 sync_param[4] = 160
@@ -695,17 +734,17 @@ zm = font1.render(msgzm, True, CYAN)
 rct_zm = zm.get_rect()
 rct_zm.topleft = (5 * z1, 5 * z1)
 
-#ircam_filter
-msgwhl = whatfilter(reachphoto, slot, block)
+#ircam_filter / spectro mode
+msgwhl = whatfilter(slot, block, irspmode)
 wh = font1.render(msgwhl, True, CYAN)
 rct_wh = wh.get_rect()
 rct_wh.topright = (xws - 6 * z1, 5 * z1)
 
-#pupil lens
-msgtop = whatmsg(reachphoto, gpin, rpin)
+#mode
+msgtop = whatmsg(phmode, rpin, apin, fpdi, irspmode)
 topm = font1.render(msgtop, True, CYAN)
 rct_top = topm.get_rect()
-rct_top.midtop = (xws / 2, 5 * z1)
+rct_top.topleft = (20 * z1, 5 * z1)
 
 imin, imax = 0, 0
 surf_live = pygame.surface.Surface((xws, yws))
@@ -823,7 +862,7 @@ while True:  # the main game loop
 
         print("Apapane: acquiring this dark.")
 
-        if not block and bpin:
+        if not block and apin:
             tmux_apapane.send_keys("ircam_block")  # blocking the light
         msgwhl = "     BLOCK      "
         wh = font1.render(msgwhl, True, RED1)
@@ -846,7 +885,8 @@ while True:  # the main game loop
         bias = ave_dark * badpixmap
         time.sleep(0.2)
 
-        tmux_apapane.send_keys("ircam_block")  # blocking the light
+        if apin:
+            tmux_apapane.send_keys("ircam_block")  # blocking the light
         tmux_apapane.send_keys(
                 "scexaostatus set darkapapane 'OFF             ' 1")
         tmux_apapane.send_keys("log Apapane: Done saving current internal dark")
@@ -874,7 +914,7 @@ while True:  # the main game loop
     else:
         # ------------------------------------------------------------------
         # read changes in expt, fps, ndr and crop
-        sync_param = ircam_synchro.get_data().astype(np.int)
+        sync_param = ircam_synchro.get_data().astype(np.int32)
         flc_oft = sync_param[4] - lag
         if not sync_param[0] and sync_param[1]:
             etimen = sync_param[2]
@@ -893,7 +933,7 @@ while True:  # the main game loop
             delay = 0
         ndrn = int(cam.get_ndr())
         cropn = np.asarray(cam.get_crop()).astype(int)
-        if gpin:
+        if phmode:
             cor = cort[:, 0]
         else:
             cor = np.array([0, 0])
@@ -944,7 +984,7 @@ while True:  # the main game loop
         imin = np.nanmin(temp2[1:])
         (myim, z3, xmin, xmax, ymin, ymax, xshift,
          yshift) = arr2im(temp2, pwr=pwr0, subt_ref=subt_ref,
-                          lin_scale=lin_scale, pos=pos2, pdi=pdi)
+                          lin_scale=lin_scale, pos=pos2, fpdi=fpdi)
         zg = z1 * z2 * z3
         zi = z2 * z3
         pygame.surfarray.blit_array(surf_live, myim)
@@ -1319,14 +1359,14 @@ while True:  # the main game loop
             if not rdb_alive:
                 rdb, rdb_alive = cvc.locate_redis_db()
             try:
-                (pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad,
-                 target, pdi) = cvc.RDB_pull(rdb, rdb_alive, True,
-                                             do_defaults=rdb_alive)
+                (pup, phmode, rpin, apin, slot, block, pap, pad, target, fpdi,
+                 irspmode) = cvc.RDB_pull(rdb, rdb_alive, True,
+                                          do_defaults=rdb_alive)
             except ConnectionError:
                 pass
-            msgwhl = whatfilter(reachphoto, slot, block)
+            msgwhl = whatfilter(slot, block, irspmode)
             wh = font1.render(msgwhl, True, CYAN)
-            msgtop = whatmsg(reachphoto, gpin, rpin)
+            msgtop = whatmsg(phmode, rpin, apin, fpdi, irspmode)
             topm = font1.render(msgtop, True, CYAN)
 
     # =====================================================================
@@ -1371,14 +1411,15 @@ while True:  # the main game loop
                     if (tindex < net2 - 1):
                         tindex += 1
                         etimec = etimes2[tindex]
-                        sync_param = ircam_synchro.get_data().astype(np.int)
+                        sync_param = ircam_synchro.get_data().astype(np.int32)
                         if not sync_param[0] and sync_param[1]:
                             sync_param[2] = etimec
                             sync_param[0] = 1
                             ircam_synchro.set_data(sync_param.astype(
                                     np.float32))
                             time.sleep(1)
-                            sync_param = ircam_synchro.get_data().astype(np.int)
+                            sync_param = ircam_synchro.get_data().astype(
+                                    np.int32)
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
@@ -1420,14 +1461,15 @@ while True:  # the main game loop
                     if (tindex > 0):
                         tindex -= 1
                         etimec = etimes2[tindex]
-                        sync_param = ircam_synchro.get_data().astype(np.int)
+                        sync_param = ircam_synchro.get_data().astype(np.int32)
                         if not sync_param[0] and sync_param[1]:
                             sync_param[2] = etimec
                             sync_param[0] = 1
                             ircam_synchro.set_data(sync_param.astype(
                                     np.float32))
                             time.sleep(1)
-                            sync_param = ircam_synchro.get_data().astype(np.int)
+                            sync_param = ircam_synchro.get_data().astype(
+                                    np.int32)
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
@@ -1463,14 +1505,15 @@ while True:  # the main game loop
                     if (findex < nfps2 - 1):
                         findex += 1
                         fpsc = fpss2[findex]
-                        sync_param = ircam_synchro.get_data().astype(np.int)
+                        sync_param = ircam_synchro.get_data().astype(np.int32)
                         if not sync_param[0] and sync_param[1]:
                             sync_param[3] = fpsc
                             sync_param[0] = 1
                             ircam_synchro.set_data(sync_param.astype(
                                     np.float32))
                             time.sleep(1)
-                            sync_param = ircam_synchro.get_data().astype(np.int)
+                            sync_param = ircam_synchro.get_data().astype(
+                                    np.int32)
                             fps = sync_param[3]
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
@@ -1499,14 +1542,15 @@ while True:  # the main game loop
                     if (findex > 0):
                         findex -= 1
                         fpsc = fpss2[findex]
-                        sync_param = ircam_synchro.get_data().astype(np.int)
+                        sync_param = ircam_synchro.get_data().astype(np.int32)
                         if not sync_param[0] and sync_param[1]:
                             sync_param[3] = fpsc
                             sync_param[0] = 1
                             ircam_synchro.set_data(sync_param.astype(
                                     np.float32))
                             time.sleep(1)
-                            sync_param = ircam_synchro.get_data().astype(np.int)
+                            sync_param = ircam_synchro.get_data().astype(
+                                    np.int32)
                             fps = sync_param[3]
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
@@ -1536,128 +1580,49 @@ while True:  # the main game loop
                 else:
                     print(hmsg)
 
-            # Save new darks for one/all exposure times
-            # -----------------------------------------
+            # Save new darks for the current exposure time
+            # --------------------------------------------
             if event.key == K_b:
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
-                    if (mmods & KMOD_LSHIFT):
-                        # Save new darks for the current exposure time
-                        # -------------------------------------
-                        msg = "  !! Acquiring a dark !!  "
-                        dinfo2 = font3.render(msg, True, BGCOL, SACOL)
-                        screen.blit(dinfo2, rct_dinfo2)
-                        tmux_apapane.send_keys(
-                                "scexaostatus set darkapapane 'NEW INT DARK    ' 0"
-                        )
-                        tmux_apapane.send_keys(
-                                "log Apapane: Saving current internal dark")
+                    msg = "  !! Acquiring a dark !!  "
+                    dinfo2 = font3.render(msg, True, BGCOL, SACOL)
+                    screen.blit(dinfo2, rct_dinfo2)
+                    tmux_apapane.send_keys(
+                            "scexaostatus set darkapapane 'NEW INT DARK    ' 0")
+                    tmux_apapane.send_keys(
+                            "log Apapane: Saving current internal dark")
 
-                        print("Apapane: Acquiring this dark.")
-                        if not block and bpin:
-                            os.system("ircam_block")  # blocking the light
-                        msgwhl = "     BLOCK      "
-                        wh = font1.render(msgwhl, True, RED1)
-                        screen.blit(wh, rct_wh)
-                        pygame.display.update([rct_dinfo2, rct_wh])
-                        time.sleep(1.0)  # safety
+                    print("Apapane: Acquiring this dark.")
+                    if not block:
+                        os.system("ircam_block")  # blocking the light
+                    msgwhl = "     BLOCK      "
+                    wh = font1.render(msgwhl, True, RED1)
+                    screen.blit(wh, rct_wh)
+                    pygame.display.update([rct_dinfo2, rct_wh])
+                    time.sleep(1.0)  # safety
 
-                        ave_dark = ave_img_data(None, clean=False, disp=True,
-                                                tint=etime, timeout=11.0)
-                        bname = conf_dir + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
-                                % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
-                        pf.writeto(bname, ave_dark, overwrite=True)
+                    ave_dark = ave_img_data(None, clean=False, disp=True,
+                                            tint=etime, timeout=11.0)
+                    bname = conf_dir + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
+                            % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
+                    pf.writeto(bname, ave_dark, overwrite=True)
 
-                        bpname = conf_dir + "badpixmap%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
-                                % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
-                        badpixmap = make_badpix(ave_dark)
-                        pf.writeto(bpname, badpixmap.astype(np.uint8),
-                                   overwrite=True)
+                    bpname = conf_dir + "badpixmap%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
+                             % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
+                    badpixmap = make_badpix(ave_dark)
+                    pf.writeto(bpname, badpixmap.astype(np.uint8),
+                               overwrite=True)
 
-                        bias = ave_dark * badpixmap
-                        time.sleep(0.2)
-                        if bpin:
-                            os.system("ircam_block")  # blocking the light
-                        tmux_apapane.send_keys(
-                                "scexaostatus set darkapapane 'OFF             ' 1"
-                        )
-                        tmux_apapane.send_keys(
-                                "log Apapane: Done saving current internal dark"
-                        )
-                        cam_dark.set_data(bias.astype(np.float32))
-                        cam_badpixmap.set_data(badpixmap.astype(np.float32))
-
-                    else:
-                        # Save new darks for all exposure times
-                        # -------------------------------------
-                        msg = "  !! Acquiring darks !!   "
-                        dinfo2 = font3.render(msg, True, BGCOL, SACOL)
-                        screen.blit(dinfo2, rct_dinfo2)
-                        tmux_apapane.send_keys(
-                                "scexaostatus set darkapapane 'ALL INT DARKS   ' 0"
-                        )
-                        tmux_apapane.send_keys(
-                                "log Apapane: Saving internal darks")
-
-                        print("Apapane: Acquiring all darks.")
-                        if bpin:
-                            tmux_apapane.send_keys(
-                                    "ircam_block")  # blocking the light
-                        msgwhl = "     BLOCK      "
-                        wh = font1.render(msgwhl, True, RED1)
-                        screen.blit(wh, rct_wh)
-                        pygame.display.update([rct_dinfo2, rct_wh])
-                        time.sleep(1.0)  # safety
-
-                        sync_param = ircam_synchro.get_data().astype(np.int)
-                        for tint in etimes2:
-                            if not sync_param[0] and sync_param[1]:
-                                sync_param[2] = tint
-                                fps = sync_param[3]
-                                sync_param[0] = 1
-                                ircam_synchro.set_data(
-                                        sync_param.astype(np.float32))
-                                time.sleep(1)
-                                sync_param = ircam_synchro.get_data().astype(
-                                        np.int)
-                                tint = sync_param[2]
-                            else:
-                                apapane_pyro.set_tint__oneway(tint * 1.e-6)
-                                time.sleep(1)
-                                tint = cam.get_expt() * 1e3
-                            ndark = int(1 * fps /
-                                        float(ndr))  # 1s of dark per exposure
-                            ave_dark = ave_img_data(ndark, clean=False,
-                                                    disp=True, tint=tint,
-                                                    timeout=11.0)
-                            bname = conf_dir + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
-                                    % (fps, tint, ndr, crop[0], crop[2], xsizeim, ysizeim)
-                            pf.writeto(bname, ave_dark, overwrite=True)
-                            bpname = conf_dir + "badpixmap%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
-                                % (fps, tint, ndr, crop[0], crop[2], xsizeim, ysizeim)
-                            badpixmapi = make_badpix(ave_dark)
-                            pf.writeto(bpname, badpixmapi.astype(np.uint8),
-                                       overwrite=True)
-
-                            time.sleep(0.2)
-                        if bpin:
-                            tmux_apapane.send_keys(
-                                    "ircam_block")  # opening the shutter
-                        tmux_apapane.send_keys(
-                                "scexaostatus set darkapapane 'OFF             ' 1"
-                        )
-                        tmux_apapane.send_keys(
-                                "log Apapane: Done saving internal darks")
-
-                        if not sync_param[0] and sync_param[1]:
-                            sync_param[2] = tint
-                            sync_param[0] = 1
-                            ircam_synchro.set_data(sync_param.astype(
-                                    np.float32))
-                        else:
-                            apapane_pyro.set_tint__oneway(tint * 1.e-6)
-                        biashere = True
-                        bpmhere = True
+                    bias = ave_dark * badpixmap
+                    time.sleep(0.2)
+                    os.system("ircam_block")  # blocking the light
+                    tmux_apapane.send_keys(
+                            "scexaostatus set darkapapane 'OFF             ' 1")
+                    tmux_apapane.send_keys(
+                            "log Apapane: Done saving current internal dark")
+                    cam_dark.set_data(bias.astype(np.float32))
+                    cam_badpixmap.set_data(badpixmap.astype(np.float32))
 
             # Save a reference image/subtract the reference image
             # ---------------------------------------------------
@@ -1753,87 +1718,13 @@ while True:  # the main game loop
                 os.system("log Apapane: start archiving images")
                 os.system("scexaostatus set logapapane 'ARCHIVING (RTC) ' 3")
 
-            # Save an HDR image/Subtract dark
-            #--------------------------------
+            # Subtract dark
+            #--------------
             if event.key == K_d:
-                mmods = pygame.key.get_mods()
-
-                if (mmods & KMOD_LCTRL):
-                    # increase exposure time if max flux is too low
-                    #print imax, isat, tindex
-                    while ((imax < 4000) & (tindex < net2 - 1)):
-                        tindex += 1
-                        etime = etimes2[tindex]
-                        apapane_pyro.set_tint__oneway(int(etime))
-                        (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
-                        logexpt = True
-                        time.sleep(2)
-                        temp, isat = get_img_data(bias, badpixmap)
-                        temp *= badpixmap
-                        isat = np.percentile(temp[1:-1, 1:-1], 99.995)
-                        temp -= bias
-                        imax = np.max(temp)
-                        #print imax, isat, tindex
-                    # decrease exposure time if saturating or non-linear
-                    while ((isat > 11000) & (tindex > 0)):
-                        tindex -= 1
-                        etime = etimes2[tindex]
-                        apapane_pyro.set_tint__oneway(int(etime))
-                        (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
-                        logexpt = True
-                        time.sleep(2)
-                        temp, isat = get_img_data(bias, badpixmap)
-                        temp *= badpixmap
-                        isat = np.percentile(temp[1:-1, 1:-1], 99.995)
-                        temp -= bias
-                        imax = np.max(temp)
-                        #print imax, isat, tindex
-
-                    etimetmp = etime
-                    v1 = 100
-                    v2 = 11000
-                    mask2 = (v1 < temp) * (temp < v2)
-                    hdim = np.zeros(temp.shape)
-                    hdim[:, :] = temp[:, :]
-                    hdim[temp < v1] = 0.0
-                    #starting HDR!
-                    for k in range(11):
-                        if (tindex < net2 - 1):
-                            temp2 = copy.deepcopy(temp)
-                            etime2 = copy.deepcopy(etime)
-                            tindex += 1
-                            etime = etimes2[tindex]
-                            apapane_pyro.set_tint__oneway(int(etime))
-                            (badpixmap, bias, bpmhere,
-                             biashere) = updatebiasbpm()
-                            logexpt = True
-                            time.sleep(2)
-                            temp, isat = get_img_data(bias, badpixmap)
-                            temp *= badpixmap
-                            temp -= bias
-                            mask1 = copy.deepcopy(mask2)
-                            mask2 = (v1 < temp) * (temp < v2)
-                            mask = mask1 * mask2
-                            coeff = etime / float(
-                                    etime2)  #(temp/temp2)[mask].mean()
-                            #print coeff, etime/float(etime2)
-                            hdim *= coeff
-                            hdim += temp
-                            hdim /= 2.0
-                            hdim[temp < v1] = 0.0
-
-                    timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
-                    timestamp2 = dt.datetime.utcnow().strftime('%H:%M:%S.%f')
-                    savepath = '/media/data/' + timestamp + '/apapanelog/'
-                    pf.writeto(savepath + 'apapane_hdr_' + timestamp2 + '.fits',
-                               hdim / hdim.max(), overwrite=True)
-                    apapane_pyro.set_tint__oneway(int(etimetmp))
-
-                else:
-                    subt_bias = not subt_bias
-                    (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
-                    if not subt_bias:
-                        bias = np.zeros_like(temp)
+                subt_bias = not subt_bias
+                (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
+                if not subt_bias:
+                    bias = np.zeros_like(temp)
 
             # Display hotspot crosses
             #------------------------
@@ -1855,36 +1746,7 @@ while True:  # the main game loop
             # Display history of position/REACH mode
             #-------------------------------------
             if event.key == K_i:
-                mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL):
-                    if (mmods & KMOD_LSHIFT):
-                        if rpin:
-                            tmux_apapane.send_keys("reach_pickoff out &")
-                            tmux_apapane.send_keys("oap4 onaxis &")
-                            tmux_apapane.send_keys("steering onaxis &")
-                            keeprpin = False
-                        else:
-                            tmux_apapane.send_keys("reach_pickoff in &")
-                            tmux_apapane.send_keys("oap4 reach &")
-                            tmux_apapane.send_keys("steering reach &")
-                            keeprpin = True
-                    else:
-                        if reachphoto:
-                            tmux_apapane.send_keys("palila_pup")
-                            tmux_apapane.send_keys("palila_pup_fcs pupil &")
-                            tmux_apapane.send_keys("apapane_pickoff out &")
-                            if not keeprpin:
-                                tmux_apapane.send_keys("reach_pickoff out &")
-                                tmux_apapane.send_keys("oap4 onaxis &")
-                                tmux_apapane.send_keys("steering onaxis &")
-                        else:
-                            tmux_apapane.send_keys("apapane_pickoff in &")
-                            if not rpin:
-                                tmux_apapane.send_keys("reach_pickoff in &")
-                                tmux_apapane.send_keys("oap4 reach &")
-                                tmux_apapane.send_keys("steering reach &")
-                else:
-                    plot_history = not plot_history
+                plot_history = not plot_history
 
             # Start/stop accumulating frames
             #-------------------------------
@@ -1973,9 +1835,9 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_apapane.send_keys("dm_stage theta push -1000")
+                        tmux_apapane.send_keys("dm_stage theta push -500")
                     else:
-                        tmux_apapane.send_keys("dm_stage theta push -100")
+                        tmux_apapane.send_keys("dm_stage theta push -20")
                 else:
                     if wait_for_archive_datatype:
                         idt -= 1
@@ -1985,9 +1847,9 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_apapane.send_keys("dm_stage theta push +1000")
+                        tmux_apapane.send_keys("dm_stage theta push +500")
                     else:
-                        tmux_apapane.send_keys("dm_stage theta push +100")
+                        tmux_apapane.send_keys("dm_stage theta push +20")
                 else:
                     if wait_for_archive_datatype:
                         idt += 1
@@ -2005,9 +1867,9 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_apapane.send_keys("dm_stage phi push +1000")
+                        tmux_apapane.send_keys("dm_stage phi push +500")
                     else:
-                        tmux_apapane.send_keys("dm_stage phi push +100")
+                        tmux_apapane.send_keys("dm_stage phi push +20")
 
             # Print / incr/decr gain
             if event.key in [K_w, K_s, K_e]:
@@ -2017,12 +1879,12 @@ while True:  # the main game loop
                 gain = float(cam.get_keywords()['DETGAIN'])
                 if not (mmods & KMOD_LSHIFT) and not (mmods & KMOD_LCTRL):
                     if event.key == K_w:
-                        tar_gain = min(2 * gain, 121)
+                        tar_gain = min(2 * gain, 104)
                         print(f"set_gain({int(tar_gain)})")
                         apapane_pyro.set_gain__oneway(int(tar_gain))
                         time.sleep(.5)
                     elif event.key == K_s:
-                        if gain == 121:
+                        if gain == 104:
                             tar_gain = 64
                         else:
                             tar_gain = max(1, gain // 2)
@@ -2036,10 +1898,15 @@ while True:  # the main game loop
 
                 if not (mmods & KMOD_LSHIFT) and (
                         mmods & KMOD_LCTRL) and event.key == K_e:
-                    # Shortcut to 121
-                    print("set_gain(121)")
-                    apapane_pyro.set_gain(121)
+                    # Shortcut to 104
+                    print("set_gain(104)")
+                    apapane_pyro.set_gain(104)
                     time.sleep(.5)
+
+    if phmode == 2:
+        #print_glint_traces()
+        pass
+    ## End glint trace names
 
     pygame.display.update(rects)
 

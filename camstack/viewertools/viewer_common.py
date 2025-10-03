@@ -119,8 +119,8 @@ def open_shm_fullpath(shm_name: str, dims: Tuple[int, int] = (1, 1),
 # ------------------------------------------------------------------
 #  Read database for some stage status
 # ------------------------------------------------------------------
-CrazyTuple = Tuple[bool, bool, bool, bool, bool, str, bool, float, float, str,
-                   bool]
+CrazyTuple = Tuple[bool, int, bool, bool, str, bool, float, float, str, bool,
+                   str]
 
 
 def RDB_pull(rdb: Redis, rdb_alive: bool, cam_apapane: bool,
@@ -136,17 +136,9 @@ def RDB_pull(rdb: Redis, rdb_alive: bool, cam_apapane: bool,
     import redis  # Need the namespace for the exception to catch
 
     fits_keys_to_pull = {
-            'X_IRCFLT',
-            'X_IRCBLK',
-            'X_PALPUP',
-            'X_PALPUS',
-            'X_PHOPKO',
-            'X_RCHPKO',
-            'X_APAPKO',
-            'D_IMRPAD',
-            'D_IMRPAP',
-            'OBJECT',
-            'X_IRCWOL',
+            'X_IRCFLT', 'X_IRCBLK', 'X_PALPUP', 'X_PHOPKO', 'X_FINPKO',
+            'X_RCHPKO', 'X_APAPKO', 'D_IMRPAD', 'D_IMRPAP', 'OBJECT',
+            'X_IRCWOL', 'X_IRSMOD'
     }
     # Now Getting the keys
 
@@ -169,31 +161,40 @@ def RDB_pull(rdb: Redis, rdb_alive: bool, cam_apapane: bool,
 
     if rdb_alive:  # Fetch from RDB
         pup = status['X_PALPUP'].strip() == 'IN'
-        reachphoto = status['X_PALPUS'].strip() == 'REACH'
-        gpin = status['X_PHOPKO'].strip() == 'IN'
+        if status["X_PHOPKO"].strip() != "OPEN":
+            if "IN" in status["X_FINPKO"]:
+                if "K-BAND" in status["X_PHOPKO"]:
+                    phmode = 3  #K-REACH
+                else:
+                    phmode = 1  #photonic lanterns
+            else:
+                phmode = 2  #GLINT
+        else:
+            phmode = 0
         rpin = status['X_RCHPKO'].strip() == 'IN'
         slot = status['X_IRCFLT']
         block = status['X_IRCBLK'].strip() == 'IN'
-        bpin = status['X_APAPKO'].strip() == 'IN'
+        apin = status['X_APAPKO'].strip() == 'IN'
         pap = float(status['D_IMRPAP'])
         pad = float(status['D_IMRPAD'])
         target = status['OBJECT']
-        pdi = status['X_IRCWOL'] == 'IN'
+        fpdi = status['X_IRCWOL'] == 'IN'
+        irspmode = status['X_IRSMOD']
     else:  # Sensible defaults?
         pup = False
-        reachphoto = False
-        gpin = False
+        phmode = 0
         rpin = False
-        bpin = False
+        apin = False
         slot = '!NO REDIS!'
         block = False
         pap = 0.
         pad = 0.
         target = 'UNKNOWN'
-        pdi = False
+        fpdi = False
+        irspmode = '!NO REDIS!'
 
-    return (pup, reachphoto, gpin, rpin, bpin, slot, block, pap, pad, target,
-            pdi)
+    return (pup, phmode, rpin, apin, slot, block, pap, pad, target, fpdi,
+            irspmode)
 
 
 def get_img_data(cam: SHM, cam_type: CREDWHAT, bias: Op[np.ndarray] = None,
@@ -231,7 +232,7 @@ def get_img_data(cam: SHM, cam_type: CREDWHAT, bias: Op[np.ndarray] = None,
 
     if subt_ref:
         assert ref is not None
-        temp -= ref
+        temp -= np.sum(temp) / np.sum(ref) * ref
         if not lin_scale:
             temp = np.abs(temp)
 

@@ -8,7 +8,9 @@ if typ.TYPE_CHECKING:  # this type hint would cause an unecessary import.
 import os, sys
 
 # Affinity fix for pygame messing up
+
 _CORES = os.sched_getaffinity(0)
+import skimage  # BS linking of whatever that eventually fixes GLX?????
 import pygame
 import pygame.constants as pgmc
 

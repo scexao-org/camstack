@@ -55,7 +55,7 @@ from pyMilk.interfacing.isio_shmlib import SHM
 import camstack.viewertools.viewer_common as cvc
 
 HOME = os.getenv('HOME')  # Expected /home/scexao
-CONF_DIR = HOME + "src/camstack/conf/palila_aux/"
+CONF_DIR = HOME + "/conf/palila_aux/"
 
 MILK_SHM_DIR = os.getenv(
         'MILK_SHM_DIR')  # Expected /tmp <- MULTIVERSE FIXING NEEDED
@@ -135,6 +135,8 @@ def arr2im(arr, vmin=0., vmax=10000.0, pwr=1.0, subt_ref=False, lin_scale=True,
     mmin, mmax = arr3[1:].min(), arr3[1:].max(
     )  # IGNORE THE FIRST ROW, clock pixels etc.
     if subt_ref and lin_scale:
+        mmin, mmax = np.percentile(arr3[1:],
+                                   0.0001), np.percentile(arr3[1:], 0.9999)
         if mmax > abs(mmin):
             arr3[0, 0] = -mmax
             arr3[0, 1] = -mmin
@@ -297,42 +299,63 @@ def make_badpix(bias, filt=3.5):
 # ------------------------------------------------------------------
 #  Filter message
 # ------------------------------------------------------------------
-def whatfilter(reachphoto, slot, block):
-    if reachphoto:
-        msgwhl = "      OPEN      "
+def whatfilter(slot, block):
+    if block:
+        msgwhl = "     BLOCK      "
     else:
-        if block:
-            msgwhl = "     BLOCK      "
-        else:
-            msgwhl = slot
+        msgwhl = slot
     return (msgwhl)
 
 
 # ------------------------------------------------------------------
 #  Top message
 # ------------------------------------------------------------------
-def whatmsg(pup, reachphoto, ppin, rpin, bpin):
+def whatmsg(pup, phmode, rpin, apin, fpdi):
     msgtops = [
             "                ", "     PUPIL      ", "     REACH      ",
-            "REACH PHOTOMETRY", "     GLINT      ", "    APAPANE     "
+            "    K-REACH     ", " REACH+K-REACH  ", "      GLINT     ",
+            " PHOTONICS INJ  ", "      FPDI      ", "    APAPANE     "
     ]
-    if reachphoto:
-        msgtop = msgtops[3]
-    else:
-        if pup and not rpin:
-            msgtop = msgtops[1]
+    if pup:
+        msgtop = msgtops[1]
 
-        elif rpin:
-            msgtop = msgtops[2]
+    elif rpin:
+        if phmode == 3:
+            msgtop = msgtops[4]
         else:
-            if ppin:
-                msgtop = msgtops[4]
-            else:
-                if bpin:
-                    msgtop = msgtops[5]
-                else:
-                    msgtop = msgtops[0]
+            msgtop = msgtops[2]
+
+    elif apin:
+        msgtop = msgtops[8]
+
+    elif fpdi:
+        msgtop = msgtops[7]
+
+    else:
+        if phmode == 1:
+            msgtop = msgtops[6]
+        elif phmode == 2:
+            msgtop = msgtops[5]
+        elif phmode == 3:
+            msgtop = msgtops[3]
+        else:
+            msgtop = msgtops[0]
     return (msgtop)
+
+
+# ------------------------------------------------------------------
+#  Corrective hotspot
+# ------------------------------------------------------------------
+def updatecor(cort, rpin, phmode):
+    cor = np.array([0, 0])
+    if phmode == 1 or phmode == 2:
+        cor = cort[:, 0]
+    elif phmode == 3:
+        cor = cort[:, 5]
+    else:
+        if rpin:
+            cor = cort[:, 1]
+    return (cor)
 
 
 # ------------------------------------------------------------------
@@ -354,13 +377,10 @@ CTRL+h      : hotspotalign
 CTRL+p      : camera to pupil plane/focus plane
 CTRL+c      : switch between apapane/palila
 CTRL+i      : REACH mode in/out
-CTRL+b      : take new darks
-CTRL+SHIFT+b: take new dark for current exp
+CTRL+b      : take new dark
 CTRL+r      : save a reference image
 CTRL+s      : start/stop logging images
 CTRL+SHIFT+s: start/stop archiving images
-CTRL+d      : save a HDR image
-CTRL+n      : switch to external/internal trigger
 CTRL+1-6    : change filter wheel slot:
               1. OPEN
               2. y-band
@@ -443,8 +463,8 @@ ircam_retroinj = cvc.open_shm("palila_retroinj", dims=(20, 1))
 # ------------------------------------------------------------------
 rdb, rdb_alive = cvc.locate_redis_db()
 
-(pup, reachphoto, ppin, rpin, bpin, slot, block, pap, pad, target,
- pdi) = cvc.RDB_pull(rdb, rdb_alive, False, do_defaults=True)
+(pup, phmode, rpin, apin, slot, block, pap, pad, target, fpdi,
+ irspmode) = cvc.RDB_pull(rdb, rdb_alive, False, do_defaults=True)
 
 pscale = 16.2  #mas per pixel in Palila
 
@@ -457,9 +477,7 @@ for i in range(ncor):
     cort[0, i] = float(corparam[2])
     cort[1, i] = float(corparam[3])
 cort /= pscale
-cor = np.array([0, 0])
-if ppin:
-    cor = cort[:, 0]
+cor = updatecor(cort, rpin, phmode)
 
 # ------------------------------------------------------------------
 #                       global variables
@@ -470,6 +488,7 @@ mycmap = cm.gray
 # -----------------------
 #   set up the window
 # -----------------------
+
 pygame.display.init()
 pygame.font.init()
 
@@ -548,7 +567,7 @@ tmux_ircam_ctrl.send_keys("get_NDR()")
 time.sleep(1)
 tmux_ircam_ctrl.send_keys("get_fps()")
 time.sleep(1)
-sync_param = ircam_synchro.get_data().astype(np.int)
+sync_param = ircam_synchro.get_data().astype(np.int32)
 lag = 7
 cam_ro = 22 - lag
 sync_param[4] = 160
@@ -583,7 +602,7 @@ font5.set_bold(True)
 xws = xsize * z1
 yws = ysize * z1
 
-path_cartoon = CONF_DIR + "Palila%d.png" % (z1, )
+path_cartoon = CONF_DIR + "/Palila%d.png" % (z1, )
 cartoon1 = pygame.image.load(path_cartoon).convert_alpha()
 
 lbl = font1.render("PALILA camera viewer", True, WHITE, BGCOL)
@@ -682,13 +701,6 @@ sc2 = font4.render(msgsc1, True, CYAN)
 rct_sc2 = sc2.get_rect()
 rct_sc2.bottomleft = (5 * z1 - 4, ysc - ktot)
 
-#REACH Photometry parameters
-dreachphoto = 64. * z1
-xreachphoto = -11.5 * z1
-yreachphoto = -12. * z1
-preachphoto = dreachphoto / 7.
-reachphotoc = preachphoto / 2.
-
 #parallactic angles
 xcpa = xws - 25 * z1
 ycpa = yws - 25 * z1
@@ -715,16 +727,16 @@ rct_zm = zm.get_rect()
 rct_zm.topleft = (5 * z1, 5 * z1)
 
 #ircam_filter
-msgwhl = whatfilter(reachphoto, slot, block)
+msgwhl = whatfilter(slot, block)
 wh = font1.render(msgwhl, True, CYAN)
 rct_wh = wh.get_rect()
-rct_wh.topright = (xws - 8 * z1, 5 * z1)
+rct_wh.topright = (xws - 4 * z1, 5 * z1)
 
-#pupil lens
-msgtop = whatmsg(pup, reachphoto, ppin, rpin, bpin)
+#mode
+msgtop = whatmsg(pup, phmode, rpin, apin, fpdi)
 topm = font1.render(msgtop, True, CYAN)
 rct_top = topm.get_rect()
-rct_top.midtop = (xws / 2, 5 * z1)
+rct_top.topleft = (20 * z1, 5 * z1)
 
 imin, imax = 0, 0
 surf_live = pygame.surface.Surface((xws, yws))
@@ -903,7 +915,7 @@ while True:  # the main game loop
     else:
         # ------------------------------------------------------------------
         # read changes in expt, fps, ndr and crop
-        sync_param = ircam_synchro.get_data().astype(np.int)
+        sync_param = ircam_synchro.get_data().astype(np.int32)
         flc_oft = sync_param[4] - lag
         if not sync_param[0] and sync_param[1]:
             etimen = sync_param[2]
@@ -920,10 +932,7 @@ while True:  # the main game loop
                 continue
         ndrn = int(cam.get_ndr())
         cropn = np.asarray(cam.get_crop()).astype(int)
-        if ppin:
-            cor = cort[:, 0]
-        else:
-            cor = np.array([0, 0])
+        cor = updatecor(cort, rpin, phmode)
         if etimen != etime or fpsn != fps or ndrn != ndr or np.any(
                 cropn != crop):
             print("reloading bias and badpixmap")
@@ -1218,10 +1227,10 @@ while True:  # the main game loop
             ih += 1
             ih %= nhist
             stds = np.std(coor, axis=1) * pscale
-            cx2 = (np.mean(coor, axis=1)[0] - 320 + crop[0] - pos2[0] -
-                   cor[0]) * pscale
+            cx2 = (np.mean(coor, axis=1)[0] - 320 + crop[0] - pos2[0] - cor[0] +
+                   0.5) * pscale
             cy2 = -(np.mean(coor, axis=1)[1] - 256 + crop[2] - pos2[1] -
-                    cor[1]) * pscale
+                    cor[1] + 0.5) * pscale
             msgcoor = "rms = %.1f mas, %.1f mas, %.1f mas" % (
                     stds[0], stds[1], m.sqrt(np.sum(stds**2) / 2.))
             mcoor = font4.render(msgcoor, True, CYAN)
@@ -1302,27 +1311,18 @@ while True:  # the main game loop
         # ------------------------------------------------------------------
         # display the cross
         if plot_cross:
-            if reachphoto:
-                #REACH spot positions
-                for i in range(8):
-                    pygame.draw.circle(screen, GREEN,
-                                       (int(xws / 2 + xreachphoto * zi +
-                                            (i - 3.5) * preachphoto * zi),
-                                        int(yws / 2 + yreachphoto * zi)),
-                                       int(reachphotoc * zi), 1)
+            if pup:
+                #Pupil cross
+                pos2 = pos[1, :]
+                color = GREEN
             else:
-                if pup:
-                    #Pupil cross
-                    pos2 = pos[1, :]
-                    color = GREEN
-                else:
-                    #Focus cross
-                    pos2 = pos[0, :]
-                    color = RED
-                ycross = (256 - crop[2] + pos2[1] + cor[1] - ymin + yshift) * zg
-                xcross = (320 - crop[0] + pos2[0] + cor[0] - xmin + xshift) * zg
-                pygame.draw.line(screen, color, (0, ycross), (xws, ycross), 1)
-                pygame.draw.line(screen, color, (xcross, 0), (xcross, yws), 1)
+                #Focus cross
+                pos2 = pos[0, :]
+                color = RED
+            ycross = (256 - crop[2] + pos2[1] + cor[1] - ymin + yshift) * zg
+            xcross = (320 - crop[0] + pos2[0] + cor[0] - xmin + xshift) * zg
+            pygame.draw.line(screen, color, (0, ycross), (xws, ycross), 1)
+            pygame.draw.line(screen, color, (xcross, 0), (xcross, yws), 1)
 
         if plot_pa:
             pygame.draw.line(screen, RED, (xcpa, ycpa),
@@ -1446,14 +1446,14 @@ while True:  # the main game loop
             if rdb_alive is False:
                 rdb, rdb_alive = cvc.locate_redis_db()
             try:
-                (pup, reachphoto, ppin, rpin, bpin, slot, block, pap, pad,
-                 target, pdi) = cvc.RDB_pull(rdb, rdb_alive, False,
-                                             do_defaults=rdb_alive)
+                (pup, phmode, rpin, apin, slot, block, pap, pad, target, fpdi,
+                 irspmode) = cvc.RDB_pull(rdb, rdb_alive, False,
+                                          do_defaults=rdb_alive)
             except ConnectionError:
                 pass
-            msgwhl = whatfilter(reachphoto, slot, block)
+            msgwhl = whatfilter(slot, block)
             wh = font1.render(msgwhl, True, CYAN)
-            msgtop = whatmsg(pup, reachphoto, ppin, rpin, bpin)
+            msgtop = whatmsg(pup, phmode, rpin, apin, fpdi)
             topm = font1.render(msgtop, True, CYAN)
 
     # =====================================================================
@@ -1498,14 +1498,15 @@ while True:  # the main game loop
                     if (tindex < net2 - 1):
                         tindex += 1
                         etimec = etimes2[tindex]
-                        sync_param = ircam_synchro.get_data().astype(np.int)
+                        sync_param = ircam_synchro.get_data().astype(np.int32)
                         if not sync_param[0] and sync_param[1]:
                             sync_param[2] = etimec
                             sync_param[0] = 1
                             ircam_synchro.set_data(sync_param.astype(
                                     np.float32))
                             time.sleep(1)
-                            sync_param = ircam_synchro.get_data().astype(np.int)
+                            sync_param = ircam_synchro.get_data().astype(
+                                    np.int32)
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
@@ -1547,14 +1548,15 @@ while True:  # the main game loop
                     if (tindex > 0):
                         tindex -= 1
                         etimec = etimes2[tindex]
-                        sync_param = ircam_synchro.get_data().astype(np.int)
+                        sync_param = ircam_synchro.get_data().astype(np.int32)
                         if not sync_param[0] and sync_param[1]:
                             sync_param[2] = etimec
                             sync_param[0] = 1
                             ircam_synchro.set_data(sync_param.astype(
                                     np.float32))
                             time.sleep(1)
-                            sync_param = ircam_synchro.get_data().astype(np.int)
+                            sync_param = ircam_synchro.get_data().astype(
+                                    np.int32)
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
                             delay = cam_ro + flc_oft + 3 * lag
@@ -1592,14 +1594,15 @@ while True:  # the main game loop
                     if (findex < nfps2 - 1):
                         findex += 1
                         fpsc = fpss2[findex]
-                        sync_param = ircam_synchro.get_data().astype(np.int)
+                        sync_param = ircam_synchro.get_data().astype(np.int32)
                         if not sync_param[0] and sync_param[1]:
                             sync_param[3] = fpsc
                             sync_param[0] = 1
                             ircam_synchro.set_data(sync_param.astype(
                                     np.float32))
                             time.sleep(1)
-                            sync_param = ircam_synchro.get_data().astype(np.int)
+                            sync_param = ircam_synchro.get_data().astype(
+                                    np.int32)
                             fps = sync_param[3]
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
@@ -1628,14 +1631,15 @@ while True:  # the main game loop
                     if (findex > 0):
                         findex -= 1
                         fpsc = fpss2[findex]
-                        sync_param = ircam_synchro.get_data().astype(np.int)
+                        sync_param = ircam_synchro.get_data().astype(np.int32)
                         if not sync_param[0] and sync_param[1]:
                             sync_param[3] = fpsc
                             sync_param[0] = 1
                             ircam_synchro.set_data(sync_param.astype(
                                     np.float32))
                             time.sleep(1)
-                            sync_param = ircam_synchro.get_data().astype(np.int)
+                            sync_param = ircam_synchro.get_data().astype(
+                                    np.int32)
                             fps = sync_param[3]
                             etime = sync_param[2]
                             flc_oft = sync_param[4] - lag
@@ -1672,145 +1676,54 @@ while True:  # the main game loop
                 if (mmods & KMOD_LCTRL):
                     if pup:
                         tmux_ircam.send_keys("palila_pup")
-                        if reachphoto:
-                            tmux_ircam.send_keys("palila_pup_fcs pupil &")
-                            tmux_ircam.send_keys("reach_pickoff out &")
-                            tmux_ircam.send_keys("apapane_pickoff out &")
                         tmux_ircam.send_keys("ircam_fcs palila")
                     else:
                         lin_scale = True
                         tmux_ircam.send_keys("palila_pup")
-                        tmux_ircam.send_keys("palila_pup_fcs pupil &")
                         tmux_ircam.send_keys("ircam_fcs palila_pup")
                 else:
                     plot_pa = not plot_pa
 
-            # Save new darks for one/all exposure times
-            # -----------------------------------------
+            # Save new darks for the current exposure time
+            # --------------------------------------------
             if event.key == K_b:
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
-                    if (mmods & KMOD_LSHIFT):
-                        # Save new darks for the current exposure time
-                        # -------------------------------------
-                        msg = "  !! Acquiring a dark !!  "
-                        dinfo2 = font3.render(msg, True, BGCOL, SACOL)
-                        screen.blit(dinfo2, rct_dinfo2)
-                        os.system(
-                                "scexaostatus set darkpalila 'NEW INT DARK    ' 0"
-                        )
-                        os.system("log Palila: Saving current internal dark")
+                    msg = "  !! Acquiring a dark !!  "
+                    dinfo2 = font3.render(msg, True, BGCOL, SACOL)
+                    screen.blit(dinfo2, rct_dinfo2)
+                    os.system(
+                            "scexaostatus set darkpalila 'NEW INT DARK    ' 0")
+                    os.system("log Palila: Saving current internal dark")
 
-                        print("Palila: dark acquisition.")
-                        if not reachphoto:
-                            if not block:
-                                os.system("ircam_block")  # blocking the light
-                        else:
-                            os.system("PG1_pickoff")
-                        msgwhl = "     BLOCK      "
-                        wh = font1.render(msgwhl, True, RED1)
-                        screen.blit(wh, rct_wh)
-                        pygame.display.update([rct_dinfo2, rct_wh])
-                        time.sleep(1.0)  # safety
+                    print("Palila: dark acquisition.")
+                    if not block:
+                        os.system("ircam_block")  # blocking the light
+                    msgwhl = "     BLOCK      "
+                    wh = font1.render(msgwhl, True, RED1)
+                    screen.blit(wh, rct_wh)
+                    pygame.display.update([rct_dinfo2, rct_wh])
+                    time.sleep(2.5)  # safety
 
-                        ave_dark = ave_img_data(None, clean=False, disp=True,
-                                                tint=etime, timeout=11.0)
-                        bname = CONF_DIR + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
-                                % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
-                        pf.writeto(bname, ave_dark, overwrite=True)
+                    ave_dark = ave_img_data(None, clean=False, disp=True,
+                                            tint=etime, timeout=11.0)
+                    bname = CONF_DIR + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
+                            % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
+                    pf.writeto(bname, ave_dark, overwrite=True)
 
-                        bpname = CONF_DIR + "badpixmap%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
-                                % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
-                        badpixmap = make_badpix(ave_dark)
-                        pf.writeto(bpname, badpixmap, overwrite=True)
+                    bpname = CONF_DIR + "badpixmap%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
+                             % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
+                    badpixmap = make_badpix(ave_dark)
+                    pf.writeto(bpname, badpixmap, overwrite=True)
 
-                        bias = ave_dark * badpixmap
-                        time.sleep(0.2)
-                        if not reachphoto:
-                            os.system("ircam_block")  # blocking the light
-                        else:
-                            os.system("PG1_pickoff")
-                        os.system(
-                                "scexaostatus set darkpalila 'OFF             ' 1"
-                        )
-                        os.system(
-                                "log Palila: Done saving current internal dark")
-                        cam_dark.set_data(bias.astype(np.float32))
-                        cam_badpixmap.set_data(badpixmap.astype(np.float32))
-
-                    else:
-                        # Save new darks for all exposure times
-                        # -------------------------------------
-                        msg = "  !! Acquiring darks !!   "
-                        dinfo2 = font3.render(msg, True, BGCOL, SACOL)
-                        screen.blit(dinfo2, rct_dinfo2)
-                        os.system(
-                                "scexaostatus set darkpalila 'ALL INT DARKS   ' 0"
-                        )
-                        os.system("log Palila: Saving internal darks")
-
-                        print("Palila: dark acquisition.")
-                        if not reachphoto:
-                            if not block:
-                                os.system("ircam_block")  # blocking the light
-                        else:
-                            os.system("PG1_pickoff")
-                        msgwhl = "     BLOCK      "
-                        wh = font1.render(msgwhl, True, RED1)
-                        screen.blit(wh, rct_wh)
-                        pygame.display.update([rct_dinfo2, rct_wh])
-                        time.sleep(1.0)  # safety
-
-                        sync_param = ircam_synchro.get_data().astype(np.int)
-                        for tint in etimes2:
-                            if not sync_param[0] and sync_param[1]:
-                                sync_param[2] = tint
-                                fps = sync_param[3]
-                                sync_param[0] = 1
-                                ircam_synchro.set_data(
-                                        sync_param.astype(np.float32))
-                                time.sleep(1)
-                                sync_param = ircam_synchro.get_data().astype(
-                                        np.int)
-                                tint = sync_param[2]
-                            else:
-                                tmux_ircam_ctrl.send_keys("set_tint(%f)" %
-                                                          (tint * 1.e-6, ))
-                                time.sleep(1)
-                                tint = cam.get_expt() * 1e6
-                            ndark = int(1 * fps /
-                                        float(ndr))  # 1s of dark per exposure
-                            ave_dark = ave_img_data(ndark, clean=False,
-                                                    disp=True, tint=tint,
-                                                    timeout=11.0)
-                            bname = CONF_DIR + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
-                                    % (fps, tint, ndr, crop[0], crop[2], xsizeim, ysizeim)
-                            pf.writeto(bname, ave_dark, overwrite=True)
-                            bpname = CONF_DIR + "badpixmap%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
-                                % (fps, tint, ndr, crop[0], crop[2], xsizeim, ysizeim)
-                            badpixmapi = make_badpix(ave_dark)
-                            pf.writeto(bpname, badpixmapi, overwrite=True)
-
-                            time.sleep(0.2)
-                        if not reachphoto:
-                            os.system("ircam_block")  # opening the shutter
-                        else:
-                            os.system("PG1_pickoff")
-                        os.system(
-                                "scexaostatus set darkpalila 'OFF             ' 1"
-                        )
-                        os.system("log Palila: Done saving internal darks")
-
-                        if not sync_param[0] and sync_param[1]:
-                            sync_param[2] = tint
-                            sync_param[0] = 1
-                            ircam_synchro.set_data(sync_param.astype(
-                                    np.float32))
-                        else:
-                            tmux_ircam_ctrl.send_keys("set_tint(%f)" %
-                                                      (tint * 1.e-6, ))
-                        biashere = True
-                        bpmhere = True
+                    bias = ave_dark * badpixmap
+                    time.sleep(0.2)
+                    os.system("ircam_block")  # blocking the light
+                    os.system(
+                            "scexaostatus set darkpalila 'OFF             ' 1")
+                    os.system("log Palila: Done saving current internal dark")
+                    cam_dark.set_data(bias.astype(np.float32))
+                    cam_badpixmap.set_data(badpixmap.astype(np.float32))
 
             # Save a reference image/subtract the reference image
             # ---------------------------------------------------
@@ -1915,94 +1828,21 @@ while True:  # the main game loop
                 os.system("log Palila: start archiving images")
                 os.system("scexaostatus set logpalila 'ARCHIVING (RTC) ' 3")
 
-            # Save an HDR image/Subtract dark
-            #--------------------------------
+            # Subtract dark
+            #--------------
             if event.key == K_d:
                 mmods = pygame.key.get_mods()
-
-                if (mmods & KMOD_LCTRL):
-                    # increase exposure time if max flux is too low
-                    #print imax, isat, tindex
-                    while ((imax < 4000) & (tindex < net2 - 1)):
-                        tindex += 1
-                        etime = etimes2[tindex]
-                        cam_cmd("tint %d %d" % (etime), False)
-                        (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
-                        logexpt = True
-                        time.sleep(2)
-                        temp, isat = get_img_data(bias, badpixmap)
-                        temp *= badpixmap
-                        isat = np.percentile(temp[1:-1, 1:-1], 99.995)
-                        temp -= bias
-                        imax = np.max(temp)
-                        #print imax, isat, tindex
-                    # decrease exposure time if saturating or non-linear
-                    while ((isat > 11000) & (tindex > 0)):
-                        tindex -= 1
-                        etime = etimes2[tindex]
-                        cam_cmd("tint %d %d" % (etime), False)
-                        (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
-                        logexpt = True
-                        time.sleep(2)
-                        temp, isat = get_img_data(bias, badpixmap)
-                        temp *= badpixmap
-                        isat = np.percentile(temp[1:-1, 1:-1], 99.995)
-                        temp -= bias
-                        imax = np.max(temp)
-                        #print imax, isat, tindex
-
-                    etimetmp = etime
-                    v1 = 100
-                    v2 = 11000
-                    mask2 = (v1 < temp) * (temp < v2)
-                    hdim = np.zeros(temp.shape)
-                    hdim[:, :] = temp[:, :]
-                    hdim[temp < v1] = 0.0
-                    #starting HDR!
-                    for k in range(11):
-                        if (tindex < net2 - 1):
-                            temp2 = copy.deepcopy(temp)
-                            etime2 = copy.deepcopy(etime)
-                            tindex += 1
-                            etime = etimes2[tindex]
-                            cam_cmd("tint %d %d" % (etime), False)
-                            (badpixmap, bias, bpmhere,
-                             biashere) = updatebiasbpm()
-                            logexpt = True
-                            time.sleep(2)
-                            temp, isat = get_img_data(bias, badpixmap)
-                            temp *= badpixmap
-                            temp -= bias
-                            mask1 = copy.deepcopy(mask2)
-                            mask2 = (v1 < temp) * (temp < v2)
-                            mask = mask1 * mask2
-                            coeff = etime / float(
-                                    etime2)  #(temp/temp2)[mask].mean()
-                            #print coeff, etime/float(etime2)
-                            hdim *= coeff
-                            hdim += temp
-                            hdim /= 2.0
-                            hdim[temp < v1] = 0.0
-
-                    timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
-                    timestamp2 = dt.datetime.utcnow().strftime('%H:%M:%S.%f')
-                    savepath = '/media/data/' + timestamp + '/palilalog/'
-                    pf.writeto(savepath + 'palila_hdr_' + timestamp2 + '.fits',
-                               hdim / hdim.max(), overwrite=True)
-                    cam_cmd("tint %d %d" % (etimetmp), False)
-
-                else:
-                    subt_bias = not subt_bias
-                    (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
-                    if not subt_bias:
-                        bias = np.zeros_like(temp)
+                subt_bias = not subt_bias
+                (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
+                if not subt_bias:
+                    bias = np.zeros_like(temp)
 
             # Display hotspot crosses
             #------------------------
             if event.key == K_c:
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
-                    if bpin:
+                    if apin:
                         os.system("apapane_pickoff out &")
                         os.system("ircam_fcs palila &")
                     else:
@@ -2028,38 +1868,16 @@ while True:  # the main game loop
             if event.key == K_i:
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
-                    if (mmods & KMOD_LSHIFT):
-                        if rpin:
-                            tmux_ircam.send_keys("reach_pickoff out &")
-                            tmux_ircam.send_keys("oap4 onaxis &")
-                            tmux_ircam.send_keys("steering onaxis &")
-                            keeprpin = False
-                        else:
-                            tmux_ircam.send_keys("reach_pickoff in &")
-                            tmux_ircam.send_keys("oap4 reach &")
-                            tmux_ircam.send_keys("steering reach &")
-                            keeprpin = True
+                    if rpin:
+                        tmux_ircam.send_keys("reach_pickoff out &")
+                        tmux_ircam.send_keys("oap4 onaxis &")
+                        tmux_ircam.send_keys("steering onaxis &")
+                        keeprpin = False
                     else:
-                        if reachphoto:
-                            tmux_ircam.send_keys("palila_pup")
-                            tmux_ircam.send_keys("palila_pup_fcs pupil &")
-                            tmux_ircam.send_keys("apapane_pickoff out &")
-                            tmux_ircam.send_keys("ircam_fcs palila &")
-                            if not keeprpin:
-                                tmux_ircam.send_keys("reach_pickoff out &")
-                                tmux_ircam.send_keys("oap4 onaxis &")
-                                tmux_ircam.send_keys("steering onaxis &")
-                        else:
-                            if not pup:
-                                tmux_ircam.send_keys("palila_pup")
-
-                            tmux_ircam.send_keys("palila_pup_fcs reach &")
-                            tmux_ircam.send_keys("apapane_pickoff in &")
-                            tmux_ircam.send_keys("ircam_fcs apapane &")
-                            if not rpin:
-                                tmux_ircam.send_keys("reach_pickoff in &")
-                                tmux_ircam.send_keys("oap4 reach &")
-                                tmux_ircam.send_keys("steering reach &")
+                        tmux_ircam.send_keys("reach_pickoff in &")
+                        tmux_ircam.send_keys("oap4 reach &")
+                        tmux_ircam.send_keys("steering reach &")
+                        keeprpin = True
                 else:
                     plot_history = not plot_history
 
@@ -2118,28 +1936,6 @@ while True:  # the main game loop
                     msgzm = "  "
                 zm = font1.render(msgzm, True, CYAN)
 
-            # Exttrig stuff
-            #---------------------
-            if event.key == K_n:
-                mmods = pygame.key.get_mods()
-                if (mmods & KMOD_LCTRL):
-                    if (mmods & KMOD_LALT):
-                        sync_param = ircam_synchro.get_data().astype(np.int)
-                        if not sync_param[0] and not sync_param[1]:
-                            sync_param[2] = etime
-                            sync_param[3] = fps
-                            sync_param[0] = 1
-                            sync_param[1] = 1
-                            ircam_synchro.set_data(sync_param.astype(
-                                    np.float32))
-                            time.sleep(1)
-                        else:
-                            sync_param[0] = 1
-                            sync_param[1] = 0
-                            ircam_synchro.set_data(sync_param.astype(
-                                    np.float32))
-                            time.sleep(1)
-
             # Crop modes and full frame
             #---------------------
             CROP_KEYLIST = [
@@ -2171,7 +1967,7 @@ while True:  # the main game loop
                         shmreload = True
 
             # Ircam Filter/block
-            #------------------------------
+            #-------------------
 
             FILT_KEYLIST = [K_1, K_2, K_3, K_4, K_5, K_6, K_7]
             if event.key in FILT_KEYLIST:
@@ -2190,9 +1986,9 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_ircam.send_keys("dm_stage phi push 1000")
+                        tmux_ircam.send_keys("dm_stage phi push 500")
                     else:
-                        tmux_ircam.send_keys("dm_stage phi push 100")
+                        tmux_ircam.send_keys("dm_stage phi push 20")
                 else:
                     if wait_for_archive_datatype:
                         idt -= 1
@@ -2202,9 +1998,9 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_ircam.send_keys("dm_stage phi push -1000")
+                        tmux_ircam.send_keys("dm_stage phi push -500")
                     else:
-                        tmux_ircam.send_keys("dm_stage phi push -100")
+                        tmux_ircam.send_keys("dm_stage phi push -20")
                 else:
                     if wait_for_archive_datatype:
                         idt += 1
@@ -2214,17 +2010,17 @@ while True:  # the main game loop
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_ircam.send_keys("dm_stage theta push -1000")
+                        tmux_ircam.send_keys("dm_stage theta push -500")
                     else:
-                        tmux_ircam.send_keys("dm_stage theta push -100")
+                        tmux_ircam.send_keys("dm_stage theta push -20")
 
             if event.key == K_RIGHT:
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
                     if (mmods & KMOD_LSHIFT):
-                        tmux_ircam.send_keys("dm_stage theta push +1000")
+                        tmux_ircam.send_keys("dm_stage theta push +500")
                     else:
-                        tmux_ircam.send_keys("dm_stage theta push +100")
+                        tmux_ircam.send_keys("dm_stage theta push +20")
 
     pygame.display.update(rects)
 
