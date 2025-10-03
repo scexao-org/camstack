@@ -150,10 +150,10 @@ class CameraMode(BaseModel):
     y1: int  # Last ROW (inclusive)
     binx: int = 1
     biny: int = 1
-    fps: float | None = None
-    tint: float | None = None
-    fgsize: tuple[int, int] | None = None
-    hotspots: dict[str, tuple[float, float]] | None = None
+    fps: typ.Union[float, None] = None
+    tint: typ.Union[float, None] = None
+    fgsize: typ.Union[typ.Tuple[int, int], None] = None
+    hotspots: typ.Union[typ.Dict[str, typ.Tuple[float, float]], None] = None
 
     def model_post_init(self, __context) -> None:
         if self.fgsize is None:

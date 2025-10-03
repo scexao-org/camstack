@@ -44,7 +44,7 @@ def main():
                              SaturationPlugin(frontend, sat_value=65520),
                              VisBlockPlugin(frontend),
                              PupilOverlayPlugin(frontend, scale=486,
-                                                angle=-33.82)))
+                                                angle=-33.82 - 103.5)))
     frontend.register_backend(backend)
     backend.register_frontend(frontend)
     frontend.run()

@@ -123,7 +123,7 @@ CTRL  + 4         : JEWEL 7x6
 CTRL  + 5         : SAM-18
 CTRL  + 6         : SAM-Ann
 CTRL  + 7         : Mirror
-CTRL  + 8         : Open (164 deg)
+CTRL  + 8         : Open
 CTRL  + 9         : LyotStop-L
 CTRL  + 0         : RAP
 CTRL  + -         : ND10
