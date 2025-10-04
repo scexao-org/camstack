@@ -1847,6 +1847,8 @@ while True:  # the main game loop
                         os.system("ircam_fcs palila &")
                     else:
                         os.system("apapane_pickoff in &")
+                        if "OUT" not in irspmode:
+                            os.system("irspectro_mode out")
                         os.system("ircam_fcs apapane &")
                 else:
                     plot_cross = not plot_cross
