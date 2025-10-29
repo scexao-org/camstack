@@ -301,7 +301,7 @@ CTRL  + s     : Save current position to last configuration"""
             else:
                 field_625 = self.data_debias_uncrop[slices[3]]
             fields = [[field_625, field_725], [field_675, field_775]]
-            if self.cam_num == 2:
+            if self.cam_num == 1:
                 fields = [[np.fliplr(field_625),
                            np.fliplr(field_725)],
                           [np.fliplr(field_675),
@@ -310,8 +310,8 @@ CTRL  + s     : Save current position to last configuration"""
         else:
             self.data_debias = self.data_debias_uncrop[self.crop_slice]
 
-            ## flip camera 2 on y-axis
-            if self.cam_num == 2:
+            ## flip camera 1 on y-axis
+            if self.cam_num == 1:
                 self.data_debias = np.fliplr(self.data_debias)
 
 
