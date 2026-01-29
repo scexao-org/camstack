@@ -9,8 +9,6 @@ import logging as logg
 from camstack.cams.edtcam import EDTCamera
 from camstack.core import utilities as util
 
-from pyMilk.interfacing.isio_shmlib import SHM
-
 
 class OCAM2K(EDTCamera):
 

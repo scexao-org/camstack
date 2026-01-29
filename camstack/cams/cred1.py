@@ -231,6 +231,10 @@ class CRED1(EDTCamera):
         water_temp = self.get_water_temperature()
         if water_temp > 40.0:
             self._emergency_abort()
+        # Poll & set kw for overillumination
+        is_overillum = self.send_command('status detailed raw')\
+            .endswith('[overilluminated]')
+        self._set_formatted_keyword('_GN_TRIP', is_overillum)
 
     # ===========================================
     # AD HOC METHODS - TO BE BOUND IN THE SHELL ?
@@ -388,6 +392,14 @@ class CRED1(EDTCamera):
     def get_maxpossiblegain(self) -> int:
         return int(self.send_command("maxpossiblegain raw"))
 
+    def gain_protection_reset(self) -> None:
+        '''
+        This will cause a camera error message on older firmwares without illum. protection.
+        That's fine.
+        '''
+        logg.warning("gain protection reset")
+        self.send_command("set overillumination acknowledge")
+
     def set_NDR(self, NDR: int) -> int:
         if NDR < 1 or not type(NDR) is int:
             raise AssertionError(f"Illegal NDR value: {NDR}")
@@ -423,6 +435,9 @@ class CRED1(EDTCamera):
                 self.current_mode.fps is not None
         )  # FIXME we should actually define fps when modesetting - OR use maxfps.
         self.set_fps(self.current_mode.fps)
+
+        # Because the new firmware is... picky when changing NDR
+        self.gain_protection_reset()
 
         self.set_gain(gain_now)
 
@@ -524,6 +539,8 @@ class Apapane(CRED1):
                         "%20.2f", "RTPS1"),
         "RET-POS2": (-1, "[deg] Stage angle of second retarder plate",
                         "%20.2f", "RTPS2"),
+        # Can add a technical-only keyword preceded with an underscore
+        "_GN_TRIP": (False, 'Gain protection tripped', 'BOOLEAN', '_GTRP')
     }
     # yapf: enable
     KEYWORDS.update(CRED1.KEYWORDS)
