@@ -370,16 +370,24 @@ hmsg = """APAPANE's INSTRUCTIONS
 
 camera controls:
 ---------------
+--EXPOSURE:--
 q           : increase exposure time
 a           : decrease exposure time
+CTRL+o      : increase frame rate
+CTRL+l      : decrease frame rate
+--GAIN:--
 e           : display  CRED1 gain
 w           : increase CRED1 gain
 s           : decrease CRED1 gain
+CTRL+e      : set to max gain (104)
+CTRL+SFT+e  : overillumination reset
+
+--NDR:--
 CTRL+q      : increase number of NDR
 CTRL+a      : decrease number of NDR
-CTRL+SFT+<N>: jump to NDR 2**<N>
-CTRL+o      : increase frame rate
-CTRL+l      : decrease frame rate
+CTRL+SFT+<N>: direct jump to NDR=2**<N>
+
+--OTHER--
 CTRL+c      : switch between apapane/palila
 CTRL+i      : REACH mode in/out
 CTRL+b      : take new dark for current exp
@@ -1183,7 +1191,12 @@ while True:  # the main game loop
             dinfo = font3.render(msg, True, FGCOL, BGCOL)
         screen.blit(dinfo, rct_dinfo)
 
-        if isat > 32000:
+        kws = cam.get_keywords()
+        if '_GN_TRIP' in kws and kws['_GN_TRIP']:
+            msg = "!! OVERILLUM (Ctrl+Sh+e)!!"
+            dinfo2 = font3.render(msg, True, BGCOL, SACOL)
+            screen.blit(dinfo2, rct_dinfo2)
+        elif isat > 32000:
             msg = "     !!!SATURATION!!!     "
             dinfo2 = font3.render(msg, True, BGCOL, SACOL)
             screen.blit(dinfo2, rct_dinfo2)
@@ -1902,6 +1915,12 @@ while True:  # the main game loop
                     print("set_gain(104)")
                     apapane_pyro.set_gain(104)
                     time.sleep(.5)
+
+                if (mmods & KMOD_LSHIFT) and (mmods &
+                                              KMOD_LCTRL) and event.key == K_e:
+                    print("gain_protection_reset()")
+                    apapane_pyro.gain_protection_reset()
+                    time.sleep(0.5)
 
     if phmode == 2:
         #print_glint_traces()
