@@ -377,16 +377,14 @@ class BaseCamera:
                 count += 1
 
         if self.taker_cset_prio[1] is not None:  # Set rtprio !
-            subprocess.run(
-                    [
-                            'milk-makecsetandrt',
-                            str(
-                                    tmux_util.find_pane_running_pid(
-                                            self.take_tmux_pane)),  # PID
-                            self.taker_cset_prio[0],  # CPUSET
-                            str(self.taker_cset_prio[1])  # PRIORITY
-                    ],
-                    stdout=subprocess.PIPE)
+            tmux_pid = tmux_util.find_pane_running_pid(self.take_tmux_pane)
+            cmd = [
+                    'milk-makecsetandrt',
+                    str(tmux_pid),
+                    self.taker_cset_prio[0],  # CPUSET
+                    str(self.taker_cset_prio[1]),  # PRIORITY
+            ]
+            subprocess.run(cmd, stdout=subprocess.PIPE)
             print(f'Calling rtset w/ {self.taker_cset_prio}')
 
         self.grab_shm_fill_keywords()
