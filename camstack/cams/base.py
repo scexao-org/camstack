@@ -23,7 +23,7 @@ except:
         return None, False
 
 
-from pyMilk.interfacing.isio_shmlib import SHM
+from pyMilk.interfacing.shm import SHM
 
 # TODO: class decorator that implements a camera-action-lock
 ''' TODO

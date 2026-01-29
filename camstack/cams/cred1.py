@@ -36,6 +36,7 @@ class CRED1(EDTCamera):
             "set_synchro",
             "set_readout_mode",
             "get_readout_mode",
+            "gain_protection_reset",
             "set_gain",
             "get_gain",
             "set_NDR",
@@ -232,6 +233,8 @@ class CRED1(EDTCamera):
         if water_temp > 40.0:
             self._emergency_abort()
 
+        self.get_overillumination_status()
+
     # ===========================================
     # AD HOC METHODS - TO BE BOUND IN THE SHELL ?
     # ===========================================
@@ -383,10 +386,26 @@ class CRED1(EDTCamera):
         res = int(self.send_command("gain raw"))
         self._set_formatted_keyword("DETGAIN", res)
         logg.info(f"get_gain: {res}")
+        self.get_overillumination_status()
         return res
 
     def get_maxpossiblegain(self) -> int:
         return int(self.send_command("maxpossiblegain raw"))
+
+    # Poll & set kw for overillumination
+    def get_overillumination_status(self) -> None:
+        is_overillum = self.send_command('status detailed raw')\
+            .endswith('[overilluminated]')
+        self._set_formatted_keyword('_GN_TRIP', is_overillum)
+
+    def gain_protection_reset(self) -> None:
+        '''
+        This will cause a camera error message on older firmwares without illum. protection.
+        That's fine.
+        '''
+        logg.warning("gain protection reset")
+        self.send_command("set overillumination acknowledge")
+        self.get_overillumination_status()
 
     def set_NDR(self, NDR: int) -> int:
         if NDR < 1 or not type(NDR) is int:
@@ -423,6 +442,9 @@ class CRED1(EDTCamera):
                 self.current_mode.fps is not None
         )  # FIXME we should actually define fps when modesetting - OR use maxfps.
         self.set_fps(self.current_mode.fps)
+
+        # Because the new firmware is... picky when changing NDR
+        self.gain_protection_reset()
 
         self.set_gain(gain_now)
 
@@ -524,6 +546,8 @@ class Apapane(CRED1):
                         "%20.2f", "RTPS1"),
         "RET-POS2": (-1, "[deg] Stage angle of second retarder plate",
                         "%20.2f", "RTPS2"),
+        # Can add a technical-only keyword preceded with an underscore
+        "_GN_TRIP": (False, 'Gain protection tripped', 'BOOLEAN', '_GTRP')
     }
     # yapf: enable
     KEYWORDS.update(CRED1.KEYWORDS)
