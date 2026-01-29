@@ -43,7 +43,7 @@ class BaseVCAM(OrcaQuest):
                        "QWP1"),
             "U_QWP1TH":
                     (-1, "[deg] VAMPIRES QWP 1 wheel theta", "%16.3f", "QWP1T"),
-            "U_QWP2": (-1, "[deg] VAMPIRES QWP 1 polarization angle", "%16.3f",
+            "U_QWP2": (-1, "[deg] VAMPIRES QWP 2 polarization angle", "%16.3f",
                        "QWP2"),
             "U_QWP2TH":
                     (-1, "[deg] VAMPIRES QWP 2 wheel theta", "%16.3f", "QWP2T"),
@@ -249,8 +249,8 @@ class BaseVCAM(OrcaQuest):
 
 
 class VCAM1(BaseVCAM):
-    PLATE_SCALE = (-5.908 / 3.6e6, -5.908 / 3.6e6)  # deg / px
-    INST_PA = -38.90  # deg
+    PLATE_SCALE = (-5.952 / 3.6e6, 5.938 / 3.6e6)  # deg / px
+    INST_PA = 129.44  # deg
     GAINS = {"FAST": 0.103, "SLOW": 0.105}
     MODES = {
             BaseVCAM.MBI:
@@ -304,8 +304,8 @@ class VCAM1(BaseVCAM):
 
 
 class VCAM2(BaseVCAM):
-    PLATE_SCALE = (-5.895 / 3.6e6, 5.895 / 3.6e6)  # deg / px
-    INST_PA = -38.58  # deg
+    PLATE_SCALE = (-5.938 / 3.6e6, -5.938 / 3.6e6)  # deg / px
+    INST_PA = 129.99  # deg
     MODES = {
             BaseVCAM.MBI:
                     util.CameraMode.from_file(util.MODES_DIR / "vampires" /
