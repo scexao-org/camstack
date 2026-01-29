@@ -11,7 +11,8 @@ if TYPE_CHECKING:
 
 import numpy as np
 from enum import Enum
-from pyMilk.interfacing.isio_shmlib import SHM
+from pyMilk.interfacing.shm import SHM
+
 from pygame.constants import (KMOD_LALT, KMOD_LCTRL, KMOD_LSHIFT, KMOD_LMETA,
                               KMOD_RALT, KMOD_RCTRL, KMOD_RSHIFT)
 
@@ -91,6 +92,17 @@ def open_shm(shm_name: str, dims: Tuple[int, int] = (1, 1),
     assert MILK_SHM_DIR
     return open_shm_fullpath(MILK_SHM_DIR + "/" + shm_name + ".im.shm",
                              dims=dims, check=check)
+
+
+def shm_set_data_with_override(shm: SHM, data: np.ndarray):
+    try:
+        shm.set_data(data)
+        return None
+    except:
+        # Try to override
+        new_shm = SHM(shm.name, data=data, nbkw=shm.IMAGE.md.NBkw,
+                      verbose=False)
+        return new_shm
 
 
 def open_shm_fullpath(shm_name: str, dims: Tuple[int, int] = (1, 1),
