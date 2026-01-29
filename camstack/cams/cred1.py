@@ -36,6 +36,7 @@ class CRED1(EDTCamera):
             "set_synchro",
             "set_readout_mode",
             "get_readout_mode",
+            "gain_protection_reset",
             "set_gain",
             "get_gain",
             "set_NDR",
