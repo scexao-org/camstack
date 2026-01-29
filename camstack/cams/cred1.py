@@ -386,6 +386,7 @@ class CRED1(EDTCamera):
         res = int(self.send_command("gain raw"))
         self._set_formatted_keyword("DETGAIN", res)
         logg.info(f"get_gain: {res}")
+        self.get_overillumination_status()
         return res
 
     def get_maxpossiblegain(self) -> int:
