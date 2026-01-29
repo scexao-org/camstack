@@ -1192,7 +1192,7 @@ while True:  # the main game loop
         screen.blit(dinfo, rct_dinfo)
 
         kws = cam.get_keywords()
-        if '_GN_TRIP' in kws and kws['_GN_TRIP']:
+        if '_GN_TRIP' in kws and kws['_GN_TRIP'] == '#TRUE#':
             msg = "!! OVERILLUM (Ctrl+Sh+e)!!"
             dinfo2 = font3.render(msg, True, BGCOL, SACOL)
             screen.blit(dinfo2, rct_dinfo2)
