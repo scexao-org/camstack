@@ -100,7 +100,7 @@ def shm_set_data_with_override(shm: SHM, data: np.ndarray):
         return None
     except:
         # Try to override
-        new_shm = SHM(shm.name, data=data, nbkw=shm.IMAGE.md.NBkw,
+        new_shm = SHM(shm.FNAME, data=data, nbkw=shm.IMAGE.md.NBkw,
                       verbose=False)
         return new_shm
 
