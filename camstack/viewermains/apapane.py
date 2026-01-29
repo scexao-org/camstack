@@ -1623,8 +1623,11 @@ while True:  # the main game loop
                             "scexaostatus set darkapapane 'OFF             ' 1")
                     tmux_apapane.send_keys(
                             "log Apapane: Done saving current internal dark")
-                    cam_dark.set_data(bias.astype(np.float32))
-                    cam_badpixmap.set_data(badpixmap.astype(np.float32))
+                    shmreload |= cvc.shm_set_data_with_override(
+                            cam_dark, bias.astype(np.float32)) is not None
+                    shmreload |= cvc.shm_set_data_with_override(
+                            cam_badpixmap,
+                            badpixmap.astype(np.float32)) is not None
 
             # Save a reference image/subtract the reference image
             # ---------------------------------------------------
