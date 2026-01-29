@@ -13,7 +13,7 @@ import camstack.viewertools.vampires_plugins as vplugs
 @click.option("-d", "--debug", "debug", is_flag=True)
 def main1(zoom, binn, debug=False):
     backend = VAMPIRESBaseViewerBackend(1, "vcam1")
-    binned_backend_shape = (560 // binn, 560 // binn)
+    binned_backend_shape = (400 // binn, 400 // binn)
 
     frontend = VAMPIRESBaseViewerFrontend(1, zoom, 20, binned_backend_shape,
                                           fonts_zoom=2 * zoom // binn)
@@ -27,7 +27,7 @@ def main1(zoom, binn, debug=False):
                                             textbox=frontend.lbl_status),
                vplugs.VCAMTriggerPlugin(frontend),
                vplugs.DiffFilterWheelPlugin(frontend),
-               vplugs.VCAMCompassPlugin(frontend, flip_y=True),
+               vplugs.VCAMCompassPlugin(frontend, flip_y=False),
                vplugs.VCAMScalePlugin(frontend),
                vplugs.VisBlockPlugin(frontend), vplugs.FocusPlugin(frontend))
 
@@ -46,7 +46,7 @@ def main1(zoom, binn, debug=False):
 @click.option("-d", "--debug", "debug", is_flag=True)
 def main2(zoom, binn, debug=False):
     backend = VAMPIRESBaseViewerBackend(2, "vcam2")
-    binned_backend_shape = (560 // binn, 560 // binn)
+    binned_backend_shape = (400 // binn, 400 // binn)
 
     frontend = VAMPIRESBaseViewerFrontend(2, zoom, 20, binned_backend_shape,
                                           fonts_zoom=2 * zoom)
@@ -60,7 +60,7 @@ def main2(zoom, binn, debug=False):
                                             textbox=frontend.lbl_status),
                vplugs.VCAMTriggerPlugin(frontend),
                vplugs.DiffFilterWheelPlugin(frontend),
-               vplugs.VCAMCompassPlugin(frontend),
+               vplugs.VCAMCompassPlugin(frontend, flip_y=True),
                vplugs.VCAMScalePlugin(frontend),
                vplugs.VisBlockPlugin(frontend), vplugs.FocusPlugin(frontend))
 

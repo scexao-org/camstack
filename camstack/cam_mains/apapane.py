@@ -45,15 +45,15 @@ def main():
 
                 cam_flag = {
                         '01-000016436d3e': 'G',
-                        '01-0000190ddb96': 'A',
-                        None: 'I'
+                        '01-00001bc12c4c': 'A',
+                        '01-0000190ddb96': 'I'
                 }[uid]
                 success = True
-            except Exception as exc:
+            except Exception as exc:  # Can err from serial OR from dict lookup (unknown ID)
                 pass
 
         if not success:
-            msg = 'Serial buffer is probably borked -- could not get camera UID.'
+            msg = f'Serial communication failed with "/opt/EDTpdv/serial_cmd -u 1 -c 0" -- could not get camera UID.'
             raise ValueError(msg)
 
     os.makedirs(os.environ['HOME'] + "/logs", exist_ok=True)

@@ -661,9 +661,9 @@ class Apapane(CRED1):
 
         # Override detector name
         self._set_formatted_keyword("DETECTOR", "CRED1 - APAPANE")
-        self._set_formatted_keyword("GAIN", 0.45)
+        self._set_formatted_keyword("GAIN", 1.98)
         self._set_formatted_keyword("INST-PA", self.INST_PA)  # FIXME
-        self._set_formatted_keyword("F-RATIO", 0.0)  # FIXME
+        self._set_formatted_keyword("F-RATIO", 37.0)
 
         # Note: RET-ANG1 is set externally by a call to "updatekw apapane RET-ANG1" from HWP scripts.
         # This avoids latency in reporting HWP states.
@@ -754,7 +754,7 @@ class Iiwi(CRED1):
 
         # Override detector name
         self._set_formatted_keyword("DETECTOR", "CRED1 - IIWI")
-        self._set_formatted_keyword("GAIN", 1.98)
+        self._set_formatted_keyword("GAIN", 0.45)
 
 
 class Ristretto(CRED1):

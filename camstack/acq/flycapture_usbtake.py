@@ -10,6 +10,7 @@
         -u <unit>        Number (index/serial) of the camera for the FlyCapture API [default: 0]
         -l <loops>       Number of images to take (0 for free run) [default: 0]
         -R               Attempt SHM reuse if possible
+        --raise          Debug: re-raise PyCapture Exceptions for postmortem debugging.
 '''
 from __future__ import annotations
 '''
@@ -43,8 +44,8 @@ def nparray_from_flyimage(fly_image: PC2.Image) -> np.ndarray:
 
 
 def main_acquire_flycapture(api_cam_num_or_serial: int, stream_name: str,
-                            n_loops: int,
-                            attempt_shm_reuse: bool = True) -> None:
+                            n_loops: int, attempt_shm_reuse: bool = True,
+                            debug_exception_reraise: bool = False) -> None:
 
     fly_bus = None
     fly_cam = None
@@ -135,6 +136,8 @@ def main_acquire_flycapture(api_cam_num_or_serial: int, stream_name: str,
         print('Bus Master Failure may mean that no cameras are detected / serial is wrong.'
               )
         print(f'Error {ex.args[0]}: {str(ex)[2:-1]}')
+        if debug_exception_reraise:
+            raise
     finally:
         # Graceful cleanup?
         # How much do we have to clean?
@@ -161,6 +164,7 @@ if __name__ == "__main__":
     arg_n_loops = int(args["-l"])
 
     arg_attempt_reuse = args["-R"]
+    arg_debug_exc_raise = args['--raise']
 
     main_acquire_flycapture(arg_cam_number, arg_stream_name, arg_n_loops,
-                            arg_attempt_reuse)
+                            arg_attempt_reuse, arg_debug_exc_raise)

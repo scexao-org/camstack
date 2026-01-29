@@ -42,7 +42,11 @@ def find_or_create_(session_name: str) -> Pane_T:
     if session is None:
         session = TMUX_SERVER.new_session(session_name)
 
-    pane = session.attached_pane
+    try:
+        pane = session.attached_pane
+    except:
+        pane = session.active_pane  # attached_pane deprecated at tmux 0.31
+
     assert isinstance(pane, tmux.pane.Pane)
 
     return pane
