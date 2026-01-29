@@ -232,10 +232,8 @@ class CRED1(EDTCamera):
         water_temp = self.get_water_temperature()
         if water_temp > 40.0:
             self._emergency_abort()
-        # Poll & set kw for overillumination
-        is_overillum = self.send_command('status detailed raw')\
-            .endswith('[overilluminated]')
-        self._set_formatted_keyword('_GN_TRIP', is_overillum)
+
+        self.get_overillumination_status()
 
     # ===========================================
     # AD HOC METHODS - TO BE BOUND IN THE SHELL ?
@@ -393,6 +391,12 @@ class CRED1(EDTCamera):
     def get_maxpossiblegain(self) -> int:
         return int(self.send_command("maxpossiblegain raw"))
 
+    # Poll & set kw for overillumination
+    def get_overillumination_status(self) -> None:
+        is_overillum = self.send_command('status detailed raw')\
+            .endswith('[overilluminated]')
+        self._set_formatted_keyword('_GN_TRIP', is_overillum)
+
     def gain_protection_reset(self) -> None:
         '''
         This will cause a camera error message on older firmwares without illum. protection.
@@ -400,6 +404,7 @@ class CRED1(EDTCamera):
         '''
         logg.warning("gain protection reset")
         self.send_command("set overillumination acknowledge")
+        self.get_overillumination_status()
 
     def set_NDR(self, NDR: int) -> int:
         if NDR < 1 or not type(NDR) is int:
