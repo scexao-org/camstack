@@ -84,7 +84,7 @@ For dumb cameras (acquisition channel but no control channel), the FG acquisitio
 ### Class tree:
 
 - BaseCamera
-  - EDTCamera
+  - EDTCamera (need EDT framegrabber acquisition, private repo.)
     - CRED1
       - Apapane
     - CRED2
@@ -98,14 +98,14 @@ For dumb cameras (acquisition channel but no control channel), the FG acquisitio
       - AutoAndor897
         - First
         - Vampires
-  - DCAMCamera
+  - DCAMCamera (need DCAM/Hamamatsu acquisition, private repo.)
     - OrcaQuest
       - FIRSTOrcam
       - AlalaOrcam
-  - SpinnakerUSBCamera
+  - SpinnakerUSBCamera (need to install Spinnaker API) [more](./doc/FLIR_USB_Cameras.md)
     - BlackFlyS
     - FLIR_U3_Camera (broken, use FlyCaptureUSBCamera::(Grasshopper3|Flea3) instead)
-  - FlyCaptureUSBCamera
+  - FlyCaptureUSBCamera (need to install FlyCapture API) [more](./doc/FLIR_USB_Cameras.md)
     - Grasshopper3
     - Flea3
       - VampiresPupilFlea
