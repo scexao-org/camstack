@@ -109,75 +109,63 @@ class BaseVCAM(OrcaQuest):
     def poll_camera_for_keywords(self) -> None:
         super().poll_camera_for_keywords()
 
-        # Defaults
-        filter01 = bs = "Unknown"
-        dfl1 = dfl2 = "Open"
-        hwp_stage = 0
-        lp_stage = 0
-        scex_lp = 'Unknown'
-        lp_theta = imrang = imrpad = -1
-        qwp1 = qwp1th = -1
-        qwp2 = qwp2th = -1
-        retang1 = retpos1 = -1
-        retang2 = retpos2 = -1
-        pupil_lens = "Unknown"
+        keyval = {
+                'U_FILTER': "Unknwon",
+                'U_BS': "Unknown",
+                'P_STGPS1': 0,
+                'P_STGPS2': 0,
+                'X_POLAR': "Unknown",
+                'X_POLARP': -1,
+                'D_IMRANG': -1,
+                'D_IMRPAD': -1,
+                'U_DIFFL1': "Open",
+                'U_DIFFL2': "Open",
+                'U_QWP1': -1,
+                'U_QWP1TH': -1,
+                'U_QWP2': -1,
+                'U_QWP2TH': -1,
+                'RET-ANG1': -1,
+                'RET-ANG2': -1,
+                'RET-POS1': -1,
+                'RET-POS2': -1,
+                'U_PUPST': "Unknown"
+        }
         try:
-            with self.RDB.pipeline() as pipe:
-                pipe.hget('U_FILTER', 'value')
-                pipe.hget('U_BS', 'value')
-                pipe.hget('P_STGPS1', 'value')
-                pipe.hget('P_STGPS2', 'value')
-                pipe.hget('X_POLAR', 'value')
-                pipe.hget('X_POLARP', 'value')
-                pipe.hget('D_IMRANG', 'value')
-                pipe.hget('D_IMRPAD', 'value')
-                pipe.hget('U_DIFFL1', 'value')
-                pipe.hget('U_DIFFL2', 'value')
-                pipe.hget("U_QWP1", "value")
-                pipe.hget("U_QWP1TH", "value")
-                pipe.hget("U_QWP2", "value")
-                pipe.hget("U_QWP2TH", "value")
-                pipe.hget("RET-ANG1", "value")
-                pipe.hget("RET-ANG2", "value")
-                pipe.hget("RET-POS1", "value")
-                pipe.hget("RET-POS2", "value")
-                pipe.hget("U_PUPST", "value")
-                filter01, bs, lp_stage, hwp_stage, scex_lp, lp_theta, imrang, imrpad, dfl1, dfl2, qwp1, qwp1th, qwp2, qwp2th, retang1, retang2, retpos1, retpos2, pupil_lens = pipe.execute(
-                )
+            assert self.RDB is not None
+            keyval.update(self.RDB.redis_batched_hget(keyval))
         except Exception:
             logg.exception(
                     'REDIS unavailable @ poll_camera_for_keywords @ BaseVCAM')
 
-        self._set_formatted_keyword('FILTER01', filter01)
-        self._set_formatted_keyword("X_POLARP", lp_theta)
-        self._set_formatted_keyword("D_IMRANG", imrang)
-        self._set_formatted_keyword("D_IMRPAD", imrpad)
-        self._set_formatted_keyword("U_QWP1", qwp1)
-        self._set_formatted_keyword("U_QWP1TH", qwp1th)
-        self._set_formatted_keyword("U_QWP2", qwp2)
-        self._set_formatted_keyword("U_QWP2TH", qwp2th)
-        self._set_formatted_keyword("RET-ANG1", retang1)
-        self._set_formatted_keyword("RET-ANG2", retang2)
-        self._set_formatted_keyword("RET-POS1", retpos1)
-        self._set_formatted_keyword("RET-POS2", retpos2)
+        for key in {
+                'X_POLARP', 'D_IMRANG', 'D_IMRPAD', 'U_QWP1', 'U_QWP1TH',
+                'U_QWP2', 'U_QWP2TH', 'RET-ANG1', 'RET-ANG2', 'RET-POS1',
+                'RET-POS2'
+        }:
+            self._set_formatted_keyword(key, keyval[key])
+
+        # Key change from global to local naming
+        self._set_formatted_keyword('FILTER01', keyval['U_FILTER'])
+
         ## determine observing mode from the following logic
         # if the PBS is in and the HWP is running, we're doing polarimetry
-        polarimetry = bs.upper() == "PBS" and \
-                      (np.abs(hwp_stage - 56) < 1 or \
-                       np.abs(lp_stage - 55.2) < 1 or \
-                       np.abs(lp_stage - 90) < 1 or
-                       scex_lp.strip().upper() == "IN")
+        polarimetry = keyval['U_BS'].upper() == "PBS" and \
+                      (np.abs(keyval['P_STGPS2'] - 56) < 1 or \
+                       np.abs(keyval['P_STGPS1'] - 55.2) < 1 or \
+                       np.abs(keyval['P_STGPS1'] - 90) < 1 or
+                       keyval['X_POLAR'].strip().upper() == "IN")
         base_mode = "IPOL" if polarimetry else "IMAG"
         # Determine whether in standard mode, SDI mode, or MBI/r mode
         nonsdi_flts = ("UNKNOWN", "OPEN", "BLOCK")
-        sdi = dfl1.upper() not in nonsdi_flts and dfl2.upper() not in nonsdi_flts
+        sdi = keyval['U_DIFFL1'].upper() not in nonsdi_flts and \
+            keyval['U_DIFFL2'].upper() not in nonsdi_flts
         if sdi:
             obs_mod = f"{base_mode}_SDI"
         elif self.current_mode_id in ("MBI", "MBI_JEWEL"):
             obs_mod = f"{base_mode}_MBI"
         elif self.current_mode_id in ("MBI_REDUCED", "MBI_ONEHALF"):
             obs_mod = f"{base_mode}_MBIR"
-        elif pupil_lens.strip().upper() == "IN":
+        elif keyval['U_PUPST'].strip().upper() == "IN":
             obs_mod = f"{base_mode}_PUP"
         else:
             obs_mod = base_mode

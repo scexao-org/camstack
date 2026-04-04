@@ -18,9 +18,10 @@ try:
     from scxkw.config import MAGIC_BOOL_STR, MAGIC_HW_STR, redis_check_enabled
 except:
     logg.error('Import error upon trying to import scxkw.config.')
+    if not typ.TYPE_CHECKING:
 
-    def redis_check_enabled() -> tuple[typ.Any, bool]:
-        return None, False
+        def redis_check_enabled() -> tuple[None, typ.Literal[False]]:
+            return None, False
 
 
 from pyMilk.interfacing.shm import SHM
