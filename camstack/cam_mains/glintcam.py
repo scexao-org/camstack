@@ -6,7 +6,7 @@ from camstack.core.logger import init_camstack_logger
 import logging
 
 import scxconf
-from scxkw.config import MAGIC_HW_STR
+from camstack.scxkw import MAGIC_HW_STR
 
 from serial import Serial
 

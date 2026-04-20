@@ -19,10 +19,7 @@ from camstack.core.utilities import (
 )
 from camstack.core.wcs import wcs_dict_init
 
-try:
-    from scxkw.config import MAGIC_BOOL_STR
-except:
-    logg.error("Import error upon trying to import scxkw.config.")
+from camstack.scxkw import MAGIC_BOOL_STR
 
 
 class ROMODES:

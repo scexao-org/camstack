@@ -6,7 +6,7 @@ from camstack.cams.cred2 import ApapaneButItsGLINT, CRED2
 
 from camstack.core.logger import init_camstack_logger
 
-from scxkw.config import MAGIC_HW_STR
+from camstack.scxkw import MAGIC_HW_STR
 
 # PYROSERVER
 import scxconf

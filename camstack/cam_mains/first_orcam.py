@@ -3,7 +3,7 @@ import os
 from camstack.core import utilities as util
 from camstack.cams.dcamcam import FIRSTOrcam
 
-from scxkw.config import MAGIC_HW_STR
+from camstack.scxkw import MAGIC_HW_STR
 import scxconf
 
 from camstack.core.logger import init_camstack_logger

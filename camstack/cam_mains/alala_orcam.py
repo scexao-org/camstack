@@ -4,7 +4,7 @@ from camstack.core import utilities as util
 from camstack.cams.dcamcam import AlalaOrcam
 from camstack.core.logger import init_camstack_logger
 
-from scxkw.config import MAGIC_HW_STR
+from camstack.scxkw import MAGIC_HW_STR
 import scxconf
 
 if __name__ == "__main__":

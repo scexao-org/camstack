@@ -4,7 +4,7 @@ from camstack.cams.ocam import OCAM2K
 from camstack.core.logger import init_camstack_logger
 
 import scxconf
-from scxkw.config import MAGIC_HW_STR
+from camstack.scxkw import MAGIC_HW_STR
 
 if __name__ == "__main__":
 

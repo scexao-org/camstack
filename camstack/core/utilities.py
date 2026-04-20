@@ -12,7 +12,7 @@ from pathlib import Path
 import tomli, tomli_w
 
 from camstack.core import tmux
-from scxkw.config import MAGIC_BOOL_STR
+from camstack.scxkw import MAGIC_BOOL_STR
 
 MODES_DIR = Path(__file__).parent.parent.parent / "conf" / "modes"
 logg = logging.getLogger(__name__)

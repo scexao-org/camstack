@@ -47,9 +47,6 @@ import subprocess
 
 import scxconf
 
-from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT
-from scxkw.redisutil.typed_db import Redis
-
 from pyMilk.interfacing.isio_shmlib import SHM
 
 import camstack.viewertools.viewer_common as cvc

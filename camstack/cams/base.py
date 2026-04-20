@@ -14,14 +14,7 @@ from camstack.core import tmux as tmux_util, thread as threadutil
 
 from camstack.core.wcs import wcs_dummy_dict
 
-try:
-    from scxkw.config import MAGIC_BOOL_STR, MAGIC_HW_STR, redis_check_enabled
-except:
-    logg.error('Import error upon trying to import scxkw.config.')
-
-    def redis_check_enabled() -> tuple[typ.Any, bool]:
-        return None, False
-
+from camstack.scxkw import MAGIC_BOOL_STR, MAGIC_HW_STR, redis_check_enabled
 
 from pyMilk.interfacing.shm import SHM
 

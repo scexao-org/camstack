@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Tuple, Optional as Op, TYPE_CHECKING, Callable
 if TYPE_CHECKING:
-    from scxkw.redisutil.typed_db import Redis
+    from camstack.scxkw import Redis
 
 import numpy as np
 from enum import Enum
@@ -44,8 +44,7 @@ class CREDWHAT(Enum):
 
 
 def locate_redis_db() -> Tuple[Op[Redis], bool]:
-    from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT
-    from scxkw.redisutil.typed_db import Redis
+    from camstack.scxkw import REDIS_DB_HOST, REDIS_DB_PORT, Redis
     rdb = Redis(host=REDIS_DB_HOST, port=REDIS_DB_PORT)
     # Is the server alive ?
     try:

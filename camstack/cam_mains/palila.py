@@ -5,7 +5,7 @@ from camstack.cams.cred2 import Palila
 
 from camstack.core.logger import init_camstack_logger
 
-from scxkw.config import MAGIC_HW_STR
+from camstack.scxkw import MAGIC_HW_STR
 
 import scxconf
 
