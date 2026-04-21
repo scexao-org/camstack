@@ -31,7 +31,10 @@ class SpinnakerUSBCamera(BaseCamera):
 
     MODES = {}
 
-    KEYWORDS = {}
+    KEYWORDS = {
+            # DETGAIN is NOT a kw from the base class.
+            'DETGAIN': (0, 'Amplifier gain [dB]', '%16d', 'GAIN'),
+    }
     KEYWORDS.update(BaseCamera.KEYWORDS)
 
     def __init__(self, name: str, stream_name: str, mode_id: Union[CameraMode,
@@ -190,7 +193,8 @@ class SpinnakerUSBCamera(BaseCamera):
 
     def get_gain(self):
         gain = self.spinn_cam.Gain()
-        self.camera_shm.update_keyword('DETGAIN', gain)
+        self.camera_shm.update_keyword(
+                'DETGAIN', gain)  # DETGAIN is NOT a kw from the base class.
         logg.info(f'get_gain: {gain}')
         return gain
 
