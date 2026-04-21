@@ -375,6 +375,37 @@ class BlackFlyS(SpinnakerUSBCamera):
         SpinnakerUSBCamera.prepare_camera_finalize(self, mode_id)
 
 
+class USYD_VIS_PG1(BlackFlyS):
+    '''
+    BFLY-U3-13S2M
+    '''
+    FULL = 'FULL'
+
+    MODES = {
+            FULL:
+                    CameraMode(x0=0, x1=1287, y0=0, y1=963, tint=0.001),
+            # Centercrop half-size
+            'VISPG1':
+                    CameraMode(x0=914, x1=914 + 372 - 1, y0=608,
+                               y1=608 + 340 - 1, tint=0.001),
+            # Full bin 2
+            #2: CameraMode(x0=)
+    }
+
+    KEYWORDS = {}
+    KEYWORDS.update(BlackFlyS.KEYWORDS)
+
+    def _fill_keywords(self):
+
+        SpinnakerUSBCamera._fill_keywords(self)
+        self.camera_shm.update_keyword('CROPPED', self.current_mode_id
+                                       != self.FULL)
+        self.camera_shm.update_keyword('DETECTOR', 'BFLY-U3-13S2M')
+
+        self._set_formatted_keyword('DETPXSZ1', 0.00375)
+        self._set_formatted_keyword('DETPXSZ2', 0.00375)
+
+
 if __name__ == "__main__":
     cam = BlackFlyS('blackfly', 'alicia', mode_id=1, spinnaker_number=0)
     from camstack.core.utilities import shellify_methods
