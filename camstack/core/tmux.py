@@ -94,9 +94,14 @@ def kill_running_Cz(pane: Pane_T) -> None:
     pane.send_keys('kill %')
 
 
-def kill_running(pane: Pane_T) -> None:
+def kill_running_shell_exit(pane: Pane_T):
     kill_running_Cc(pane)
-    time.sleep(2.0)  # We need longer time for dcamusbtake to clear
+    pane.send_keys('C-d', enter=False, suppress_history=False)
+
+
+def kill_running(pane: Pane_T, sleep_time: float = 2.0) -> None:
+    kill_running_Cc(pane)
+    time.sleep(sleep_time)  # We need longer time for dcamusbtake to clear
     kill_running_Cz(pane)
 
 

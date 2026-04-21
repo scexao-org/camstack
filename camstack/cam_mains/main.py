@@ -6,7 +6,7 @@ import typing as typ
 from argparse import ArgumentParser
 
 from camstack.core.tmux import (find_or_create, send_keys, kill_running,
-                                find_or_create_remote)
+                                find_or_create_remote, kill_running_shell_exit)
 from camstack.core.utilities import enforce_whichcomp
 import scxconf
 
@@ -50,6 +50,9 @@ _group.add_argument(
 _group.add_argument('-l', '--local', action='store_true',
                     help="Disallow SSH bouncing, force local computer")
 
+_group.add_argument('-k', '--kill', action='store_true',
+                    help="Kill camera server.")
+
 
 def main(
         call_from_dunder_main: bool = False,
@@ -83,7 +86,10 @@ def main(
     else:
         tmux_name = f"{cam_name.lower()}_ctrl"
 
-    print(f"Starting {cam_name} in tmux session {tmux_name}")
+    if args.kill:
+        print(f"Killing {cam_name} in tmux session {tmux_name}")
+    else:
+        print(f"Starting {cam_name} in tmux session {tmux_name}")
 
     if (required_machine is None or force_local or
                 enforce_whichcomp(required_machine, err=False)):
@@ -106,6 +112,12 @@ def main(
     # Important for environment + bashrc == conda loaded == can change virtualenv
     import time
     time.sleep(2.0)
+
+    if args.kill:
+        kill_running_shell_exit(tmux)
+        time.sleep(5.0)
+        kill_running(tmux)
+        return
 
     kill_running(tmux)
 
