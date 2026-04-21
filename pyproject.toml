@@ -49,21 +49,6 @@ all = []
 # NEW for starting cams.
 camstart = "camstack.cam_mains.main:main"
 
-# DEPRECATED
-cam-alalacamstart = "camstack.deprecatedscripts.main:alala"
-cam-apapanestart = "camstack.deprecatedscripts.main:apapane"
-cam-fircamstart = "camstack.deprecatedscripts.main:first"
-cam-firstpupstart = "camstack.deprecatedscripts.main:first_pupil"
-cam-glintstart = "camstack.deprecatedscripts.main:glint"
-cam-iiwistart = "camstack.deprecatedscripts.main:iiwi"
-cam-kiwikiustart = "camstack.deprecatedscripts.main:kiwikiu"
-cam-ocamstart = "camstack.deprecatedscripts.main:pueo"
-cam-palilastart = "camstack.deprecatedscripts.main:palila"
-cam-vcam1start = "camstack.deprecatedscripts.main:vcam1"
-cam-vcam2start = "camstack.deprecatedscripts.main:vcam2"
-cam-vpupcamstart = "camstack.deprecatedscripts.main:vpup"
-cam-simucamstart = "camstack.deprecatedscripts.main:simucam"
-
 # VIEWERS
 # Using an empty dud_main function at the end of file for when
 # We really just want the script
