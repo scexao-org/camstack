@@ -81,7 +81,7 @@ vcam2 = "camstack.viewermains.vcam:main2"
 vpupcam = "camstack.viewermains.vpupcam:main"
 
 [tool.pyright]
-extraPaths = ["/home/vdeo/src/swmain",] # Need to list scexao's pip install -e packages...
+extraPaths = [] # Need to list scexao's pip install -e packages... --> pyrightconfig.json
 typeCheckingMode = "basic" # off | basic | standard | strict # Look there https://github.com/microsoft/pyright/blob/main/docs/configuration.md
 include = ["camstack"]
 exclude = ["build/",

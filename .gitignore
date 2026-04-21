@@ -29,3 +29,5 @@ build/
 
 conf/**/backup*.toml
 conf/**/*.toml.bak
+
+pyrightconfig.json
