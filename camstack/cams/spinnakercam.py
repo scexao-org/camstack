@@ -112,7 +112,7 @@ class SpinnakerUSBCamera(BaseCamera):
         logg.debug('prepare_camera_finalize @ SpinnakerUSBCamera')
 
         # Set fps max
-        max_fps = self.spinn_cam.AcquisitionFrameRate.GetMax()
+        max_fps = self.spinn_cam.AcquisitionFrameRate.GetMax()  # Hz
         self.set_fps(max_fps)
         # Expo max
         max_expo_this_fps = min(self.spinn_cam.ExposureTime.GetMax() * 1e-6,
@@ -418,6 +418,20 @@ class USYD_VIS_PG1(FLIR_U3_Camera):
     def _prepare_backend_cmdline(self, reuse_shm: bool = False):
         return super()._prepare_backend_cmdline(
                 reuse_shm=reuse_shm, env_launcher='mamba run -n py38 ')
+
+    def set_fps(self, fps: float) -> float:
+        '''
+        Override -- this camera does not support set_fps.
+        '''
+        return self.get_fps()
+
+    def get_fps(self):
+        max_fps = self.spinn_cam.AcquisitionFrameRate.GetMax()  # Hz
+        tint = self.get_tint()
+        fps = min(1 / tint, max_fps)
+        self.camera_shm.update_keyword('FRATE', fps)
+        logg.info(f'get_fps: {fps}')
+        return fps
 
 
 if __name__ == "__main__":
