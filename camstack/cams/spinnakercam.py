@@ -127,10 +127,11 @@ class SpinnakerUSBCamera(BaseCamera):
         logg.info('spinn_system.ReleaseInstance()')
         self.spinn_system.ReleaseInstance()
 
-    def _prepare_backend_cmdline(self, reuse_shm: bool = False):
+    def _prepare_backend_cmdline(self, reuse_shm: bool = False,
+                                 env_launcher: str = ''):
 
         # Prepare the cmdline for starting up!
-        exec_path = "python -m camstack.acq.spinnaker_usbtake"
+        exec_path = env_launcher + "python -m camstack.acq.spinnaker_usbtake"
         self.taker_tmux_command = (f'{exec_path} -s {self.STREAMNAME} '
                                    f'-u {self.spinn_number} -l 0')
         if reuse_shm:
@@ -404,6 +405,10 @@ class USYD_VIS_PG1(BlackFlyS):
 
         self._set_formatted_keyword('DETPXSZ1', 0.00375)
         self._set_formatted_keyword('DETPXSZ2', 0.00375)
+
+    def _prepare_backend_cmdline(self, reuse_shm: bool = False):
+        return super()._prepare_backend_cmdline(
+                reuse_shm=reuse_shm, env_launcher='mamba run -n py38 ')
 
 
 if __name__ == "__main__":
