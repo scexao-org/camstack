@@ -121,6 +121,9 @@ def main(
 
     kill_running(tmux)
 
+    if args.kill:
+        return
+
     # initiating this camera's main method
     print(f"DEBUG: using {cam_pyinvocationstring}")
     if cam_name == 'VPUPCAM':
