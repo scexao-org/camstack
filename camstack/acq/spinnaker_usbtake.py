@@ -10,12 +10,63 @@
         -u <unit>        Number of the camera for the Spinnaker API [default: 0]
         -l <loops>       Number of images to take (0 for free run) [default: 0]
         -R               Attempt SHM reuse if possible
+        -B               List cameras
 '''
+# Consider running this directly in mamba
+# mamba run -n py38 python -m camstack.acq.spinnaker_usbtake [options]
 
 import PySpin
 from pyMilk.interfacing.shm import SHM
 
 import time
+
+
+def main_camera_info():
+    spinn_system = None
+    spinn_cam = None
+
+    interesting_props = [
+            'WidthMax', 'HeightMax', 'BinningHorizontal', 'BinningVertical',
+            'AcquisitionFrameRate', 'ExposureTime', 'Gain', 'Width', 'Height',
+            'OffsetX', 'OffsetY'
+    ]
+
+    try:
+        spinn_system = PySpin.System.GetInstance()
+        cam_list = spinn_system.GetCameras()
+
+        for kk in range(len(cam_list)):
+            spinn_cam = cam_list[kk]
+            spinn_cam.Init()
+            cam_info = \
+                [spinn_cam.DeviceVendorName() + ' ' + spinn_cam.DeviceModelName() + \
+                    f' [{spinn_cam.DeviceFamilyName()}] [ID={spinn_cam.DeviceID()}]']
+            for prop in interesting_props:
+                p = getattr(spinn_cam, prop)
+                cam_info += [
+                        f'{prop:<25} {p.GetValue():<20} [{p.GetUnit():<2}]   ({p.GetMin()} -- {p.GetMax()})'
+                ]
+
+            print(f'--------- CAMERA {kk} ----------')
+            print('\n'.join(cam_info))
+
+            spinn_cam.DeInit()
+            spinn_cam = None
+    finally:
+        cam_list.Clear()
+        try:
+            if spinn_cam is not None:
+                spinn_cam.DeInit()
+                del spinn_cam
+        except UnboundLocalError:
+            pass
+        except PySpin.SpinnakerException as ex:
+            print('Error C: %s' % ex)
+        try:
+            if spinn_system is not None:
+                spinn_system.ReleaseInstance()
+        except PySpin.SpinnakerException as ex:
+            print('Error D: %s' % ex)
 
 
 def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
@@ -77,8 +128,8 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
 
             try:
                 spinn_image = spinn_cam.GetNextImage(1000)  # 1 sec timeout
-            except PySpin.SpinnakerException:
-                print('GetNextImage timeout.')
+            except PySpin.SpinnakerException as exc:
+                print(f'GetNextImage timeout: {repr(exc)}')
                 continue
 
             if spinn_image.IsIncomplete():
@@ -91,6 +142,7 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
                                                  PySpin.HQ_LINEAR)
             else:
                 conv_image = spinn_image
+            spinn_image.Release()
 
             data_arr = conv_image.GetNDArray()
 
@@ -153,5 +205,10 @@ if __name__ == "__main__":
 
     arg_attempt_reuse = args["-R"]
 
-    main_acquire_spinnaker(arg_cam_number, arg_stream_name, arg_n_loops,
-                           arg_attempt_reuse)
+    enumerate_info = args['-B']
+
+    if enumerate_info:
+        main_camera_info()
+    else:
+        main_acquire_spinnaker(arg_cam_number, arg_stream_name, arg_n_loops,
+                               arg_attempt_reuse)
