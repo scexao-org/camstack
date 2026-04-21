@@ -247,7 +247,7 @@ class FLIR_U3_Camera(SpinnakerUSBCamera):
             logg.warning('Cannot set Gamma to 1.0 for this camera.')
             pass
         # BlackLevel 0. - May have to add some bias back
-        self.spinn_cam.BlackLevel.SetValue(0)
+        self.spinn_cam.BlackLevel.SetValue(self.spinn_cam.BlackLevel.GetMin())
 
         # Crank the gain to the max. Haven't figured out many things just yet.
         self.spinn_cam.Gain.SetValue(self.spinn_cam.Gain.GetMax())
@@ -381,7 +381,7 @@ class BlackFlyS(SpinnakerUSBCamera):
         SpinnakerUSBCamera.prepare_camera_finalize(self, mode_id)
 
 
-class USYD_VIS_PG1(BlackFlyS):
+class USYD_VIS_PG1(FLIR_U3_Camera):
     '''
     BFLY-U3-13S2M
     '''
@@ -399,7 +399,7 @@ class USYD_VIS_PG1(BlackFlyS):
     }
 
     KEYWORDS = {}
-    KEYWORDS.update(BlackFlyS.KEYWORDS)
+    KEYWORDS.update(FLIR_U3_Camera.KEYWORDS)
 
     def _fill_keywords(self):
 
