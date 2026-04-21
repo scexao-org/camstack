@@ -81,7 +81,12 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
 
         spinn_system = PySpin.System.GetInstance()
         cam_list = spinn_system.GetCameras()
-        spinn_cam = cam_list[api_cam_num]
+        if api_cam_num < len(cam_list):  # Index
+            spinn_cam = cam_list[api_cam_num]
+        else:
+            _serials = [int(c.GetDeviceSerialNumber()) for c in cam_list]
+            spinn_cam = cam_list[_serials.index(api_cam_num)]
+
         cam_list.Clear()
 
         spinn_cam.Init()
