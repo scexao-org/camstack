@@ -100,13 +100,16 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
         need_convert_16 = spinn_image.GetBitsPerPixel() not in [8, 16]
 
         if need_convert_16:
-            conv_image = spinn_image.Convert(PySpin.PixelFormat_Mono16,
-                                             PySpin.HQ_LINEAR)
+            processor = PySpin.ImageProcessor()
+            conv_image = processor.Convert(spinn_image,
+                                           PySpin.PixelFormat_Mono16)
         else:
             conv_image = spinn_image
 
         data_arr = conv_image.GetNDArray()
         spinn_image.Release()
+        if need_convert_16:
+            conv_image.Release()
 
         try:
             shm = SHM(stream_name)
@@ -143,13 +146,16 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
                 continue
 
             if need_convert_16:
-                conv_image = spinn_image.Convert(PySpin.PixelFormat_Mono16,
-                                                 PySpin.HQ_LINEAR)
+                conv_image = processor.Convert(spinn_image,
+                                               PySpin.PixelFormat_Mono16)
             else:
                 conv_image = spinn_image
-            spinn_image.Release()
 
             data_arr = conv_image.GetNDArray()
+
+            spinn_image.Release()
+            if need_convert_16:
+                conv_image.Release()
 
             time_2 = time.time()
             dt = time_2 - time_1
