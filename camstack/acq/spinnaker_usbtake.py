@@ -27,7 +27,8 @@ def main_camera_info():
 
     interesting_props = [
             'WidthMax', 'HeightMax', 'BinningHorizontal', 'BinningVertical',
-            'AcquisitionFrameRate', 'ExposureTime', 'Gain'
+            'AcquisitionFrameRate', 'ExposureTime', 'Gain', 'Width', 'Height',
+            'OffsetX', 'OffsetY'
     ]
 
     try:
@@ -127,8 +128,8 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
 
             try:
                 spinn_image = spinn_cam.GetNextImage(1000)  # 1 sec timeout
-            except PySpin.SpinnakerException:
-                print('GetNextImage timeout.')
+            except PySpin.SpinnakerException as exc:
+                print(f'GetNextImage timeout: {repr(exc)}')
                 continue
 
             if spinn_image.IsIncomplete():
@@ -141,6 +142,7 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
                                                  PySpin.HQ_LINEAR)
             else:
                 conv_image = spinn_image
+            spinn_image.Release()
 
             data_arr = conv_image.GetNDArray()
 
