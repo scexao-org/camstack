@@ -72,7 +72,12 @@ class SpinnakerUSBCamera(BaseCamera):
 
         if self.spinn_cam is None:
             cam_list = self.spinn_system.GetCameras()
-            self.spinn_cam = cam_list[self.spinn_number]
+            if self.spinn_number < len(cam_list):  # Index
+                self.spinn_cam = cam_list[self.spinn_number]
+            else:
+                serials = [int(c.GetDeviceSerialNumber()) for c in cam_list]
+                self.spinn_cam = cam_list[serials.index(self.spinn_number)]
+
             cam_list.Clear()
 
             self.spinn_cam.Init()
