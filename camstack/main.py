@@ -5,41 +5,39 @@ import typing as typ
 
 from argparse import ArgumentParser
 
+# Let's use absolute imports here sor this file can run in python -i <path> mode
 from camstack.core import tmux
-from camstack.core.utilities import enforce_whichcomp
-import scxconf
+from camstack.core.utilities import enforce_whichcomp, get_thiscomp
+from camstack.main_arch import CameraLauncherSpec
+
+from camstack.deployments import CAMERA_LAUNCH_CONFIG
+
+try:
+    import scxconf
+except ImportError as exc:
+    scxconf = None
+    print('Warning: scxconf is not available, SSH remote camera launch is disabled.'
+          )
 
 # This is the main data structure for
 # which cameras map to which python modules/files
-CAM_INVOCATION: dict[str | None, tuple[str | None, str | None]] = {
-        "ALALA": ("camstack.cam_mains.alala_orcam", 'AORTS'),  # nlcwfs?
-        "APD": ("camstack.cams.ao_apd", 'AORTS'),  # nlcwfs?
-        "APAPANE": ("camstack.cam_mains.apapane", '5'),
-        "APAPANEG": ("camstack.cam_mains.apapane -- G", '5'),
-        "FIRST": ("camstack.cam_mains.first_orcam", 'K'),
-        "FIRST_PUPIL": ("camstack.cam_mains.first_pupil", 'K'),
-        "IIWI": ("camstack.cam_mains.iiwi", 'AORTS'),
-        "IIWIA": ("camstack.cam_mains.iiwi -- A", 'AORTS'),
-        "IIWIG": ("camstack.cam_mains.iiwi -- G", 'AORTS'),
-        "IIWII": ("camstack.cam_mains.iiwi -- I", 'AORTS'),
-        "IIWI5": ("camstack.cam_mains.iiwi -- 5", '5'),
-        "GLINT": ("camstack.cam_mains.glintcam", '5'),
-        "KALAOCAM": ("camstack.cam_mains.kalaocam", None),
-        "KIWIKIU": ("camstack.cam_mains.kiwikiu", '5'),
-        "PALILA": ("camstack.cam_mains.palila", '5'),
-        "PUEO": ("camstack.cam_mains.pueo", '5'),
-        "SIMUCAM": ("camstack.cam_mains.simucam", None),
-        "VCAM1": ("camstack.cam_mains.vcam -- 1", '5'),
-        "VCAM2": ("camstack.cam_mains.vcam -- 2", '5'),
-        "VPUPCAM": ("camstack.cam_mains.vpupcam", 'V'),
-        "NULL": (None, None),
-}
+# TODO toml file? in conf/?
 
-CAM_NAMES = [str(k) for k in CAM_INVOCATION]
+from collections import Counter
+
+cc = Counter([c.name for c in CAMERA_LAUNCH_CONFIG])
+if any(cc.values()) > 1:
+    raise ValueError(
+            f'Duplicate keys {[c for c, v in cc.items() if v > 1]} in CONFIG.CAMERA_LAUNCHERS'
+    )
+CAM_LAUNCHERS: dict[str, CameraLauncherSpec] = {
+        c.name.upper(): c
+        for c in CAMERA_LAUNCH_CONFIG
+}
 
 parser = ArgumentParser(prog="camstart",
                         description="Spin up or restart a camera tmux daemon")
-parser.add_argument("camera", choices=CAM_NAMES, type=str.upper,
+parser.add_argument("camera", choices=CAM_LAUNCHERS.keys(), type=str.upper,
                     help="Name of camera to start")
 _group = parser.add_mutually_exclusive_group()
 _group.add_argument(
@@ -71,44 +69,34 @@ def main(
 
     cam_name: str = args.camera
 
-    cam_pyinvocationstring, required_machine = CAM_INVOCATION[cam_name]
+    launch_config = CAM_LAUNCHERS[cam_name]
+    tmux_name = launch_config.ctrl_tmux_name
 
-    # Default cam name e.g. palila_ctrl
-    if cam_name.lower().startswith('iiwi'):
-        tmux_name = 'iiwi_ctrl'
-    elif cam_name.lower().startswith('apapane'):
-        tmux_name = 'apapane_ctrl'
-    elif cam_name.lower() == 'first':
-        tmux_name = 'fircam_ctrl'
-    elif cam_name.lower() == 'pueo':
-        tmux_name = 'ocam_ctrl'
-    else:
-        tmux_name = f"{cam_name.lower()}_ctrl"
-
-    if args.kill:
-        print(f"Killing {cam_name} in tmux session {tmux_name}")
-    else:
-        print(f"Starting {cam_name} in tmux session {tmux_name}")
-
-    if (required_machine is None or force_local or
-                enforce_whichcomp(required_machine, err=False)):
+    req_machine = launch_config.required_machine
+    if (req_machine is None or force_local or
+                enforce_whichcomp(req_machine, err=False)):
         # No request OR local machine
+        machine_str = f'local [{get_thiscomp()}]'
         tmux_pane = tmux.find_or_create(tmux_name)
     else:
         # Remote
-        if (permit_ssh_bounce and required_machine is not None):
+        if (scxconf and permit_ssh_bounce and req_machine is not None):
             tmux_pane = tmux.find_or_create_remote(
-                    tmux_name,
-                    scxconf.SSH_LOOKUP_FROM_WHICHCOMP[required_machine])
+                    tmux_name, scxconf.SSH_LOOKUP_FROM_WHICHCOMP[req_machine])
+            machine_str = f'remote [{get_thiscomp()}->{req_machine}]'
         else:
             # This always raises.
-            tmux_pane = None
-            enforce_whichcomp(required_machine, err=True)
+            tmux_pane, machine_str = None, None
+            enforce_whichcomp(req_machine, err=True)
 
-    assert tmux is not None  # typing is happy.
+    assert tmux_pane is not None  # typing is happy.
+    assert machine_str is not None
+
+    print((f"{'Killing' if args.kill else 'Starting'} {cam_name} "
+           f"in tmux session {tmux_name} on {machine_str}"))  #todo
 
     # Basically this is to ensure bashrc has finished loading in the tmux we just created.
-    # Important for environment + bashrc == conda loaded == can change virtualenv
+    # Important for environment + bashrc == conda loaded == can change env
     import time
     time.sleep(2.0)
 
@@ -121,13 +109,14 @@ def main(
     tmux.kill_running(tmux_pane)
 
     # initiating this camera's main method
-    print(f"DEBUG: using {cam_pyinvocationstring}")
-    if cam_name == 'VPUPCAM':
-        tmux.send_keys(tmux_pane, f"conda activate pycapture")
-    tmux.send_keys(tmux_pane, f"python -i -m {cam_pyinvocationstring}")
+    print(f"DEBUG: using {launch_config.conda_env_string} + python -m {launch_config.main}"
+          )
+    if launch_config.conda_env_string != '':
+        tmux.send_keys(tmux_pane, launch_config.conda_env_string)
+    tmux.send_keys(tmux_pane, f"python -i -m {launch_config.main}")
 
     # all done. no cleanup
-    print(f"Finished initiating camera. Inspect {tmux_name} "
+    print(f"Completed. Inspect {tmux_name} "
           "for further debug information (some cameras take "
           "a little longer to start).")
 

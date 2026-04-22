@@ -10,8 +10,10 @@ This creates the python control shell in ocam_ctrl.
 
 Also includes the camera viewers - and their backups
 
------
 
+Custom deployments: the variable `CAMSTACK_DEPLOYMENT_ID` is needed. See the `camstack/deployment/__init__.py` in how it is used.
+
+-----
 
 ## Camera acquisition stack
 
