@@ -1,57 +1,135 @@
 # Camstack
 
+Camera session manager developed for Subaru/SCExAO
 
-Camera management stuff. Including keywords and TCP streaming from the stream source.
+## Installation
 
-Gets installed with `pip install -e .`
+- Install [pyMilk](https://github.com/milk-org/pyMilk) first
+- Clone with git.
+- `pip install -e .` at repository root.
+- Some features (EDT) will _require that the root is `$HOME/src/camstack`.
+- Define `CAMSTACK_DEPLOYMENT_ID` to benefit from a custom deployment, and see `camstack/deployment/__init__.py` for how they are defined and used.
 
-Look at the scripts/startOCAM to get an idea.
-This creates the python control shell in ocam_ctrl.
+## Camera session
 
-Also includes the camera viewers - and their backups
+```mermaid
+%%{init: {'flowchart': {'nodeSpacing': 25, 'rankSpacing': 50, 'useMaxWidth': false}}}%%
+flowchart TD
+    A["camstart [name] [-slk]"]
+
+    subgraph CS["Camera Session"]
+        subgraph CC["Camera Control"]
+          direction LR
+        direction LR
+          CCInit[Init
+          - Configure camera
+          - Configure grabber
+          - Run dependents]
+          CCControl[Control
+          _exposed  python prompt_
+          - Change crop
+          - Change exposure, etc
+          - Change trigger modes
+          - Any definition of camera]
+          CCPT[Polling thread
+          -Dependents status
+          -Temperature
+          -Other camera polls]
+          CCRedis[Opt: DB update]
+          CCSystemd[Opt: status & alerts]
+          CCPyro[Opt: RPC Control
+          Using Pyro, control
+          cam from any python
+          session]
+        end
+        subgraph D["Dependents"]
+        CF[Camera Framegrabbing]
+        AX1[Aux process 1]
+        AX2[Aux process 2]
+        end
+    end
+
+    A -->|"Start/kills in tmux_ctrl session"| CC
+    CC -->|"in tmux"| CF
+    CC -->|"in tmux"| AX1
+    CC -->|"in tmux"| AX2
+    CF -->|"data SHM (raw)"| AX1
+    AX1 -->|"data SHM (processed)"| AX2
+
+    linkStyle 4,5 stroke:red,stroke-width:3px
+```
+
+## Controlling the camera
+
+There are three ways of controlling the camera:
+__Directly at-the-counter__
+An interactive python shell is always running in the `camera_ctrl` tmux session. By attaching to this session, the operator can call all the exposed camera methods, e.g. `set_tint(shutter_time)`, `set_camera_mode()`, `set_fps(1e9)`, etc.
+__Tmux line injection__
+Using the tmux API, the commands above can be sent (shell, python's libtmux) using `tmux send-keys` into the ctrl session
+__Python remote objects__
+During the startup, the camera object can be bound to a Remote Procedure Call (RPC) object using the `Pyro` package.
+This enables remote connection (local and remote) to the control object for any allowable location, and control the camera such as:
+```python
+cam = connect('CAMERA_IDENTY')
+cam.get_tint() # returns current exposure time
+cam.set_camera_mode('MY_CUSTOM_CROP') # halts and restart the camera in a different sensor crop mode # the crop is pre-defined in the camera's class.
+cam.set_fps(1000) # 1 kHz
+```
+
+## Accessing the data
+
+The data pointer is a shared memory object, which is separate from the control object. See [ImageStreamIO](https://github.com/milk-org/ImageStreamIO) and the python bindings [pyMilk](https://github.com/milk-org/pyMilk)
+At any python terminal on the local machine
+```python
+from pyMilk.interfacing.shm import SHM
+cam_data = SHM('cam_shm_name')
+array = cam_data.get_data() # Get current data, maybe stale
+array = cam_data.get_data(True) # Get next published data
+array_list = cam.multi_recv_data(100) # Get next 100 frames
+```
+
+
+## Viewers
+
+`pygame` based SHM viewers are distributed with camstack
+The package an plugin system to customize their features.
+
+> pygame requires python <= 3.13
+
+Running `anycam.py <shm_name>` (and press `h` for help):
+
+![anycam screenshot](doc/anycam_screenshot.png)
 
 -----
 
+## Deploying new cameras
 
-## Camera acquisition stack
+The class hierarchy is built:
+> Base class
+> > Common technical basis (e.g. same framegrabber)
+> > > Camera model: define control methods for this camera odel)
+> > > > Camera identity: define features, keywords, for ONE camera doing ONE job.
 
-### Layout
+Integrating new camera models is more or less easy depending on the existing, and how esoteric the manufacturer's SDK.
 
-`./scripts` folder: bash launcher scripts. Cleanup of the `<cam>_ctrl` tmux, and eventually launch the python `camstack.cam_mains.<cam>` main script.
+An entrypoint is created in the `deployments/` folder for each camera identity, and then the session can be started using
+```bash
+camstart <camera_nickname>
+```
 
-`./camstack/cam_mains` folder: camera launcher python scripts.
-- Define auxiliary tasks:
-  - a tmux session
-  - a command line
-  - a cpuset and a real-time priority
-  - and a sequencing order in which to be started/killed relative to other aux tasks.
-- Instantiate the camera. A camera class is:
-  - a subclass of the `BaseCamera`
-  - with a specialized backend (USB, framegrabber, underlying API...)
-  - with model specific definitions (C-Red One, C-Red 2, Orca, etc...)
-  - with camera specific definitions (special cropmodes for Palila, GLINT, etc...)
+## Misc
+
+### Why separate the framegrabbing from the control
+
+In many science cases, the _camera framegrabbing_ is designed to be a C program with realtime privileges and minimal overhead. On the other hand, it is convenient to keep the camera control and session orchestrator purely in python.
+
+### Where is the framegrabbing code?
+
+Unfortunately, not here until we do a better review of
 
 ### Camera startup
 
-Instantiating the Camera class eventually results in the camera freerunning in a shared memory and all the auxiliary tasks being started.
-
-The camera launcher `camstack.cam_mains.<cam>` script, which runs in the `<cam>_ctrl` tmux session, eventually drops to an interactive python prompt. **This is where you control the camera**. A clean quit is performed by issuing the `close()` command.
-
-### Init sequence:
-
-This is the general outline of what happens during the Camera Class constructor.
-
-- `kill_taker_and_dependents()`: Allocate and clear all tmux sessions for framegrabber and auxiliary tasks
-- `init_framegrab_backend()`: [BACKEND SPECIFIC] initialize resources for acquisition on the receiving end. This can be opening a serial port, configuring the acquisition size, etc...
-- `prepare_camera_for_size()`: [BACKEND AND CAMERA SPECIFIC] set the camera crop mode. Performs tasks that need the camera control channel open but that need to be done before the acquisition starts.
-- `_start_taker_no_dependents()`:
-  - `_prepare_backend_cmdline()`: [BACKEND SPECIFIC] prep the shell line to be run in the `<cam>_fgrab` tmux. This is a minimal chunk of C to make the camera freerun to a SHM.
-  - Start said cmdline and begin acquisition.
-  - Adjust real-time priority and cpuset
-- `grab_shm_fill_keywords()`: [CAMERA SPECIFIC] get a python handle to the freshly created SHM (by the framegrabbing process), and proceed to populate FITS keywords specific to the camera. They'll propagate through TCP all the way to the logger. This is not backend specific, the access is done through pyMilk, but the exact keywords are camera specific.
-- `prepare_camera_finalize()`: [CAMERA, BACKEND SPECIFIC] Finish configuring the camera for the acquisition mode you want, with those last commands having to / allowed to be issued after the camera freeruns. Such as setting fps, integration time, NDR, exttrig for some models.
-
-See a more extensive example in [this page](DETAILED_CAMERA_INIT.md)
+See [details (probs not up to date)](doc/DETAILED_CAMERA_INIT.md)
 
 ### Changing camera "mode"
 
@@ -60,53 +138,39 @@ This is done without quitting at the `<cam>_ctrl` command prompt, by calling `se
 
 For dumb cameras (acquisition channel but no control channel), the FG acquisition can be set to an arbitrary size dynamically by calling `set_camera_size(height, width)`.
 
+## Trimmed layout
 
-### Recap
-
-
-| Camera | What         | Class        | Medium               | Bash entry          | Python entry     | Computer | Stream      | Raw stream   |
-| ------ | ------------ | ------------ | -------------------- | ------------------- | ---------------- | -------- | ----------- | ------------ |
-| Apapane| CRED1        | Apapane      | Camlink              | `cam-apapanestart`  | `apapane.py`     | scexao5  | `apapane`   | `apapane_raw`|
-| Palila | CRED2        | Palila       | Camlink              | `cam-palilastart`   | `palila.py`      | scexao5  | `palila`    | `palila_raw` |
-| GLINT  | CRED2        | GLINT        | Camlink              | `cam-glintstart`    | `glintcam.py`    | scexao5  | `glint`     |              |
-| Kiwikiu| CRED2        | Kiwikiu      | Camlink              | `cam-kiwikiustart`  | `kiwikiu.py`     | scexao5  | `kiwikiu`   |              |
-| Reno   | Ocam2K       | OCAM2K       | Camlink              | `cam-ocamstart`     | `renocam.py`     | scexao5  | `ocam2d`    | `ocam2krc`   |
-| Alala  | OrcaQuest    | AlalaOrcam   | CoaxPress (x)or USB3 | `cam-alalacamstart` | `first_orcam.py` | alala    | `orcam`     |              |
-| FIRST  | OrcaQuest    | FIRSTOrcam   | CoaxPress (x)or USB3 | `cam-fircamstart`   | `alala_orcam.py` | kamua    | `orcam`     |              |
-| FLIR   | BlackFlyS    | BlackFlyS    | USB3                 | ` `                 | ` `              |          |             |              |
-| FLIR   | GS3-U3-23S6M | Grasshopper3 | USB3                 | ` `                 | ` `              | scexao5  |             |              |
-| FLIR   | FL3-U3-13S2M | Flea3        | USB3                 | `cam-vpupcamstart`  | `vpupcam.py`     | vampires | `vpupcam`   |              |
-| FLIR   | FL3-U3-13S2M | Flea3        | USB3                 | ` `                 | ` `              | kamua    |             |              |
-| Nuvu   | HNü128AO     | Kalao        | Camlink              | ` `                 | `kalaocam.py`    |          |             |              |
-| VCam   | Andor897     | Vampires     | Camlink              | ` `                 | ` `              | scexao5  | `vcamim<k>` |              |
-| FIRST  | Andor897     | First        | Camlink              | ` `                 | ` `              | kamua    | ` `         |              |
-
-### Class tree:
-
-- BaseCamera
-  - EDTCamera (need EDT framegrabber acquisition, private repo.)
-    - CRED1
-      - Apapane
-    - CRED2
-      - Palila
-      - GLINT
-      - Kiwikiu
-    - OCAM2K
-    - NUVU
-      - Kalao
-    - AutoDumbEDTCamera
-      - AutoAndor897
-        - First
-        - Vampires
-  - DCAMCamera (need DCAM/Hamamatsu acquisition, private repo.)
-    - OrcaQuest
-      - FIRSTOrcam
-      - AlalaOrcam
-  - SpinnakerUSBCamera (need to install Spinnaker API) [more](./doc/FLIR_USB_Cameras.md)
-    - BlackFlyS
-    - FLIR_U3_Camera (broken, use FlyCaptureUSBCamera::(Grasshopper3|Flea3) instead)
-  - FlyCaptureUSBCamera (need to install FlyCapture API) [more](./doc/FLIR_USB_Cameras.md)
-    - Grasshopper3
-    - Flea3
-      - VampiresPupilFlea
-      - FirstPupilFlea
+```bash
+├── camstack/                      # __python package root__
+│   ├── acq/                       # runnable files for acquisition
+│   │   ├── flycapture_usbtake.py  #     with PyCapture2
+│   │   ├── spinnaker_usbtake.py   #     with PySpin
+│   │   └── simcam_framegen.py     #     frame emitter for simulated camera
+│   ├── cam_mains/                 # Exec entrypoint for camera personalities, with auxiliary helper processes
+│   ├── cams/                      # Camera class hierarchy
+│   │   ├── base.py                #     Base class, defining all of a "camera session"
+│   │   └── ...                    #     Many more files following inheritance as:
+│   │                              # Base --> Framegrabber type --> Camera model --> Camera personality
+│   ├── core/
+│   ├── deployments/               # Deployment files defining which camera personalities are available in each install
+│   ├── deprecatedscripts/
+│   ├── image_processing.py        # image processing routines
+│   ├── main_arch.py               # Schema definitions for deployment
+│   ├── main.py                    # __main entrypoint__ for starting camera sessions
+│   ├── pyro_keys.py
+│   ├── scxkw.py                   # Wrapper around optional keyword + database system
+│   ├── utilities/
+│   ├── viewerclasses/             # Pygame viewers: classes for viewers tailored to different camera personalities
+│   ├── viewermains/               # Pygame viewers: entrypoints for viewer applications
+│   └── viewertools/               # Pygame viewers: a plugin stack for the pygame viewers
+├── conf/
+│   ├── modes/                     # toml files containing e.g. crop modes
+│   └── edt_fg_conf/               # cfg files for EDT framegrabbers (cameralink)
+├── doc/                           # Documentation
+├── ocamdecode/                    # Generation & config files for OCAM2
+├── pyproject.toml
+├── README.md
+├── scripts/                       # Custom utilities & legacy deployment scripts
+├── setup.py
+└── tests/                         # pytest stack
+```

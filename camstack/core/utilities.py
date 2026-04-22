@@ -398,6 +398,10 @@ def enforce_whichcomp(comp: str, err: bool = True) -> bool:
     return this_comp == comp
 
 
+def get_thiscomp() -> str:
+    return os.environ.get('WHICHCOMP', '')
+
+
 def process_ordering_start(processes: list[DependentProcess]):
     for k, proc in enumerate(processes):
         proc.start_order = k

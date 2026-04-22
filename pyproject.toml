@@ -15,7 +15,6 @@ dependencies = [
   "numpy",
   "pydantic",
   "tqdm",
-  "pydantic",
   "tomli",
   "tomli-w"
 ]
@@ -47,7 +46,7 @@ all = []
 # possible... https://github.com/pypa/pip/issues/9726
 [project.scripts]
 # NEW for starting cams.
-camstart = "camstack.cam_mains.main:main"
+camstart = "camstack.main:main"
 
 # VIEWERS
 # Using an empty dud_main function at the end of file for when
@@ -63,6 +62,18 @@ pueo = "camstack.viewermains.pueo:main" # WARNING IN TRANSITION
 vcam1 = "camstack.viewermains.vcam:main1"
 vcam2 = "camstack.viewermains.vcam:main2"
 vpupcam = "camstack.viewermains.vpupcam:main"
+
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+    "--ignore=mains/*",
+]
+
+[tool.coverage.run]
+command_line = "-m pytest"
+branch = true
+source = ["./camstack"]
 
 [tool.pyright]
 extraPaths = [] # Need to list scexao's pip install -e packages... --> pyrightconfig.json

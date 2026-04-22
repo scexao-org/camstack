@@ -13,7 +13,7 @@
 from camstack.core.utilities import enforce_whichcomp
 
 from .depwarning import print_dep_warning
-from camstack.cam_mains.main import main
+from camstack.main import main
 
 
 def alala() -> None:
