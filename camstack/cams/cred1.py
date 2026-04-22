@@ -1,7 +1,7 @@
 """
     Apapane
 """
-from typing import Union, Optional as Op, Tuple, List
+from __future__ import annotations
 
 import logging as logg
 import os
@@ -91,13 +91,13 @@ class CRED1(EDTCamera):
             channel: int = 0,
             basefile=None,
             taker_cset_prio: Typ_tuple_cset_prio = ("system", None),
-            dependent_processes: List[DependentProcess] = [],
+            dependent_processes: list[DependentProcess] = [],
     ) -> None:
         # Allocate and start right in the appropriate binning mode
         self.synchro: bool = False
         if basefile is None:
-            basefile = os.environ["HOME"] + "/src/camstack/config/cred1_16bit.cfg"
-        self.NDR: Op[int] = None  # Grabbed in prepare_camera_finalize
+            basefile = 'cred1_16bit.cfg'
+        self.NDR: int | None = None  # Grabbed in prepare_camera_finalize
 
         # Call EDT camera init
         # This should pre-kill dependent sessions
@@ -136,7 +136,8 @@ class CRED1(EDTCamera):
                 "Calling _constructor_finalize on base CRED1 class. Must subclass."
         )
 
-    def prepare_camera_for_size(self, mode_id: Op[Typ_mode_id] = None) -> None:
+    def prepare_camera_for_size(self,
+                                mode_id: Typ_mode_id | None = None) -> None:
         # Note: when called the first time, this immediately follows
         # self.init_framegrab_backend()
         # So, the serial port is live, but we haven't tried to talk yet.
@@ -160,7 +161,8 @@ class CRED1(EDTCamera):
 
         EDTCamera.prepare_camera_for_size(self, mode_id=mode_id)
 
-    def prepare_camera_finalize(self, mode_id: Op[Typ_mode_id] = None) -> None:
+    def prepare_camera_finalize(self,
+                                mode_id: Typ_mode_id | None = None) -> None:
         logg.debug("prepare_camera_finalize @ CRED1")
 
         if mode_id is None:
@@ -236,7 +238,7 @@ class CRED1(EDTCamera):
     # AD HOC METHODS - TO BE BOUND IN THE SHELL ?
     # ===========================================
 
-    def _get_cropping(self) -> Tuple[int, int, int, int]:
+    def _get_cropping(self) -> tuple[int, int, int, int]:
         # We mimicked the definition of the cropmodes from the CRED2
         # BUT the CRED1 is 1-base indexed.... remove 1
         logg.debug("_get_cropping @ CRED1")
@@ -250,7 +252,7 @@ class CRED1(EDTCamera):
         return x0, x1, y0, y1
 
     def _set_check_cropping(self, x0: int, x1: int, y0: int,
-                            y1: int) -> Tuple[int, int, int, int]:
+                            y1: int) -> tuple[int, int, int, int]:
         for _ in range(3):
             logg.debug("_set_check_cropping attempt @ CRED1")
             gx0, gx1, gy0, gy1 = self._get_cropping()

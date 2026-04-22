@@ -1,7 +1,9 @@
 '''
     Palila, Kiwikiu, GLINT
 '''
-from typing import Union, List, Optional as Op, Tuple
+from __future__ import annotations
+
+import typing as typ
 
 import os
 import time
@@ -70,12 +72,12 @@ class CRED2(EDTCamera):
     def __init__(self, name: str, stream_name: str, mode_id: int = 0,
                  unit: int = 0, channel: int = 0,
                  taker_cset_prio: util.Typ_tuple_cset_prio = ('system', None),
-                 dependent_processes: List[util.DependentProcess] = []) -> None:
+                 dependent_processes: list[util.DependentProcess] = []) -> None:
 
         # Allocate and start right in the appropriate binning mode
         self.synchro = False
-        basefile = os.environ['HOME'] + '/src/camstack/config/cred2_16bit.cfg'
-        self.NDR: Op[int] = None  # Grabbed in prepare_camera_finalize
+        basefile = 'cred2_16bit.cfg'
+        self.NDR: int | None = None  # Grabbed in prepare_camera_finalize
 
         # Call EDT camera init
         # This should pre-kill dependent sessions
@@ -102,8 +104,8 @@ class CRED2(EDTCamera):
     # AD HOC PREPARE CAMERA
     # =====================
 
-    def prepare_camera_for_size(self,
-                                mode_id: Op[util.Typ_mode_id] = None) -> None:
+    def prepare_camera_for_size(self, mode_id: util.Typ_mode_id | None = None
+                                ) -> None:
         logg.debug('prepare_camera_for_size @ CRED2')
 
         self.send_command('set cropping on')
@@ -125,8 +127,8 @@ class CRED2(EDTCamera):
 
         EDTCamera.prepare_camera_for_size(self, mode_id=mode_id)
 
-    def prepare_camera_finalize(self,
-                                mode_id: Op[util.Typ_mode_id] = None) -> None:
+    def prepare_camera_finalize(self, mode_id: util.Typ_mode_id | None = None
+                                ) -> None:
         logg.debug('prepare_camera_finalize @ CRED2')
 
         if mode_id is None:
@@ -188,7 +190,7 @@ class CRED2(EDTCamera):
     # AD HOC METHODS - TO BE BOUND IN THE SHELL ?
     # ===========================================
 
-    def _get_cropping(self) -> Tuple[int, int, int, int]:
+    def _get_cropping(self) -> tuple[int, int, int, int]:
         logg.debug('_get_cropping @ CRED2')
         _, xx, yy = self.send_command('cropping raw').split(
                 ':')  # return is "(on|off):x0-x1:y0-y1"
@@ -197,7 +199,7 @@ class CRED2(EDTCamera):
         return x0, x1, y0, y1
 
     def _set_check_cropping(self, x0: int, x1: int, y0: int,
-                            y1: int) -> Tuple[int, int, int, int]:
+                            y1: int) -> tuple[int, int, int, int]:
         for _ in range(3):
             logg.debug('_set_check_cropping attempt @ CRED2')
             gx0, gx1, gy0, gy1 = self._get_cropping()
@@ -226,13 +228,13 @@ class CRED2(EDTCamera):
         logg.info(f'set_synchro: {self.synchro}')
         return self.synchro
 
-    def set_gain(self, gain: Union[int, str]) -> int:
+    def set_gain(self, gain: int | str) -> int:
         if type(gain) is int:
             gain = CRED2_GAINENUM.STR2INT_MAP[gain]
         self.send_command(f'set sensibility {gain}')
         return self.get_gain()
 
-    def set_sensibility(self, sensibility: Union[int, str]) -> int:
+    def set_sensibility(self, sensibility: int | str) -> int:
         return self.set_gain(sensibility)
 
     def get_gain(self) -> int:
