@@ -5,8 +5,7 @@ import typing as typ
 
 from argparse import ArgumentParser
 
-from camstack.core.tmux import (find_or_create, send_keys, kill_running,
-                                find_or_create_remote, kill_running_shell_exit)
+from camstack.core import tmux
 from camstack.core.utilities import enforce_whichcomp
 import scxconf
 
@@ -50,7 +49,7 @@ _group.add_argument(
 _group.add_argument('-l', '--local', action='store_true',
                     help="Disallow SSH bouncing, force local computer")
 
-_group.add_argument('-k', '--kill', action='store_true',
+parser.add_argument('-k', '--kill', action='store_true',
                     help="Kill camera server.")
 
 
@@ -94,16 +93,16 @@ def main(
     if (required_machine is None or force_local or
                 enforce_whichcomp(required_machine, err=False)):
         # No request OR local machine
-        tmux = find_or_create(tmux_name)
+        tmux_pane = tmux.find_or_create(tmux_name)
     else:
         # Remote
         if (permit_ssh_bounce and required_machine is not None):
-            tmux = find_or_create_remote(
+            tmux_pane = tmux.find_or_create_remote(
                     tmux_name,
                     scxconf.SSH_LOOKUP_FROM_WHICHCOMP[required_machine])
         else:
             # This always raises.
-            tmux = None
+            tmux_pane = None
             enforce_whichcomp(required_machine, err=True)
 
     assert tmux is not None  # typing is happy.
@@ -114,18 +113,18 @@ def main(
     time.sleep(2.0)
 
     if args.kill:
-        kill_running_shell_exit(tmux)
+        tmux.kill_running_shell_exit(tmux_pane)
         time.sleep(5.0)
-        kill_running(tmux)
+        tmux.kill_running(tmux_pane)
         return
 
-    kill_running(tmux)
+    tmux.kill_running(tmux_pane)
 
     # initiating this camera's main method
     print(f"DEBUG: using {cam_pyinvocationstring}")
     if cam_name == 'VPUPCAM':
-        send_keys(tmux, f"conda activate pycapture")
-    send_keys(tmux, f"python -i -m {cam_pyinvocationstring}")
+        tmux.send_keys(tmux_pane, f"conda activate pycapture")
+    tmux.send_keys(tmux_pane, f"python -i -m {cam_pyinvocationstring}")
 
     # all done. no cleanup
     print(f"Finished initiating camera. Inspect {tmux_name} "

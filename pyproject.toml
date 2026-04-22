@@ -47,7 +47,7 @@ all = []
 # possible... https://github.com/pypa/pip/issues/9726
 [project.scripts]
 # NEW for starting cams.
-camstart = "camstack.cam_mains.main:main"
+camstart = "camstack.main:main"
 
 # VIEWERS
 # Using an empty dud_main function at the end of file for when
