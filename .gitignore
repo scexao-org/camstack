@@ -32,3 +32,4 @@ conf/**/*.toml.bak
 
 pyrightconfig.json
 .coverage
+html

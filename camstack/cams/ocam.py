@@ -1,7 +1,7 @@
 '''
     Manage the ocam
 '''
-from typing import List, Optional as Op, Tuple
+from __future__ import annotations
 
 import os
 import logging as logg
@@ -51,12 +51,12 @@ class OCAM2K(EDTCamera):
                  final_stream_name: str, binning: bool = True, unit: int = 3,
                  channel: int = 0,
                  taker_cset_prio: util.Typ_tuple_cset_prio = ('system', None),
-                 dependent_processes: List[util.DependentProcess] = []) -> None:
+                 dependent_processes: list[util.DependentProcess] = []) -> None:
 
         # Allocate and start right in the appropriate binning mode
 
         mode_id = (1, 3)[binning]
-        basefile = os.environ['HOME'] + '/src/camstack/config/ocam_full.cfg'
+        basefile = 'ocam_full.cfg'
 
         self.synchro = True
         self.STREAMNAME_ocam2d = final_stream_name
@@ -87,8 +87,8 @@ class OCAM2K(EDTCamera):
     # AD HOC PREPARE CAMERA
     # =====================
 
-    def prepare_camera_for_size(self,
-                                mode_id: Op[util.Typ_mode_id] = None) -> None:
+    def prepare_camera_for_size(self, mode_id: util.Typ_mode_id | None = None
+                                ) -> None:
         logg.debug('prepare_camera_for_size @ OCAM2K')
 
         # This function called during the EDTCamera.__init__ from self.__init__
@@ -114,8 +114,8 @@ class OCAM2K(EDTCamera):
             if 'decode' in dep_proc.cli_cmd:
                 dep_proc.cli_args = [mode_id]
 
-    def prepare_camera_finalize(self,
-                                mode_id: Op[util.Typ_mode_id] = None) -> None:
+    def prepare_camera_finalize(self, mode_id: util.Typ_mode_id | None = None
+                                ) -> None:
         logg.debug('prepare_camera_finalize @ OCAM2K')
 
         if mode_id is None:
@@ -125,7 +125,7 @@ class OCAM2K(EDTCamera):
         self.set_synchro(self.synchro)
 
     def send_command_parsed(self, cmd: str,
-                            base_timeout: float = 100.) -> List[str]:
+                            base_timeout: float = 100.) -> list[str]:
         # Just a little bit of parsing to handle the OCAM format
         # We override the method signature from the superclass.
         logg.debug(f'OCAM2K send_command: "{cmd}"')
@@ -234,7 +234,7 @@ class OCAM2K(EDTCamera):
         logg.info(f'get_temperature: {val}')
         return val
 
-    def _get_temperature(self) -> Tuple[float, float]:
+    def _get_temperature(self) -> tuple[float, float]:
         ret = self.send_command_parsed('temp')
         # Expected raw return: <1>[-45.2][23][13][24][0.1][9][12][-450][1][10594]
         temps = [float(s) for s in ret]
@@ -243,7 +243,7 @@ class OCAM2K(EDTCamera):
         self._set_formatted_keyword('DET-TMP', temps[0] + 273.15)
         return temps[0], temps[7] / 10.  # temp, setpoint
 
-    def toggle_cooling(self, cooling: Op[bool] = None) -> bool:
+    def toggle_cooling(self, cooling: bool | None = None) -> bool:
         if cooling is None:  # Perform a toggle
             self.get_temperature()  # Populate self.is_cooling = bool(temp[8])
             cooling = not self.is_cooling

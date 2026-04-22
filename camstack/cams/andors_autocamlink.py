@@ -2,7 +2,7 @@
     Andors are pretty dumb cameras in the current regard
     It's really only about managing the initialization file and the acquisition tmux
 '''
-from typing import List
+from __future__ import annotations
 
 import os
 import logging as logg
@@ -22,10 +22,10 @@ class AutoAndor897(AutoDumbEDTCamera):
     def __init__(self, name: str, stream_name: str, unit: int = 2,
                  channel: int = 0, mode_id: util.Typ_mode_id = 512,
                  taker_cset_prio: util.Typ_tuple_cset_prio = ('system', None),
-                 dependent_processes: List[util.DependentProcess] = []) -> None:
+                 dependent_processes: list[util.DependentProcess] = []) -> None:
 
         # Since this is a no-control, auto-detect camera, this is really only useful for the number of taps.
-        basefile = os.environ['HOME'] + '/src/camstack/config/andor_897.cfg'
+        basefile = 'andor_897.cfg'
 
         # Call EDT camera init
         AutoDumbEDTCamera.__init__(self, name, stream_name, mode_id, unit,
@@ -57,7 +57,7 @@ class Vampires(AutoAndor897):
     def __init__(self, name: str, stream_name: str, unit: int = 2,
                  channel: int = 0, mode_id: util.Typ_mode_id = 512,
                  taker_cset_prio: util.Typ_tuple_cset_prio = ('system', None),
-                 dependent_processes: List[util.DependentProcess] = []) -> None:
+                 dependent_processes: list[util.DependentProcess] = []) -> None:
         # Just register the vampires camera number... which is the camlink channel.
         self.vcam_num = channel
 
