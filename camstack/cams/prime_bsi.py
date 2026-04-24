@@ -6,10 +6,60 @@ import os
 import struct  # for pack, unpack
 import logging as logg
 
-from camstack.cams.params_shm_backend import ParamsSHMCamera
+from camstack.cams.params_shm_backend import ParamsSHMCamera, CommandTransport
 from camstack.core import utilities as util
 
 from hwmain.teledyne import pvcam
+
+
+class CommandTransportForPVCAM(CommandTransport):
+
+    # Params SHM key mask to define get vs. set
+    # Need to check the selected mask has no conflict with any parameter key
+    PARAMS_SHM_GET_MAGIC = 0x8000_0000
+    # Arbitrary MAGIC number
+    # encodes a "Invalid property" returned from the framegrab process
+    PARAMS_SHM_INVALID_MAGIC = 123
+
+    def to_fits_val(self, pvcam_key: int, value: int | float):
+        key_to_cast_from: str = 'd' if type(value) is float else 'q'
+        key_to_cast_to: str | None = pvcam.STRUCT_KEY_DICT[
+                pvcam.extract_type_byte(pvcam_key)]
+
+        if key_to_cast_to is None:
+            raise ValueError(
+                    f'{key_to_cast_from=}; {key_to_cast_to=} - Illegal state.')
+
+        value_reinterpret = struct.unpack(key_to_cast_to,\
+                              struct.pack(key_to_cast_from, value))[0]
+
+        return value_reinterpret
+
+    def to_format_val(self, pvcam_key: int, value: int | float):
+        value_reinterpret = self.to_fits_val(pvcam_key, value)
+
+        if (pvcam_key in pvcam.PROP_ENUM_MAP and
+                    value_reinterpret is not None and
+                    value_reinterpret != self.PARAMS_SHM_INVALID_MAGIC):
+            return pvcam.PROP_ENUM_MAP[pvcam_key](value_reinterpret)
+
+        return value_reinterpret
+
+    if typ.TYPE_CHECKING:
+        from pyMilk.interfacing.shm import KWType
+
+    def getter_request_to_k_v_c(self, api_key: int) -> tuple[str, KWType, str]:
+        return f"{api_key | self.PARAMS_SHM_GET_MAGIC:08x}", 0.0, ''
+
+    def setter_request_to_k_v_c(self, api_key: int,
+                                value: typ.Any) -> tuple[str, KWType, str]:
+        # PARAMS for PVCAM are gonna be longs, not floats
+        return f"{api_key:08x}", int(value), ''
+
+    def kvc_to_transport_return_vals(self, kw_key: str, value: KWType,
+                                     comment: str) -> float:
+        # For this transport, we ENFORCE kwtype is always a float.
+        return value  # type: ignore
 
 
 class PVCAMCamera(ParamsSHMCamera):
@@ -21,8 +71,7 @@ class PVCAMCamera(ParamsSHMCamera):
     KEYWORDS = {}
     KEYWORDS.update(ParamsSHMCamera.KEYWORDS)
 
-    PARAMS_SHM_GET_MAGIC = 0x8000_0000
-    PARAMS_SHM_INVALID_MAGIC = 123
+    CLS_SHM_COMMUNICATOR = CommandTransportForPVCAM
 
     def __init__(
             self,
@@ -54,8 +103,6 @@ class PVCAMCamera(ParamsSHMCamera):
             mode_id: util.Typ_mode_id | None = None,
             params_injection: T_params_inj | None = None,
     ) -> None:
-        # TODO
-        assert self.control_shm is not None
 
         logg.debug("prepare_camera_for_size @ DCAMCamera")
 
@@ -97,12 +144,12 @@ class PVCAMCamera(ParamsSHMCamera):
         if params_injection is not None:
             params.update(params_injection)
 
-        # Hex format the keys
-        dump_params = {f"{k:08x}": params[k] for k in params}
+        api_keys, values = [], []
+        for k, v in params.items():
+            api_keys += [k]
+            values += [v]
 
-        # PARAMS for PVCAM are gonna be longs, not floats
-        self.control_shm.reset_keywords(dump_params)
-        self.control_shm.set_data(self.control_shm.get_data() * 0 + len(params))
+        self.ctrl_transport.setmulti_nofeedback_nosync(values, api_keys)
 
     def _prepare_backend_cmdline(self, reuse_shm: bool = False) -> None:
 
@@ -112,36 +159,6 @@ class PVCAMCamera(ParamsSHMCamera):
                                    f"-u {self.pvcam_number} -l 0 -N 4")
         if reuse_shm:
             self.taker_tmux_command += " -R"  # Do not overwrite the SHM.
-
-    def _params_shm_return_raw_to_fits_val(self, pvcam_key: int, value: float):
-        key_to_cast_from: str = 'd' if type(value) is float else 'q'
-        key_to_cast_to: str | None = pvcam.STRUCT_KEY_DICT[
-                pvcam.extract_type_byte(pvcam_key)]
-
-        if key_to_cast_to is None:
-            raise ValueError(
-                    f'key_to_cast_from: {key_to_cast_from}; key_to_cast_to: None - Illegal state.'
-            )
-
-        value_reinterpret = struct.unpack(key_to_cast_to,
-                                          struct.pack(key_to_cast_from,
-                                                      value))[0]
-
-        return value_reinterpret
-
-    def _params_shm_return_raw_to_format_val(self, pvcam_key: int,
-                                             value: float):
-        value_reinterpret = self._params_shm_return_raw_to_fits_val(
-                pvcam_key, value)
-
-        if (pvcam_key in pvcam.PROP_ENUM_MAP and
-                    value_reinterpret is not None and
-                    value_reinterpret != self.PARAMS_SHM_INVALID_MAGIC):
-            value_return = pvcam.PROP_ENUM_MAP[pvcam_key](value_reinterpret)
-        else:
-            value_return = value_reinterpret
-
-        return value_return
 
 
 class JensPrimeBSI(PVCAMCamera):
@@ -183,20 +200,22 @@ class JensPrimeBSI(PVCAMCamera):
         # TODO BIAS?
 
     def get_tint(self) -> float:
-        val = self._prm_getvalue("EXPTIME", pvcam.PARAMMAGIC_EXP_TIME) / 1e6
-        logg.info(f"get_tint {val}")
-        return val
+        val_fmt, val_fits = self.ctrl_transport.get(pvcam.PARAMMAGIC_EXP_TIME)
+        self._set_formatted_keyword("EXPTIME", val_fits / 1e6)
+        logg.info(f"get_tint {val_fmt / 1e6}")
+        return val_fmt / 1e6
 
     def set_tint(self, tint: float) -> float:
-        tint = self._prm_setvalue(int(tint * 1e6), "EXPTIME",
-                                  pvcam.PARAMMAGIC_EXP_TIME) / 1e6
-        # update FRATE and EXPTIME
-        return tint
+        val_fmt, val_fits = self.ctrl_transport.set(int(tint * 1e6),
+                                                    pvcam.PARAMMAGIC_EXP_TIME)
+        self._set_formatted_keyword("EXPTIME", val_fits / 1e6)
+        logg.info(f"get_tint {val_fmt / 1e6}")
+        return val_fmt / 1e6
 
     def get_temperature(self) -> float:
         # Let's try and play: it's readonly
         # but should trigger the cam calling back home
-        temp_C = self._prm_getvalue(None, pvcam.PARAM_TEMP) / 100.
+        temp_C = self.ctrl_transport.get(pvcam.PARAM_TEMP)[0] / 100.
         temp_K = temp_C + 273.15
         # convert celsius to kelvin
         self._set_formatted_keyword("DET-TMP", temp_K)
@@ -204,19 +223,17 @@ class JensPrimeBSI(PVCAMCamera):
         return temp_K
 
     def get_temperature_setpoint(self) -> float:
-        temp_C = self._prm_getvalue(None, pvcam.PARAM_TEMP_SETPOINT) / 100.
+        temp_C = self.ctrl_transport.get(pvcam.PARAM_TEMP_SETPOINT)[0] / 100.
         return temp_C + 273.15
 
     def set_temperature_setpoint(self, temp_C: float) -> float:
         # Tested: -35C to +5C
-        temp_C = self._prm_setvalue(int(temp_C * 100), None,
-                                    pvcam.PARAM_TEMP_SETPOINT) / 100.
+        temp_C_fmt = self.ctrl_transport.set(int(
+                temp_C * 100), pvcam.PARAM_TEMP_SETPOINT)[0] / 100.
         return temp_C + 273.15
 
     def get_fan_speed(self) -> pvcam.EN_FAN_SPEED:
-        return pvcam.EN_FAN_SPEED(
-                self._prm_getvalue(None, pvcam.PARAM_FAN_SPEED_SETPOINT))
+        return self.ctrl_transport.get(pvcam.PARAM_FAN_SPEED_SETPOINT)[0]
 
     def set_fan_speed(self, speed: pvcam.EN_FAN_SPEED) -> pvcam.EN_FAN_SPEED:
-        return pvcam.EN_FAN_SPEED(
-                self._prm_setvalue(speed, None, pvcam.PARAM_FAN_SPEED_SETPOINT))
+        return self.ctrl_transport.set(speed, pvcam.PARAM_FAN_SPEED_SETPOINT)[0]

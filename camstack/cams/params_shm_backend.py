@@ -46,107 +46,53 @@ class WrappingVerboseRLock:
         #print('exited.')
 
 
-class ParamsSHMCamera(BaseCamera):
+class CommandTransport:
 
-    INTERACTIVE_SHELL_METHODS = [] + BaseCamera.INTERACTIVE_SHELL_METHODS
-
-    MODES = {}
-
-    KEYWORDS = {}
-    KEYWORDS.update(BaseCamera.KEYWORDS)
-
-    # Params SHM key mask to define get vs. set
-    # Need to check the selected mask has no conflict with any parameter key
-    PARAMS_SHM_GET_MAGIC = 0x8000_0000
-    # Arbitrary MAGIC number
-    # encodes a "Invalid property" returned from the framegrab process
-    PARAMS_SHM_INVALID_MAGIC = -8.0085
-
-    def __init__(self, *args, **kwargs) -> None:
-
+    def __init__(self, data_stream_name):
         # Do basic stuff
-        self.control_shm: SHM | None = None
+        self.control_shm = SHM(data_stream_name + "_params_fb",
+                               np.zeros((1, ), dtype=np.int32))
         # Need an RLock because during the set_camera_mode we eventually get to a _prm_setget_multivalue for fill_keywords.
         self.control_shm_lock = WrappingVerboseRLock()  #threading.RLock()
 
-        super().__init__(*args, **kwargs)
+    def set(self, value: typ.Any, api_cam_key: int) -> tuple[typ.Any, typ.Any]:
+        return self.setmulti([value], [api_cam_key])[0]
 
-    def init_framegrab_backend(self) -> None:
-        logg.debug("init_framegrab_backend @ ParamsSHMCamera")
+    def get(self, api_cam_key: int) -> tuple[typ.Any, typ.Any]:
+        return self.getmulti([api_cam_key])[0]
 
-        if self.is_taker_running():
-            # Let's give ourselves two tries
-            time.sleep(3.0)
-            if self.is_taker_running():
-                msg = "Cannot change camera config while camera is running"
-                logg.error(msg)
-                raise AssertionError(msg)
+    def setmulti(self, values: list[typ.Any],
+                 api_cam_keys: list[int]) -> list[tuple[typ.Any, typ.Any]]:
+        return self.setgetmulti(values, api_cam_keys, getonly_flag=False)
 
-        # Try create a feedback SHM for parameters
-        if self.control_shm is None:
-            self.control_shm = SHM(self.STREAMNAME + "_params_fb",
-                                   np.zeros((1, ), dtype=np.int32))
+    def getmulti(self,
+                 api_cam_keys: list[int]) -> list[tuple[typ.Any, typ.Any]]:
+        return self.setgetmulti([0.0] * len(api_cam_keys), api_cam_keys,
+                                getonly_flag=True)
 
-    def set_camera_mode(self, mode_id: util.Typ_mode_id, **kwargs) -> None:
-        # Wrap into something thread-safe during the restart.
+    def setmulti_nofeedback_nosync(self, values: list[typ.Any],
+                                   api_cam_keys: list[int]) -> None:
+        logg.debug(
+                f"CommandTransport setmulti_nofeedback_nosync: {list(zip(api_cam_keys, values))}"
+        )
+        n_keywords = len(values)
+
+        dcam_string_keys = [f"{key:08x}" for key in api_cam_keys]
+
         with self.control_shm_lock:
-            return super().set_camera_mode(mode_id, **kwargs)
+            self.control_shm.reset_keywords({
+                    dk: v
+                    for dk, v in zip(dcam_string_keys, values)
+            })
+            self.control_shm.set_data(self.control_shm.get_data() * 0 +
+                                      n_keywords)  # Toggle grabber process
 
-    def _ensure_backend_restarted(self) -> None:
-        # In case we recreated the SHM...
-        # The sleep(1.0) used elsewhere, TOO FAST FOR DCAM!
-        # so dcamusbtake.c implements a forced feedback
+            # Flush the semaphores for the post we just did
+            while self.control_shm.check_sem_trywait():
+                pass
 
-        assert self.control_shm  # mypy happyness check.
-
-        # This should work, unless the grabber crashes during restart.
-        n_secs: int = 20
-        for k in range(n_secs):
-            time.sleep(1)
-
-            pid = find_pane_running_pid(self.take_tmux_pane)
-            assert pid is not None, f"pid in frame taker tmux is None - the framegrab process did not start/crashed."
-            try:
-                os.kill(pid, 0)
-            except OSError:
-                logg.error('dcam/pvcam grabber crashed during restart.')
-                raise RuntimeError('dcam/pvcam grabber crashed during restard.')
-
-            if self.control_shm.check_sem_trywait():
-                break
-
-            if k == n_secs - 1:
-                message = 'dcam/pvcam grabber taking more than 20 sec to restart.'
-                # Ensure the state is known by making absolutely sure we kill this.
-                self._kill_taker_no_dependents(bypass_aux_thread=True)
-                logg.critical(message)
-                raise RuntimeError(message)
-
-    def _prm_setvalue(self, value: typ.Any, fits_key: str | None,
-                      api_cam_key: int) -> float:
-        return self._prm_setmultivalue([value], [fits_key], [api_cam_key])[0]
-
-    def _prm_setmultivalue(self, values: list[typ.Any],
-                           fits_keys: list[str | None],
-                           api_cam_keys: list[int]) -> list[float]:
-        return self._prm_setgetmultivalue(values, fits_keys, api_cam_keys,
-                                          getonly_flag=False)
-
-    def _prm_getvalue(self, fits_key: str | None, api_cam_key: int) -> float:
-        return self._prm_getmultivalue([fits_key], [api_cam_key])[0]
-
-    def _prm_getmultivalue(self, fits_keys: list[str | None],
-                           api_cam_keys: list[int]) -> list[float]:
-        return self._prm_setgetmultivalue([0.0] * len(fits_keys), fits_keys,
-                                          api_cam_keys, getonly_flag=True)
-
-    def _prm_setgetmultivalue(
-            self,
-            values: list[typ.Any],
-            fits_keys: list[str | None],
-            dcam_keys: list[int],
-            getonly_flag: bool,
-    ) -> list[float]:
+    def setgetmulti(self, values: list[typ.Any], api_keys: list[int],
+                    getonly_flag: bool) -> list[tuple[typ.Any, typ.Any]]:
         """
             Setter - implements a quick feedback between this code and dcamusbtake
 
@@ -163,59 +109,125 @@ class ParamsSHMCamera(BaseCamera):
         """
 
         logg.debug(
-                f"ParamsSHMCamera _prm_setgetmultivalue [getonly: {getonly_flag}]: {list(zip(fits_keys, values))}"
+                f"ParamsSHMCamera setgetmulti [getonly: {getonly_flag}]: {list(zip(api_keys, values))}"
         )
         assert self.control_shm
 
         n_keywords = len(values)
 
         if getonly_flag:
-            dcam_string_keys = [
-                    f"{dcam_key | self.PARAMS_SHM_GET_MAGIC:08x}"
-                    for dcam_key in dcam_keys
-            ]
+            kvc_list = [self.getter_request_to_k_v_c(key) for key in api_keys]
+            # dcam_string_keys =
         else:
-            dcam_string_keys = [f"{dcam_key:08x}" for dcam_key in dcam_keys]
+            kvc_list = [
+                    self.setter_request_to_k_v_c(key, values)
+                    for key in api_keys
+            ]
+        key_list = [k for (k, _, _) in kvc_list]
 
         with self.control_shm_lock:
-            self.control_shm.reset_keywords({
-                    dk: v
-                    for dk, v in zip(dcam_string_keys, values)
-            })
+            self.control_shm.reset_keywords({k: (v, c) for k, v, c in kvc_list})
             self.control_shm.set_data(self.control_shm.get_data() * 0 +
                                       n_keywords)  # Toggle grabber process
             self.control_shm.multi_recv_data(3, True,
                                              timeout=1.0)  # Ensure re-sync
 
-            fb_values: list[float] = [
-                    self.control_shm.get_keywords()[dk]
-                    for dk in dcam_string_keys
-            ]  # Get back the cam value
+            all_kwc = self.control_shm.get_keywords(True)
+            transport_returns = [
+                    self.kvc_to_transport_return_vals(k, *all_kwc[k])
+                    for k in key_list
+            ]
 
-        for idx, (fk, dcamk) in enumerate(zip(fits_keys, dcam_keys)):
-            if fk is not None:
-                # Can pass None to skip keys entirely.
-                fits_value = self._params_shm_return_raw_to_fits_val(
-                        dcamk, fb_values[idx])
-                self._set_formatted_keyword(fk, fits_value)
+        for_return: list[tuple[float, float]] = []
+        for k, v in zip(api_keys, transport_returns):
+            for_return += [(self.to_format_val(k, v), self.to_fits_val(k, v))]
 
-            format_value = self._params_shm_return_raw_to_format_val(
-                    dcamk, fb_values[idx])
-            fb_values[idx] = format_value
+        return for_return
 
-        return fb_values
+    def getter_request_to_k_v_c(self, api_key):
+        raise NotImplementedError('Subclass expected')
 
-    def _params_shm_return_raw_to_fits_val(self, api_key: int, value: float):
+    def setter_request_to_k_v_c(self, api_key, value):
+        raise NotImplementedError('Subclass expected')
+
+    def kvc_to_transport_return_vals(self, kw_key, value, comment):
+        raise NotImplementedError('Subclass expected')
+
+    def to_format_val(self, api_key: int, value: float):
+        # This call is intended to be overriden by subclasses
+        # So as to amend how the return values from _prm_setgetmultivalue
+        # are provided (think enums... se dcamcam)
+        return value  # Nothing to do here
+
+    def to_fits_val(self, api_key: int, value: float):
         # This call is intended to be overriden by subclasses
         # So as to amend how the return values from the feeback SHM
         # are given to the camera SHM keywords (think type casting...)
         return value
 
-    def _params_shm_return_raw_to_format_val(self, api_key: int, value: float):
-        # This call is intended to be overriden by subclasses
-        # So as to amend how the return values from _prm_setgetmultivalue
-        # are provided (think enums... se dcamcam)
-        return value  # Nothing to do here
+
+class ParamsSHMCamera(BaseCamera):
+
+    INTERACTIVE_SHELL_METHODS = [] + BaseCamera.INTERACTIVE_SHELL_METHODS
+
+    MODES = {}
+
+    KEYWORDS = {}
+    KEYWORDS.update(BaseCamera.KEYWORDS)
+
+    CLS_SHM_COMMUNICATOR: type[CommandTransport] = CommandTransport
+    ctrl_transport: CommandTransport
+
+    def __init__(self, *args, **kwargs) -> None:
+
+        super().__init__(*args, **kwargs)
+
+    def init_framegrab_backend(self) -> None:
+        logg.debug("init_framegrab_backend @ ParamsSHMCamera")
+
+        if self.is_taker_running():
+            # Let's give ourselves two tries
+            time.sleep(3.0)
+            if self.is_taker_running():
+                msg = "Cannot change camera config while camera is running"
+                logg.error(msg)
+                raise AssertionError(msg)
+
+        self.ctrl_transport = self.CLS_SHM_COMMUNICATOR(
+                data_stream_name=self.STREAMNAME)
+
+    def set_camera_mode(self, mode_id: util.Typ_mode_id, **kwargs) -> None:
+        # Wrap into something thread-safe during the restart.
+        with self.ctrl_transport.control_shm_lock:
+            return super().set_camera_mode(mode_id, **kwargs)
+
+    def _ensure_backend_restarted(self) -> None:
+        # In case we recreated the SHM...
+        # The sleep(1.0) used elsewhere, TOO FAST FOR DCAM!
+        # so dcamusbtake.c implements a forced feedback
+
+        # This should work, unless the grabber crashes during restart.
+        n_secs: int = 20
+        for k in range(n_secs):
+            time.sleep(1)
+
+            pid = find_pane_running_pid(self.take_tmux_pane)
+            assert pid is not None, f"pid in frame taker tmux is None - the framegrab process did not start/crashed."
+            try:
+                os.kill(pid, 0)
+            except OSError:
+                logg.error('dcam/pvcam grabber crashed during restart.')
+                raise RuntimeError('dcam/pvcam grabber crashed during restard.')
+
+            if self.ctrl_transport.control_shm.check_sem_trywait():
+                break
+
+            if k == n_secs - 1:
+                message = 'dcam/pvcam grabber taking more than 20 sec to restart.'
+                # Ensure the state is known by making absolutely sure we kill this.
+                self._kill_taker_no_dependents(bypass_aux_thread=True)
+                logg.critical(message)
+                raise RuntimeError(message)
 
     def auxiliary_thread_run_function(self) -> None:
         '''
@@ -244,11 +256,11 @@ class ParamsSHMCamera(BaseCamera):
                 continue
 
             # This is the bit specific to the subclass
-            if not self.control_shm_lock.acquire(blocking=False):
+            if not self.ctrl_transport.control_shm_lock.acquire(blocking=False):
                 continue
 
             # And the additional try/finally is also subclass specific.
             try:
                 self.auxiliary_thread_inner_function()
             finally:
-                self.control_shm_lock.release()
+                self.ctrl_transport.control_shm_lock.release()
