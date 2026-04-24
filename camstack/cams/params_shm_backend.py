@@ -65,7 +65,7 @@ class ParamsSHMCamera(BaseCamera):
     def __init__(self, *args, **kwargs) -> None:
 
         # Do basic stuff
-        self.control_shm: typ.Optional[SHM] = None
+        self.control_shm: SHM | None = None
         # Need an RLock because during the set_camera_mode we eventually get to a _prm_setget_multivalue for fill_keywords.
         self.control_shm_lock = WrappingVerboseRLock()  #threading.RLock()
 
@@ -122,32 +122,31 @@ class ParamsSHMCamera(BaseCamera):
                 logg.critical(message)
                 raise RuntimeError(message)
 
-    def _prm_setvalue(self, value: typ.Any, fits_key: typ.Optional[str],
+    def _prm_setvalue(self, value: typ.Any, fits_key: str | None,
                       api_cam_key: int) -> float:
         return self._prm_setmultivalue([value], [fits_key], [api_cam_key])[0]
 
-    def _prm_setmultivalue(self, values: typ.List[typ.Any],
-                           fits_keys: typ.List[typ.Optional[str]],
-                           api_cam_keys: typ.List[int]) -> typ.List[float]:
+    def _prm_setmultivalue(self, values: list[typ.Any],
+                           fits_keys: list[str | None],
+                           api_cam_keys: list[int]) -> list[float]:
         return self._prm_setgetmultivalue(values, fits_keys, api_cam_keys,
                                           getonly_flag=False)
 
-    def _prm_getvalue(self, fits_key: typ.Optional[str],
-                      api_cam_key: int) -> float:
+    def _prm_getvalue(self, fits_key: str | None, api_cam_key: int) -> float:
         return self._prm_getmultivalue([fits_key], [api_cam_key])[0]
 
-    def _prm_getmultivalue(self, fits_keys: typ.List[typ.Optional[str]],
-                           api_cam_keys: typ.List[int]) -> typ.List[float]:
+    def _prm_getmultivalue(self, fits_keys: list[str | None],
+                           api_cam_keys: list[int]) -> list[float]:
         return self._prm_setgetmultivalue([0.0] * len(fits_keys), fits_keys,
                                           api_cam_keys, getonly_flag=True)
 
     def _prm_setgetmultivalue(
             self,
-            values: typ.List[typ.Any],
-            fits_keys: typ.List[typ.Optional[str]],
-            dcam_keys: typ.List[int],
+            values: list[typ.Any],
+            fits_keys: list[str | None],
+            dcam_keys: list[int],
             getonly_flag: bool,
-    ) -> typ.List[float]:
+    ) -> list[float]:
         """
             Setter - implements a quick feedback between this code and dcamusbtake
 
@@ -188,7 +187,7 @@ class ParamsSHMCamera(BaseCamera):
             self.control_shm.multi_recv_data(3, True,
                                              timeout=1.0)  # Ensure re-sync
 
-            fb_values: typ.List[float] = [
+            fb_values: list[float] = [
                     self.control_shm.get_keywords()[dk]
                     for dk in dcam_string_keys
             ]  # Get back the cam value
