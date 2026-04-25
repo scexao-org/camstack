@@ -46,52 +46,53 @@ class WrappingVerboseRLock:
         #print('exited.')
 
 
-class CommandTransport:
+ApiKeyT = typ.TypeVar('ApiKeyT')
 
-    def __init__(self, data_stream_name):
+
+class CommandTransport(typ.Generic[ApiKeyT]):
+
+    def __init__(self, data_stream_name: str) -> None:
         # Do basic stuff
         self.control_shm = SHM(data_stream_name + "_params_fb",
                                np.zeros((1, ), dtype=np.int32))
         # Need an RLock because during the set_camera_mode we eventually get to a _prm_setget_multivalue for fill_keywords.
         self.control_shm_lock = WrappingVerboseRLock()  #threading.RLock()
 
-    def set(self, value: typ.Any, api_cam_key: int) -> tuple[typ.Any, typ.Any]:
+    def set(self, value: typ.Any,
+            api_cam_key: ApiKeyT) -> tuple[typ.Any, typ.Any]:
         return self.setmulti([value], [api_cam_key])[0]
 
-    def get(self, api_cam_key: int) -> tuple[typ.Any, typ.Any]:
+    def get(self, api_cam_key: ApiKeyT) -> tuple[typ.Any, typ.Any]:
         return self.getmulti([api_cam_key])[0]
 
     def setmulti(self, values: list[typ.Any],
-                 api_cam_keys: list[int]) -> list[tuple[typ.Any, typ.Any]]:
+                 api_cam_keys: list[ApiKeyT]) -> list[tuple[typ.Any, typ.Any]]:
         return self.setgetmulti(values, api_cam_keys, getonly_flag=False)
 
     def getmulti(self,
-                 api_cam_keys: list[int]) -> list[tuple[typ.Any, typ.Any]]:
-        return self.setgetmulti([0.0] * len(api_cam_keys), api_cam_keys,
+                 api_cam_keys: list[ApiKeyT]) -> list[tuple[typ.Any, typ.Any]]:
+        return self.setgetmulti([None] * len(api_cam_keys), api_cam_keys,
                                 getonly_flag=True)
 
     def setmulti_nofeedback_nosync(self, values: list[typ.Any],
-                                   api_cam_keys: list[int]) -> None:
+                                   api_cam_keys: list[ApiKeyT]) -> None:
         logg.debug(
                 f"CommandTransport setmulti_nofeedback_nosync: {list(zip(api_cam_keys, values))}"
         )
         n_keywords = len(values)
-
-        dcam_string_keys = [f"{key:08x}" for key in api_cam_keys]
-
+        kvc_list = [
+                self.setter_request_to_k_v_c(key, val)
+                for key, val in zip(api_cam_keys, values)
+        ]
         with self.control_shm_lock:
-            self.control_shm.reset_keywords({
-                    dk: v
-                    for dk, v in zip(dcam_string_keys, values)
-            })
+            self.control_shm.reset_keywords({k: (v, c) for k, v, c in kvc_list})
             self.control_shm.set_data(self.control_shm.get_data() * 0 +
                                       n_keywords)  # Toggle grabber process
-
             # Flush the semaphores for the post we just did
             while self.control_shm.check_sem_trywait():
                 pass
 
-    def setgetmulti(self, values: list[typ.Any], api_keys: list[int],
+    def setgetmulti(self, values: list[typ.Any], api_keys: list[ApiKeyT],
                     getonly_flag: bool) -> list[tuple[typ.Any, typ.Any]]:
         """
             Setter - implements a quick feedback between this code and dcamusbtake
@@ -120,8 +121,8 @@ class CommandTransport:
             # dcam_string_keys =
         else:
             kvc_list = [
-                    self.setter_request_to_k_v_c(key, values)
-                    for key in api_keys
+                    self.setter_request_to_k_v_c(key, val)
+                    for key, val in zip(api_keys, values)
             ]
         key_list = [k for (k, _, _) in kvc_list]
 
@@ -144,22 +145,25 @@ class CommandTransport:
 
         return for_return
 
-    def getter_request_to_k_v_c(self, api_key):
+    def getter_request_to_k_v_c(self,
+                                api_key: ApiKeyT) -> tuple[str, typ.Any, str]:
         raise NotImplementedError('Subclass expected')
 
-    def setter_request_to_k_v_c(self, api_key, value):
+    def setter_request_to_k_v_c(self, api_key: ApiKeyT,
+                                value: typ.Any) -> tuple[str, typ.Any, str]:
         raise NotImplementedError('Subclass expected')
 
-    def kvc_to_transport_return_vals(self, kw_key, value, comment):
+    def kvc_to_transport_return_vals(self, kw_key: str, value: typ.Any,
+                                     comment: str) -> typ.Any:
         raise NotImplementedError('Subclass expected')
 
-    def to_format_val(self, api_key: int, value: float):
+    def to_format_val(self, api_key: ApiKeyT, value: typ.Any) -> typ.Any:
         # This call is intended to be overriden by subclasses
         # So as to amend how the return values from _prm_setgetmultivalue
         # are provided (think enums... se dcamcam)
         return value  # Nothing to do here
 
-    def to_fits_val(self, api_key: int, value: float):
+    def to_fits_val(self, api_key: ApiKeyT, value: typ.Any) -> typ.Any:
         # This call is intended to be overriden by subclasses
         # So as to amend how the return values from the feeback SHM
         # are given to the camera SHM keywords (think type casting...)
@@ -175,8 +179,9 @@ class ParamsSHMCamera(BaseCamera):
     KEYWORDS = {}
     KEYWORDS.update(BaseCamera.KEYWORDS)
 
-    CLS_SHM_COMMUNICATOR: type[CommandTransport] = CommandTransport
-    ctrl_transport: CommandTransport
+    CLS_SHM_COMMUNICATOR: typ.ClassVar[type[CommandTransport[
+            typ.Any]]] = CommandTransport
+    ctrl_transport: CommandTransport[typ.Any]
 
     def __init__(self, *args, **kwargs) -> None:
 

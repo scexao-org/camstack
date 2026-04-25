@@ -12,7 +12,7 @@ from camstack.core import utilities as util
 from hwmain.teledyne import pvcam
 
 
-class CommandTransportForPVCAM(CommandTransport):
+class CommandTransportForPVCAM(CommandTransport[int]):
 
     # Params SHM key mask to define get vs. set
     # Need to check the selected mask has no conflict with any parameter key
@@ -21,10 +21,10 @@ class CommandTransportForPVCAM(CommandTransport):
     # encodes a "Invalid property" returned from the framegrab process
     PARAMS_SHM_INVALID_MAGIC = 123
 
-    def to_fits_val(self, pvcam_key: int, value: int | float):
+    def to_fits_val(self, api_key: int, value: int | float):
         key_to_cast_from: str = 'd' if type(value) is float else 'q'
         key_to_cast_to: str | None = pvcam.STRUCT_KEY_DICT[
-                pvcam.extract_type_byte(pvcam_key)]
+                pvcam.extract_type_byte(api_key)]
 
         if key_to_cast_to is None:
             raise ValueError(
@@ -35,13 +35,12 @@ class CommandTransportForPVCAM(CommandTransport):
 
         return value_reinterpret
 
-    def to_format_val(self, pvcam_key: int, value: int | float):
-        value_reinterpret = self.to_fits_val(pvcam_key, value)
+    def to_format_val(self, api_key: int, value: int | float):
+        value_reinterpret = self.to_fits_val(api_key, value)
 
-        if (pvcam_key in pvcam.PROP_ENUM_MAP and
-                    value_reinterpret is not None and
+        if (api_key in pvcam.PROP_ENUM_MAP and value_reinterpret is not None and
                     value_reinterpret != self.PARAMS_SHM_INVALID_MAGIC):
-            return pvcam.PROP_ENUM_MAP[pvcam_key](value_reinterpret)
+            return pvcam.PROP_ENUM_MAP[api_key](value_reinterpret)
 
         return value_reinterpret
 

@@ -12,7 +12,7 @@ from hwmain.dcam import dcamprop
 from camstack.core.wcs import wcs_dict_init
 
 
-class CommandTransportForDCAM(CommandTransport):
+class CommandTransportForDCAM(CommandTransport[int]):
 
     # Params SHM key mask to define get vs. set
     # Need to check the selected mask has no conflict with any parameter key
@@ -24,16 +24,16 @@ class CommandTransportForDCAM(CommandTransport):
     # def to_fits_val(self, api_key: int, value: float):
     # Unecessary: happy with the superclass.
 
-    def to_format_val(self, dcam_key: int, value: float):
+    def to_format_val(self, api_key: int, value: float):
         '''
         Bind the returned raw floats into dcamprop enums if possible
         '''
 
-        if (dcam_key in dcamprop.PROP_ENUM_MAP and value is not None and
+        if (api_key in dcamprop.PROP_ENUM_MAP and value is not None and
                     value != self.PARAMS_SHM_INVALID_MAGIC):
             # Response type of requested prop is described by a proper enumeration.
             # Instantiate the Enum class for the return value.
-            return dcamprop.PROP_ENUM_MAP[dcam_key](value)  # type: ignore
+            return dcamprop.PROP_ENUM_MAP[api_key](value)  # type: ignore
 
         return value
 
