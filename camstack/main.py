@@ -114,7 +114,9 @@ def main(
           )
     if launch_config.conda_env_string != '':
         tmux.send_keys(tmux_pane, launch_config.conda_env_string)
-    tmux.send_keys(tmux_pane, f"python -i -m {launch_config.main}")
+    tmux.send_keys(
+            tmux_pane, f"python -i -m {launch_config.main} " +
+            ' '.join(launch_config.add_args))
 
     # all done. no cleanup
     print(f"Completed. Inspect {tmux_name} "
