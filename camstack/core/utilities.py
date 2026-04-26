@@ -381,8 +381,13 @@ def shellify_methods(instance_of_camera, top_level_globals):
 
     '''
     for method_name in instance_of_camera.INTERACTIVE_SHELL_METHODS:
-        top_level_globals[method_name] = getattr(instance_of_camera,
-                                                 method_name)
+        if hasattr(instance_of_camera, method_name):
+            top_level_globals[method_name] = getattr(instance_of_camera,
+                                                     method_name)
+        else:
+            logg.warning(
+                    f'shellify_methods: no method {method_name} in instance of {type(instance_of_camera)}'
+            )
 
 
 def enforce_whichcomp(comp: str, err: bool = True) -> bool:
