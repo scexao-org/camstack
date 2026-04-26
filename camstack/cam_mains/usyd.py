@@ -23,11 +23,19 @@ if __name__ == "__main__":
         from camstack.cams.spinnakercam import USYD_VIS_PG1
         cam = USYD_VIS_PG1('vispg1', 'vispg1', mode_id='VISPG1',
                            spinnaker_number=17175549)
+        pyro_key = 'VPG1'
     elif cam_flag == 'CB2':
         from camstack.cams.flisdkgenicam import AndorCB2_7_1
         cam = AndorCB2_7_1('cb2', 'cb2', mode_id='FULL', flisdk_index=0)
+        pyro_key = 'CB2'
     else:
         raise NotImplementedError('Cannot be here.')
 
     from camstack.core.utilities import shellify_methods
     shellify_methods(cam, globals())
+
+    from swmain.network.pyroserver_registerable import PyroServer
+
+    server = PyroServer(bindTo=('localhost', 0), nsAddress=('localhost', 51000))
+    server.add_device(cam, pyro_key, add_oneway_callables=True)
+    server.start()
