@@ -141,13 +141,17 @@ class CommandTransportForGenicam(CommandTransport[CB2_API_KeyT]):
 
         k = f'{((prop.unique_id << 4) | request):08x}'
 
-        if prop.type in [int, float]:
-            assert isinstance(value, prop.type)
-            return k, value, prop.name  # type: ignore
-
         if prop.type == bool:
             assert isinstance(value, bool)
             return k, MAGIC_BOOL_STR.TUPLE[value], prop.name
+
+        if prop.type == int:
+            assert isinstance(value, (int, bool))
+            return k, int(value), prop.name  # type: ignore
+
+        if prop.type == float:
+            assert isinstance(value, (int, bool, float))
+            return k, float(value), prop.name  # type: ignore
 
         if prop.type == sdk.Command:
             assert value is None
@@ -250,12 +254,12 @@ class FliSdkGenicam(ParamsSHMCamera):
 
         # yapf: disable
         params: dict[CB2_API_KeyT, typ.Any] = {
+                sdk.RegionSelector: sdk.RegionSelectorEnum.Region0,
                 sdk.OffsetX: x0,
                 sdk.OffsetY: y0,
                 sdk.Width:   x1 - x0 + 1,
                 sdk.Height:  y1 - y0 + 1,
                 # Trigger defaults: free-running
-                # TODO: TriggerSelector must be set to FrameStart on the C side
                 sdk.TriggerSelector: sdk.TriggerSelectorEnum.FrameStart,
                 sdk.TriggerMode: sdk.TriggerModeEnum.Off,
                 sdk.TriggerActivation: sdk.TriggerActivationEnum.RisingEdge,
@@ -283,9 +287,10 @@ class FliSdkGenicam(ParamsSHMCamera):
             self._start_taker_no_dependents(reuse_shm=True)
 
     def _prepare_backend_cmdline(self, reuse_shm: bool = False) -> None:
-        exec_path = os.environ["SCEXAO_HW"] + "/bin/hwacq-flitake"
+        # exec_path = 'python -m hwmain.andor.acq_cb2'
+        exec_path = os.environ["SCEXAO_HW"] + "/bin/hwacq-flisdktake"
         self.taker_tmux_command = (f"{exec_path} -s {self.STREAMNAME} "
-                                   f"-u {self.cam_index} -l 0 -N 4")
+                                   f"-u {self.cam_index} -l 0") # -N 4 ?
         if reuse_shm:
             self.taker_tmux_command += " -R"  # Do not overwrite the SHM.
 
@@ -308,8 +313,9 @@ class AndorCB2_7_1(FliSdkGenicam):
     FULL = 'FULL'
 
     # yapf: disable
-    MODES = {
+    MODES = { # Pixel granularity is 8.
             FULL: util.CameraMode(x0=0, x1=3215, y0=0, y1=2207, tint=0.001),
+            'CENTER': util.CameraMode(x0=804+4, x1=3215-804+4, y0=552, y1=2207-552, tint=0.001),
     }
     # yapf: enable
 
@@ -364,15 +370,15 @@ class AndorCB2_7_1(FliSdkGenicam):
 
     def get_tint(self) -> float:
         val, val_fits = self.ctrl_transport.get(sdk.ExposureTime)
-        self._set_formatted_keyword("EXPTIME", val_fits)
-        logg.info(f"get_tint {val}")
-        return val
+        self._set_formatted_keyword("EXPTIME", val_fits / 1e6)
+        logg.info(f"get_tint {val / 1e6}")
+        return val / 1e6
 
-    def set_tint(self, tint: float) -> float:
-        tint, tint_fits = self.ctrl_transport.set(tint, sdk.ExposureTime)
-        self._set_formatted_keyword("EXPTIME", tint_fits)
+    def set_tint(self, tint_sec: float) -> float:
+        tint, tint_fits = self.ctrl_transport.set(tint_sec * 1e6, sdk.ExposureTime)
+        self._set_formatted_keyword("EXPTIME", tint_fits / 1e6)
         self.get_fps()
-        return tint
+        return tint / 1e6
 
     def get_fps(self) -> float:
         fps, fps_fits = self.ctrl_transport.get(sdk.AcquisitionFrameRate)
@@ -387,7 +393,7 @@ class AndorCB2_7_1(FliSdkGenicam):
 
     def get_maxfps(self) -> float:
         fps, _ = self.ctrl_transport.get(
-                sdk.MaximumExternalAcquisitionFrameRate)
+                sdk.AcquisitionFrameRate.max)
         logg.info(f"get_maxfps {fps}")
         return fps
 
