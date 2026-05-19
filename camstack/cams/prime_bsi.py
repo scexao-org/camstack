@@ -22,6 +22,7 @@ class CommandTransportForPVCAM(CommandTransport[int]):
     PARAMS_SHM_INVALID_MAGIC = 123
 
     def to_fits_val(self, api_key: int, value: int | float):
+        # Performing a byte-level interpret cast
         key_to_cast_from: str = 'd' if type(value) is float else 'q'
         key_to_cast_to: str | None = pvcam.STRUCT_KEY_DICT[
                 pvcam.extract_type_byte(api_key)]
@@ -48,7 +49,7 @@ class CommandTransportForPVCAM(CommandTransport[int]):
         from pyMilk.interfacing.shm import KWType
 
     def getter_request_to_k_v_c(self, api_key: int) -> tuple[str, KWType, str]:
-        return f"{api_key | self.PARAMS_SHM_GET_MAGIC:08x}", 0.0, ''
+        return f"{api_key | self.PARAMS_SHM_GET_MAGIC:08x}", 0, ''
 
     def setter_request_to_k_v_c(self, api_key: int,
                                 value: typ.Any) -> tuple[str, KWType, str]:

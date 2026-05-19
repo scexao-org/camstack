@@ -147,26 +147,49 @@ class CommandTransport(typ.Generic[ApiKeyT]):
 
     def getter_request_to_k_v_c(self,
                                 api_key: ApiKeyT) -> tuple[str, typ.Any, str]:
+        '''
+            Transforms a getter request for API key api_key into a
+            (key, value, comment) triplet to pass
+            from the control into the transport SHM keywords.
+        '''
         raise NotImplementedError('Subclass expected')
 
     def setter_request_to_k_v_c(self, api_key: ApiKeyT,
                                 value: typ.Any) -> tuple[str, typ.Any, str]:
+        '''
+            Transforms a setter request for API key api_key with value value into a
+            (key, value, comment) triplet to pass
+            from the control into the transport SHM keywords.
+        '''
         raise NotImplementedError('Subclass expected')
 
     def kvc_to_transport_return_vals(self, kw_key: str, value: typ.Any,
                                      comment: str) -> typ.Any:
+        '''
+            Transforms a (key, value, comment) triplet return from the
+            transport SHM keywords into a usable value.
+            This is to be used when e.g. long strings are packaged into
+            the comment field.
+        '''
         raise NotImplementedError('Subclass expected')
 
     def to_format_val(self, api_key: ApiKeyT, value: typ.Any) -> typ.Any:
-        # This call is intended to be overriden by subclasses
-        # So as to amend how the return values from _prm_setgetmultivalue
-        # are provided (think enums... se dcamcam)
+        '''
+            Convert a transport return value (as delivered from kvc_to_transport_return_vals)
+            to a value that is appropriate for use through the software
+            - including API file enumerations
+            - or strings, or number formats, etc.
+        '''
         return value  # Nothing to do here
 
     def to_fits_val(self, api_key: ApiKeyT, value: typ.Any) -> typ.Any:
-        # This call is intended to be overriden by subclasses
-        # So as to amend how the return values from the feeback SHM
-        # are given to the camera SHM keywords (think type casting...)
+        '''
+            Convert a transport return value (as delivered from kvc_to_transport_return_vals)
+            to a proper formatted and compliant value that:
+            - can be set to the camera data SHM keywords
+            - can be used in FITS files
+            as a difference to to_format_val, this excludes ad-hoc enums from the API.
+        '''
         return value
 
 
