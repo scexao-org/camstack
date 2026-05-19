@@ -35,8 +35,9 @@ CAM_LAUNCHERS: dict[str, CameraLauncherSpec] = {
         for c in CAMERA_LAUNCH_CONFIG
 }
 
-parser = ArgumentParser(prog="camstart",
-                        description="Spin up or restart a camera tmux daemon")
+parser = ArgumentParser(
+        prog="camstart",
+        description="Spin up or restart a camera session server")
 parser.add_argument("camera", choices=CAM_LAUNCHERS.keys(), type=str.upper,
                     help="Name of camera to start")
 _group = parser.add_mutually_exclusive_group()
@@ -113,7 +114,9 @@ def main(
           )
     if launch_config.conda_env_string != '':
         tmux.send_keys(tmux_pane, launch_config.conda_env_string)
-    tmux.send_keys(tmux_pane, f"python -i -m {launch_config.main}")
+    tmux.send_keys(
+            tmux_pane, f"python -i -m {launch_config.main} " +
+            ' '.join(launch_config.add_args))
 
     # all done. no cleanup
     print(f"Completed. Inspect {tmux_name} "

@@ -31,7 +31,10 @@ class SpinnakerUSBCamera(BaseCamera):
 
     MODES = {}
 
-    KEYWORDS = {}
+    KEYWORDS = {
+            # DETGAIN is NOT a kw from the base class.
+            'DETGAIN': (0, 'Amplifier gain [dB]', '%16d', 'GAIN'),
+    }
     KEYWORDS.update(BaseCamera.KEYWORDS)
 
     def __init__(self, name: str, stream_name: str, mode_id: Union[CameraMode,
@@ -72,7 +75,12 @@ class SpinnakerUSBCamera(BaseCamera):
 
         if self.spinn_cam is None:
             cam_list = self.spinn_system.GetCameras()
-            self.spinn_cam = cam_list[self.spinn_number]
+            if self.spinn_number < len(cam_list):  # Index
+                self.spinn_cam = cam_list[self.spinn_number]
+            else:
+                serials = [int(c.GetDeviceSerialNumber()) for c in cam_list]
+                self.spinn_cam = cam_list[serials.index(self.spinn_number)]
+
             cam_list.Clear()
 
             self.spinn_cam.Init()
@@ -104,7 +112,7 @@ class SpinnakerUSBCamera(BaseCamera):
         logg.debug('prepare_camera_finalize @ SpinnakerUSBCamera')
 
         # Set fps max
-        max_fps = self.spinn_cam.AcquisitionFrameRate.GetMax()
+        max_fps = self.spinn_cam.AcquisitionFrameRate.GetMax()  # Hz
         self.set_fps(max_fps)
         # Expo max
         max_expo_this_fps = min(self.spinn_cam.ExposureTime.GetMax() * 1e-6,
@@ -127,10 +135,11 @@ class SpinnakerUSBCamera(BaseCamera):
         logg.info('spinn_system.ReleaseInstance()')
         self.spinn_system.ReleaseInstance()
 
-    def _prepare_backend_cmdline(self, reuse_shm: bool = False):
+    def _prepare_backend_cmdline(self, reuse_shm: bool = False,
+                                 env_launcher: str = ''):
 
         # Prepare the cmdline for starting up!
-        exec_path = "python -m camstack.acq.spinnaker_usbtake"
+        exec_path = env_launcher + "python -m camstack.acq.spinnaker_usbtake"
         self.taker_tmux_command = (f'{exec_path} -s {self.STREAMNAME} '
                                    f'-u {self.spinn_number} -l 0')
         if reuse_shm:
@@ -184,7 +193,8 @@ class SpinnakerUSBCamera(BaseCamera):
 
     def get_gain(self):
         gain = self.spinn_cam.Gain()
-        self.camera_shm.update_keyword('DETGAIN', gain)
+        self.camera_shm.update_keyword(
+                'DETGAIN', gain)  # DETGAIN is NOT a kw from the base class.
         logg.info(f'get_gain: {gain}')
         return gain
 
@@ -241,7 +251,7 @@ class FLIR_U3_Camera(SpinnakerUSBCamera):
             logg.warning('Cannot set Gamma to 1.0 for this camera.')
             pass
         # BlackLevel 0. - May have to add some bias back
-        self.spinn_cam.BlackLevel.SetValue(0)
+        self.spinn_cam.BlackLevel.SetValue(self.spinn_cam.BlackLevel.GetMin())
 
         # Crank the gain to the max. Haven't figured out many things just yet.
         self.spinn_cam.Gain.SetValue(self.spinn_cam.Gain.GetMax())
@@ -373,6 +383,55 @@ class BlackFlyS(SpinnakerUSBCamera):
 
         # Something that we feel is BlackFly specific but not Spinnaker generic
         SpinnakerUSBCamera.prepare_camera_finalize(self, mode_id)
+
+
+class USYD_VIS_PG1(FLIR_U3_Camera):
+    '''
+    BFLY-U3-13S2M
+    '''
+    FULL = 'FULL'
+
+    MODES = {
+            FULL:
+                    CameraMode(x0=0, x1=1287, y0=0, y1=963, tint=0.001),
+            # Centercrop half-size
+            'VISPG1':
+                    CameraMode(x0=914, x1=914 + 372 - 1, y0=608,
+                               y1=608 + 340 - 1, tint=0.001),
+            # Full bin 2
+            #2: CameraMode(x0=)
+    }
+
+    KEYWORDS = {}
+    KEYWORDS.update(FLIR_U3_Camera.KEYWORDS)
+
+    def _fill_keywords(self):
+
+        SpinnakerUSBCamera._fill_keywords(self)
+        self.camera_shm.update_keyword('CROPPED', self.current_mode_id
+                                       != self.FULL)
+        self.camera_shm.update_keyword('DETECTOR', 'BFLY-U3-13S2M')
+
+        self._set_formatted_keyword('DETPXSZ1', 0.00375)
+        self._set_formatted_keyword('DETPXSZ2', 0.00375)
+
+    def _prepare_backend_cmdline(self, reuse_shm: bool = False):
+        return super()._prepare_backend_cmdline(
+                reuse_shm=reuse_shm, env_launcher='mamba run -n py38 ')
+
+    def set_fps(self, fps: float) -> float:
+        '''
+        Override -- this camera does not support set_fps.
+        '''
+        return self.get_fps()
+
+    def get_fps(self):
+        max_fps = self.spinn_cam.AcquisitionFrameRate.GetMax()  # Hz
+        tint = self.get_tint()
+        fps = min(1 / tint, max_fps)
+        self.camera_shm.update_keyword('FRATE', fps)
+        logg.info(f'get_fps: {fps}')
+        return fps
 
 
 if __name__ == "__main__":

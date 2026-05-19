@@ -4,12 +4,53 @@ import typing as typ
 import os
 import logging as logg
 
-from camstack.cams.params_shm_backend import ParamsSHMCamera
+from camstack.cams.params_shm_backend import ParamsSHMCamera, CommandTransport
 from camstack.core import utilities as util
 
 from hwmain.dcam import dcamprop
 
 from camstack.core.wcs import wcs_dict_init
+
+
+class CommandTransportForDCAM(CommandTransport[int]):
+
+    # Params SHM key mask to define get vs. set
+    # Need to check the selected mask has no conflict with any parameter key
+    PARAMS_SHM_GET_MAGIC = 0x8000_0000
+    # Arbitrary MAGIC number
+    # encodes a "Invalid property" returned from the framegrab process
+    PARAMS_SHM_INVALID_MAGIC = -8.0085
+
+    # def to_fits_val(self, api_key: int, value: float):
+    # Unecessary: happy with the superclass.
+
+    def to_format_val(self, api_key: int, value: float):
+        '''
+        Bind the returned raw floats into dcamprop enums if possible
+        '''
+
+        if (api_key in dcamprop.PROP_ENUM_MAP and value is not None and
+                    value != self.PARAMS_SHM_INVALID_MAGIC):
+            # Response type of requested prop is described by a proper enumeration.
+            # Instantiate the Enum class for the return value.
+            return dcamprop.PROP_ENUM_MAP[api_key](value)  # type: ignore
+
+        return value
+
+    if typ.TYPE_CHECKING:
+        from pyMilk.interfacing.shm import KWType
+
+    def getter_request_to_k_v_c(self, api_key: int) -> tuple[str, KWType, str]:
+        return f"{api_key | self.PARAMS_SHM_GET_MAGIC:08x}", 0.0, ''
+
+    def setter_request_to_k_v_c(self, api_key: int,
+                                value: typ.Any) -> tuple[str, KWType, str]:
+        return f"{api_key:08x}", float(value), ''
+
+    def kvc_to_transport_return_vals(self, kw_key: str, value: KWType,
+                                     comment: str) -> float:
+        # For this transport, we ENFORCE kwtype is always a float.
+        return value  # type: ignore
 
 
 class DCAMCamera(ParamsSHMCamera):
@@ -21,8 +62,7 @@ class DCAMCamera(ParamsSHMCamera):
     KEYWORDS = {}
     KEYWORDS.update(ParamsSHMCamera.KEYWORDS)
 
-    PARAMS_SHM_GET_MAGIC = 0x8000_0000
-    PARAMS_SHM_INVALID_MAGIC = -8.0085
+    CLS_SHM_COMMUNICATOR = CommandTransportForDCAM
 
     IS_WATER_COOLED = False  # Amend in subclasses.
 
@@ -53,7 +93,6 @@ class DCAMCamera(ParamsSHMCamera):
             mode_id: None | util.Typ_mode_id = None,
             params_injection: None | dict[dcamprop.EProp, int | float] = None,
     ) -> None:
-        assert self.control_shm is not None
 
         logg.debug("prepare_camera_for_size @ DCAMCamera")
 
@@ -109,13 +148,15 @@ class DCAMCamera(ParamsSHMCamera):
         # FIXME Why not call a set_prm_multivalue???
         # There's something with the taker not implementing the
         # triple-semaphore-click feedback at this point yet.
-        dump_params = {f"{k:08x}": 1.0 * params[k] for k in params}
 
-        self.control_shm.reset_keywords(dump_params)
-        self.control_shm.set_data(self.control_shm.get_data() * 0 + len(params))
-        while self.control_shm.check_sem_trywait(
-        ):  # semflush the post we just made.
-            pass
+        api_keys, values = [], []
+        for k, v in params.items():
+            api_keys += [k]
+            values += [
+                    v
+            ]  # force float cast -> Now impl in setter_request_to_k_v_c
+
+        self.ctrl_transport.setmulti_nofeedback_nosync(values, api_keys)
 
     def abort_exposure(self, injected_tint: float = 0.1) -> None:
         # Basically restart the stack. Hacky way to abort a very long exposure.
@@ -125,7 +166,7 @@ class DCAMCamera(ParamsSHMCamera):
         # This is a faster version of the intended:
         # self.set_camera_mode(self.current_mode_id)
 
-        with self.control_shm_lock:
+        with self.ctrl_transport.control_shm_lock:
             self._kill_taker_no_dependents()
             self.prepare_camera_for_size(
                     self.current_mode_id, params_injection={
@@ -141,19 +182,6 @@ class DCAMCamera(ParamsSHMCamera):
                                    f"-u {self.dcam_number} -l 0 -N 4")
         if reuse_shm:
             self.taker_tmux_command += " -R"  # Do not overwrite the SHM.
-
-    # def _params_shm_return_raw_to_fits_val(self, api_key: int, value: float):
-    # Unecessary: happy with the superclass.
-
-    def _params_shm_return_raw_to_format_val(self, dcam_key: int, value: float):
-        if (dcam_key in dcamprop.PROP_ENUM_MAP and value is not None and
-                    value != self.PARAMS_SHM_INVALID_MAGIC):
-            # Response type of requested prop is described by a proper enumeration.
-            # Instantiate the Enum class for the return value.
-            new_value = dcamprop.PROP_ENUM_MAP[dcam_key](value)
-        else:
-            new_value = value
-        return new_value
 
 
 class OrcaQuest(DCAMCamera):
@@ -228,8 +256,15 @@ class OrcaQuest(DCAMCamera):
         self._set_formatted_keyword("DETPXSZ2", 0.0046)
 
         # Detector specs from instruction manual
-        self._prm_getvalue("GAIN", dcamprop.EProp.CONVERSIONFACTOR_COEFF)
-        self._prm_getvalue("DETBIAS", dcamprop.EProp.CONVERSIONFACTOR_OFFSET)
+        self._set_formatted_keyword(
+                'GAIN',
+                self.ctrl_transport.get(
+                        dcamprop.EProp.CONVERSIONFACTOR_COEFF)[1])
+
+        self._set_formatted_keyword(
+                'DETBIAS',
+                self.ctrl_transport.get(
+                        dcamprop.EProp.CONVERSIONFACTOR_OFFSET)[1])
 
     def poll_camera_for_keywords(self) -> None:
         self.get_temperature()
@@ -237,7 +272,7 @@ class OrcaQuest(DCAMCamera):
     def get_temperature(self) -> float:
         # Let's try and play: it's readonly
         # but should trigger the cam calling back home
-        temp_C = self._prm_getvalue(None, dcamprop.EProp.SENSORTEMPERATURE)
+        temp_C, _ = self.ctrl_transport.get(dcamprop.EProp.SENSORTEMPERATURE)
         temp_K = temp_C + 273.15
         # convert celsius to kelvin
         self._set_formatted_keyword("DET-TMP", temp_K)
@@ -247,32 +282,32 @@ class OrcaQuest(DCAMCamera):
     # And now we fill up... FAN, LIQUID
 
     def get_tint(self) -> float:
-        val = self._prm_getvalue("EXPTIME", dcamprop.EProp.EXPOSURETIME)
+        val, val_fits = self.ctrl_transport.get(dcamprop.EProp.EXPOSURETIME)
+        self._set_formatted_keyword("EXPTIME", val_fits)
         logg.info(f"get_tint {val}")
         return val
 
     def set_tint(self, tint: float) -> float:
-        tint = self._prm_setvalue(float(tint), "EXPTIME",
-                                  dcamprop.EProp.EXPOSURETIME)
+        tint, tint_fits = self.ctrl_transport.set(tint,
+                                                  dcamprop.EProp.EXPOSURETIME)
+        self._set_formatted_keyword("EXPTIME", tint_fits)
         # update FRATE and EXPTIME
         self.get_fps()
         return tint
 
     def get_fps(self) -> float:
-        exp_time, read_time, ext_trig = self._prm_getmultivalue(
-                ["EXPTIME", None, None],
-                [
-                        dcamprop.EProp.EXPOSURETIME,
-                        dcamprop.EProp.TIMING_READOUTTIME,
-                        dcamprop.EProp.TRIGGERSOURCE
-                ],
-        )
+        (tint, tint_fits), (read_time,
+                            _), (ext_trig, _) = self.ctrl_transport.getmulti([
+                                    dcamprop.EProp.EXPOSURETIME,
+                                    dcamprop.EProp.TIMING_READOUTTIME,
+                                    dcamprop.EProp.TRIGGERSOURCE
+                            ], )
         if ext_trig == dcamprop.ETriggerSource.INTERNAL:
-            fps = 1 / max(exp_time, read_time)
+            fps = 1 / max(tint, read_time)
         else:
-            fps = 1 / (
-                    exp_time + read_time
-            )  # Rolling shutter for the currently used trigger mode. FIXME when we deploy continuous external trigger mode.
+            # Rolling shutter for the currently used trigger mode. FIXME when we deploy continuous external trigger mode.
+            fps = 1 / (tint + read_time)
+        self._set_formatted_keyword("EXPTIME", tint_fits)
         self._set_formatted_keyword("FRATE", fps)
         logg.info(f"get_fps {fps}")
         return fps
@@ -282,8 +317,8 @@ class OrcaQuest(DCAMCamera):
         return self.get_fps()
 
     def get_maxfps(self) -> float:
-        fps = 1 / self._prm_getvalue(None, dcamprop.EProp.TIMING_READOUTTIME)
-        logg.info(f"get_fps {fps}")
+        fps = 1 / self.ctrl_transport.get(dcamprop.EProp.TIMING_READOUTTIME)[0]
+        logg.info(f"get_maxfps {fps}")
         return fps
 
     def set_readout_mode(self, mode: str) -> None:
@@ -303,7 +338,7 @@ class OrcaQuest(DCAMCamera):
             raise ValueError(f"Unrecognized readout mode: {mode}")
 
         # preserve trigger mode
-        with self.control_shm_lock:
+        with self.ctrl_transport.control_shm_lock:
             self._kill_taker_no_dependents()
             self.prepare_camera_for_size(params_injection={
                     dcamprop.EProp.READOUTSPEED: readmode,
@@ -311,7 +346,7 @@ class OrcaQuest(DCAMCamera):
             self._start_taker_no_dependents(reuse_shm=True)
 
     def get_readout_mode(self) -> str:
-        readmode = self._prm_getvalue(None, dcamprop.EProp.READOUTSPEED)
+        readmode, _ = self.ctrl_transport.get(dcamprop.EProp.READOUTSPEED)
         if readmode == dcamprop.EReadoutSpeed.READOUT_ULTRAQUIET:
             mode = "SLOW"
         elif readmode == dcamprop.EReadoutSpeed.READOUT_FAST:
@@ -322,7 +357,7 @@ class OrcaQuest(DCAMCamera):
         return mode
 
     def get_external_trigger(self) -> bool:
-        val = (self._prm_getvalue(None, dcamprop.EProp.TRIGGERSOURCE) ==
+        val = (self.ctrl_transport.get(dcamprop.EProp.TRIGGERSOURCE)[0] ==
                dcamprop.ETriggerSource.EXTERNAL)
         self._set_formatted_keyword("EXTTRIG", val)
         return val
@@ -331,18 +366,16 @@ class OrcaQuest(DCAMCamera):
         if enable:
             logg.debug(f"Enabling external trigger.")
             # Enable the internal trigger
-            result = self._prm_setvalue(
-                    float(dcamprop.ETriggerSource.EXTERNAL),
-                    None,
+            result = self.ctrl_transport.set(
+                    dcamprop.ETriggerSource.EXTERNAL,
                     dcamprop.EProp.TRIGGERSOURCE,
-            )
+            )[0]
         else:
             logg.debug("Disabling external trigger.")
-            result = self._prm_setvalue(
-                    float(dcamprop.ETriggerSource.INTERNAL),
-                    None,
+            result = self.ctrl_transport.set(
+                    dcamprop.ETriggerSource.INTERNAL,
                     dcamprop.EProp.TRIGGERSOURCE,
-            )
+            )[0]
 
         ext_trig = result == dcamprop.ETriggerSource.EXTERNAL
         self._set_formatted_keyword("EXTTRIG", ext_trig)
@@ -378,17 +411,20 @@ class OrcaQuest(DCAMCamera):
         else:
             raise ValueError("Output trigger polarity not recognized.")
 
-        return self._prm_setmultivalue(
-                list(map(float, (kind_val, pol_val))),
-                [None, None],
+        ret = self.ctrl_transport.setmulti(
+                [kind_val, pol_val],
                 [
                         dcamprop.EProp.OUTPUTTRIGGER_KIND + key_offset,
                         dcamprop.EProp.OUTPUTTRIGGER_POLARITY + key_offset,
                 ],
         )
 
+        return [
+                v[0] for v in ret
+        ]  # extract formatted value from (formatted_value, fits_value) of ret
+
     def get_cooler_mode(self):
-        value = self._prm_getvalue(None, dcamprop.EProp.SENSORCOOLER)
+        value = self.ctrl_transport.get(dcamprop.EProp.SENSORCOOLER)
         if value == dcamprop.ESensorCooler.OFF:
             return "OFF"
         elif value == dcamprop.ESensorCooler.ON:
@@ -410,7 +446,7 @@ class OrcaQuest(DCAMCamera):
             raise ValueError(f"Invalid cooling mode {mode}")
 
         logg.debug(f"Setting cooling mode to {mode}")
-        self._prm_setvalue(float(prop), None, dcamprop.EProp.SENSORCOOLER)
+        self.ctrl_transport.set(prop, dcamprop.EProp.SENSORCOOLER)
 
 
 class FIRSTOrcam(OrcaQuest):
