@@ -264,6 +264,7 @@ class PygameViewerFrontend:
         self.backend_obj = backend
         self.has_backend = True
 
+        self.backend_obj.register_frontend(self)
         self.backend_obj.cross_register_plugins(self.plugins)
 
     def run(self) -> None:
