@@ -41,6 +41,8 @@ class GenericViewerBackend:
     HELP_MSG = """
 Display controls:
 --------------------------------------------------
+x | Esc   : quit
+
 c         : display cross
 k         : display camera SHM keywords
 d         : subtract dark frame
