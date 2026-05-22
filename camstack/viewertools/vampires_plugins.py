@@ -381,10 +381,10 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
             sign = -1
         elif key == pgmc.K_UP:
             substage = "x"
-            sign = 1
+            sign = -1
         elif key == pgmc.K_DOWN:
             substage = "x"
-            sign = -1
+            sign = 1
 
         nudge_value = sign * step
         self.backend_obj.logger.info(f"Moving {substage} by {nudge_value} mm")
