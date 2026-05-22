@@ -27,7 +27,7 @@ def main1(zoom, binn, debug=False):
                                             textbox=frontend.lbl_status),
                vplugs.VCAMTriggerPlugin(frontend),
                vplugs.DiffFilterWheelPlugin(frontend),
-               vplugs.VCAMCompassPlugin(frontend, flip_y=False),
+               vplugs.VCAMCompassPlugin(frontend, flip_y=True),
                vplugs.VCAMScalePlugin(frontend),
                vplugs.VisBlockPlugin(frontend), vplugs.FocusPlugin(frontend))
 
@@ -60,7 +60,7 @@ def main2(zoom, binn, debug=False):
                                             textbox=frontend.lbl_status),
                vplugs.VCAMTriggerPlugin(frontend),
                vplugs.DiffFilterWheelPlugin(frontend),
-               vplugs.VCAMCompassPlugin(frontend, flip_y=True),
+               vplugs.VCAMCompassPlugin(frontend, flip_y=False),
                vplugs.VCAMScalePlugin(frontend),
                vplugs.VisBlockPlugin(frontend), vplugs.FocusPlugin(frontend))
 
