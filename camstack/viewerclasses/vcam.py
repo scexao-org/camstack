@@ -78,9 +78,9 @@ SHIFT + i : Nudge focus by -0.1 mm
 Cam focus controls:
 --------------------------------------------------
 CTRL  + l : Nudge cam focus by  0.01 mm
-CTRL  + ; : Nudge cam focus by -0.01mm
-SHIFT + l : Nudge cam focus by  0.1 mm
-SHIFT + ; : Nudge cam focus by -0.1 mm
+CTRL  + ; : Nudge cam focus by -0.01 mm
+SHIFT + l : Nudge cam focus by  0.1  mm
+SHIFT + ; : Nudge cam focus by -0.1  mm
 
 MBI wheel controls:
 --------------------------------------------------
@@ -122,9 +122,10 @@ CTRL  + 0     : CLC-5
 CTRL  + -     : CLC-7
 CTRL  + =     : DGVVC
 CTRL  + ARROW : Nudge 0.001 mm in x (left/right) and y (up/down)
-SHIFT + ARROW : Nudge 0.05 mm in x (left/right) and y (up/down)
+CTRL  + SHIFT + ARROW : Nudge 0.01 mm in x (left/right) and y (up/down)
+SHIFT + ARROW : Nudge  0.05 mm in x (left/right) and y (up/down)
 CTRL  + .     : Nudge -0.05 mm in focus
-CTRL  + ;     : Nudge 0.05 mm in focus
+CTRL  + ,     : Nudge  0.05 mm in focus
 CTRL  + o     : Offset fieldstop 0.5 mm; press again to return
 CTRL  + s     : Save current position to last configuration"""
 
@@ -310,8 +311,8 @@ CTRL  + s     : Save current position to last configuration"""
         else:
             self.data_debias = self.data_debias_uncrop[self.crop_slice]
 
-            ## flip camera 1 on y-axis
-            if self.cam_num == 1:
+            ## flip camera 2 on y-axis
+            if self.cam_num == 2:
                 self.data_debias = np.fliplr(self.data_debias)
 
 

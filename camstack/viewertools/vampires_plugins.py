@@ -327,21 +327,29 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
         # yapf: disable
         self.shortcut_map = {
             buts.Shortcut(pgmc.K_LEFT, pgmc.KMOD_LCTRL):
-                    partial(self.nudge_fieldstop, pgmc.K_LEFT, fine=True),
+                    partial(self.nudge_fieldstop, pgmc.K_LEFT, step=0.001),
+            buts.Shortcut(pgmc.K_LEFT, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT):
+                    partial(self.nudge_fieldstop, pgmc.K_LEFT, step=0.01),
             buts.Shortcut(pgmc.K_LEFT, pgmc.KMOD_LSHIFT):
-                    partial(self.nudge_fieldstop, pgmc.K_LEFT, fine=False),
+                    partial(self.nudge_fieldstop, pgmc.K_LEFT, step=0.05),
             buts.Shortcut(pgmc.K_RIGHT, pgmc.KMOD_LCTRL):
-                    partial(self.nudge_fieldstop, pgmc.K_RIGHT, fine=True),
+                    partial(self.nudge_fieldstop, pgmc.K_RIGHT, step=0.001),
+            buts.Shortcut(pgmc.K_RIGHT, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT):
+                    partial(self.nudge_fieldstop, pgmc.K_RIGHT, step=0.01),
             buts.Shortcut(pgmc.K_RIGHT, pgmc.KMOD_LSHIFT):
-                    partial(self.nudge_fieldstop, pgmc.K_RIGHT, fine=False),
+                    partial(self.nudge_fieldstop, pgmc.K_RIGHT, step=0.05),
             buts.Shortcut(pgmc.K_UP, pgmc.KMOD_LCTRL):
-                    partial(self.nudge_fieldstop, pgmc.K_UP, fine=True),
+                    partial(self.nudge_fieldstop, pgmc.K_UP, step=0.001),
+            buts.Shortcut(pgmc.K_UP, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT):
+                    partial(self.nudge_fieldstop, pgmc.K_UP, step=0.01),
             buts.Shortcut(pgmc.K_UP, pgmc.KMOD_LSHIFT):
-                    partial(self.nudge_fieldstop, pgmc.K_UP, fine=False),
+                    partial(self.nudge_fieldstop, pgmc.K_UP, step=0.05),
             buts.Shortcut(pgmc.K_DOWN, pgmc.KMOD_LCTRL):
-                    partial(self.nudge_fieldstop, pgmc.K_DOWN, fine=True),
+                    partial(self.nudge_fieldstop, pgmc.K_DOWN, step=0.001),
+            buts.Shortcut(pgmc.K_DOWN, pgmc.KMOD_LCTRL | pgmc.KMOD_LSHIFT):
+                    partial(self.nudge_fieldstop, pgmc.K_DOWN, step=0.01),
             buts.Shortcut(pgmc.K_DOWN, pgmc.KMOD_LSHIFT):
-                    partial(self.nudge_fieldstop, pgmc.K_DOWN, fine=False),
+                    partial(self.nudge_fieldstop, pgmc.K_DOWN, step=0.05),
             buts.Shortcut(pgmc.K_7, pgmc.KMOD_LCTRL):
                     partial(self.change_fieldstop, 1),
             buts.Shortcut(pgmc.K_8, pgmc.KMOD_LCTRL):
@@ -363,7 +371,7 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
         }
         # yapf: enable
 
-    def nudge_fieldstop(self, key, fine=True):
+    def nudge_fieldstop(self, key, step: float):
         sign = 1
         if key == pgmc.K_LEFT:
             substage = "y"
@@ -378,10 +386,7 @@ class FieldstopPlugin(DeviceMixin, BasePlugin):
             substage = "x"
             sign = -1
 
-        if fine:
-            nudge_value = sign * 0.001
-        else:
-            nudge_value = sign * 0.05
+        nudge_value = sign * step
         self.backend_obj.logger.info(f"Moving {substage} by {nudge_value} mm")
         self.device.move_relative__oneway(substage, nudge_value)
 

@@ -268,9 +268,12 @@ class VCAM1(BaseVCAM):
             BaseVCAM.MBI_ONEHALF:
                     util.CameraMode(x0=1124, x1=3011, y0=1328, y1=1547,
                                     tint=1e-4),
+            BaseVCAM.NPBS:
+                    util.CameraMode(x0=1780 + 20, x1=2315 + 20, y0=884, y1=1419,
+                                    tint=1e-3),
     }
     MODES.update(BaseVCAM.MODES)
-    MODES[BaseVCAM.NPBS] = MODES[BaseVCAM.STANDARD]
+    # MODES[BaseVCAM.NPBS] = MODES[BaseVCAM.STANDARD]
 
     REDIS_PUSH_ENABLED = True
     REDIS_PREFIX = "u_V"  # LOWERCASE x to not get mixed with the SCExAO keys
@@ -319,15 +322,18 @@ class VCAM2(BaseVCAM):
             BaseVCAM.MBI_ONEHALF:
                     util.CameraMode(x0=1128, x1=3015, y0=744, y1=979,
                                     tint=1e-4),
-            BaseVCAM.NPBS:
-                    util.CameraMode(x0=1700, x1=2235, y0=816, y1=1351,
-                                    tint=1e-3),
+            # BaseVCAM.NPBS:
+            #         util.CameraMode(x0=1700, x1=2235, y0=816, y1=1351,
+            #                         tint=1e-3),
             BaseVCAM.PUPIL:
                     util.CameraMode(x0=1648, x1=2407, y0=772, y1=1531,
                                     tint=0.1),
+            # BaseVCAM.NPBS:
+            #         util.CameraMode(x0=1700, x1=2235, y0=816, y1=1351,
+            #                         tint=1e-3),
             BaseVCAM.NPBS:
-                    util.CameraMode(x0=1700, x1=2235, y0=816, y1=1351,
-                                    tint=1e-3),
+                    util.CameraMode(x0=1700 + 76, x1=1700 + 76 + 535, y0=816 -
+                                    120, y1=816 - 120 + 535, tint=1e-3),
     }
     MODES.update(BaseVCAM.MODES)
 
