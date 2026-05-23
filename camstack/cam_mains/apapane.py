@@ -34,7 +34,7 @@ def main():
         # This cfg file will work the serial for all FLI cameras.
         edt_serial = EdtInterfaceSerial(
                 unit=1, channel=0, config_file=os.environ['HOME'] +
-                '/src/camstack/config/cred2_single_channel.cfg')
+                '/src/camstack/conf/edt_fg_conf/cred2_single_channel.cfg')
 
         success = False
         for _ in range(3):
@@ -65,7 +65,7 @@ def main():
     }
 
     Klass: type = type_lookup[cam_flag]
-    mode = 3
+    mode = 0
 
     # Prepare dependent processes
     tcp_recv = RemoteDependentProcess(

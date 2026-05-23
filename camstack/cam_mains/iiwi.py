@@ -38,7 +38,7 @@ def main():
         # This cfg file will work the serial for all FLI cameras.
         edt_serial = EdtInterfaceSerial(
                 unit=0, channel=0, config_file=os.environ['HOME'] +
-                '/src/camstack/config/cred2_single_channel.cfg')
+                '/src/camstack/edt_fg_conf/cred2_single_channel.cfg')
         uid = edt_serial.send_command(
                 'hwuid', base_timeout=1.0).removesuffix('\r\nOK\r\nfli-cli>')
 

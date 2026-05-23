@@ -42,8 +42,8 @@ class EDTCamera(BaseCamera):
             self.pdv_basefile: str = pdv_basefile
         else:
             self.pdv_basefile = os.environ[
-                    'HOME'] + '/src/conf/edt_fg_conf/' + pdv_basefile
-            assert os.path.exists(pdv_basefile)
+                    'HOME'] + '/src/camstack/conf/edt_fg_conf/' + pdv_basefile
+            assert os.path.exists(self.pdv_basefile)
 
         self.pdv_taps: int = 1  # We will retrive this from the FG.
 

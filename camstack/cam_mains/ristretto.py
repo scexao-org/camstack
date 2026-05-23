@@ -17,7 +17,7 @@ if __name__ == "__main__":
     cam = Ristretto(
             'ristretto', 'ristretto_raw', unit=0, channel=0,
             basefile=os.environ['HOME'] +
-            '/src/camstack/config/cred1_ristretto.cfg', mode_id=mode,
+            '/src/camstack/conf/edt_fg_conf/cred1_ristretto.cfg', mode_id=mode,
             dependent_processes=[])
     #, taker_cset_prio=('ristretto_edt', None))
 

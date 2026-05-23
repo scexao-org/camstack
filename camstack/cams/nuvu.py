@@ -97,7 +97,7 @@ class NUVU(EDTCamera):
                  dependent_processes=[]):
 
         debug = 1
-        basefile = CAMSTACK_HOME + '/config/nuvu_kalao_16bit.cfg'
+        basefile = CAMSTACK_HOME + '/conf/edt_fg_conf/nuvu_kalao_16bit.cfg'
 
         # Call EDT camera init
         # This should pre-kill dependent sessions
