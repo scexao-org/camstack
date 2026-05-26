@@ -38,9 +38,16 @@ def main_camera_info():
         for kk in range(len(cam_list)):
             spinn_cam = cam_list[kk]
             spinn_cam.Init()
+            family_name = ''
+            try:
+                family_name = f' [{spinn_cam.DeviceFamilyName()}] '  # GEV cam weird about that one ?
+            except:
+                pass
+
             cam_info = \
                 [spinn_cam.DeviceVendorName() + ' ' + spinn_cam.DeviceModelName() + \
-                    f' [{spinn_cam.DeviceFamilyName()}] [ID={spinn_cam.DeviceID()}]']
+                    family_name +\
+                    f'[ID={spinn_cam.DeviceID()}]']
             for prop in interesting_props:
                 p = getattr(spinn_cam, prop)
                 cam_info += [
