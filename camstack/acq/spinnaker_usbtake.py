@@ -20,6 +20,13 @@ from pyMilk.interfacing.shm import SHM
 
 import time
 
+def try_eth_info(cam) -> str:
+    try:
+        i = cam.GevCurrentIPAddress()
+        m = cam.GevCurrentSubnetMask()
+        return f'IP: {i >> 24 & 0xFF}.{i >> 16 & 0xFF}.{i >> 8 & 0xFF}.{i & 0xFF} - Mask: {m >> 24 & 0xFF}.{m >> 16 & 0xFF}.{m >> 8 & 0xFF}.{m & 0xFF}'
+    except:
+        return '[No ethernet info]'
 
 def main_camera_info():
     spinn_system = None
@@ -38,7 +45,7 @@ def main_camera_info():
         for kk in range(len(cam_list)):
             spinn_cam = cam_list[kk]
             spinn_cam.Init()
-            family_name = ''
+            family_name = ' '
             try:
                 family_name = f' [{spinn_cam.DeviceFamilyName()}] '  # GEV cam weird about that one ?
             except:
@@ -48,6 +55,7 @@ def main_camera_info():
                 [spinn_cam.DeviceVendorName() + ' ' + spinn_cam.DeviceModelName() + \
                     family_name +\
                     f'[ID={spinn_cam.DeviceID()}]']
+            cam_info += [try_eth_info(spinn_cam)]
             for prop in interesting_props:
                 p = getattr(spinn_cam, prop)
                 cam_info += [
@@ -59,6 +67,10 @@ def main_camera_info():
 
             spinn_cam.DeInit()
             spinn_cam = None
+    except Exception as exc:
+        print(f'Something went wrong! Exception {repr(exc)} (will re-raise)')
+        print('It is recommended to reset the USB cameras (~/reset_pg1.sh)')
+        raise exc
     finally:
         cam_list.Clear()
         try:
