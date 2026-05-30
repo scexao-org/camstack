@@ -65,6 +65,7 @@ vpupcam = "camstack.viewermains.vpupcam:main"
 
 hwacq-flycaptake = "camstack.acq.flycapture_usbtake:main"
 hwacq-spinnakertake = "camstack.acq.spinnaker_usbtake:main"
+hwacq-spintransporttake = "camstack.acq.spinnaker_over_transport_usbtake:main"
 
 
 [tool.pytest.ini_options]

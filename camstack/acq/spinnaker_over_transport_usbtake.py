@@ -19,7 +19,9 @@ import typing as typ
 # mamba run -n py38 python -m camstack.acq.spinnaker_usbtake [options]
 
 import PySpin
-from pyMilk.interfacing.shm import SHM, KWCommentDict
+from pyMilk.interfacing.shm import SHM
+if typ.TYPE_CHECKING:
+    from pyMilk.interfacing.shm import KWCommentDict
 from camstack.scxkw import MAGIC_BOOL_STR
 import numpy as np
 
@@ -41,7 +43,7 @@ def _params_parse_and_set(spinn_cam: typ.Any, kws: KWCommentDict,
                       actual value       -> SET then GET
       keyword comment: feature_name, or feature_name#string_value for str setters
     """
-
+    kws = kws.copy()
     updates: dict[str, tuple] = {
     }  # accumulated write-backs {name: (value, comment)}
 
@@ -70,6 +72,7 @@ def _params_parse_and_set(spinn_cam: typ.Any, kws: KWCommentDict,
                     updates[kw_name] = ('plholder', comment)
                 else:
                     updates[kw_name] = (x, comment)
+                print(updates[kw_name])
             elif request == sdk.REQUEST.GETMIN:
                 updates[kw_name] = (spinn_cam_prop.GetMin(), comment)
             elif request == sdk.REQUEST.GETMAX:
@@ -79,17 +82,21 @@ def _params_parse_and_set(spinn_cam: typ.Any, kws: KWCommentDict,
                     spinn_cam_prop.SetValue(comment.split('#')[1])
                     updates[kw_name] = 'plholder', prop_string + '#' + spinn_cam_prop(
                     )
+                    print(comment.split('#')[1], updates[kw_name][1].split('#')[1])
                 elif value == MAGIC_BOOL_STR.TRUE:  # bool true
                     spinn_cam_prop.SetValue(True)
                     updates[kw_name] = MAGIC_BOOL_STR.TUPLE[
                             spinn_cam_prop()], comment
+                    print(True, updates[kw_name][0])
                 elif value == MAGIC_BOOL_STR.FALSE:  # bool false
                     spinn_cam_prop.SetValue(False)
                     updates[kw_name] = MAGIC_BOOL_STR.TUPLE[
                             spinn_cam_prop()], comment
+                    print(False, updates[kw_name][0])
                 else:  # int, floats, enums
                     spinn_cam_prop.SetValue(value)
                     updates[kw_name] = spinn_cam_prop(), comment
+                    print(value, updates[kw_name][0])
         except Exception as exc:
             ok = False
             msg = f'  kw[{kw_name}] feature={prop_string!r}: {exc!r}'
@@ -108,8 +115,7 @@ def _params_parse_and_set(spinn_cam: typ.Any, kws: KWCommentDict,
 
 def _has_setter(kws: KWCommentDict) -> bool:
     """
-    Return True if any keyword in kw_items is a SET or EXEC operation.
-    Mirrors has_setter() in andorcb2.cpp.
+    Return True if any keyword in kw_items is a SET operation.
     """
     for kw_name in kws:
         try:
@@ -294,15 +300,18 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
         cam_list.Clear()
 
         # Open the parameter-feedback SHM (already created by the Python control session)
-        params_shm = SHM(stream_name + '_params_fb')
+        params_shm = SHM(stream_name + '_params_fb', autoSqueeze=False) # Since this is (1,), don't squeeze.
 
         # -- Apply initial params (mirrors the two params_parse_and_set calls in andorcb2.cpp).
         # Reset offsets first so any Width/Height + Offset combination is accepted
         # regardless of keyword ordering in the SHM.
         kws = params_shm.get_keywords(True)
-        _params_parse_and_set(spinn_cam, kws, fatal=True)
+        # Reset the ROI offsets and the binning to 1
+        spinn_cam.OffsetX.SetValue(0)
+        spinn_cam.OffsetY.SetValue(0)
+        _params_parse_and_set(spinn_cam, kws, fatal=False)
         params_shm.reset_keywords(
-                _params_parse_and_set(spinn_cam, kws, fatal=True))
+                _params_parse_and_set(spinn_cam, kws, fatal=False))
 
         # Flush accumulated semaphore posts from init (mirrors ImageStreamIO_semflush)
         while params_shm.check_sem_trywait():
@@ -310,7 +319,7 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
 
         # -- Read image dimensions after params have been applied --
         width = spinn_cam.Width.GetValue()
-        height = spinn_cam.GetValue()
+        height = spinn_cam.Height.GetValue()
 
         # -- Start acquisition and grab one frame to detect pixel depth --
         spinn_cam.BeginAcquisition()
@@ -326,9 +335,9 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
 
         try:
             shm_output_data = SHM(stream_name)
-            shm_output_data.set_data(np.zeros((width, heigth), dtype))
+            shm_output_data.set_data(np.zeros((height, width), dtype))
         except:
-            shm_output_data = SHM(stream_name, np.zeros((width, heigth), dtype),
+            shm_output_data = SHM(stream_name, np.zeros((height, width), dtype),
                                   nbkw=50)
 
         shm_output_data.set_keywords({
@@ -360,7 +369,7 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
             is_software_trigger: bool = \
                     spinn_cam.TriggerMode() == sdk.TriggerModeEnum.On and \
                     spinn_cam.TriggerSource() == sdk.TriggerSourceEnum.Software
-            soft_trigger = False
+            received_soft_trigger = False
 
             if params_shm.check_sem_trywait():
                 print('Touching the params!')
@@ -368,7 +377,7 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
                 # Some params (ROI, binning) require acquisition to be stopped.
                 # Let's just assume all setters need it.
                 needs_stop = _has_setter(kws)
-                soft_trigger = _contains_soft_trigger(kws)
+                received_soft_trigger = _contains_soft_trigger(kws)
 
                 if needs_stop:
                     spinn_cam.EndAcquisition()
@@ -389,7 +398,7 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
             # --- Acquire next frame (direct wait, 100 ms timeout) ---
 
             spinn_image = None
-            if is_software_trigger and not soft_trigger:
+            if is_software_trigger and not received_soft_trigger:
                 # a microsleep could be useful here...
                 # save CPU cycles
                 time.sleep(0.0001)

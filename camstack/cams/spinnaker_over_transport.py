@@ -18,7 +18,7 @@ from camstack.cams.params_shm_backend import ParamsSHMCamera, CommandTransport
 SPINNAKER_API_KEY_T: typ.TypeAlias = str | sdk.Prop
 
 
-class CommandTransportForGenicam(CommandTransport[SPINNAKER_API_KEY_T]):
+class CommandTransportForSpinnaker(CommandTransport[SPINNAKER_API_KEY_T]):
     if typ.TYPE_CHECKING:
         from pyMilk.interfacing.shm import KWType
 
@@ -140,6 +140,8 @@ class CommandTransportForGenicam(CommandTransport[SPINNAKER_API_KEY_T]):
             return value
 
 
+# GIGE 16048585
+
 class SpinnakerTransportedCamera(ParamsSHMCamera):
 
     INTERACTIVE_SHELL_METHODS = [] + \
@@ -152,6 +154,9 @@ class SpinnakerTransportedCamera(ParamsSHMCamera):
             'DETGAIN': (0, 'Amplifier gain [dB]', '%16d', 'GAIN'),
     }
     KEYWORDS.update(BaseCamera.KEYWORDS)
+
+    CLS_SHM_COMMUNICATOR = CommandTransportForSpinnaker
+    ctrl_transport: CommandTransport[SPINNAKER_API_KEY_T] # helpful for the type checker.
 
     def __init__(self, name: str, stream_name: str,
                  mode_id: Typ_mode_id_or_heightwidth, spinnaker_number: int,
@@ -168,29 +173,6 @@ class SpinnakerTransportedCamera(ParamsSHMCamera):
         BaseCamera.__init__(self, name, stream_name, mode_id, no_start=no_start,
                             taker_cset_prio=taker_cset_prio,
                             dependent_processes=dependent_processes)
-
-        # The int values of the enumerations took a little digging...
-        # This is best achieved by
-        # 1/ Looking into SpinViewQt for what works for your camera
-        # 2/ calling e.g. [l.GetName() for l in spinn_cam.PixelFormat.GetEntries()]
-
-        # We're gonna have a divergence here between the first U3 generation cameras
-        # and the Blackfly S...
-
-    def init_framegrab_backend(self):
-        logg.debug('init_framegrab_backend @ SpinnakerTransportedCamera')
-
-        if self.is_taker_running():
-            msg = 'Cannot change camera config while camera is running'
-            logg.error(msg)
-            raise AssertionError()
-
-        # TODO this must be injected on preparecameraforsize
-        # Disable trigger
-        self.ctrl_transport.set(sdk.TriggerMode, sdk.TriggerModeEnum.Off)
-        # Set continuous acquisition
-        self.ctrl_transport.set(sdk.AcquisitionMode,
-                                sdk.AcquisitionModeEnum.Continuous)
 
         self._spinnaker_subtypes_constructor_finalizer()
 
@@ -223,7 +205,8 @@ class SpinnakerTransportedCamera(ParamsSHMCamera):
                 sdk.Height:  y1 - y0 + 1,
                 # Trigger defaults: free-running
                 sdk.TriggerMode: sdk.TriggerModeEnum.Off,
-                sdk.PixelFormat: sdk.PixelFormatEnum.Mono12Packed
+                sdk.PixelFormat: sdk.PixelFormatEnum.Mono12Packed,
+                sdk.AcquisitionMode: sdk.AcquisitionModeEnum.Continuous,
                 #sdk.TriggerSelector: sdk.TriggerSelectorEnum.FrameStart,
                 #sdk.TriggerActivation: sdk.TriggerActivationEnum.RisingEdge,
                 # Other misc initializers:
@@ -240,24 +223,6 @@ class SpinnakerTransportedCamera(ParamsSHMCamera):
         values = list(params.values())
         self.ctrl_transport.setmulti_nofeedback_nosync(values, api_keys)
 
-        # TODO
-        '''
-        # Reset offsets
-        self.ctrl_transport.set(sdk.OffsetX, 0)
-        self.ctrl_transport.set(sdk.OffsetY, 0)
-
-        # Bin
-        self.ctrl_transport.set(sdk.BinningHorizontal, mode.biny)
-        self.ctrl_transport.set(sdk.BinningVertical, mode.binx)
-
-        # h, w
-        self.ctrl_transport.set(sdk.Width, x1 - x0 + 1)
-        self.ctrl_transport.set(sdk.Height, y1 - y0 + 1)
-
-        # offsets
-        self.ctrl_transport.set(sdk.OffsetX, x0)
-        self.ctrl_transport.set(sdk.OffsetY, y0)
-        '''
 
     def prepare_camera_finalize(self, mode_id=None):
         # Only the stuff that is mode dependent
@@ -287,7 +252,7 @@ class SpinnakerTransportedCamera(ParamsSHMCamera):
                                  env_launcher: str = ''):
 
         # Prepare the cmdline for starting up!
-        exec_path = env_launcher + ""
+        exec_path = env_launcher + "hwacq-spintransporttake"
         self.taker_tmux_command = (f'{exec_path} -s {self.STREAMNAME} '
                                    f'-u {self.spinn_number} -l 0')
         if reuse_shm:
@@ -320,17 +285,17 @@ class SpinnakerTransportedCamera(ParamsSHMCamera):
         return fpsval
 
     def set_fps(self, fps: float):
-        self.ctrl_transport.set(sdk.AcquisitionFrameRate, fps)
+        self.ctrl_transport.set(fps, sdk.AcquisitionFrameRate)
         return self.get_fps()
 
     def get_tint(self):
         tintval, tintfits = self.ctrl_transport.get(sdk.ExposureTime)
-        self._set_formatted_keyword('EXPTIME', tintfits)
-        logg.info(f'get_tint: {tintval}')
-        return tintval
+        self._set_formatted_keyword('EXPTIME', tintfits / 1e6)
+        logg.info(f'get_tint: {tintval / 1e6}')
+        return tintval / 1e6
 
     def set_tint(self, tint: float):
-        self.ctrl_transport.set(sdk.ExposureTime, tint * 1e6)
+        self.ctrl_transport.set(tint * 1e6, sdk.ExposureTime)
         return self.get_tint()
 
     def get_gain(self):
@@ -341,7 +306,7 @@ class SpinnakerTransportedCamera(ParamsSHMCamera):
         return gainval
 
     def set_gain(self, gain: float):
-        self.ctrl_transport.set(sdk.Gain, gain)
+        self.ctrl_transport.set(gain, sdk.Gain)
         return self.get_gain()
 
     def get_temperature(self):
@@ -394,15 +359,14 @@ TriggerSelector           EnumEntry_TriggerSelector_FrameStart
     KEYWORDS.update(SpinnakerTransportedCamera.KEYWORDS)
 
     def _spinnaker_subtypes_constructor_finalizer(self):
-        logg.debug('_spinnaker_subtypes_constructor_finalizer @ BlackFlyS')
+        logg.debug('_spinnaker_subtypes_constructor_finalizer @ BFLY-PGE-31S4M')
 
         # Disable LED
-        self.ctrl_transport.set(sdk.DeviceIndicatorMode,
-                                sdk.DeviceIndicatorModeEnum.Inactive)
+        self.ctrl_transport.set(sdk.DeviceIndicatorModeEnum.Inactive, sdk.DeviceIndicatorMode)
         # Disable autoexp
-        self.ctrl_transport.set(sdk.ExposureAuto, sdk.ExposureAutoEnum.Off)
+        self.ctrl_transport.set(sdk.ExposureAutoEnum.Off, sdk.ExposureAuto)
         # Disable autogain
-        self.ctrl_transport.set(sdk.GainAuto, sdk.GainAutoEnum.Off)
+        self.ctrl_transport.set(sdk.GainAutoEnum.Off, sdk.GainAuto)
 
     def _fill_keywords(self):
 
@@ -415,7 +379,7 @@ TriggerSelector           EnumEntry_TriggerSelector_FrameStart
         self._set_formatted_keyword('DETPXSZ2', 0.00345)
 
     def prepare_camera_finalize(self, mode_id=None):
-        logg.debug('prepare_camera_finalize @ BlackFlyS')
+        logg.debug('prepare_camera_finalize @ BFLY-PGE-31S4M')
 
         # Something that we feel is BlackFly specific but not Spinnaker generic
         SpinnakerTransportedCamera.prepare_camera_finalize(self, mode_id)
@@ -438,3 +402,38 @@ TriggerSelector           EnumEntry_TriggerSelector_FrameStart
         self._set_formatted_keyword('FRATE', fps)
         logg.info(f'get_fps: {fps}')
         return fps
+
+    def disable_trigger(self) -> None:
+        self.ctrl_transport.set(sdk.TriggerModeEnum.Off, sdk.TriggerMode)
+
+    def enable_software_trigger(self, delay_us: float = 0) -> None:
+        self._enable_trigger(sdk.TriggerSourceEnum.Software, delay_us = delay_us)
+
+    def enable_hardware_trigger(self, delay_us: float = 0):
+        self._enable_trigger(sdk.TriggerSourceEnum.Line0, delay_us = delay_us)
+
+    def _enable_trigger(self, source: sdk.TriggerSourceEnum, delay_us: float = 0) -> None:
+        # EDIT I don't believe triggerdelay is working?
+        params: dict[SPINNAKER_API_KEY_T, typ.Any] = {
+            sdk.TriggerMode: sdk.TriggerModeEnum.On,
+            sdk.TriggerSource: source,
+            sdk.TriggerActivation: sdk.TriggerActivationEnum.FallingEdge,
+        }
+        if delay_us > 0:
+            params.update({
+                sdk.TriggerDelayEnabled: True,
+                sdk.TriggerDelay: delay_us,
+            })
+        else:
+            params.update({
+                sdk.TriggerDelayEnabled: False
+            })
+        api_keys: list[SPINNAKER_API_KEY_T] = []
+        values = []
+        for a,v in params.items():
+            api_keys += [a]
+            values += [v]
+        self.ctrl_transport.setmulti(values, api_keys)
+
+    def send_software_trigger(self):
+        self.ctrl_transport.set(None, sdk.TriggerSoftware)
