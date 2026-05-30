@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import PySpin
 from pyMilk.interfacing.shm import SHM
+import numpy as np
 
 import time
 
@@ -173,48 +174,39 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
         cam_list.Clear()
 
         spinn_cam.BeginAcquisition()
-        spinn_image = spinn_cam.GetNextImage(1000)  # 1 sec timeout
 
-        print('OK')
-        # We need to convert - not native 8 or 16 ! 10 or 12 bit packed probs.
-        # So we convert to Mono16.
-        need_convert_16 = spinn_image.GetBitsPerPixel() not in [8, 16]
-
-        if need_convert_16:
-            processor = PySpin.ImageProcessor()
-            conv_image = processor.Convert(spinn_image,
-                                           PySpin.PixelFormat_Mono16)
-        else:
-            conv_image = spinn_image
-
-        data_arr = conv_image.GetNDArray()
-        spinn_image.Release()
-        if need_convert_16:
-            conv_image.Release()
-
-        try:
-            shm = SHM(stream_name)
-            shm.set_data(data_arr)
-        except:
-            shm = SHM(stream_name, data_arr, nbkw=50)
-
-        shm.set_keywords({
-                'MFRATE': (0.0, "Measured frame rate (Hz)"),
-                '_MAQTIME': (int(time.time() * 1e6),
-                             "Frame acq time (us, CLOCK_REALTIME)"),
-                '_FGSIZE1': (data_arr.shape[1],
-                             "Size of frame grabber for the X axis (pixel)"),
-                '_FGSIZE2': (data_arr.shape[0],
-                             "Size of frame grabber for the Y axis (pixel)"),
-        })
-
+        initializing = True
+    
         n_img = 0
         time_1 = time.time()
         mfrate = 0.0
         mfrate_gain = 0.01
 
-        while True:
+        width, heigth = spinn_cam.Width(), spinn_cam.Height()
+        fmt = spinn_cam.PixelFormat.GetEntry(spinn_cam.PixelFormat()).GetName()
+        need_conversion_to_16bit = not ('Mono8' in fmt or 'Mono16' in fmt)
+        processor = PySpin.ImageProcessor()
 
+        dtype = np.uint8 if 'Mono8' in fmt else np.uint16
+
+        try:
+            shm = SHM(stream_name)
+            shm.set_data(np.zeros((width, heigth), dtype))
+        except:
+            shm = SHM(stream_name, np.zeros((width, heigth), dtype), nbkw=50)
+
+        shm.set_keywords({
+                'MFRATE': (0.0, "Measured frame rate (Hz)"),
+                '_MAQTIME': (int(time.time() * 1e6),
+                            "Frame acq time (us, CLOCK_REALTIME)"),
+                '_FGSIZE1': (width,
+                            "Size of frame grabber for the X axis (pixel)"),
+                '_FGSIZE2': (heigth,
+                            "Size of frame grabber for the Y axis (pixel)"),
+        })
+    
+
+        while True:
             try:
                 spinn_image = spinn_cam.GetNextImage(1000)  # 1 sec timeout
             except PySpin.SpinnakerException as exc:
@@ -226,7 +218,9 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
                       spinn_image.GetImageStatus())
                 continue
 
-            if need_convert_16:
+            # We need to convert - not native 8 or 16 ! 10 or 12 bit packed probs.
+            # So we convert to Mono16.
+            if need_conversion_to_16bit:
                 conv_image = processor.Convert(spinn_image,
                                                PySpin.PixelFormat_Mono16)
             else:
@@ -235,7 +229,7 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
             data_arr = conv_image.GetNDArray()
 
             spinn_image.Release()
-            if need_convert_16:
+            if need_conversion_to_16bit:
                 conv_image.Release()
 
             time_2 = time.time()
