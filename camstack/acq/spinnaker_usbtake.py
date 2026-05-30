@@ -41,10 +41,34 @@ def try_family_name(cam) -> str:
 
 PRETTY_PRINT_PROPS = [
         'WidthMax', 'HeightMax', 'BinningHorizontal', 'BinningVertical',
-        'AcquisitionFrameRate', 'ExposureTime', 'Gain', 'Width', 'Height',
-        'OffsetX', 'OffsetY'
+        'AcquisitionFrameRate', 'ExposureTime', 'ExposureAuto', 'Gain',
+        'GainAuto', 'Width', 'Height', 'OffsetX', 'OffsetY',
+        'TriggerActivation', 'TriggerDelay', 'TriggerMode', 'TriggerSource',
+        'TriggerSelector'
 ]
 BOOL_PROPS = []
+
+
+def try_infostring_value(prop: str, p) -> str | None:
+    try:
+        return f'{prop:<25} {p.GetValue():<20} [{p.GetUnit():<2}]   ({p.GetMin()} -- {p.GetMax()})'
+    except:
+        return None
+
+
+def try_infostring_enum(prop: str, p) -> str | None:
+    try:
+        return f'{prop:<25} {p.GetEntry(p.GetValue()).GetName()}'
+    except:
+        return None
+
+
+def try_infostring_bool(prop: str, p) -> str | None:
+    try:
+        tag = ('ON', 'OFF')[p.GetValue()]
+        return f'{prop:<25} {tag}'
+    except:
+        return None
 
 
 def print_camera_info(cam) -> list[str]:
@@ -54,9 +78,19 @@ def print_camera_info(cam) -> list[str]:
     for prop in PRETTY_PRINT_PROPS:
         try:
             p = getattr(cam, prop)
-            cam_info += [
-                    f'{prop:<25} {p.GetValue():<20} [{p.GetUnit():<2}]   ({p.GetMin()} -- {p.GetMax()})'
-            ]
+            s = try_infostring_value(prop, p)
+            if s is not None:
+                cam_info += [s]
+                continue
+            s = try_infostring_enum(prop, p)
+            if s is not None:
+                cam_info += [s]
+                continue
+            s = try_infostring_bool(prop, p)
+            if s is not None:
+                cam_info += [s]
+                continue
+            cam_info += [f'{prop:<25} [Error during getvalue]']
         except:
             cam_info += [f'{prop:<25} [Error during getattr]']
     return cam_info
@@ -113,6 +147,7 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
         cam_list = spinn_system.GetCameras()
         if api_cam_num < len(cam_list):  # Index
             spinn_cam = cam_list[api_cam_num]
+            spinn_cam.Init()
         else:
             # With GigE cams, the same serial may appear multiple times!
             # Cam is detected correctly on one IP, and poorly on other subnet IPs
@@ -123,17 +158,17 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
                     _serials_to_index[sn] = []
                 _serials_to_index[sn] += [kk]
 
-        for cam_idx in _serials_to_index[api_cam_num]:
-            cam = cam_list[cam_idx]
-            try:
-                cam.Init()
-                spinn_cam = cam
-                break
-            except PySpin.SpinnakerException as exc:
-                cam = None
-                pass
-        else:  # for-else statement only if loop as completed without finding ok serial.
-            raise exc
+            for cam_idx in _serials_to_index[api_cam_num]:
+                cam = cam_list[cam_idx]
+                try:
+                    cam.Init()
+                    spinn_cam = cam
+                    break
+                except PySpin.SpinnakerException as exc:
+                    cam = None
+                    pass
+            else:  # for-else statement only if loop as completed without finding ok serial.
+                raise exc
 
         cam_list.Clear()
 
