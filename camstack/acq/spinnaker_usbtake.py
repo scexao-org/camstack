@@ -173,10 +173,6 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
 
         cam_list.Clear()
 
-        spinn_cam.BeginAcquisition()
-
-        initializing = True
-    
         n_img = 0
         time_1 = time.time()
         mfrate = 0.0
@@ -198,13 +194,14 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
         shm.set_keywords({
                 'MFRATE': (0.0, "Measured frame rate (Hz)"),
                 '_MAQTIME': (int(time.time() * 1e6),
-                            "Frame acq time (us, CLOCK_REALTIME)"),
-                '_FGSIZE1': (width,
-                            "Size of frame grabber for the X axis (pixel)"),
+                             "Frame acq time (us, CLOCK_REALTIME)"),
+                '_FGSIZE1':
+                        (width, "Size of frame grabber for the X axis (pixel)"),
                 '_FGSIZE2': (heigth,
-                            "Size of frame grabber for the Y axis (pixel)"),
+                             "Size of frame grabber for the Y axis (pixel)"),
         })
-    
+
+        spinn_cam.BeginAcquisition()
 
         while True:
             try:
