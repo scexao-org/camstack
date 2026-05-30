@@ -12,6 +12,8 @@
         -R               Attempt SHM reuse if possible
         -B               List cameras
 '''
+from __future__ import annotations
+
 # Consider running this directly in mamba
 # mamba run -n py38 python -m camstack.acq.spinnaker_usbtake [options]
 
@@ -20,23 +22,49 @@ from pyMilk.interfacing.shm import SHM
 
 import time
 
+
 def try_eth_info(cam) -> str:
     try:
         i = cam.GevCurrentIPAddress()
         m = cam.GevCurrentSubnetMask()
-        return f'IP: {i >> 24 & 0xFF}.{i >> 16 & 0xFF}.{i >> 8 & 0xFF}.{i & 0xFF} - Mask: {m >> 24 & 0xFF}.{m >> 16 & 0xFF}.{m >> 8 & 0xFF}.{m & 0xFF}'
+        return f'[IP: {i >> 24 & 0xFF}.{i >> 16 & 0xFF}.{i >> 8 & 0xFF}.{i & 0xFF} - Mask: {m >> 24 & 0xFF}.{m >> 16 & 0xFF}.{m >> 8 & 0xFF}.{m & 0xFF}]'
     except:
         return '[No ethernet info]'
+
+
+def try_family_name(cam) -> str:
+    try:
+        return f'[{cam.DeviceFamilyName()}] '  # GEV cam weird about that one ?
+    except:
+        return '[No FamilyName info]'
+
+
+PRETTY_PRINT_PROPS = [
+        'WidthMax', 'HeightMax', 'BinningHorizontal', 'BinningVertical',
+        'AcquisitionFrameRate', 'ExposureTime', 'Gain', 'Width', 'Height',
+        'OffsetX', 'OffsetY'
+]
+BOOL_PROPS = []
+
+
+def print_camera_info(cam) -> list[str]:
+    cam_info = [cam.DeviceVendorName() + ' ' + cam.DeviceModelName() + \
+                    ' ' + try_family_name(cam) + ' ' + try_eth_info(cam) + \
+                    f' [ID={cam.DeviceID()}]']
+    for prop in PRETTY_PRINT_PROPS:
+        try:
+            p = getattr(cam, prop)
+            cam_info += [
+                    f'{prop:<25} {p.GetValue():<20} [{p.GetUnit():<2}]   ({p.GetMin()} -- {p.GetMax()})'
+            ]
+        except:
+            cam_info += [f'{prop:<25} [Error during getattr]']
+    return cam_info
+
 
 def main_camera_info():
     spinn_system = None
     spinn_cam = None
-
-    interesting_props = [
-            'WidthMax', 'HeightMax', 'BinningHorizontal', 'BinningVertical',
-            'AcquisitionFrameRate', 'ExposureTime', 'Gain', 'Width', 'Height',
-            'OffsetX', 'OffsetY'
-    ]
 
     try:
         spinn_system = PySpin.System.GetInstance()
@@ -44,48 +72,31 @@ def main_camera_info():
 
         for kk in range(len(cam_list)):
             spinn_cam = cam_list[kk]
-            spinn_cam.Init()
-            family_name = ' '
+            serial = 'error S/N'
             try:
-                family_name = f' [{spinn_cam.DeviceFamilyName()}] '  # GEV cam weird about that one ?
-            except:
-                pass
-
-            cam_info = \
-                [spinn_cam.DeviceVendorName() + ' ' + spinn_cam.DeviceModelName() + \
-                    family_name +\
-                    f'[ID={spinn_cam.DeviceID()}]']
-            cam_info += [try_eth_info(spinn_cam)]
-            for prop in interesting_props:
-                p = getattr(spinn_cam, prop)
-                cam_info += [
-                        f'{prop:<25} {p.GetValue():<20} [{p.GetUnit():<2}]   ({p.GetMin()} -- {p.GetMax()})'
-                ]
-
-            print(f'--------- CAMERA {kk} ----------')
-            print('\n'.join(cam_info))
-
-            spinn_cam.DeInit()
-            spinn_cam = None
-    except Exception as exc:
-        print(f'Something went wrong! Exception {repr(exc)} (will re-raise)')
-        print('It is recommended to reset the USB cameras (~/reset_pg1.sh)')
-        raise exc
-    finally:
-        cam_list.Clear()
-        try:
-            if spinn_cam is not None:
+                serial = spinn_cam.GetDeviceSerialNumber()
+                spinn_cam.Init()
+                info = print_camera_info(spinn_cam)
+                print(f'--------- CAMERA {kk} [{serial}] ----------')
+                print('\n'.join(info))
+            except Exception as exc:
+                print(f'ERROR---- CAMERA {kk} [{serial}] -------XXX')
+                print(f'{repr(exc)}')
+                print('(Reset the USB cameras? (~/reset_pg1.sh)')
+            finally:
                 spinn_cam.DeInit()
-                del spinn_cam
-        except UnboundLocalError:
-            pass
-        except PySpin.SpinnakerException as ex:
-            print('Error C: %s' % ex)
+                spinn_cam = None
+
+    finally:
+        try:
+            cam_list.Clear()
+        except Exception as exc:
+            print('Error: %s' % exc)
         try:
             if spinn_system is not None:
                 spinn_system.ReleaseInstance()
         except PySpin.SpinnakerException as ex:
-            print('Error D: %s' % ex)
+            print('Error: %s' % ex)
 
 
 def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
@@ -103,12 +114,28 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
         if api_cam_num < len(cam_list):  # Index
             spinn_cam = cam_list[api_cam_num]
         else:
-            _serials = [int(c.GetDeviceSerialNumber()) for c in cam_list]
-            spinn_cam = cam_list[_serials.index(api_cam_num)]
+            # With GigE cams, the same serial may appear multiple times!
+            # Cam is detected correctly on one IP, and poorly on other subnet IPs
+            _serials_to_index: dict[int, list[int]] = {}
+            for kk, c in enumerate(cam_list):
+                sn = int(c.GetDeviceSerialNumber())
+                if sn not in _serials_to_index:
+                    _serials_to_index[sn] = []
+                _serials_to_index[sn] += [kk]
+
+        for cam_idx in _serials_to_index[api_cam_num]:
+            cam = cam_list[cam_idx]
+            try:
+                cam.Init()
+                spinn_cam = cam
+                break
+            except PySpin.SpinnakerException as exc:
+                cam = None
+                pass
+        else:  # for-else statement only if loop as completed without finding ok serial.
+            raise exc
 
         cam_list.Clear()
-
-        spinn_cam.Init()
 
         spinn_cam.BeginAcquisition()
         spinn_image = spinn_cam.GetNextImage(1000)  # 1 sec timeout
@@ -190,7 +217,7 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
                 break
 
     except Exception as ex:
-        print('Error 0: %s' % ex)
+        print(f'Error 0: {repr(ex)}')
     except KeyboardInterrupt:
         print('Keyboard interrupt!')
     finally:
@@ -220,7 +247,7 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
             print('Error D: %s' % ex)
 
 
-if __name__ == "__main__":
+def main():
     import docopt
 
     args = docopt.docopt(__doc__)
@@ -242,3 +269,7 @@ if __name__ == "__main__":
     else:
         main_acquire_spinnaker(arg_cam_number, arg_stream_name, arg_n_loops,
                                arg_attempt_reuse)
+
+
+if __name__ == "__main__":
+    main()

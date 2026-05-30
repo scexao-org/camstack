@@ -150,7 +150,7 @@ def main_acquire_flycapture(api_cam_num_or_serial: int, stream_name: str,
             print(f'Error during cam close: {ex.args[0]}: {str(ex)[2:-1]}')
 
 
-if __name__ == "__main__":
+def main():
     import docopt
 
     args = docopt.docopt(__doc__)
@@ -168,3 +168,7 @@ if __name__ == "__main__":
 
     main_acquire_flycapture(arg_cam_number, arg_stream_name, arg_n_loops,
                             arg_attempt_reuse, arg_debug_exc_raise)
+
+
+if __name__ == "__main__":
+    main()

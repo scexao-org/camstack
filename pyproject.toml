@@ -63,6 +63,9 @@ vcam1 = "camstack.viewermains.vcam:main1"
 vcam2 = "camstack.viewermains.vcam:main2"
 vpupcam = "camstack.viewermains.vpupcam:main"
 
+hwacq-flycaptake = "camstack.acq.flycapture_usbtake:main"
+hwacq-spinnakertake = "camstack.acq.spinnaker_usbtake:main"
+
 
 [tool.pytest.ini_options]
 addopts = [
