@@ -71,6 +71,8 @@ def _params_parse_and_set(spinn_cam: typ.Any, kws: KWCommentDict,
               )
 
         ok = True
+        # TODO better errors so that the return value is correct...
+        # TODO consider some min-max clamping
         try:
             if request == sdk.REQUEST.GETORCALL:
                 x = spinn_cam_prop()
@@ -421,8 +423,12 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
                 continue
 
             if spinn_image.IsIncomplete():
-                print(f'Image incomplete - status {spinn_image.GetImageStatus()}'
-                      )
+                stat = spinn_image.GetImageStatus()
+                descr = PySpin.Image.GetImageStatusDescription(stat)
+                if len(descr) > 100:
+                    descr = descr[:90] + '... [trunc]'
+                print(f'Image incomplete - status {descr} [{stat}]')
+
                 spinn_image.Release()
                 spinn_image = None
                 continue
