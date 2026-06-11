@@ -139,7 +139,7 @@ class SpinnakerUSBCamera(BaseCamera):
                                  env_launcher: str = ''):
 
         # Prepare the cmdline for starting up!
-        exec_path = env_launcher + "python -m camstack.acq.spinnaker_usbtake"
+        exec_path = env_launcher + "python -m camstack.acq.spinnaker_grab"
         self.taker_tmux_command = (f'{exec_path} -s {self.STREAMNAME} '
                                    f'-u {self.spinn_number} -l 0')
         if reuse_shm:

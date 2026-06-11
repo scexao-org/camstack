@@ -9,10 +9,14 @@ For the many variants of FLIR USB cameras (Grasshopper, Flea, Blackfly...), proc
   - New (e.g. BlackFly) require Spinnaker
 
 - Use the main acquisition process from camstack to ensure the camera is detected and can acquire frames in default configuration:
-  - FlyCapture: `python -m camstack.acq.flycapture_usbtake`
-  - Spinnaker: `python -m camstack.acq.spinnaker_usbtake`
+  - FlyCapture: `python -m camstack.acq.flycapture_grab`
+  - Spinnaker: `python -m camstack.acq.spinnaker_grab`
+  - Spinnaker (more modern): `python -m camstack.acq.spinnaker_over_transport_grab`
+Spinnaker / Flycapture will most likely require a venv to run. Calling the camstack session into the venv at launch can easily
+be configured.
 
 It it works, continue. If it doesn't, you'll need to troubleshoot at this step.
+Add the `-B` flag to the command above to simply list cameras and confirm they're detected.
 
 ## Run as a camstack control server
 

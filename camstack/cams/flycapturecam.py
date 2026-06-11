@@ -228,7 +228,7 @@ class FlyCaptureUSBCamera(BaseCamera):
     def _prepare_backend_cmdline(self, reuse_shm: bool = False):
 
         # Prepare the cmdline for starting up!
-        exec_path = "conda activate pycapture; python -m camstack.acq.flycapture_usbtake"
+        exec_path = "conda activate pycapture; python -m camstack.acq.flycapture_grab"
         self.taker_tmux_command = (f'{exec_path} -s {self.STREAMNAME} '
                                    f'-u {self.fly_number} -l 0')
         if reuse_shm:

@@ -1,9 +1,14 @@
 #!/usr/bin/env python
 '''
-    spinnaker USB3 camera framegrabber
+    Spinnaker camera framegrabber - works in conjuction with camstack.cams.spinnakercams
+    In this implementation, the control class opens the PySpin API and takes a control
+    pointer to the camera. This process only grabs frames.
+
+    Tested with USB3 BlackFly S at Subaru; proven not working (use the _transport_ version)
+    on a GigE BlackFly on PWI.
 
     Usage:
-        spinnaker_usbtake [options]
+        spinnaker_grab [options]
 
     Options:
         -s <stream_name> SHM name
@@ -15,7 +20,7 @@
 from __future__ import annotations
 
 # Consider running this directly in mamba
-# mamba run -n py38 python -m camstack.acq.spinnaker_usbtake [options]
+# mamba run -n py38 python -m camstack.acq.spinnaker_grab [options]
 
 import PySpin
 from pyMilk.interfacing.shm import SHM
@@ -173,10 +178,6 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
 
         cam_list.Clear()
 
-        spinn_cam.BeginAcquisition()
-
-        initializing = True
-    
         n_img = 0
         time_1 = time.time()
         mfrate = 0.0
@@ -198,13 +199,14 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
         shm.set_keywords({
                 'MFRATE': (0.0, "Measured frame rate (Hz)"),
                 '_MAQTIME': (int(time.time() * 1e6),
-                            "Frame acq time (us, CLOCK_REALTIME)"),
-                '_FGSIZE1': (width,
-                            "Size of frame grabber for the X axis (pixel)"),
+                             "Frame acq time (us, CLOCK_REALTIME)"),
+                '_FGSIZE1':
+                        (width, "Size of frame grabber for the X axis (pixel)"),
                 '_FGSIZE2': (heigth,
-                            "Size of frame grabber for the Y axis (pixel)"),
+                             "Size of frame grabber for the Y axis (pixel)"),
         })
-    
+
+        spinn_cam.BeginAcquisition()
 
         while True:
             try:

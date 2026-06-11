@@ -142,14 +142,34 @@ For dumb cameras (acquisition channel but no control channel), the FG acquisitio
 
 ```bash
 ├── camstack/                      # __python package root__
-│   ├── acq/                       # runnable files for acquisition
-│   │   ├── flycapture_usbtake.py  #     with PyCapture2
-│   │   ├── spinnaker_usbtake.py   #     with PySpin
-│   │   └── simcam_framegen.py     #     frame emitter for simulated camera
-│   ├── cam_mains/                 # Exec entrypoint for camera personalities, with auxiliary helper processes
-│   ├── cams/                      # Camera class hierarchy
-│   │   ├── base.py                #     Base class, defining all of a "camera session"
-│   │   └── ...                    #     Many more files following inheritance as:
+│   ├── acq/                       # runnable files for acquisition
+│   │   ├── flycapture_grab.py     #     with PyCapture2
+│   │   ├── spinnaker_grab.py      #     with PySpin
+│   │   ├── spinnaker_over_transport_grab.py  #     with Spinnaker over transport
+│   │   └── simcam_framegen.py     #     frame emitter for simulated camera
+│   ├── cam_mains/                 # Exec entrypoint for camera personalities, with auxiliary helper processes
+│   ├── cams/                      # Camera class hierarchy
+│   │   │   # BASE CLASS
+│   │   ├── base.py                #     Base class, defining all of a "camera session"
+│   │   │   # BACKENDS
+│   │   ├── edtcam.py              #     EDT framegrabber base
+│   │   ├── autodumbedt.py         #     Dumb EDT camera (as in, grabbing but no serial control, e.g. Andor ixon)
+│   │   ├── dcamcam.py             #     DCAM (Hamamatsu) cameras
+│   │   ├── flycapturecam.py       #     FLIR/PointGrey via FlyCapture
+│   │   ├── spinnakercam.py        #     FLIR via Spinnaker
+│   │   ├── flisdkgenicam.py       #     First Light Imaging SDK GeniCam
+│   │   ├── params_shm_backend.py  #     Parameter SHM backend - Uses SHM keywords as transport layer between control and framegrabbing process
+│   │   │   # MODELS & PERSONALITIES (sometimes in the same file)
+│   │   ├── andors_autocamlink.py  #     Andor cameras over CameraLink
+│   │   ├── spinnaker_over_transport.py  # Spinnaker over transport layer
+│   │   ├── cred1.py               #     C-RED 1 camera
+│   │   ├── cred2.py               #     C-RED 2 camera
+│   │   ├── nuvu.py                #     Nuvu camera
+│   │   ├── ocam.py                #     OCAM2 camera
+│   │   ├── prime_bsi.py           #     Prime BSI camera
+│   │   ├── ao_apd.py              #     AO APD detector
+│   │   ├── vampires.py            #     VAMPIRES camera
+│   │   └── simulatedcam.py        #     Simulated camera
 │   │                              # Base --> Framegrabber type --> Camera model --> Camera personality
 │   ├── core/
 │   ├── deployments/               # Deployment files defining which camera personalities are available in each install
