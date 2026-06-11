@@ -63,9 +63,9 @@ vcam1 = "camstack.viewermains.vcam:main1"
 vcam2 = "camstack.viewermains.vcam:main2"
 vpupcam = "camstack.viewermains.vpupcam:main"
 
-hwacq-flycaptake = "camstack.acq.flycapture_usbtake:main"
-hwacq-spinnakertake = "camstack.acq.spinnaker_usbtake:main"
-hwacq-spintransporttake = "camstack.acq.spinnaker_over_transport_usbtake:main"
+hwacq-flycaptake = "camstack.acq.flycapture_grab:main"
+hwacq-spinnakertake = "camstack.acq.spinnaker_grab:main"
+hwacq-spintransporttake = "camstack.acq.spinnaker_over_transport_grab:main"
 
 
 [tool.pytest.ini_options]
@@ -86,8 +86,9 @@ include = ["camstack"]
 exclude = ["build/",
            "**/__pycache",
            "**/.mypy_cache",
-           "camstack/acq/flycapture_usbtake.py",
-           "camstack/acq/spinnaker_usbtake.py"
+           "camstack/acq/flycapture_grab.py",
+           "camstack/acq/spinnaker_grab.py",
+           "camstack/acq/spinnaker_over_transport_grab.py"
            ]
 reportMissingImports = true
 reportMissingTypeStubs = false

@@ -1,9 +1,15 @@
 #!/usr/bin/env python
 '''
-    spinnaker USB3 camera framegrabber
+    Spinnaker camera framegrabber - works in conjunction with camera class
+    at camstack.cams.spinnaker_over_transport.
+    Validated with USB3 and GigE spinnaker cameras of BlackFly/BlackFly S family.
+
+    Exclusive access to camera in this process.
+
+    Communication with the control shell is done with a transport: commands-over-SHM-keywords.
 
     Usage:
-        spinnaker_usbtake [options]
+        spinnaker_over_transport_grab [options]
 
     Options:
         -s <stream_name> SHM name
@@ -16,7 +22,7 @@ from __future__ import annotations
 import typing as typ
 
 # Consider running this directly in mamba
-# mamba run -n py38 python -m camstack.acq.spinnaker_usbtake [options]
+# mamba run -n py38 python -m camstack.acq.spinnaker_over_transport_grab [options]
 
 import PySpin
 from pyMilk.interfacing.shm import SHM
@@ -82,7 +88,9 @@ def _params_parse_and_set(spinn_cam: typ.Any, kws: KWCommentDict,
                     spinn_cam_prop.SetValue(comment.split('#')[1])
                     updates[kw_name] = 'plholder', prop_string + '#' + spinn_cam_prop(
                     )
-                    print(comment.split('#')[1], updates[kw_name][1].split('#')[1])
+                    print(
+                            comment.split('#')[1],
+                            updates[kw_name][1].split('#')[1])
                 elif value == MAGIC_BOOL_STR.TRUE:  # bool true
                     spinn_cam_prop.SetValue(True)
                     updates[kw_name] = MAGIC_BOOL_STR.TUPLE[
@@ -300,7 +308,9 @@ def main_acquire_spinnaker(api_cam_num: int, stream_name: str, n_loops: int,
         cam_list.Clear()
 
         # Open the parameter-feedback SHM (already created by the Python control session)
-        params_shm = SHM(stream_name + '_params_fb', autoSqueeze=False) # Since this is (1,), don't squeeze.
+        params_shm = SHM(
+                stream_name + '_params_fb',
+                autoSqueeze=False)  # Since this is (1,), don't squeeze.
 
         # -- Apply initial params (mirrors the two params_parse_and_set calls in andorcb2.cpp).
         # Reset offsets first so any Width/Height + Offset combination is accepted

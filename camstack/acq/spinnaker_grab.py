@@ -1,9 +1,14 @@
 #!/usr/bin/env python
 '''
-    spinnaker USB3 camera framegrabber
+    Spinnaker camera framegrabber - works in conjuction with camstack.cams.spinnakercams
+    In this implementation, the control class opens the PySpin API and takes a control
+    pointer to the camera. This process only grabs frames.
+
+    Tested with USB3 BlackFly S at Subaru; proven not working (use the _transport_ version)
+    on a GigE BlackFly on PWI.
 
     Usage:
-        spinnaker_usbtake [options]
+        spinnaker_grab [options]
 
     Options:
         -s <stream_name> SHM name
@@ -15,7 +20,7 @@
 from __future__ import annotations
 
 # Consider running this directly in mamba
-# mamba run -n py38 python -m camstack.acq.spinnaker_usbtake [options]
+# mamba run -n py38 python -m camstack.acq.spinnaker_grab [options]
 
 import PySpin
 from pyMilk.interfacing.shm import SHM

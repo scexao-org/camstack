@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 '''
-    spinnaker USB3 camera framegrabber
+    FlyCapture camera framegrabber [validated for USB cameras, probably fine with GigE]
+    Works in conjunction with camera class at camstack.cams.flycapturecam
 
     Usage:
-        spinnaker_usbtake [options]
+        flycapture_grab [options]
 
     Options:
         -s <stream_name> SHM name
