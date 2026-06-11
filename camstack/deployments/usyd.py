@@ -4,8 +4,15 @@ from ..main_arch import CameraLauncherSpec
 
 USYD_VISPL_CONFIG = [
         CameraLauncherSpec(\
-            name='VISPG1', main='camstack.cam_mains.usyd',
-            add_args=['VPG1'], conda_env_string='mamba activate py38'),
+            name='VPG1', main='camstack.cam_mains.usyd',
+             add_args=['VPG1'], conda_env_string='mamba activate py38'),
+        CameraLauncherSpec(\
+            name='VPG2', main='camstack.cam_mains.usyd',
+            add_args=['VPG2']),
+        CameraLauncherSpec(\
+            name='VPG3', main='camstack.cam_mains.usyd',
+            add_args=['VPG3']),
+
         CameraLauncherSpec(\
             name='CB2', main='camstack.cam_mains.usyd',
             add_args=['CB2']

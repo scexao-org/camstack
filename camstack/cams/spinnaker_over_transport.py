@@ -142,6 +142,7 @@ class CommandTransportForSpinnaker(CommandTransport[SPINNAKER_API_KEY_T]):
 
 # GIGE 16048585
 
+
 class SpinnakerTransportedCamera(ParamsSHMCamera):
 
     INTERACTIVE_SHELL_METHODS = [] + \
@@ -156,7 +157,8 @@ class SpinnakerTransportedCamera(ParamsSHMCamera):
     KEYWORDS.update(BaseCamera.KEYWORDS)
 
     CLS_SHM_COMMUNICATOR = CommandTransportForSpinnaker
-    ctrl_transport: CommandTransport[SPINNAKER_API_KEY_T] # helpful for the type checker.
+    ctrl_transport: CommandTransport[
+            SPINNAKER_API_KEY_T]  # helpful for the type checker.
 
     def __init__(self, name: str, stream_name: str,
                  mode_id: Typ_mode_id_or_heightwidth, spinnaker_number: int,
@@ -223,7 +225,6 @@ class SpinnakerTransportedCamera(ParamsSHMCamera):
         values = list(params.values())
         self.ctrl_transport.setmulti_nofeedback_nosync(values, api_keys)
 
-
     def prepare_camera_finalize(self, mode_id=None):
         # Only the stuff that is mode dependent
         # And/or should be called after each mode change.
@@ -257,6 +258,7 @@ class SpinnakerTransportedCamera(ParamsSHMCamera):
                                    f'-u {self.spinn_number} -l 0')
         if reuse_shm:
             self.taker_tmux_command += ' -R'  # Do not overwrite the SHM.
+        print(self.taker_tmux_command)
 
     def _ensure_backend_restarted(self):
         # Plenty simple enough for spinnaker
@@ -316,7 +318,115 @@ class SpinnakerTransportedCamera(ParamsSHMCamera):
         return tempval
 
 
-class USYD_VIS_PG2(SpinnakerTransportedCamera):
+class GigECams(SpinnakerTransportedCamera):
+    '''
+    Common class for GigE cameras (and possibly more)
+    Factors in code for the Blackfly BFLY-PGE-31S4M
+    and the Blackfly S BFS-PGE-50S4M
+    '''
+    INTERACTIVE_SHELL_METHODS = SpinnakerTransportedCamera.INTERACTIVE_SHELL_METHODS + [
+            'FULL'
+    ]
+
+    KEYWORDS = {
+            # DETGAIN is NOT a kw from the base class.
+            'DETGAIN': (0, 'Amplifier gain [dB]', '%16d', 'GAIN'),
+            # EXTTRIG is part of base
+            'TRIGSRC': ('Freerun', 'Trigger source', '%-10s', 'TRSRC'),
+            'TRIGDLY': (0, 'Trigger delay [us]', '%20d', 'TRDLY'),
+    }
+    KEYWORDS.update(SpinnakerTransportedCamera.KEYWORDS)
+
+    def _spinnaker_subtypes_constructor_finalizer(self):
+        logg.debug('_spinnaker_subtypes_constructor_finalizer @ BFLY-PGE-31S4M')
+
+        # Disable LED
+        self.ctrl_transport.set(sdk.DeviceIndicatorModeEnum.Inactive,
+                                sdk.DeviceIndicatorMode)
+        # Disable autoexp
+        self.ctrl_transport.set(sdk.ExposureAutoEnum.Off, sdk.ExposureAuto)
+        # Disable autogain
+        self.ctrl_transport.set(sdk.GainAutoEnum.Off, sdk.GainAuto)
+
+    def _prepare_backend_cmdline(self, reuse_shm: bool = False,
+                                 env_launcher: str = 'mamba run -n py38 '):
+        return super()._prepare_backend_cmdline(reuse_shm=reuse_shm,
+                                                env_launcher=env_launcher)
+
+    def _fill_keywords(self):
+
+        super()._fill_keywords()
+        self._set_formatted_keyword('CROPPED', self.current_mode_id
+                                    != self.FULL)
+        self._set_formatted_keyword('DETECTOR', 'GIGE FLIR Camera')
+
+    def set_fps(self, fps: float) -> float:
+        '''
+        Override -- this camera does not support set_fps.
+        '''
+        return self.get_fps()
+
+    def get_fps(self) -> float:
+        fps = self.ctrl_transport.get(sdk.AcquisitionFrameRate)[0]  # Hz
+        self._set_formatted_keyword('FRATE', fps)
+        return fps
+
+    def disable_trigger(self) -> None:
+        self.ctrl_transport.set(sdk.TriggerModeEnum.Off, sdk.TriggerMode)
+        self._set_formatted_keyword('EXTTRIG', False)
+
+    def enable_software_trigger(self, delay_us: float = 0) -> None:
+        self._enable_trigger(sdk.TriggerSourceEnum.Software, delay_us=delay_us)
+
+    def enable_hardware_trigger(self, delay_us: float = 0):
+        self._enable_trigger(sdk.TriggerSourceEnum.Line0, delay_us=delay_us)
+
+    def _enable_trigger(self, source: sdk.TriggerSourceEnum,
+                        delay_us: float = 0) -> None:
+        # EDIT I don't believe triggerdelay is working?
+        params: dict[SPINNAKER_API_KEY_T, typ.Any] = {
+                sdk.TriggerMode: sdk.TriggerModeEnum.On,
+                sdk.TriggerSource: source,
+                sdk.TriggerActivation: sdk.TriggerActivationEnum.FallingEdge,
+        }
+        if delay_us > 0:
+            params.update({
+                    sdk.TriggerDelayEnable: True,
+                    sdk.TriggerDelay: delay_us,
+            })
+        else:
+            params.update({sdk.TriggerDelayEnable: False})
+        api_keys: list[SPINNAKER_API_KEY_T] = []
+        values = []
+        for a, v in params.items():
+            api_keys += [a]
+            values += [v]
+        ret_values = self.ctrl_transport.setmulti(values, api_keys)
+        for key, (value, fits_value) in zip(api_keys, ret_values):
+            if key == sdk.TriggerMode:
+                self._set_formatted_keyword('EXTTRIG',
+                                            value == sdk.TriggerModeEnum.On)
+            if key == sdk.TriggerSource:
+                self._set_formatted_keyword('TRIGSRC', fits_value)
+            if key == sdk.TriggerDelay:
+                self._set_formatted_keyword('TRIGDLY', fits_value)
+
+    def get_gain(self):
+        gain = self.ctrl_transport.get(sdk.Gain)[0]
+        self._set_formatted_keyword(
+                'DETGAIN', gain)  # DETGAIN is NOT a kw from the base class.
+        logg.info(f'get_gain: {gain}')
+        return gain
+
+    def set_gain(self, gain: float):
+        self.ctrl_transport.set(gain, sdk.Gain)
+        return self.get_gain()
+
+    def send_software_trigger(self):
+        self.ctrl_transport.set(None, sdk.TriggerSoftware)
+
+
+class USYD_VIS_PG2(GigECams):
     '''
         Blackfly BFLY-PGE-31S4M
 --------- CAMERA 1 [16048585] ----------
@@ -341,10 +451,6 @@ TriggerSource             EnumEntry_TriggerSource_Software
 TriggerSelector           EnumEntry_TriggerSelector_FrameStart
     '''
 
-    INTERACTIVE_SHELL_METHODS = SpinnakerTransportedCamera.INTERACTIVE_SHELL_METHODS + [
-            'FULL'
-    ]
-
     FULL = 'FULL'
 
     MODES = {
@@ -355,22 +461,9 @@ TriggerSelector           EnumEntry_TriggerSelector_FrameStart
             2: CameraMode(x0=1112, x1=1112 + 256 - 1, y0=632, y1=632 + 256 - 1)
     }
 
-    KEYWORDS = {}
-    KEYWORDS.update(SpinnakerTransportedCamera.KEYWORDS)
-
-    def _spinnaker_subtypes_constructor_finalizer(self):
-        logg.debug('_spinnaker_subtypes_constructor_finalizer @ BFLY-PGE-31S4M')
-
-        # Disable LED
-        self.ctrl_transport.set(sdk.DeviceIndicatorModeEnum.Inactive, sdk.DeviceIndicatorMode)
-        # Disable autoexp
-        self.ctrl_transport.set(sdk.ExposureAutoEnum.Off, sdk.ExposureAuto)
-        # Disable autogain
-        self.ctrl_transport.set(sdk.GainAutoEnum.Off, sdk.GainAuto)
-
     def _fill_keywords(self):
 
-        SpinnakerTransportedCamera._fill_keywords(self)
+        super()._fill_keywords()
         self._set_formatted_keyword('CROPPED', self.current_mode_id
                                     != self.FULL)
         self._set_formatted_keyword('DETECTOR', 'BFLY-PGE-31S4M')
@@ -378,62 +471,48 @@ TriggerSelector           EnumEntry_TriggerSelector_FrameStart
         self._set_formatted_keyword('DETPXSZ1', 0.00345)
         self._set_formatted_keyword('DETPXSZ2', 0.00345)
 
-    def prepare_camera_finalize(self, mode_id=None):
-        logg.debug('prepare_camera_finalize @ BFLY-PGE-31S4M')
 
-        # Something that we feel is BlackFly specific but not Spinnaker generic
-        SpinnakerTransportedCamera.prepare_camera_finalize(self, mode_id)
+class USYD_VIS_PG3(GigECams):
+    '''
+        Blackfly BFLY-PGE-31S4M
+--------- CAMERA 1 [24284634] ----------
+FLIR Blackfly S BFS-PGE-50S4M [No FamilyName info] [IP: 192.168.0.1 - Mask: 255.255.255.0] [ID=24284634]
+WidthMax                  2448                 [  ]   (0 -- 4294967295)
+HeightMax                 2048                 [  ]   (0 -- 4294967295)
+BinningHorizontal         1                    [  ]   (1 -- 4)
+BinningVertical           1                    [  ]   (1 -- 4)
+AcquisitionFrameRate      183.817582372335     [Hz]   (1.0 -- 183.817582372335)
+ExposureTime              1002.0               [us]   (16.0 -- 30000006.0)
+ExposureAuto              EnumEntry_ExposureAuto_Off
+Gain                      0.0                  [dB]   (0.0 -- 47.994294033026364)
+GainAuto                  EnumEntry_GainAuto_Off
+Width                     256                  [  ]   (8 -- 1096)
+Height                    256                  [  ]   (6 -- 694)
+OffsetX                   1352                 [  ]   (0 -- 2192)
+OffsetY                   1354                 [  ]   (0 -- 1792)
+TriggerActivation         [Error during getvalue]
+TriggerDelay              57.0                 [us]   (57.0 -- 65520.0)
+TriggerMode               EnumEntry_TriggerMode_Off
+TriggerSource             EnumEntry_TriggerSource_Software
+TriggerSelector           EnumEntry_TriggerSelector_FrameStart
+    '''
 
-    def _prepare_backend_cmdline(self, reuse_shm: bool = False,
-                                 env_launcher: str = 'mamba run -n py38 '):
-        return super()._prepare_backend_cmdline(reuse_shm=reuse_shm,
-                                                env_launcher=env_launcher)
+    FULL = 'FULL'
 
-    def set_fps(self, fps: float) -> float:
-        '''
-        Override -- this camera does not support set_fps.
-        '''
-        return self.get_fps()
+    MODES = {
+            FULL: CameraMode(x0=0, x1=2447, y0=0, y1=2047),
+            # Centercrop half-size
+            1: CameraMode(x0=612, x1=2447 - 612, y0=512, y1=2047 - 512),
+            # 256x256 offseted
+            2: CameraMode(x0=1112, x1=1112 + 256 - 1, y0=632, y1=632 + 256 - 1)
+    }
 
-    def get_fps(self):
-        max_fps = self.ctrl_transport.get(sdk.AcquisitionFrameRate.max)[0]  # Hz
-        tint = self.get_tint()
-        fps = min(1 / tint, max_fps)
-        self._set_formatted_keyword('FRATE', fps)
-        logg.info(f'get_fps: {fps}')
-        return fps
+    def _fill_keywords(self):
 
-    def disable_trigger(self) -> None:
-        self.ctrl_transport.set(sdk.TriggerModeEnum.Off, sdk.TriggerMode)
+        super()._fill_keywords()
+        self._set_formatted_keyword('CROPPED', self.current_mode_id
+                                    != self.FULL)
+        self._set_formatted_keyword('DETECTOR', 'BFS-PGE-50S4M')
 
-    def enable_software_trigger(self, delay_us: float = 0) -> None:
-        self._enable_trigger(sdk.TriggerSourceEnum.Software, delay_us = delay_us)
-
-    def enable_hardware_trigger(self, delay_us: float = 0):
-        self._enable_trigger(sdk.TriggerSourceEnum.Line0, delay_us = delay_us)
-
-    def _enable_trigger(self, source: sdk.TriggerSourceEnum, delay_us: float = 0) -> None:
-        # EDIT I don't believe triggerdelay is working?
-        params: dict[SPINNAKER_API_KEY_T, typ.Any] = {
-            sdk.TriggerMode: sdk.TriggerModeEnum.On,
-            sdk.TriggerSource: source,
-            sdk.TriggerActivation: sdk.TriggerActivationEnum.FallingEdge,
-        }
-        if delay_us > 0:
-            params.update({
-                sdk.TriggerDelayEnabled: True,
-                sdk.TriggerDelay: delay_us,
-            })
-        else:
-            params.update({
-                sdk.TriggerDelayEnabled: False
-            })
-        api_keys: list[SPINNAKER_API_KEY_T] = []
-        values = []
-        for a,v in params.items():
-            api_keys += [a]
-            values += [v]
-        self.ctrl_transport.setmulti(values, api_keys)
-
-    def send_software_trigger(self):
-        self.ctrl_transport.set(None, sdk.TriggerSoftware)
+        self._set_formatted_keyword('DETPXSZ1', 0.00274)
+        self._set_formatted_keyword('DETPXSZ2', 0.00274)
