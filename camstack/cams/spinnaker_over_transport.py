@@ -6,6 +6,7 @@ import logging as logg
 
 from typing import Any
 
+from camstack import MAMBA_OR_CONDA
 from camstack.cams.base import BaseCamera
 from camstack.core.utilities import CameraMode, Typ_mode_id, Typ_mode_id_or_heightwidth
 
@@ -348,8 +349,9 @@ class GigECams(SpinnakerTransportedCamera):
         # Disable autogain
         self.ctrl_transport.set(sdk.GainAutoEnum.Off, sdk.GainAuto)
 
-    def _prepare_backend_cmdline(self, reuse_shm: bool = False,
-                                 env_launcher: str = 'mamba run -n py38 '):
+    def _prepare_backend_cmdline(
+            self, reuse_shm: bool = False,
+            env_launcher: str = f'{MAMBA_OR_CONDA} run -n py38 '):
         return super()._prepare_backend_cmdline(reuse_shm=reuse_shm,
                                                 env_launcher=env_launcher)
 

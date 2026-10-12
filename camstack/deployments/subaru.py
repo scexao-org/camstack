@@ -62,6 +62,6 @@ SUBARU_CONFIG = [
                 name='VPUPCAM',
                 main='camstack.cam_mains.vpupcam',
                 required_machine='V',
-                conda_env_string='conda activate pycapture',
+                conda_env=f'pycapture',
         ),
 ]

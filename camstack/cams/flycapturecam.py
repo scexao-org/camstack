@@ -5,6 +5,7 @@ import logging as logg
 
 from typing import List, Any
 
+from camstack import MAMBA_OR_CONDA
 from camstack.cams.base import BaseCamera
 import camstack.core.utilities as util
 
@@ -228,7 +229,7 @@ class FlyCaptureUSBCamera(BaseCamera):
     def _prepare_backend_cmdline(self, reuse_shm: bool = False):
 
         # Prepare the cmdline for starting up!
-        exec_path = "conda activate pycapture; python -m camstack.acq.flycapture_grab"
+        exec_path = f"{MAMBA_OR_CONDA} run -n pycapture python -m camstack.acq.flycapture_grab"
         self.taker_tmux_command = (f'{exec_path} -s {self.STREAMNAME} '
                                    f'-u {self.fly_number} -l 0')
         if reuse_shm:

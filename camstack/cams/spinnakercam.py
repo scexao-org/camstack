@@ -4,6 +4,7 @@ import logging as logg
 
 from typing import Union, Tuple, List, Any
 
+from camstack import MAMBA_OR_CONDA
 from camstack.cams.base import BaseCamera
 from camstack.core.utilities import CameraMode
 
@@ -417,7 +418,8 @@ class USYD_VIS_PG1(FLIR_U3_Camera):
 
     def _prepare_backend_cmdline(self, reuse_shm: bool = False):
         return super()._prepare_backend_cmdline(
-                reuse_shm=reuse_shm, env_launcher='mamba run -n py38 ')
+                reuse_shm=reuse_shm,
+                env_launcher=f'{MAMBA_OR_CONDA} run -n py38 ')
 
     def set_fps(self, fps: float) -> float:
         '''

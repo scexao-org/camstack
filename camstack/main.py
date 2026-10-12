@@ -110,12 +110,16 @@ def main(
     tmux.kill_running(tmux_pane)
 
     # initiating this camera's main method
-    print(f"DEBUG: using {launch_config.conda_env_string} + python -m {launch_config.main}"
-          )
-    if launch_config.conda_env_string != '':
-        tmux.send_keys(tmux_pane, launch_config.conda_env_string)
+    print(f"DEBUG: using {launch_config.conda_env} + "
+          f"python -m {launch_config.main}")
+
+    mamba_run = ''
+    if launch_config.conda_env != '':
+        from camstack import MAMBA_OR_CONDA
+        mamba_run = f'{MAMBA_OR_CONDA} run -n {launch_config.conda_env} '
+
     tmux.send_keys(
-            tmux_pane, f"python -i -m {launch_config.main} " +
+            tmux_pane, f"{mamba_run}python -i -m {launch_config.main} " +
             ' '.join(launch_config.add_args))
 
     # all done. no cleanup

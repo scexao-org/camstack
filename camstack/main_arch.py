@@ -14,7 +14,7 @@ class CameraLauncherSpec:
     main: str
     add_args: list[str] = field(default_factory=list)
 
-    conda_env_string: str = ''  # env loader as a separate command 'conda activate x', mamba, venv, uv, etc.
+    conda_env: str = ''  # env loader as a separate command 'conda activate x', mamba, venv, uv, etc.
     ctrl_tmux_name: str = ''  # None default to <name.lower()>_ctrl
     required_machine: str | None = None  # WHICHCOMP mechanism SSH lookup
 
