@@ -17,3 +17,6 @@ elif CAMSTACK_DEPLOYMENT == 'KALAO':
 elif CAMSTACK_DEPLOYMENT == 'USYD':
     from . import usyd
     CAMERA_LAUNCH_CONFIG += usyd.USYD_VISPL_CONFIG
+elif CAMSTACK_DEPLOYMENT == 'HEE':
+    from . import hee
+    CAMERA_LAUNCH_CONFIG += hee.HEE_CONFIG
